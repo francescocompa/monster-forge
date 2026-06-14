@@ -10,6 +10,7 @@ const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str
 const ABILS=["str","dex","con","int","wis","cha"];
 const DMG_TYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
 const FACTIONS=["Enemy","Ally","Party","Setting"];
+const STATUSES=["Draft","Ready","Archived"]; // bestiary workflow status (Batch 13)
 const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
 const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
 const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once per encounter, immediately after another creature's turn, and must use them in order (Action 1, then 2, then 3).";
@@ -185,41 +186,72 @@ const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X
 // Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
 function getBinId(k){return localStorage.getItem("mf_bin:"+k)||null;}
 function setBinId(k,id){localStorage.setItem("mf_bin:"+k,id);}
+// Local mirror: every save is written here first so work survives a cloud outage or a
+// cleared/empty bin. On load we hydrate from this instantly, then reconcile with the cloud.
+function cacheGet(k){try{return JSON.parse(localStorage.getItem("mf_cache:"+k));}catch(e){return null;}}
+function cacheSet(k,val){try{localStorage.setItem("mf_cache:"+k,JSON.stringify(val));}catch(e){/* quota — cloud is still the backstop */}}
+// "dirty" = we have local edits that haven't been confirmed written to the cloud
+function isDirty(){return localStorage.getItem("mf_dirty")==="1";}
+function setDirty(v){if(v)localStorage.setItem("mf_dirty","1");else localStorage.removeItem("mf_dirty");}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let cloudReady=false; // true once the cloud has been read (or confirmed to have no bin yet)
 
+// fetch with retry on rate-limit (429) and transient 5xx; returns the Response or null
+async function jbinFetch(url,opts,tries=3){
+  for(let i=0;i<tries;i++){
+    try{
+      const r=await fetch(url,opts);
+      if(r.ok)return r;
+      if(r.status!==429&&r.status<500)return r; // hard error — don't burn retries
+    }catch(e){/* network — retry */}
+    if(i<tries-1)await sleep(500*(i+1));
+  }
+  return null;
+}
+// returns {ok:true,record} on success, {ok:true,record:null,noBin:true} when no bin exists
+// yet, {ok:false} when the cloud was unreachable (so callers never confuse "empty" with "down")
 async function jbinGet(k){
   const id=getBinId(k);
-  if(!id)return null;
-  try{
-    const r=await fetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
-    if(!r.ok)return null;
-    const d=await r.json();
-    return d.record;
-  }catch(e){return null;}
+  if(!id)return {ok:true,record:null,noBin:true};
+  const r=await jbinFetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
+  if(!r||!r.ok)return {ok:false};
+  try{const d=await r.json();return {ok:true,record:d.record};}catch(e){return {ok:false};}
 }
+// returns true on a confirmed write, false otherwise
 async function jbinSet(k,val){
   const id=getBinId(k);
   if(id){
-    // update existing bin
-    try{
-      const r=await fetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
-      if(!r.ok)throw new Error("put failed");
-    }catch(e){showBanner("Cloud save failed. Recent edits may not be synced — use Export JSON as a backup.");}
-  } else {
-    // create new bin
-    try{
-      const r=await fetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
-      if(!r.ok)throw new Error("create failed");
-      const d=await r.json();
-      setBinId(k,d.metadata.id);
-    }catch(e){showBanner("Cloud storage setup failed. Use Export JSON to keep your work.");}
+    const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
+    return !!(r&&r.ok);
   }
+  const r=await jbinFetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
+  if(r&&r.ok){try{const d=await r.json();setBinId(k,d.metadata.id);return true;}catch(e){return false;}}
+  return false;
 }
 
 async function loadAll(){
-  try{
-    const a=await jbinGet("library:monsters");state.lib=a?a.map(normalizeMonster):[];
-    const b=await jbinGet("library:adventures");state.adv=b?b.map(normalizeAdv):[];
-  }catch(e){/* bins not created yet — fine, will create on first save */}
+  // 1. instant hydrate from the local mirror so the UI is never empty while the cloud loads
+  const cl=cacheGet("library:monsters"),ca=cacheGet("library:adventures");
+  if(cl)state.lib=cl.map(normalizeMonster);
+  if(ca)state.adv=ca.map(normalizeAdv);
+  // 2. reconcile with the cloud
+  const a=await jbinGet("library:monsters"),b=await jbinGet("library:adventures");
+  if(a.ok&&b.ok){
+    cloudReady=true;
+    if(isDirty()){
+      // we have unsynced local edits — push them up rather than letting the cloud overwrite them
+      const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);
+      if(ok1&&ok2)setDirty(false);
+    } else {
+      // cloud is authoritative; only adopt it when a bin actually exists (else keep cache)
+      if(!a.noBin){state.lib=(a.record||[]).map(normalizeMonster);cacheSet("library:monsters",state.lib);}
+      if(!b.noBin){state.adv=(b.record||[]).map(normalizeAdv);cacheSet("library:adventures",state.adv);}
+    }
+  } else {
+    // cloud unreachable: keep the local mirror and pause nothing — _flush still caches every edit
+    cloudReady=false;
+    showBanner("Cloud unreachable — working from your local copy. Edits are saved on this device and will sync when the cloud is back.",hideBanner);
+  }
 }
 // debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
 let _saveTimer=null,_pend={lib:false,adv:false};
@@ -227,10 +259,14 @@ function saveLib(){_pend.lib=true;_schedule();}
 function saveAdv(){_pend.adv=true;_schedule();}
 function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
 async function _flush(){
-  try{
-    if(_pend.lib){_pend.lib=false;await jbinSet("library:monsters",state.lib);}
-    if(_pend.adv){_pend.adv=false;await jbinSet("library:adventures",state.adv);}
-  }catch(e){showBanner("A cloud save failed. Export JSON as a backup.");}
+  // local mirror first — this write cannot fail to a network, so work is never lost
+  cacheSet("library:monsters",state.lib);
+  cacheSet("library:adventures",state.adv);
+  let okAll=true;
+  if(_pend.lib){_pend.lib=false;if(!await jbinSet("library:monsters",state.lib))okAll=false;}
+  if(_pend.adv){_pend.adv=false;if(!await jbinSet("library:adventures",state.adv))okAll=false;}
+  if(okAll){setDirty(false);}
+  else{setDirty(true);showBanner("Cloud save failed — your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}
 }
 if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
 
@@ -249,6 +285,7 @@ function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"c
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
+  status:"Draft",tag:"",archived:false,
   _auto:{ac:true,hp:true}};}
 function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
   const w=String(str||"").match(/^\s*(\d+)\s*ft/i);if(w)s.walk=+w[1];
@@ -283,6 +320,10 @@ function normalizeMonster(m){
   m.villain.items=(m.villain.items||[]).map(e=>Object.assign({mode:"villain",round:e.round||1},e));
   m._auto=m._auto||{ac:false,hp:false};
   m.sort=m.sort||{};
+  // Bestiary organisation (Batch 13): workflow status, free-text tag, archive flag
+  if(!STATUSES.includes(m.status))m.status="Draft";
+  if(typeof m.tag!=="string")m.tag="";
+  m.archived=!!m.archived;
   return m;
 }
 function normalizeAdv(a){
@@ -653,6 +694,8 @@ function claudeMonster(m){
 
 function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)switchView(b.dataset.view);});
+// burger (narrow-width) menu mirrors the nav tabs; the global click handler closes the menu after
+$("#menu-top").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)switchView(b.dataset.view);});
 
 function renderLibrary(){
   const q=($("#libSearch").value||"").toLowerCase();
@@ -904,16 +947,26 @@ function bindEncEvents(a){
   q("[data-encup]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encup,-1)));
   q("[data-encdown]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encdown,1)));
   q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
-  q("[data-ovrsize]").forEach(el=>el.addEventListener("input",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
-  q("[data-ovrlevel]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-ovrsize]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrlevel]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
-  q("[data-ovrpc]").forEach(el=>el.addEventListener("input",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>{if(!state.lib.length){toast("Save a creature first, or use Quick / Forge.");return;}addMonsterCombatant(findEnc(a,el.dataset.addmon),state.lib[0].id);saveAdv();renderAdvDetail();}));
   q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
   q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.addforge);pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
-  q("[data-cf]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[cid,f]=el.dataset.cf.split(":");const{c}=findCombat(a,cid);if(!c)return;c[f]=(f==="count")?clamp(Number(el.value||1),1,99):el.value;saveAdv();if(["cr","count","faction","monsterId"].includes(f))renderEncList(a);});});
+  q("[data-cf]").forEach(el=>{
+    const[cid,f]=el.dataset.cf.split(":");
+    const store=()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=(f==="count")?clamp(Number(el.value||1),1,99):el.value;saveAdv();};
+    if(el.tagName==="SELECT"){el.addEventListener("change",()=>{store();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});}
+    else if(el.type==="number"){
+      // re-rendering on every keystroke would steal focus mid-typing — store live, refresh totals on commit
+      el.addEventListener("input",store);
+      el.addEventListener("change",()=>{store();renderEncList(a);});
+    }
+    else el.addEventListener("input",store); // free-text fields drive no re-render
+  });
   q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
 }
 function moveEnc(a,id,dir){
