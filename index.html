@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <div class="app" id="app">
@@ -16,6 +16,7 @@
     <button class="kebab" data-menu="top" title="Menu">⋯</button>
     <div class="menu" id="menu-top">
       <button id="topChassis">＋ New from chassis</button>
+      <button id="topPaste">⎀ Paste 5etools statblock</button>
       <button id="topExport">⭳ Export JSON</button>
       <button id="topImport">⭱ Import JSON</button>
     </div>
@@ -31,6 +32,7 @@
     <div class="stash">
       <span class="lbl">Library</span>
       <button class="mini" id="newFromChassis">＋ New from chassis</button>
+      <button class="mini" id="pasteStatblock">⎀ Paste statblock</button>
       <button class="mini" id="exportAll">⭳ Export JSON</button>
       <button class="mini" id="importAll">⭱ Import JSON</button>
       <input type="file" id="fileIn" accept="application/json" style="display:none">
@@ -226,6 +228,7 @@
           <div class="grow"></div>
           <button class="btn ghost sm" id="libNew" style="width:auto">＋ New creature</button>
           <button class="btn ghost sm" id="libChassis" style="width:auto">From chassis</button>
+          <button class="btn ghost sm" id="libPaste" style="width:auto">Paste statblock</button>
         </div>
         <div id="libBody"></div>
       </div>
@@ -245,6 +248,6 @@
 
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

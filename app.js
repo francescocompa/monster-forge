@@ -307,7 +307,11 @@ function paintDmg(){$$("#dmgGrid [data-dmg]").forEach(b=>{const st=M.dmg[b.datas
 function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
 function bindStatic(){
   bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
-  bindField("#f_acnote","acnote");bindField("#f_hpf","hpf");bindField("#f_init","init",true);
+  bindField("#f_acnote","acnote");bindField("#f_init","init",true);
+  $("#f_hpf").addEventListener("input",()=>{M.hpf=$("#f_hpf").value;
+    // a valid dice formula auto-derives HP, but only when HP is empty or just the CR autofill (not a manual edit)
+    if(/\d+\s*d\s*\d+/i.test(M.hpf)&&(M.hp==null||M._auto.hp)){M.hp=exprAvg(M.hpf);M._auto.hp=false;$("#f_hp").value=M.hp;$("#wb_hp").classList.remove("suggested");}
+    renderPreview();});
   bindField("#f_dmgnote","dmgnote");bindField("#f_cimm","cimm");bindField("#f_gear","gear");bindField("#f_lang","lang");
   $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
@@ -335,9 +339,14 @@ function bindStatic(){
   $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
 }
+// while HP is still auto (not manually set), derive it from a valid HP formula if present, else from CR
+function syncAutoHP(){if(!M._auto.hp)return;const f=M.hpf||"";const badge=$("#wb_hp .badge");
+  if(/\d+\s*d\s*\d+/i.test(f)){M.hp=exprAvg(f);if(badge)badge.textContent="avg";}
+  else{const boh=BOH[M.cr];if(boh)M.hp=boh[1];if(badge)badge.textContent="≈CR";}
+  $("#f_hp").value=M.hp??"";}
 function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
   if(M._auto.ac){M.ac=boh[0];$("#f_ac").value=boh[0];$("#wb_ac").classList.add("suggested");}
-  if(M._auto.hp){M.hp=boh[1];$("#f_hp").value=boh[1];$("#wb_hp").classList.add("suggested");}}
+  if(M._auto.hp){$("#wb_hp").classList.add("suggested");syncAutoHP();}}
 function updateHpDie(){const el=$("#f_hpf");if(!el)return;const sz=$("#f_size");const size=(sz&&sz.value)||M.size;el.placeholder="4"+(SIZE_DIE[size]||"d8")+" + 8";}
 function updateCRDisplay(){const el=$("#f_cr");if(el)el.value=M.cr;}
 function parseCRInput(v){v=String(v).trim().replace(/^cr\s*/i,"");if(CR_LIST.includes(v))return v;
@@ -696,7 +705,7 @@ $("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal(
 
 function monsterDirty(){const m=M;
   if(m.name.trim()||m.type||m.subtype||m.align||m.acnote||m.hpf||m.gear||m.dmgnote||m.cimm)return true;
-  if(m.ac!=null||m.hp!=null||(m.init!==""&&m.init!=null))return true;
+  if((m.ac!=null&&!m._auto.ac)||(m.hp!=null&&!m._auto.hp)||(m.init!==""&&m.init!=null))return true;
   if((m.lang||"Common")!=="Common"||m.cr!=="1")return true;
   if(ABILS.some(a=>m[a]!==10))return true;
   if(m.saves.length||m.skills.length||Object.keys(m.dmg).length)return true;
@@ -935,6 +944,9 @@ $("#topExport").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
 $("#topImport").addEventListener("click",()=>$("#fileIn").click());
 $("#topChassis").addEventListener("click",()=>openChassis());
+$("#topPaste").addEventListener("click",openImportModal);
+$("#pasteStatblock").addEventListener("click",openImportModal);
+$("#libPaste").addEventListener("click",openImportModal);
 $("#railCollapse").addEventListener("click",()=>$("#app").classList.add("nav-collapsed"));
 $("#railOpen").addEventListener("click",()=>$("#app").classList.remove("nav-collapsed"));
 $("#fileIn").addEventListener("change",e=>{
@@ -955,6 +967,86 @@ function copyModal(title,text,hint){
 function confirmModal(msg,onYes){
   openModalRaw(`<h3>Confirm</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn ghost sm" id="cNo" style="width:auto">Cancel</button><button class="btn primary sm" id="cYes" style="width:auto">Yes</button></div>`);
   $("#cNo").addEventListener("click",closeModal);$("#cYes").addEventListener("click",()=>{closeModal();onYes();});
+}
+
+// ── 5etools paste importer ────────────────────────────────────────────────────
+// Parses a 5e.tools / MM'25-style plain-text block into a monster. Label-keyed,
+// European-number tolerant; actions/traits imported as text entries.
+const SEC_HEADERS={traits:"traits",actions:"actions","bonus actions":"bonus",reactions:"reactions","legendary actions":"legend","lair actions":"lair","regional effects":"regional","villain actions":"villain"};
+function classifyDmg(str){const types={},note=[];String(str).split(/[,;]/).map(t=>t.trim()).filter(Boolean).forEach(tok=>{const hit=DMG_TYPES.find(d=>d.toLowerCase()===tok.toLowerCase());if(hit)types[hit]=1;else note.push(tok);});return{types,note};}
+// split a section's blocks into named entries; frequency/continuation lines fold into the previous entry
+function parseEntries(blocks){const out=[];(blocks||[]).forEach(b=>{b=b.trim();if(!b)return;
+  const isCont=/^(at will|cantrip|constant|\d\s*\/\s*day|\d(?:st|nd|rd|th)[- ]level|level \d)/i.test(b);
+  const mm=b.match(/^(.{1,60}?)\.\s+([\s\S]+)$/);
+  if(mm&&!isCont)out.push({name:mm[1].trim(),text:mm[2].trim()});
+  else if(out.length)out[out.length-1].text+="\n"+b;
+  else out.push({name:"",text:b});});
+  return out;}
+function splitIntro(blocks){if(!blocks||!blocks.length)return{intro:"",items:[]};
+  const introRe=/legendary action uses|immediately after another creature|on initiative count|can take \d+ legendary|^the .* takes a lair action|villain action/i;
+  if(introRe.test(blocks[0]))return{intro:blocks[0].trim(),items:parseEntries(blocks.slice(1))};
+  return{intro:"",items:parseEntries(blocks)};}
+function parse5etools(raw){
+  const m=blankMonster();m._auto={ac:false,hp:false};
+  const lines=raw.replace(/\r/g,"").split("\n").map(l=>l.trim());
+  let i=0;while(i<lines.length&&!lines[i])i++;if(i>=lines.length)return null;
+  m.name=lines[i++];
+  const sizeRe=/^(tiny|small|medium|large|huge|gargantuan)\b/i;
+  let typeIdx=-1;for(let j=i;j<lines.length;j++){if(/^AC\s/i.test(lines[j]))break;if(sizeRe.test(lines[j])){typeIdx=j;break;}}
+  if(typeIdx>=0){const parts=lines[typeIdx].split(",");const left=parts[0].trim();m.align=parts.slice(1).join(",").trim();
+    const sm=left.match(sizeRe);m.size=sm[0][0].toUpperCase()+sm[0].slice(1).toLowerCase();
+    let rest=left.replace(sizeRe,"").trim();const sub=rest.match(/\(([^)]+)\)/);if(sub){m.subtype=sub[1].trim();rest=rest.replace(/\([^)]*\)/,"").trim();}
+    m.type=rest;i=typeIdx+1;}
+  const isHeader=l=>SEC_HEADERS[l.toLowerCase()]!==undefined;
+  let secStart=lines.length;for(let j=i;j<lines.length;j++){if(isHeader(lines[j])){secStart=j;break;}}
+  let skillsRaw=null,mt;
+  for(let j=i;j<secStart;j++){const l=lines[j];if(!l)continue;
+    if(mt=l.match(/^AC\s+(\d+)\s*(?:\(([^)]+)\))?/i)){m.ac=+mt[1];if(mt[2])m.acnote=mt[2].trim();}
+    else if(mt=l.match(/^Initiative\s+([+-]?\d+)/i))m.init=+mt[1];
+    else if(mt=l.match(/^HP\s+(\d+)\s*(?:\(([^)]+)\))?/i)){m.hp=+mt[1];if(mt[2])m.hpf=mt[2].trim();}
+    else if(mt=l.match(/^Speed\s+(.+)/i))m.spd=Object.assign(m.spd,parseSpeed(mt[1]));
+    else if(mt=l.match(/^Skills?\s+(.+)/i))skillsRaw=mt[1];
+    else if(mt=l.match(/^Saving Throws?\s+(.+)/i))mt[1].split(",").forEach(s=>{const sm2=s.trim().match(/^(str|dex|con|int|wis|cha)/i);if(sm2&&!m.saves.includes(sm2[1].toLowerCase()))m.saves.push(sm2[1].toLowerCase());});
+    else if(mt=l.match(/^Immunities\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="imm");if(c.note.length)m.cimm=(m.cimm?m.cimm+", ":"")+c.note.join(", ");}
+    else if(mt=l.match(/^Resistances\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="res");if(c.note.length)m.dmgnote=c.note.map(n=>n+" (Resistance)").join("; ");}
+    else if(mt=l.match(/^Vulnerabilities\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="vuln");}
+    else if(mt=l.match(/^Condition Immunities\s+(.+)/i))m.cimm=(m.cimm?m.cimm+", ":"")+mt[1].trim();
+    else if(mt=l.match(/^Gear\s+(.+)/i))m.gear=mt[1].trim();
+    else if(mt=l.match(/^Senses\s+(.+)/i)){m.senses=parseSenses(mt[1]);
+      let other=mt[1].replace(/Passive Perception\s+\d+/i,"").replace(/(darkvision|blindsight|tremorsense|truesight)\s*\d+\s*ft\.?/ig,"").replace(/\bblind beyond[^,;]*/i,"").replace(/[,;\s]+$/,"").replace(/^[,;\s]+/,"").trim();
+      if(other)m.senses.other=other;}
+    else if(mt=l.match(/^Languages?\s+(.+)/i))m.lang=mt[1].trim();
+    else if(mt=l.match(/^(?:CR|Challenge(?: Rating)?)\s+([\d/]+)/i)){if(CR_LIST.includes(mt[1]))m.cr=mt[1];}
+    else if(/^(str|dex|con|int|wis|cha)$/i.test(l)){const ab=l.toLowerCase(),nums=[];let k=j+1;
+      while(k<secStart&&nums.length<3){const t=lines[k];if(t!==""){if(/^[+-]?\d+$/.test(t))nums.push(t);else break;}k++;}
+      if(nums.length>=1)m[ab]=+nums[0];
+      if(nums.length>=3&&Number(nums[2])!==mod(m[ab])&&!m.saves.includes(ab))m.saves.push(ab);
+      j=k-1;}}
+  if(skillsRaw){const pb=pbForCR(m.cr);skillsRaw.split(",").forEach(s=>{const mm2=s.trim().match(/^([A-Za-z' ]+?)\s*([+-]\d+)$/);if(!mm2)return;const nm=mm2[1].trim().replace(/ /g,"_");if(!SKILLS[nm])return;
+    const bonus=(+mm2[2])-mod(m[SKILLS[nm]]);m.skills.push([nm,bonus>=pb*2?"exp":bonus<=0?"none":"prof"]);});}
+  // sections → blank-line-separated blocks
+  let cur=null;const sec={};let buf=[];
+  const flush=()=>{if(buf.length){(sec[cur]=sec[cur]||[]).push(buf.join(" ").trim());buf=[];}};
+  for(let j=secStart;j<lines.length;j++){const l=lines[j];if(isHeader(l)){flush();cur=SEC_HEADERS[l.toLowerCase()];continue;}if(!cur)continue;if(l==="")flush();else buf.push(l);}
+  flush();
+  const toEntries=blocks=>parseEntries(blocks).map(e=>T(e.name,e.text));
+  if(sec.traits)m.traits=toEntries(sec.traits);
+  if(sec.actions)m.actions=toEntries(sec.actions);
+  if(sec.bonus)m.bonus=toEntries(sec.bonus);
+  if(sec.reactions)m.reactions=parseEntries(sec.reactions).map(e=>{const tm=e.text.match(/Trigger:\s*([\s\S]*?)\s*Response:\s*([\s\S]+)/i);return tm?{mode:"react",name:e.name,trigger:tm[1].trim(),response:tm[2].trim()}:{mode:"react",name:e.name,trigger:"",response:e.text};});
+  if(sec.legend){const s=splitIntro(sec.legend);m.legend={on:true,intro:s.intro,items:s.items.map(e=>T(e.name,e.text))};}
+  if(sec.lair){const s=splitIntro(sec.lair);m.lair={on:true,intro:s.intro,items:s.items.map(e=>T(e.name,e.text))};}
+  if(sec.villain){const s=splitIntro(sec.villain);m.villain={on:true,intro:s.intro,items:s.items.map((e,ix)=>Object.assign(T(e.name,e.text),{mode:"villain",round:Math.min(3,ix+1)}))};}
+  if(sec.regional)m.regional={on:true,text:(sec.regional||[]).join("\n\n")};
+  return m;}
+function openImportModal(){
+  openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Copy a creature's text from 5e.tools (or an MM'25-style block) and paste it below. Attacks come in as text; review in the Forge, then Save to Bestiary.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
+  setTimeout(()=>$("#impArea")&&$("#impArea").focus(),50);
+  $("#impCancel").addEventListener("click",closeModal);
+  $("#impGo").addEventListener("click",()=>{const raw=$("#impArea").value;if(!raw.trim()){toast("Paste a statblock first.");return;}
+    let m;try{m=parse5etools(raw);}catch(e){m=null;}
+    if(!m||!m.name){toast("Couldn't parse that — is it a 5etools block?");return;}
+    closeModal();loadMonster(m);switchView("forge");toast("Imported — review and Save to Bestiary.");});
 }
 
 document.addEventListener("click",e=>{
