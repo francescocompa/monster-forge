@@ -348,7 +348,7 @@ function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"c
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
-  status:"Draft",tag:"",archived:false,
+  status:"Draft",tags:[],archived:false,
   _auto:{ac:true,hp:true}};}
 function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
   const w=String(str||"").match(/^\s*(\d+)\s*ft/i);if(w)s.walk=+w[1];
@@ -385,7 +385,8 @@ function normalizeMonster(m){
   m.sort=m.sort||{};
   // Bestiary organisation (Batch 13): workflow status, free-text tag, archive flag
   if(!STATUSES.includes(m.status))m.status="Draft";
-  if(typeof m.tag!=="string")m.tag="";
+  if(typeof m.tag==="string"){m.tags=m.tag?[m.tag]:[];delete m.tag;} // migrate single tag → tags[]
+  if(!Array.isArray(m.tags))m.tags=[];
   m.archived=!!m.archived;
   return m;
 }
@@ -422,6 +423,19 @@ function renderDmg(){const box=$("#dmgRows");if(!box)return;
 $("#addDmg").addEventListener("click",()=>{const avail=DMG_TYPES.find(d=>!(d in M.dmg))||DMG_TYPES[0];M.dmg[avail]="res";renderDmg();renderPreview();});
 
 function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
+// Condition Immunities as removable chips. m.cimm stays a comma-joined string (compatible with
+// import/export and the statblock); the chip UI just splits/joins it.
+function cimmList(){return (M.cimm||"").split(",").map(s=>s.trim()).filter(Boolean);}
+function renderCimm(){const box=$("#cimmChips");if(!box)return;const list=cimmList();
+  box.innerHTML=list.map((c,i)=>`<span class="chip${findCondition(c)?" known":""}">${esc(c)}<button class="chipx" data-rmcimm="${i}" title="Remove">×</button></span>`).join("");
+  box.querySelectorAll("[data-rmcimm]").forEach(b=>b.addEventListener("click",()=>{const a=cimmList();a.splice(+b.dataset.rmcimm,1);M.cimm=a.join(", ");renderCimm();renderPreview();}));}
+function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
+  const add=v=>{v=(v||"").trim();if(!v)return;const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");ci.value="";renderCimm();renderPreview();};
+  ci.addEventListener("input",()=>{if(ci.value.includes(",")){const p=ci.value.split(",");p.slice(0,-1).forEach(add);ci.value=p[p.length-1];}});
+  ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add(ci.value);}else if(e.key==="Backspace"&&!ci.value){const a=cimmList();if(a.length){a.pop();M.cimm=a.join(", ");renderCimm();renderPreview();}}});
+  ci.addEventListener("change",()=>{if(ci.value.trim())add(ci.value);}); // datalist pick / commit on blur
+  $("#f_cimm_field").addEventListener("click",e=>{if(e.target.id==="f_cimm_field")ci.focus();});}
+function buildCondDatalist(){const dl=$("#condDatalist");if(!dl)return;dl.innerHTML=[...new Set(state.conditions.map(c=>c.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
 function bindStatic(){
   bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
   bindField("#f_acnote","acnote");bindField("#f_init","init",true);
@@ -429,7 +443,8 @@ function bindStatic(){
     // a valid dice formula auto-derives HP, but only when HP is empty or just the CR autofill (not a manual edit)
     if(/\d+\s*d\s*\d+/i.test(M.hpf)&&(M.hp==null||M._auto.hp)){M.hp=exprAvg(M.hpf);M._auto.hp=false;$("#f_hp").value=M.hp;$("#wb_hp").classList.remove("suggested");}
     renderPreview();});
-  bindField("#f_dmgnote","dmgnote");bindField("#f_cimm","cimm");bindField("#f_gear","gear");bindField("#f_lang","lang");
+  bindField("#f_dmgnote","dmgnote");bindField("#f_gear","gear");bindField("#f_lang","lang");
+  bindCimm();
   $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
   const itp=$("#f_initprof");itp.addEventListener("click",()=>{const nv=nextTri(itp.dataset.state);M.initProf=nv;paintTri(itp,nv);renderPreview();});
@@ -638,7 +653,7 @@ function loadMonster(m){
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
   $("#f_snword").value=M.shortName.word||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
-  $("#f_dmgnote").value=M.dmgnote||"";$("#f_cimm").value=M.cimm||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
+  $("#f_dmgnote").value=M.dmgnote||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
   ABILS.forEach(a=>$("#ab_"+a).value=M[a]);
   $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
   $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
@@ -648,7 +663,7 @@ function loadMonster(m){
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
   $$("[data-sort]").forEach(b=>b.classList.toggle("on",!!M.sort[b.dataset.sort]));
   if(M._auto.ac||M._auto.hp)applyCRAuto();
-  refreshAbil();renderDmg();renderSkills();renderEntries();renderPreview();
+  refreshAbil();renderDmg();renderSkills();renderCimm();renderEntries();renderPreview();
 }
 
 function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
@@ -658,7 +673,9 @@ function defenseStrings(m){
   const res=DMG_TYPES.filter(d=>m.dmg[d]==="res"),imm=DMG_TYPES.filter(d=>m.dmg[d]==="imm"),vuln=DMG_TYPES.filter(d=>m.dmg[d]==="vuln");
   const noteRes=[],noteImm=[],noteVuln=[];
   (m.dmgnote||"").split(";").map(x=>x.trim()).filter(Boolean).forEach(n=>{if(/vulnerab/i.test(n))noteVuln.push(n.replace(/\s*\(Vulnerability\)/i,""));else if(/immun/i.test(n))noteImm.push(n.replace(/\s*\(Immunity\)/i,""));else noteRes.push(n.replace(/\s*\(Resistance\)/i,""));});
-  return{res:[...res,...noteRes].join(", "),vuln:[...vuln,...noteVuln].join(", "),imm:[[...imm,...noteImm].join(", "),m.cimm].filter(Boolean).join("; ")};
+  const sj=a=>a.slice().sort((x,y)=>x.localeCompare(y)).join(", "); // always list alphabetically
+  const immDmg=sj([...imm,...noteImm]);
+  return{res:sj([...res,...noteRes]),vuln:sj([...vuln,...noteVuln]),immDmg,imm:[immDmg,m.cimm].filter(Boolean).join("; ")};
 }
 function sensesStr(m){const s=m.senses||{};let p=[];
   if(s.darkvision)p.push(`Darkvision ${s.darkvision} ft.`);
@@ -683,6 +700,33 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   return{main,groups};}
 function subName(t){return applyRefs(t);}
 function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");}
+// ── Spell / condition references (Batch 14) ──────────────────────────────────
+// Look up uploaded reference data by name (case-insensitive).
+function findSpell(name){const n=String(name||"").trim().toLowerCase();return state.spells.find(s=>(s.name||"").toLowerCase()===n);}
+function findCondition(name){const n=String(name||"").trim().toLowerCase();return state.conditions.find(c=>(c.name||"").toLowerCase()===n);}
+function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
+// Linkify a comma-separated spell list; matched spells become hover/click refs.
+function linkSpells(str){return String(str||"").split(",").map(tok=>{const t=tok.trim();if(!t)return "";return findSpell(t)?refSpan("spell",t):esc(t);}).filter(Boolean).join(", ");}
+// Build the hover/click card body for a spell or condition.
+function refContent(kind,name){
+  if(kind==="spell"){const s=findSpell(name);if(!s)return "";
+    const meta=s.level===0?(s.school+" cantrip"):s.level?("Level "+s.level+" "+s.school):s.school;
+    const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
+      .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
+    return `<div class="refcard-h">${esc(s.name)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtInline(s.text).replace(/\n/g,"<br>")}</div>`:""}`;}
+  const c=findCondition(name);if(!c)return "";
+  return `<div class="refcard-h">${esc(c.name)}${c.source?` <span class="refcard-src">${esc(c.source)}</span>`:""}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtInline(c.text).replace(/\n/g,"<br>")}</div>`:""}`;}
+let _refTimer=null;
+function ensureRefpop(){let p=$("#refpop");if(!p){p=document.createElement("div");p.id="refpop";p.className="refpop";document.body.appendChild(p);
+  p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);}return p;}
+function showRefpop(anchor,kind,name){const html=refContent(kind,name);if(!html)return;const p=ensureRefpop();p.innerHTML=html;p.classList.add("show");
+  const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
+  let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
+  p.style.left=left+"px";p.style.top=top+"px";}
+function hideRefpop(){clearTimeout(_refTimer);_refTimer=setTimeout(()=>{const p=$("#refpop");if(p)p.classList.remove("show");},140);}
+document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
+document.addEventListener("mouseout",e=>{if(e.target.closest&&e.target.closest(".reflink"))hideRefpop();});
+document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest("#refpop")))hideRefpop();},true);
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
@@ -711,17 +755,20 @@ function renderPreview(){
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
-  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
-  if(def.imm)h+=`<p><span class="k">Immunities</span> ${esc(def.imm)}</p>`;
+  const conds=(m.cimm||"").split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  const condHTML=conds.map(c=>findCondition(c)?refSpan("condition",c):esc(c)).join(", ");
+  const immLine=[def.immDmg?esc(def.immDmg):"",condHTML].filter(Boolean).join("; ");
+  if(immLine)h+=`<p><span class="k">Immunities</span> ${immLine}</p>`;
   if(m.gear)h+=`<p><span class="k">Gear</span> ${esc(m.gear)}</p>`;
   const sStr=sensesStr(m);
   h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
   h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
   h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
   const blk=e=>{
-    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${fmtInline(applyRefs(g.spells))}</p>`).join("");}
+    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
     const body=e.mode==="attack"?attackText(e):e.text;
     return `<p class="blk"><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
   };
@@ -785,7 +832,7 @@ let libUI={dir:1}; // sort direction; other filters read live from the DOM
 function buildLibFilters(){
   const crSel=$("#libCR"),tagSel=$("#libTag");if(!crSel)return;
   const crs=[...new Set(state.lib.map(m=>m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0));
-  const tags=[...new Set(state.lib.map(m=>m.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const tags=[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b));
   const keep=(sel,val)=>[...sel.options].some(o=>o.value===val)?val:"";
   const cv=keep(crSel,crSel.value),tv=keep(tagSel,tagSel.value);
   crSel.innerHTML=`<option value="">Any CR</option>`+crs.map(c=>`<option value="${c}">CR ${c}</option>`).join("");
@@ -795,15 +842,16 @@ function buildLibFilters(){
 }
 function renderLibrary(){
   const body=$("#libBody");
-  if(!state.lib.length){body.innerHTML=`<div class="empty-state">No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.</div>`;return;}
   const q=($("#libSearch").value||"").toLowerCase().trim();
   const st=$("#libStatus").value,cr=$("#libCR").value,tg=$("#libTag").value,sort=$("#libSort").value,dir=libUI.dir;
+  if(st==="Preset")return renderPresetCards(body,q,cr,sort,dir);
+  if(!state.lib.length){body.innerHTML=`<div class="empty-state">No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.</div>`;return;}
   let filt=state.lib.filter(m=>{
     if(q&&!m.name.toLowerCase().includes(q)&&!(m.type||"").toLowerCase().includes(q))return false;
     if(st==="Active"){if(m.archived)return false;}
     else if(st!=="All"&&m.status!==st)return false;
     if(cr&&m.cr!==cr)return false;
-    if(tg&&m.tag!==tg)return false;
+    if(tg&&!(m.tags||[]).includes(tg))return false;
     return true;
   });
   const cmp={name:(a,b)=>a.name.localeCompare(b.name),cr:(a,b)=>(CR_NUM[a.cr]??0)-(CR_NUM[b.cr]??0),xp:(a,b)=>xpOf(a)-xpOf(b),status:(a,b)=>STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status)}[sort]||((a,b)=>a.name.localeCompare(b.name));
@@ -811,16 +859,32 @@ function renderLibrary(){
   body.innerHTML=`<div class="cards">${filt.map(cardHTML).join("")}</div>`||"";
   if(!filt.length)body.innerHTML=`<div class="empty-state">No creatures match these filters.</div>`;
   const find=id=>state.lib.find(x=>x.id===id);
-  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap")||e.target.closest(".card-ctl"))return;loadMonster(find(el.dataset.card));switchView("forge");}));
+  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap")||e.target.closest(".tags")||e.target.closest(".card-tags"))return;loadMonster(find(el.dataset.card));switchView("forge");}));
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(find(b.dataset.edit));switchView("forge");}));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();buildLibFilters();renderLibrary();toast("Duplicated.");}));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();buildLibFilters();renderLibrary();toast("Deleted.");})));
   body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
   body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
   body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
-  body.querySelectorAll(".card-status").forEach(sel=>sel.addEventListener("change",()=>setStatus(find(sel.dataset.st),sel.value)));
-  body.querySelectorAll(".card-tag").forEach(inp=>inp.addEventListener("change",()=>{const m=find(inp.dataset.tag);m.tag=inp.value.trim();saveLib();buildLibFilters();renderLibrary();}));
+  body.querySelectorAll("[data-stchip]").forEach(ch=>ch.addEventListener("click",e=>{e.stopPropagation();openStatusMenu(find(ch.dataset.stchip),ch);}));
+  body.querySelectorAll("[data-addtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openTagAdd(find(b.dataset.addtag),b);}));
+  body.querySelectorAll("[data-rmtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const m=find(b.dataset.rmtag);m.tags=(m.tags||[]).filter(t=>t!==b.dataset.tagval);saveLib();buildLibFilters();renderLibrary();}));
 }
+// Small floating popover used by the status & tag-add chips.
+let _pop=null;
+function closePopover(){if(_pop){_pop.remove();_pop=null;document.removeEventListener("click",_popOutside,true);}}
+function _popOutside(e){if(_pop&&!_pop.contains(e.target))closePopover();}
+function showPopover(anchor,html){closePopover();const p=document.createElement("div");p.className="popover";p.innerHTML=html;document.body.appendChild(p);
+  const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-8);left=Math.max(8,left);
+  let top=r.bottom+4;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-4);
+  p.style.left=left+"px";p.style.top=top+"px";_pop=p;setTimeout(()=>document.addEventListener("click",_popOutside,true),0);return p;}
+function openStatusMenu(m,anchor){if(!m)return;const p=showPopover(anchor,STATUSES.map(s=>`<button class="popitem${s===m.status?" on":""}" data-s="${s}">${s}</button>`).join(""));
+  p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();setStatus(m,b.dataset.s);}));}
+function openTagAdd(m,anchor){if(!m)return;const p=showPopover(anchor,`<input type="text" class="popinput" list="libTagList" placeholder="Add or pick a tag…" autocomplete="off">`);
+  const inp=p.querySelector("input");inp.focus();
+  const commit=v=>{v=(v||"").replace(/,/g,"").trim();closePopover();if(v&&!(m.tags||[]).includes(v)){(m.tags=m.tags||[]).push(v);saveLib();}buildLibFilters();renderLibrary();};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit(inp.value);}else if(e.key==="Escape")closePopover();});
+  inp.addEventListener("input",()=>{if(inp.value.includes(","))commit(inp.value);});}
 function setStatus(m,status){if(!m)return;m.status=status;m.archived=(status==="Archived");saveLib();buildLibFilters();renderLibrary();}
 function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}">
   <div class="menu-wrap cardmenu">
@@ -837,12 +901,32 @@ function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" arch
     </div>
   </div>
   <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
-  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag">${xpOf(m).toLocaleString()} XP</span><span class="tag st st-${m.status}">${m.status}</span></div>
-  <div class="card-ctl">
-    <select class="card-status" data-st="${m.id}">${STATUSES.map(s=>`<option value="${s}" ${s===m.status?"selected":""}>${s}</option>`).join("")}</select>
-    <input class="card-tag" type="text" data-tag="${m.id}" value="${esc(m.tag||"")}" placeholder="tag" list="libTagList">
+  <div class="tags">
+    <span class="tag cr">CR ${m.cr}</span>
+    <span class="tag st st-${m.status} statchip" data-stchip="${m.id}">${m.status} <span class="caret">▾</span></span>
+  </div>
+  <div class="card-tags">
+    ${(m.tags||[]).map(t=>`<span class="tag tagchip">${esc(t)}<button class="chipx" data-rmtag="${m.id}" data-tagval="${esc(t)}" title="Remove tag">×</button></span>`).join("")}
+    <button class="tag addtag" data-addtag="${m.id}" title="Add tag">＋</button>
   </div>
 </div>`;}
+// "Preset" status view: built-in chassis + uploaded statblock presets, de-emphasised (like
+// Archived). These are reference bases — clicking one loads a fresh copy into the Forge.
+function presetPool(){return [...CHASSIS.map(m=>({m,src:"Built-in"})),...state.presets.map(m=>({m,src:m._source||"Uploaded"}))];}
+function presetCardHTML(o){const m=o.m;return `<div class="card preset" data-pick="${esc(m.id)}" title="Use as base">
+  <span class="src-badge${o.src==="Built-in"?" built":""}">${esc(o.src)}</span>
+  <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
+  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag st st-Preset">Preset</span></div>
+</div>`;}
+function renderPresetCards(body,q,cr,sort,dir){
+  let arr=presetPool().filter(o=>(!q||o.m.name.toLowerCase().includes(q)||(o.m.type||"").toLowerCase().includes(q))&&(!cr||o.m.cr===cr));
+  const cmp={name:(a,b)=>a.m.name.localeCompare(b.m.name),cr:(a,b)=>(CR_NUM[a.m.cr]??0)-(CR_NUM[b.m.cr]??0),xp:(a,b)=>xpOf(a.m)-xpOf(b.m)}[sort]||((a,b)=>a.m.name.localeCompare(b.m.name));
+  arr=arr.slice().sort((a,b)=>cmp(a,b)*dir||a.m.name.localeCompare(b.m.name));
+  if(!arr.length){body.innerHTML=`<div class="empty-state">No presets match. Upload a .md library from the sidebar (“Preset libraries…”).</div>`;return;}
+  const cap=200,shown=arr.slice(0,cap);
+  body.innerHTML=`<div class="cards">${shown.map(presetCardHTML).join("")}</div>${arr.length>cap?`<div class="hint" style="margin-top:10px">Showing first ${cap} of ${arr.length.toLocaleString()} — refine your search.</div>`:""}`;
+  body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(ch)applyChassis(ch,false,false);}));
+}
 $("#libSearch").addEventListener("input",renderLibrary);
 ["libStatus","libCR","libTag","libSort"].forEach(id=>$("#"+id).addEventListener("change",renderLibrary));
 $("#libDir").addEventListener("click",()=>{libUI.dir*=-1;$("#libDir").textContent=libUI.dir>0?"↑ A–Z":"↓ Z–A";renderLibrary();});
@@ -908,9 +992,9 @@ function openChassis(fromForge){
     <div class="toolbar chassis-tools">
       <input type="text" class="search" id="chSearch" placeholder="Search name…">
       <select class="filt" id="chSource">
+        <option value="all" selected>All sources</option>
         <option value="builtin">Built-in chassis</option>
         ${sources.map(s=>`<option value="src:${esc(s.name)}">${esc(s.name)} (${s.count})</option>`).join("")}
-        ${sources.length?`<option value="all">All sources</option>`:""}
       </select>
       <select class="filt" id="chCR"><option value="">Any CR</option>${CR_LIST.map(c=>`<option value="${c}">CR ${c}</option>`).join("")}</select>
       <div class="grow"></div>

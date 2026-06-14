@@ -110,7 +110,9 @@
             <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
             <div class="grid g2" style="margin-top:11px">
               <label class="f">Defense note<input type="text" id="f_dmgnote" placeholder="…from nonmagical attacks"></label>
-              <label class="f">Condition Immunities<input type="text" id="f_cimm" placeholder="Charmed, Frightened"></label>
+              <label class="f">Condition Immunities
+                <div class="chipfield" id="f_cimm_field"><span class="chips" id="cimmChips"></span><input type="text" id="f_cimm_input" class="chipinput" placeholder="add condition…" list="condDatalist" autocomplete="off"></div>
+              </label>
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Gear<input type="text" id="f_gear" placeholder="Longsword, Shield"></label>
@@ -236,6 +238,7 @@
               <option value="Draft">Draft</option>
               <option value="Ready">Ready</option>
               <option value="Archived">Archived</option>
+              <option value="Preset">Preset</option>
               <option value="All">All statuses</option>
             </select>
             <select class="filt" id="libCR"></select>
@@ -267,6 +270,7 @@
   </main>
 </div>
 
+<datalist id="condDatalist"></datalist>
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 <script>document.write('<script src="app.js?cb='+Date.now()+'"><\/script>');</script>
