@@ -147,6 +147,34 @@ const REACT_SNIPS={
   "Deflect Missiles":{trigger:"[C] is hit by a ranged attack roll and takes Bludgeoning, Piercing, or Slashing damage.",response:"[C] reduces the damage by 1d10 plus its Dexterity modifier."},
   "Opportunity Attack":{trigger:"A creature [c] can see leaves [c]'s reach.",response:"[C] makes one melee attack against the triggering creature."},
 };
+// Generic, reskinnable presets in the same [C]/[c]/{DC} token style as the trait library.
+const LEGEND_SNIPS={
+  "Attack":"[C] makes one attack.",
+  "Move":"[C] moves up to its Speed without provoking Opportunity Attacks.",
+  "Cantrip":"[C] casts one of its cantrips.",
+  "Detect":"[C] makes a Wisdom (Perception) check.",
+  "Teleport":"[C] teleports, along with any equipment it is wearing or carrying, up to 30 feet to an unoccupied space it can see.",
+  "Frightening Gaze":"[C] targets one creature it can see within 30 feet. The target makes a DC {DC} Wisdom saving throw or has the Frightened condition until the end of [c]'s next turn.",
+  "Tail Swipe":"[C] makes one melee attack with its tail against a creature within reach.",
+  "Wing Attack (Costs 2 Uses)":"[C] beats its wings. Each creature within 10 feet of [c] makes a DC {DC} Dexterity saving throw, taking 14 (4d6) Bludgeoning damage on a failed save, or half as much on a success. [C] can then fly up to half its Speed.",
+  "Drain (Costs 2 Uses)":"One creature within 30 feet of [c] makes a DC {DC} Constitution saving throw, taking 14 (4d6) Necrotic damage on a failed save, or half as much on a success.",
+  "Summon (Costs 2 Uses)":"[C] summons one ally of challenge rating 2 or lower in an unoccupied space within 30 feet; it acts on [c]'s initiative.",
+};
+const VILLAIN_SNIPS={
+  "Reposition":"[C] and each ally within 30 feet of it can move up to their Speed without provoking Opportunity Attacks.",
+  "Signature Strike":"[C] makes one attack against each creature of its choice that it can reach.",
+  "Area Assault":"Each creature in a 20-foot-radius Sphere centered on a point [c] can see within 60 feet makes a DC {DC} Dexterity saving throw, taking 21 (6d6) damage on a failed save, or half as much on a success.",
+  "Rallying Command":"Each ally within 30 feet of [c] can immediately use its Reaction to make one attack.",
+  "Desperate Gambit":"[C] takes the Dodge action and regains 22 (4d10) Hit Points. Until the start of its next turn, the first attack roll against [c] each turn has Disadvantage.",
+  "Mass Debilitation":"Each enemy within 30 feet of [c] makes a DC {DC} Constitution saving throw or has the Frightened condition until the end of [c]'s next turn.",
+};
+const LAIR_SNIPS={
+  "Grasping Terrain":"The ground in a 20-foot-radius area [c] can see becomes Difficult Terrain until the next lair action. Each creature there makes a DC {DC} Strength saving throw or has the Restrained condition until the next lair action.",
+  "Eruption":"[C] targets a point it can see within 60 feet. Each creature within a 5-foot radius makes a DC {DC} Dexterity saving throw, taking 11 (2d10) damage on a failed save, or half as much on a success.",
+  "Obscuring Veil":"A 20-foot-radius Sphere of magical mist appears within 120 feet of [c], Heavily Obscuring its area until the next lair action.",
+  "Hazardous Ground":"A 15-foot-radius area [c] can see becomes hazardous until the next lair action. A creature that enters it for the first time on a turn or starts its turn there makes a DC {DC} Constitution saving throw, taking 7 (2d6) damage on a failure.",
+  "Summon Hazard":"[C] conjures a creature of challenge rating 1 or lower in an unoccupied space it can see within 60 feet; it acts on initiative count 20.",
+};
 const LIB_PROMPT='<option value="">＋ From library…</option>';
 const CHASSIS=[
   mk({id:"c_commoner",name:"Commoner",ac:10,hp:4,hpf:"1d8",s:[10,10,10,10,10,10],cr:"0",actions:[ATK({name:"Club",dice:"1d4",addMod:false,dtype:"Bludgeoning",reach:5})]}),
@@ -536,6 +564,9 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
   else if(kind==="actions"){if(pre==="atk")M.actions.push(ATK(Object.assign({name},clone(ATK_PRESETS[name]))));else M.actions.push(T(name,expandSnip(TEXT_ACTIONS[name])));}
   else if(kind==="bonus")M.bonus.push(T(name,expandSnip(BONUS_SNIPS[name])));
   else if(kind==="reactions"){const s=REACT_SNIPS[name];M.reactions.push({mode:"react",name,trigger:expandSnip(s.trigger),response:expandSnip(s.response)});}
+  else if(kind==="legend")M.legend.items.push(T(name,expandSnip(LEGEND_SNIPS[name])));
+  else if(kind==="lair")M.lair.items.push(T(name,expandSnip(LAIR_SNIPS[name])));
+  else if(kind==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name,text:expandSnip(VILLAIN_SNIPS[name])});
   if(M.sort&&M.sort[kind])sortEntries(kind);renderEntries();renderPreview();}
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
 function buildLibSelects(){
@@ -546,6 +577,9 @@ function buildLibSelects(){
   $('[data-lib="actions"]').innerHTML=LIB_PROMPT+`<optgroup label="Attacks — guided">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
   $('[data-lib="bonus"]').innerHTML=LIB_PROMPT+pre("txt",Object.keys(BONUS_SNIPS));
   $('[data-lib="reactions"]').innerHTML=LIB_PROMPT+pre("react",Object.keys(REACT_SNIPS));
+  $('[data-lib="legend"]').innerHTML=LIB_PROMPT+list(Object.keys(LEGEND_SNIPS));
+  $('[data-lib="villain"]').innerHTML=LIB_PROMPT+list(Object.keys(VILLAIN_SNIPS));
+  $('[data-lib="lair"]').innerHTML=LIB_PROMPT+list(Object.keys(LAIR_SNIPS));
   $$("[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
   buildDatalist("dl-traits",Object.keys(TRAIT_SNIPS));
   buildDatalist("dl-atk",Object.keys(ATK_PRESETS));
