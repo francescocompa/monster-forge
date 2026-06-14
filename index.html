@@ -41,8 +41,13 @@
       <div class="forge">
         <div class="form-col" id="formCol">
           <div class="col-head">
-            <div><h2 id="forgeTitle">New Creature</h2></div>
-            <div style="display:flex;gap:8px"><button class="btn ghost sm" id="forgeChassis" style="width:auto">Load chassis</button></div>
+            <h2 id="forgeTitle">New Creature</h2>
+            <div class="forge-actions">
+              <button class="btn ghost sm" id="forgePaste" style="width:auto">⎀ Paste 5etools</button>
+              <button class="btn ghost sm" id="forgeChassis" style="width:auto">⊕ Load chassis</button>
+              <button class="btn ghost sm" id="clearForge" style="width:auto">Clear</button>
+              <button class="btn primary sm" id="saveMonster" style="width:auto">⚒ Save to Bestiary</button>
+            </div>
           </div>
 
           <fieldset class="fieldset">
@@ -98,8 +103,9 @@
             <div class="fs-sub">Skills</div>
             <div id="skillRows"></div>
             <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
-            <div class="fs-sub">Damage types <span style="color:var(--faint);text-transform:none;letter-spacing:0">— click to cycle: none → Resist → Immune → Vulnerable</span></div>
-            <div class="dmg-grid" id="dmgGrid"></div>
+            <div class="fs-sub">Damage modifiers</div>
+            <div id="dmgRows"></div>
+            <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
             <div class="grid g2" style="margin-top:11px">
               <label class="f">Defense note<input type="text" id="f_dmgnote" placeholder="…from nonmagical attacks"></label>
               <label class="f">Condition Immunities<input type="text" id="f_cimm" placeholder="Charmed, Frightened"></label>
@@ -179,7 +185,8 @@
             </div>
           </fieldset>
 
-          <fieldset class="fieldset" id="fsHelp">
+          <hr class="section-div">
+          <div id="fsHelp" class="bracket-help">
             <div class="fs-title">Bracket shortcuts</div>
             <p class="hint" style="margin:-4px 0 10px">Type these tokens in any trait, action, reaction, or note. They expand in the preview and in every export.</p>
             <table class="shortcuts"><tbody>
@@ -189,7 +196,7 @@
               <tr><td><code>[2d6 + 6]</code></td><td class="res">Averages any dice expression on render → <b>13 (2d6 + 6)</b>.</td></tr>
               <tr><td><code>{C}</code> · <code>{c}</code> · <code>{s}</code></td><td class="res">Brace forms are accepted too, in case square brackets clash with your text.</td></tr>
             </tbody></table>
-          </fieldset>
+          </div>
         </div>
 
         <div class="preview-col">
@@ -198,18 +205,9 @@
           <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
           <div class="outs">
             <div class="save-row">
-              <button class="btn primary" id="saveMonster">⚒ Save to Bestiary</button>
-              <div class="menu-wrap">
-                <button class="kebab" data-menu="forge" title="More">⋯</button>
-                <div class="menu up" id="menu-forge">
-                  <button id="pushClaude">Copy for Claude <span class="sub">→ push to Notion</span></button>
-                  <button id="copyNotion">Copy for Notion <span class="sub">manual · single-column</span></button>
-                  <div class="sep"></div>
-                  <button class="danger" id="clearForge">Clear forge</button>
-                </div>
-              </div>
+              <button id="pushClaude" class="btn ghost sm" style="width:auto">Copy for Claude</button>
+              <button id="copyNotion" class="btn ghost sm" style="width:auto">Copy for Notion</button>
             </div>
-            <p class="hint">“Copy for Claude” sends structured data — paste in chat and I build the Notion page in MM25 two-column format and set AC/HP/XP/CR. “Copy for Notion” is the no-tokens fallback (single-column paste; set properties by hand).</p>
           </div>
         </div>
       </div>

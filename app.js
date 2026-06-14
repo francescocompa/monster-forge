@@ -344,9 +344,22 @@ function normalizeAdv(a){
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
 function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
-function buildDmgGrid(){$("#dmgGrid").innerHTML=DMG_TYPES.map(d=>`<button class="dchip" data-dmg="${d}"><span class="st">–</span>${d}</button>`).join("");
-  $$("#dmgGrid [data-dmg]").forEach(b=>b.addEventListener("click",()=>{const d=b.dataset.dmg;const order=["none","res","imm","vuln"];const cur=M.dmg[d]||"none";const nx=order[(order.indexOf(cur)+1)%4];if(nx==="none")delete M.dmg[d];else M.dmg[d]=nx;paintDmg();renderPreview();}));}
-function paintDmg(){$$("#dmgGrid [data-dmg]").forEach(b=>{const st=M.dmg[b.dataset.dmg]||"none";b.className="dchip"+(st!=="none"?" "+st:"");b.querySelector(".st").textContent={none:"–",res:"R",imm:"I",vuln:"V"}[st];});}
+// Damage modifiers — same shape as the Skills section: one row per type = name select +
+// 3-state toggle (Resist/Immune/Vulnerable) + remove. "All Physical" expands to B/P/S.
+const DMG3=[["res","Resist"],["imm","Immune"],["vuln","Vulnerable"]];
+const DMG_SELECT=["All Physical",...DMG_TYPES];
+const PHYS=["Bludgeoning","Piercing","Slashing"];
+function renderDmg(){const box=$("#dmgRows");if(!box)return;
+  const entries=Object.entries(M.dmg);
+  box.innerHTML=entries.length?entries.map(([type,st])=>`<div class="rowline">
+    <select data-dt="${esc(type)}" class="dmgName">${DMG_SELECT.map(d=>`<option value="${d}" ${d===type?"selected":""}>${d}</option>`).join("")}</select>
+    <button type="button" class="tritog dmgState" data-dt="${esc(type)}"></button>
+    <button class="iconbtn" data-rmdmg="${esc(type)}">✕</button></div>`).join(""):`<div class="hint" style="margin:2px 0">No damage modifiers — add resistances, immunities, or vulnerabilities.</div>`;
+  box.querySelectorAll(".dmgName").forEach(el=>el.addEventListener("change",e=>{const old=e.target.dataset.dt,val=e.target.value,st=M.dmg[old]||"res";delete M.dmg[old];if(val==="All Physical")PHYS.forEach(t=>M.dmg[t]=st);else M.dmg[val]=st;renderDmg();renderPreview();}));
+  box.querySelectorAll(".dmgState").forEach(el=>{const t=el.dataset.dt;paintTri(el,M.dmg[t]||"res",DMG3);el.addEventListener("click",()=>{const nv=nextTri(M.dmg[t]||"res",DMG3);M.dmg[t]=nv;paintTri(el,nv,DMG3);renderPreview();});});
+  box.querySelectorAll("[data-rmdmg]").forEach(el=>el.addEventListener("click",()=>{delete M.dmg[el.dataset.rmdmg];renderDmg();renderPreview();}));
+}
+$("#addDmg").addEventListener("click",()=>{const avail=DMG_TYPES.find(d=>!(d in M.dmg))||DMG_TYPES[0];M.dmg[avail]="res";renderDmg();renderPreview();});
 
 function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
 function bindStatic(){
@@ -569,7 +582,7 @@ function loadMonster(m){
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
   $$("[data-sort]").forEach(b=>b.classList.toggle("on",!!M.sort[b.dataset.sort]));
   if(M._auto.ac||M._auto.hp)applyCRAuto();
-  refreshAbil();paintDmg();renderSkills();renderEntries();renderPreview();
+  refreshAbil();renderDmg();renderSkills();renderEntries();renderPreview();
 }
 
 function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
@@ -611,16 +624,17 @@ function mainAttackBonus(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const atk=m.act
   if(atk)return{val:atk.atk!==""&&atk.atk!=null?Number(atk.atk):mod(m[atk.ability])+pb,cr:false};
   return{val:boh?boh[2]:null,cr:true};}
 function mainSaveDC(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const sp=m.actions.find(e=>e.mode==="spell");
-  if(sp)return{val:sp.dc!==""&&sp.dc!=null?Number(sp.dc):8+pb+mod(m[sp.ability]||0),cr:false};
-  return{val:boh?boh[4]:null,cr:true};}
+  if(sp)return{val:sp.dc!==""&&sp.dc!=null?Number(sp.dc):8+pb+mod(m[sp.ability]||0),cr:false,abil:sp.ability};
+  // CR-target DC is keyed off the creature's best ability
+  return{val:boh?boh[4]:null,cr:true,abil:ABILS.reduce((a,b)=>mod(m[b])>mod(m[a])?b:a,"str")};}
 function renderPreview(){
   const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
   const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
   const ab=mainAttackBonus(m),dc=mainSaveDC(m);
-  const chip=(lbl,val,approx,tip)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}</b></div>`;
+  const chip=(lbl,val,approx,tip,suf)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}${suf?` <span class="dabil">${suf}</span>`:""}</b></div>`;
   $("#derived").innerHTML=chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
     +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
-    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"");
+    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"");
   $("#crTargets").innerHTML=boh?`<b>CR ${m.cr} targets</b> — AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
   $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
   const initVal=initOf(m);
@@ -732,6 +746,7 @@ $("#libSearch").addEventListener("input",renderLibrary);
 $("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
+$("#forgePaste").addEventListener("click",openImportModal);
 $("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any unsaved edits to this creature will be lost.",()=>{loadMonster(blankMonster());toast("Cleared.");}));
 
 $("#saveMonster").addEventListener("click",async()=>{
@@ -1150,7 +1165,7 @@ function wrapStepper(input,step,min){
 }
 
 (async function init(){
-  buildAbilityGrid();buildDmgGrid();
+  buildAbilityGrid();
   fillSelect("#f_size",SIZES);
   bindStatic();buildCRStepper();buildLibSelects();
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
