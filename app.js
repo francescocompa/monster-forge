@@ -204,8 +204,17 @@ const CHASSIS=[
   mk({id:"c_archfiend",name:"Archfiend",size:"Large",type:"Fiend",ac:19,acnote:"natural armor",hp:262,hpf:"21d10+147",s:[26,15,24,22,18,26],cr:"17",saves:["str","con","wis","cha"],dmg:{Cold:"res",Fire:"imm",Poison:"imm"},cimm:"Charmed, Frightened, Poisoned",senses:"Truesight 120 ft.",traits:[T("Legendary Resistance (3/Day)","If the archfiend fails a save, it can choose to succeed instead."),T("Magic Resistance","Advantage on saves against spells and other magical effects.")],actions:[T("Multiattack","The archfiend makes one Flame Blade attack and one Slam attack."),ATK({name:"Flame Blade",dice:"3d6",reach:10,dtype:"Slashing",extra:"plus 13 (3d8) Fire damage."}),T("Hellfire (Recharge 5–6)","Dexterity Saving Throw: DC 21, each creature in a 30-foot-radius Sphere within 120 ft. Failure: 52 (15d6) Fire damage. Success: Half damage.")],legend:{on:true,intro:"",items:[T("Teleport","The archfiend teleports up to 120 feet."),T("Hurl Flame","Ranged attack, +14, range 120 ft., 13 (3d8) Fire damage."),T("Dread (Costs 2 Uses)","Each creature within 30 ft. makes a DC 21 Wis save or is Frightened until the end of its next turn.")]},lair:{on:true,intro:"",items:[T("Eruption","Magma erupts from a point the archfiend can see within its lair; each creature in a 5-ft radius makes a DC 18 Dex save, taking 11 (2d10) Fire damage on a failure.")],regional:""}}),
 ];
 
-let state={lib:[],adv:[],selAdv:null};
+let state={lib:[],adv:[],selAdv:null,presets:[]};
 let M=null, pendingForge=null;
+
+// ── Uploaded preset library (Batch 13) ───────────────────────────────────────
+// 5etools .md statblock dumps the user uploads at runtime. Stored in localStorage
+// only (never JSONBin / never the repo): they're bulky reference data and the text
+// is copyrighted, so they stay on-device. Grouped by source filename.
+const PRESET_KEY="mf_presets";
+function loadPresets(){try{state.presets=(JSON.parse(localStorage.getItem(PRESET_KEY))||[]).map(normalizeMonster);}catch(e){state.presets=[];}}
+function savePresets(){try{localStorage.setItem(PRESET_KEY,JSON.stringify(state.presets));}catch(e){toast("Couldn't store presets — device storage may be full.");}}
+function presetSources(){const s=[];state.presets.forEach(m=>{const k=m._source||"Uploaded";const e=s.find(x=>x.name===k);if(e)e.count++;else s.push({name:k,count:1});});return s;}
 
 // ── JSONBin cloud storage ─────────────────────────────────────────────────────
 // Personal-use master key (full CRUD). The previous value was a read-only ACCESS key,
@@ -745,28 +754,59 @@ function claudeMonster(m){
 
 const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures"};
 function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
-function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
+function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library"){buildLibFilters();renderLibrary();}if(v==="adventures")renderAdvList();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
+let libUI={dir:1}; // sort direction; other filters read live from the DOM
+// Populate the CR + tag filter dropdowns from current data, preserving the active choice.
+function buildLibFilters(){
+  const crSel=$("#libCR"),tagSel=$("#libTag");if(!crSel)return;
+  const crs=[...new Set(state.lib.map(m=>m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0));
+  const tags=[...new Set(state.lib.map(m=>m.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const keep=(sel,val)=>[...sel.options].some(o=>o.value===val)?val:"";
+  const cv=keep(crSel,crSel.value),tv=keep(tagSel,tagSel.value);
+  crSel.innerHTML=`<option value="">Any CR</option>`+crs.map(c=>`<option value="${c}">CR ${c}</option>`).join("");
+  tagSel.innerHTML=`<option value="">Any tag</option>`+tags.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")+(tags.length?"":"");
+  crSel.value=cv;tagSel.value=tv;
+  const dl=$("#libTagList");if(dl)dl.innerHTML=tags.map(t=>`<option value="${esc(t)}">`).join("");
+}
 function renderLibrary(){
-  const q=($("#libSearch").value||"").toLowerCase();
-  const filt=state.lib.filter(m=>!q||m.name.toLowerCase().includes(q)||(m.type||"").toLowerCase().includes(q));
   const body=$("#libBody");
   if(!state.lib.length){body.innerHTML=`<div class="empty-state">No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.</div>`;return;}
-  body.innerHTML=`<div class="cards">${filt.map(cardHTML).join("")||`<div class="empty-state">No matches.</div>`}</div>`;
-  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap"))return;loadMonster(state.lib.find(x=>x.id===el.dataset.card));switchView("forge");}));
-  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(state.lib.find(x=>x.id===b.dataset.edit));switchView("forge");}));
-  body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(state.lib.find(x=>x.id===b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
-  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${state.lib.find(x=>x.id===b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
-  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
-  body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
+  const q=($("#libSearch").value||"").toLowerCase().trim();
+  const st=$("#libStatus").value,cr=$("#libCR").value,tg=$("#libTag").value,sort=$("#libSort").value,dir=libUI.dir;
+  let filt=state.lib.filter(m=>{
+    if(q&&!m.name.toLowerCase().includes(q)&&!(m.type||"").toLowerCase().includes(q))return false;
+    if(st==="Active"){if(m.archived)return false;}
+    else if(st!=="All"&&m.status!==st)return false;
+    if(cr&&m.cr!==cr)return false;
+    if(tg&&m.tag!==tg)return false;
+    return true;
+  });
+  const cmp={name:(a,b)=>a.name.localeCompare(b.name),cr:(a,b)=>(CR_NUM[a.cr]??0)-(CR_NUM[b.cr]??0),xp:(a,b)=>xpOf(a)-xpOf(b),status:(a,b)=>STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status)}[sort]||((a,b)=>a.name.localeCompare(b.name));
+  filt=filt.slice().sort((a,b)=>cmp(a,b)*dir||a.name.localeCompare(b.name));
+  body.innerHTML=`<div class="cards">${filt.map(cardHTML).join("")}</div>`||"";
+  if(!filt.length)body.innerHTML=`<div class="empty-state">No creatures match these filters.</div>`;
+  const find=id=>state.lib.find(x=>x.id===id);
+  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap")||e.target.closest(".card-ctl"))return;loadMonster(find(el.dataset.card));switchView("forge");}));
+  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(find(b.dataset.edit));switchView("forge");}));
+  body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();buildLibFilters();renderLibrary();toast("Duplicated.");}));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();buildLibFilters();renderLibrary();toast("Deleted.");})));
+  body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
+  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
+  body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
+  body.querySelectorAll(".card-status").forEach(sel=>sel.addEventListener("change",()=>setStatus(find(sel.dataset.st),sel.value)));
+  body.querySelectorAll(".card-tag").forEach(inp=>inp.addEventListener("change",()=>{const m=find(inp.dataset.tag);m.tag=inp.value.trim();saveLib();buildLibFilters();renderLibrary();}));
 }
-function cardHTML(m){return `<div class="card" data-card="${m.id}">
+function setStatus(m,status){if(!m)return;m.status=status;m.archived=(status==="Archived");saveLib();buildLibFilters();renderLibrary();}
+function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
     <div class="menu" id="menu-lib-${m.id}">
       <button data-edit="${m.id}">Edit</button>
       <button data-dup="${m.id}">Duplicate</button>
+      <button data-arch="${m.id}">${arch?"Restore":"Archive"}</button>
+      <div class="sep"></div>
       <button data-claude="${m.id}">Copy for Claude</button>
       <button data-notion="${m.id}">Copy for Notion</button>
       <div class="sep"></div>
@@ -774,9 +814,15 @@ function cardHTML(m){return `<div class="card" data-card="${m.id}">
     </div>
   </div>
   <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
-  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag">${xpOf(m).toLocaleString()} XP</span></div>
+  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag">${xpOf(m).toLocaleString()} XP</span><span class="tag st st-${m.status}">${m.status}</span></div>
+  <div class="card-ctl">
+    <select class="card-status" data-st="${m.id}">${STATUSES.map(s=>`<option value="${s}" ${s===m.status?"selected":""}>${s}</option>`).join("")}</select>
+    <input class="card-tag" type="text" data-tag="${m.id}" value="${esc(m.tag||"")}" placeholder="tag" list="libTagList">
+  </div>
 </div>`;}
 $("#libSearch").addEventListener("input",renderLibrary);
+["libStatus","libCR","libTag","libSort"].forEach(id=>$("#"+id).addEventListener("change",renderLibrary));
+$("#libDir").addEventListener("click",()=>{libUI.dir*=-1;$("#libDir").textContent=libUI.dir>0?"↑ A–Z":"↓ Z–A";renderLibrary();});
 $("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
@@ -828,18 +874,54 @@ function applyChassis(ch,keepId,merge){
   let base;
   if(merge)base=mergeChassis(ch);
   else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};}
+  delete base._preset;delete base._source;
   loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
 }
+function findChassis(id){return CHASSIS.find(x=>x.id===id)||state.presets.find(x=>x.id===id);}
 function openChassis(fromForge){
-  const groups={};CHASSIS.forEach(c=>{(groups[c.cr]=groups[c.cr]||[]).push(c);});
-  let h=`<h3>Start from a chassis</h3><p class="hint" style="margin:-4px 0 14px">Generic, editable bases. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>`;
-  CR_LIST.filter(cr=>groups[cr]).forEach(cr=>{h+=`<div class="section-label" style="margin-top:14px">CR ${cr} · ${(CR_XP[cr]||0).toLocaleString()} XP</div><div class="cards">`;groups[cr].forEach(c=>{h+=`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(c.name)}</h4><div class="meta">${esc(c.size+" "+c.type)}</div><div style="margin-top:auto;padding-top:6px"><button class="btn ghost sm" data-pick="${c.id}" style="width:100%">Use as base</button></div></div>`;});h+=`</div>`;});
+  const sources=presetSources();
+  openModalRaw(`<h3>Start from a chassis</h3>
+    <p class="hint" style="margin:-4px 0 12px">Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>
+    <div class="toolbar chassis-tools">
+      <input type="text" class="search" id="chSearch" placeholder="Search name…">
+      <select class="filt" id="chSource">
+        <option value="builtin">Built-in chassis</option>
+        ${sources.map(s=>`<option value="src:${esc(s.name)}">${esc(s.name)} (${s.count})</option>`).join("")}
+        ${sources.length?`<option value="all">All sources</option>`:""}
+      </select>
+      <select class="filt" id="chCR"><option value="">Any CR</option>${CR_LIST.map(c=>`<option value="${c}">CR ${c}</option>`).join("")}</select>
+      <div class="grow"></div>
+      <select class="filt" id="chSort"><option value="cr">CR ↑</option><option value="name">Name</option></select>
+    </div>
+    <div id="chBody"></div>`);
+  const pool=()=>{const src=$("#chSource").value;
+    if(src==="builtin")return CHASSIS.map(m=>({m,src:"Built-in"}));
+    if(src==="all")return [...CHASSIS.map(m=>({m,src:"Built-in"})),...state.presets.map(m=>({m,src:m._source}))];
+    return state.presets.filter(m=>m._source===src.slice(4)).map(m=>({m,src:m._source}));};
+  function draw(){
+    const q=$("#chSearch").value.toLowerCase().trim(),cr=$("#chCR").value,sort=$("#chSort").value;
+    let arr=pool().filter(o=>(!q||o.m.name.toLowerCase().includes(q))&&(!cr||o.m.cr===cr));
+    arr.sort(sort==="name"?(a,b)=>a.m.name.localeCompare(b.m.name):(a,b)=>((CR_NUM[a.m.cr]??0)-(CR_NUM[b.m.cr]??0))||a.m.name.localeCompare(b.m.name));
+    const body=$("#chBody"),cap=200,shown=arr.slice(0,cap);
+    if(!arr.length){body.innerHTML=`<div class="empty-state" style="padding:30px">No matches.${state.presets.length?"":" Upload a .md preset library from the sidebar (“Preset libraries…”) to add more bases."}</div>`;return;}
+    body.innerHTML=`<div class="cards">${shown.map(o=>`<div class="card" style="cursor:default"><span class="src-badge${o.src==="Built-in"?" built":""}">${esc(o.src)}</span><h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">Use as base</button></div></div>`).join("")}</div>${arr.length>cap?`<div class="hint" style="margin-top:10px">Showing first ${cap} of ${arr.length.toLocaleString()} — refine your search.</div>`:""}`;
+    body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;closeModal();
+      if(fromForge===true&&monsterDirty())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
+  }
+  $("#chSearch").addEventListener("input",draw);
+  ["chSource","chCR","chSort"].forEach(id=>$("#"+id).addEventListener("change",draw));
+  draw();setTimeout(()=>$("#chSearch")&&$("#chSearch").focus(),50);
+}
+function presetModal(){
+  const sources=presetSources();
+  let h=`<h3>Preset libraries</h3><p class="hint" style="margin:-4px 0 14px">Upload 5etools-style <code>.md</code> statblock dumps to use as bases in <b>From chassis</b>. Parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo.</p>`;
+  if(sources.length)h+=`<div class="preset-list">`+sources.map(s=>`<div class="preset-row"><div><b>${esc(s.name)}</b><span class="hint"> · ${s.count.toLocaleString()} statblocks</span></div><button class="iconbtn" data-rmsrc="${esc(s.name)}" title="Remove library">✕</button></div>`).join("")+`</div>`;
+  else h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
+  h+=`<div class="mrow"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .md files</button></div>`;
   openModalRaw(h);
-  $("#modal").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{
-    const ch=CHASSIS.find(x=>x.id===b.dataset.pick);closeModal();
-    if(fromForge===true&&monsterDirty())chassisConflictModal(ch);
-    else applyChassis(ch,fromForge===true,false);
-  }));
+  $("#prClose").addEventListener("click",closeModal);
+  $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
+  $("#modal").querySelectorAll("[data-rmsrc]").forEach(b=>b.addEventListener("click",()=>{const n=b.dataset.rmsrc;state.presets=state.presets.filter(m=>m._source!==n);savePresets();toast("Removed “"+n+"”.");presetModal();}));
 }
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
@@ -1062,6 +1144,17 @@ $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
 $("#pasteStatblock").addEventListener("click",openImportModal);
 $("#libPaste").addEventListener("click",openImportModal);
+$("#presetManage").addEventListener("click",presetModal);
+$("#mdIn").addEventListener("change",e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  let added=0,done=0;
+  files.forEach(f=>{const r=new FileReader();
+    r.onload=()=>{let parsed=[];try{parsed=parseStatblockMD(r.result,f.name);}catch(err){parsed=[];}
+      state.presets=state.presets.filter(m=>m._source!==f.name).concat(parsed);added+=parsed.length;
+      if(++done===files.length){savePresets();toast(`Loaded ${added.toLocaleString()} statblock(s) from ${files.length} file(s).`);if($("#modalBg").classList.contains("show"))presetModal();}};
+    r.readAsText(f);});
+  e.target.value="";
+});
 // Single sidebar toggle in the appbar. Wide screens dock/undock; narrow screens open the
 // floating drawer (no hover on touch).
 $("#navToggle").addEventListener("click",e=>{e.stopPropagation();const app=$("#app");
@@ -1079,7 +1172,7 @@ document.addEventListener("click",e=>{const app=$("#app");if(app.classList.conta
 })();
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
+  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();buildLibFilters();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
   r.readAsText(f);e.target.value="";
 });
 
@@ -1167,6 +1260,48 @@ function parse5etools(raw){
   if(sec.villain){const s=splitIntro(sec.villain);m.villain={on:true,intro:s.intro,items:s.items.map((e,ix)=>Object.assign(T(e.name,e.text),{mode:"villain",round:Math.min(3,ix+1)}))};}
   if(sec.regional)m.regional={on:true,text:(sec.regional||[]).join("\n\n")};
   return m;}
+// ── Markdown statblock importer (Batch 13) ────────────────────────────────────
+// Converts a 5etools-style markdown dump (### Name / *type* / - **AC** … / ability
+// table / **Actions** …) into the plain-text shape parse5etools already understands,
+// then reuses that parser. One .md file holds many statblocks split by `---`.
+function stripMdTokens(s){
+  return s
+    .replace(/\{@recharge(\s+\d+)?\}/gi,(m,n)=>n?`(Recharge ${n.trim()}–6)`:"(Recharge 5–6)")
+    .replace(/\{@[a-z]+\s+([^}|]+?)(?:\|[^}]*)?\}/gi,"$1") // {@creature Foo|src} → Foo
+    .replace(/\{@[a-z]+\}/gi,"")
+    .replace(/\[Area of Effect\]/gi,"").replace(/\[hover\]/gi,"");
+}
+function mdBlockToPlain(block){
+  block=stripMdTokens(block.replace(/\r/g,""));
+  const out=[],ORD=["STR","DEX","CON","INT","WIS","CHA"];let pend=false;
+  block.split("\n").forEach(raw=>{
+    let l=raw.trim();
+    if(!l){out.push("");return;}
+    if(l.startsWith("|")){
+      const cells=l.split("|").map(c=>c.trim()).filter(c=>c.length);
+      if(cells.every(c=>/^:?-+:?$/.test(c)))return;                       // table rule
+      if(ORD.every((a,i)=>(cells[i]||"").toUpperCase()===a)){pend=true;return;} // ability header
+      if(pend){pend=false;cells.slice(0,6).forEach((c,i)=>{const sm=c.match(/(-?\d+)\s*\(([+-]?\d+)\)/);out.push(ORD[i]);if(sm){out.push(sm[1]);out.push(sm[2]);}else{const n=c.match(/-?\d+/);out.push(n?n[0]:"10");}});return;}
+      return;
+    }
+    if(l.startsWith("#")){out.push(l.replace(/^#+\s*/,""));return;}        // ### Name
+    const hd=l.match(/^\*\*([A-Za-z ]+)\*\*$/);if(hd){out.push(hd[1].trim());return;} // **Actions**
+    l=l.replace(/^[-]\s+/,"").replace(/\*+/g,"").replace(/\s{2,}/g," ").replace(/\s+([.,;])/g,"$1");
+    out.push(l.trim());
+  });
+  return out.join("\n");
+}
+function parseStatblockMD(raw,source){
+  const chunks=raw.replace(/\r/g,"").split(/^\s*---\s*$/m).filter(c=>/^\s*#{2,3}\s+/m.test(c));
+  const out=[];
+  chunks.forEach(ch=>{
+    let m;try{m=parse5etools(mdBlockToPlain(ch));}catch(e){m=null;}
+    if(m&&m.name){m._preset=true;m._source=source;m.chassis=true;m.id="p_"+slug(source)+"_"+slug(m.name);out.push(m);}
+  });
+  return out;
+}
+function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");}
+
 function openImportModal(){
   openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Copy a creature's text from 5e.tools (or an MM'25-style block) and paste it below. Attacks come in as text; review in the Forge, then Save to Bestiary.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
   setTimeout(()=>$("#impArea")&&$("#impArea").focus(),50);
@@ -1205,6 +1340,7 @@ function wrapStepper(input,step,min){
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
+  loadPresets();
   await loadAll();
   loadMonster(blankMonster());
 })();

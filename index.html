@@ -24,9 +24,11 @@
     <div class="spacer"></div>
     <div class="stash">
       <button class="mini" id="pasteStatblock">⎀ Paste statblock</button>
+      <button class="mini" id="presetManage">⬚ Preset libraries…</button>
       <button class="mini" id="exportAll">⭳ Export JSON</button>
       <button class="mini" id="importAll">⭱ Import JSON</button>
       <input type="file" id="fileIn" accept="application/json" style="display:none">
+      <input type="file" id="mdIn" accept=".md,.txt,text/markdown,text/plain" multiple style="display:none">
     </div>
   </aside>
 
@@ -215,14 +217,40 @@
 
     <section class="view" id="view-library">
       <div class="scroll">
-        <div class="col-head"><h2>Bestiary</h2></div>
-        <div class="toolbar">
-          <input type="text" class="search" id="libSearch" placeholder="Search by name or type…">
-          <div class="grow"></div>
-          <button class="btn ghost sm" id="libNew" style="width:auto">＋ New creature</button>
-          <button class="btn ghost sm" id="libChassis" style="width:auto">From chassis</button>
-          <button class="btn ghost sm" id="libPaste" style="width:auto">Paste statblock</button>
+        <div class="lib-head">
+          <div class="col-head">
+            <h2>Bestiary</h2>
+            <div class="splitbtn menu-wrap">
+              <button class="btn primary sm" id="libNew" style="width:auto">＋ New creature</button>
+              <button class="kebab split-caret" data-menu="libnew" title="More ways to add">▾</button>
+              <div class="menu" id="menu-libnew">
+                <button id="libChassis">⊕ From chassis…</button>
+                <button id="libPaste">⎀ Paste 5etools…</button>
+              </div>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input type="text" class="search" id="libSearch" placeholder="Search name (contains)…">
+            <select class="filt" id="libStatus">
+              <option value="Active">Active</option>
+              <option value="Draft">Draft</option>
+              <option value="Ready">Ready</option>
+              <option value="Archived">Archived</option>
+              <option value="All">All statuses</option>
+            </select>
+            <select class="filt" id="libCR"></select>
+            <select class="filt" id="libTag"></select>
+            <div class="grow"></div>
+            <select class="filt" id="libSort">
+              <option value="name">Name</option>
+              <option value="cr">CR</option>
+              <option value="xp">XP</option>
+              <option value="status">Status</option>
+            </select>
+            <button class="btn ghost sm" id="libDir" style="width:auto" title="Toggle sort direction">↑ A–Z</button>
+          </div>
         </div>
+        <datalist id="libTagList"></datalist>
         <div id="libBody"></div>
       </div>
     </section>

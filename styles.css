@@ -294,6 +294,29 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .modal textarea{min-height:210px;font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre}
 .modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 
+/* ── Bestiary (Batch 13) ─────────────────────────────────────────────────── */
+.lib-head{position:sticky;top:0;z-index:6;background:var(--bg);margin:-20px -24px 14px;padding:18px 24px 10px;border-bottom:1px solid var(--line)}
+.lib-head .col-head{margin-bottom:12px}
+.toolbar select.filt{width:auto;flex:none;padding:7px 26px 7px 10px;font-size:12px;color:var(--dim)}
+.splitbtn{display:inline-flex;align-items:stretch}
+.splitbtn .btn.primary.sm{border-radius:7px 0 0 7px}
+.splitbtn .kebab.split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 7px 7px 0;width:28px;height:auto;font-size:13px}
+.splitbtn .kebab.split-caret:hover{background:#e87964;color:#fff}
+.card.archived{opacity:.5}
+.card.archived:hover{opacity:.8}
+.tag.st-Ready{color:var(--ok);border-color:#2f5e3f}
+.tag.st-Draft{color:var(--dim)}
+.tag.st-Archived{color:var(--faint)}
+.card-ctl{display:flex;gap:6px;margin-top:auto;padding-top:8px}
+.card-ctl .card-status{width:auto;flex:none;font-size:11px;padding:5px 6px}
+.card-ctl .card-tag{flex:1;min-width:0;font-size:11px;padding:5px 7px}
+.chassis-tools{margin-bottom:14px}
+.src-badge{align-self:flex-start;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);background:#0e0f12;border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.src-badge.built{color:var(--accent-soft);border-color:#6e3329}
+.preset-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.preset-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+.preset-row .hint{display:inline}
+
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:720px){.app{grid-template-columns:1fr}.app .rail{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
