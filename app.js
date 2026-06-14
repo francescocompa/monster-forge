@@ -204,17 +204,30 @@ const CHASSIS=[
   mk({id:"c_archfiend",name:"Archfiend",size:"Large",type:"Fiend",ac:19,acnote:"natural armor",hp:262,hpf:"21d10+147",s:[26,15,24,22,18,26],cr:"17",saves:["str","con","wis","cha"],dmg:{Cold:"res",Fire:"imm",Poison:"imm"},cimm:"Charmed, Frightened, Poisoned",senses:"Truesight 120 ft.",traits:[T("Legendary Resistance (3/Day)","If the archfiend fails a save, it can choose to succeed instead."),T("Magic Resistance","Advantage on saves against spells and other magical effects.")],actions:[T("Multiattack","The archfiend makes one Flame Blade attack and one Slam attack."),ATK({name:"Flame Blade",dice:"3d6",reach:10,dtype:"Slashing",extra:"plus 13 (3d8) Fire damage."}),T("Hellfire (Recharge 5–6)","Dexterity Saving Throw: DC 21, each creature in a 30-foot-radius Sphere within 120 ft. Failure: 52 (15d6) Fire damage. Success: Half damage.")],legend:{on:true,intro:"",items:[T("Teleport","The archfiend teleports up to 120 feet."),T("Hurl Flame","Ranged attack, +14, range 120 ft., 13 (3d8) Fire damage."),T("Dread (Costs 2 Uses)","Each creature within 30 ft. makes a DC 21 Wis save or is Frightened until the end of its next turn.")]},lair:{on:true,intro:"",items:[T("Eruption","Magma erupts from a point the archfiend can see within its lair; each creature in a 5-ft radius makes a DC 18 Dex save, taking 11 (2d10) Fire damage on a failure.")],regional:""}}),
 ];
 
-let state={lib:[],adv:[],selAdv:null,presets:[]};
+let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[]};
 let M=null, pendingForge=null;
 
-// ── Uploaded preset library (Batch 13) ───────────────────────────────────────
-// 5etools .md statblock dumps the user uploads at runtime. Stored in localStorage
-// only (never JSONBin / never the repo): they're bulky reference data and the text
-// is copyrighted, so they stay on-device. Grouped by source filename.
-const PRESET_KEY="mf_presets";
+// ── Uploaded reference libraries (Batch 13/14) ───────────────────────────────
+// 5etools .md dumps the user uploads at runtime: statblocks (chassis bases), spells,
+// and conditions/glossary terms. Stored in localStorage only (never JSONBin / never
+// the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
+// in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
+const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions";
 function loadPresets(){try{state.presets=(JSON.parse(localStorage.getItem(PRESET_KEY))||[]).map(normalizeMonster);}catch(e){state.presets=[];}}
 function savePresets(){try{localStorage.setItem(PRESET_KEY,JSON.stringify(state.presets));}catch(e){toast("Couldn't store presets — device storage may be full.");}}
+function loadSpells(){try{state.spells=JSON.parse(localStorage.getItem(SPELL_KEY))||[];}catch(e){state.spells=[];}}
+function saveSpells(){try{localStorage.setItem(SPELL_KEY,JSON.stringify(state.spells));}catch(e){toast("Couldn't store spells — device storage may be full.");}}
+function loadConditions(){try{state.conditions=JSON.parse(localStorage.getItem(COND_KEY))||[];}catch(e){state.conditions=[];}}
+function saveConditions(){try{localStorage.setItem(COND_KEY,JSON.stringify(state.conditions));}catch(e){toast("Couldn't store conditions — device storage may be full.");}}
+function loadRefLibs(){loadPresets();loadSpells();loadConditions();}
+// statblock sources only (drives the From-chassis source picker)
 function presetSources(){const s=[];state.presets.forEach(m=>{const k=m._source||"Uploaded";const e=s.find(x=>x.name===k);if(e)e.count++;else s.push({name:k,count:1});});return s;}
+// every uploaded library across kinds, for the manage modal
+function presetLibraries(){const map={};
+  const add=(arr,kind)=>arr.forEach(x=>{const n=x._source||"Uploaded",key=n+" "+kind;(map[key]=map[key]||{name:n,kind,count:0}).count++;});
+  add(state.presets,"statblock");add(state.spells,"spell");add(state.conditions,"condition");
+  return Object.values(map);}
+const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions"};
 
 // ── JSONBin cloud storage ─────────────────────────────────────────────────────
 // Personal-use master key (full CRUD). The previous value was a read-only ACCESS key,
@@ -923,15 +936,19 @@ function openChassis(fromForge){
   draw();setTimeout(()=>$("#chSearch")&&$("#chSearch").focus(),50);
 }
 function presetModal(){
-  const sources=presetSources();
-  let h=`<h3>Preset libraries</h3><p class="hint" style="margin:-4px 0 14px">Upload 5etools-style <code>.md</code> statblock dumps to use as bases in <b>From chassis</b>. Parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo.</p>`;
-  if(sources.length)h+=`<div class="preset-list">`+sources.map(s=>`<div class="preset-row"><div><b>${esc(s.name)}</b><span class="hint"> · ${s.count.toLocaleString()} statblocks</span></div><button class="iconbtn" data-rmsrc="${esc(s.name)}" title="Remove library">✕</button></div>`).join("")+`</div>`;
+  const libs=presetLibraries();
+  let h=`<h3>Preset libraries</h3><p class="hint" style="margin:-4px 0 14px">Upload 5etools-style <code>.md</code> dumps — <b>statblocks</b> (bases for <b>From chassis</b>), <b>spells</b>, or <b>conditions</b>. The kind is detected automatically. Parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo.</p>`;
+  if(libs.length)h+=`<div class="preset-list">`+libs.map(s=>`<div class="preset-row"><div><b>${esc(s.name)}</b> <span class="kind-badge k-${s.kind}">${KIND_LABEL[s.kind]}</span><span class="hint"> · ${s.count.toLocaleString()}</span></div><button class="iconbtn" data-rmsrc="${esc(s.name)}" data-rmkind="${s.kind}" title="Remove library">✕</button></div>`).join("")+`</div>`;
   else h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   h+=`<div class="mrow"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .md files</button></div>`;
   openModalRaw(h);
   $("#prClose").addEventListener("click",closeModal);
   $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
-  $("#modal").querySelectorAll("[data-rmsrc]").forEach(b=>b.addEventListener("click",()=>{const n=b.dataset.rmsrc;state.presets=state.presets.filter(m=>m._source!==n);savePresets();toast("Removed “"+n+"”.");presetModal();}));
+  $("#modal").querySelectorAll("[data-rmsrc]").forEach(b=>b.addEventListener("click",()=>{const n=b.dataset.rmsrc,k=b.dataset.rmkind;
+    if(k==="spell"){state.spells=state.spells.filter(x=>x._source!==n);saveSpells();}
+    else if(k==="condition"){state.conditions=state.conditions.filter(x=>x._source!==n);saveConditions();}
+    else{state.presets=state.presets.filter(x=>x._source!==n);savePresets();}
+    toast("Removed “"+n+"”.");presetModal();}));
 }
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
@@ -1157,11 +1174,16 @@ $("#libPaste").addEventListener("click",openImportModal);
 $("#presetManage").addEventListener("click",presetModal);
 $("#mdIn").addEventListener("change",e=>{
   const files=[...e.target.files];if(!files.length)return;
-  let added=0,done=0;
+  const summary=[];let done=0;
   files.forEach(f=>{const r=new FileReader();
-    r.onload=()=>{let parsed=[];try{parsed=parseStatblockMD(r.result,f.name);}catch(err){parsed=[];}
-      state.presets=state.presets.filter(m=>m._source!==f.name).concat(parsed);added+=parsed.length;
-      if(++done===files.length){savePresets();toast(`Loaded ${added.toLocaleString()} statblock(s) from ${files.length} file(s).`);if($("#modalBg").classList.contains("show"))presetModal();}};
+    r.onload=()=>{const kind=detectMdKind(r.result);let n=0;
+      try{
+        if(kind==="spell"){const p=parseSpellsMD(r.result,f.name);state.spells=state.spells.filter(x=>x._source!==f.name).concat(p);n=p.length;saveSpells();}
+        else if(kind==="condition"){const p=parseConditionsMD(r.result,f.name);state.conditions=state.conditions.filter(x=>x._source!==f.name).concat(p);n=p.length;saveConditions();}
+        else{const p=parseStatblockMD(r.result,f.name);state.presets=state.presets.filter(x=>x._source!==f.name).concat(p);n=p.length;savePresets();}
+      }catch(err){n=0;}
+      summary.push(`${f.name}: ${n.toLocaleString()} ${KIND_LABEL[kind]?KIND_LABEL[kind].toLowerCase():kind}`);
+      if(++done===files.length){toast(`Loaded — ${summary.join("; ")}`);if($("#modalBg").classList.contains("show"))presetModal();}};
     r.readAsText(f);});
   e.target.value="";
 });
@@ -1306,11 +1328,58 @@ function parseStatblockMD(raw,source){
   const out=[];
   chunks.forEach(ch=>{
     let m;try{m=parse5etools(mdBlockToPlain(ch));}catch(e){m=null;}
-    if(m&&m.name){m._preset=true;m._source=source;m.chassis=true;m.id="p_"+slug(source)+"_"+slug(m.name);out.push(m);}
+    if(m&&m.name){m._preset=true;m._source=source;m._kind="statblock";m.chassis=true;m.id="p_"+slug(source)+"_"+slug(m.name);out.push(m);}
   });
   return out;
 }
 function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");}
+// Decide what an uploaded .md actually is, so spells/conditions aren't parsed as statblocks.
+function detectMdKind(raw){
+  if(/-\s*\*\*Casting Time:\*\*/i.test(raw))return "spell";
+  if(/^##\s+Conditions\b/mi.test(raw)||/^\*Source:\s*X?PHB/mi.test(raw))return "condition";
+  return "statblock";
+}
+// Spell dump: ### Name / *Level N School* (or *School cantrip*) / - **Casting Time:** … / body.
+function parseSpellsMD(raw,source){
+  const chunks=stripMdTokens(raw.replace(/\r/g,"")).split(/^\s*---\s*$/m).filter(c=>/^\s*#{2,3}\s+/m.test(c));
+  const out=[];
+  chunks.forEach(ch=>{
+    const lines=ch.split("\n");let i=0,name="",meta="",fields={},body=[];
+    for(;i<lines.length;i++){const t=lines[i].trim();if(/^#{2,3}\s+/.test(t)){name=t.replace(/^#+\s*/,"").trim();i++;break;}}
+    for(;i<lines.length;i++){const t=lines[i].trim();if(!t)continue;const mm=t.match(/^\*(.+)\*$/);if(mm)meta=mm[1].trim();i++;break;}
+    for(;i<lines.length;i++){const t=lines[i].trim();
+      const fm=t.match(/^-\s*\*\*([^:*]+):\*\*\s*(.*)$/);
+      if(fm){fields[fm[1].trim().toLowerCase()]=fm[2].trim();continue;}
+      body.push(t.replace(/\*+/g,""));}
+    if(!name)return;
+    let level=null,school=meta,mm;
+    if(mm=meta.match(/^(.+?)\s+cantrip$/i)){level=0;school=mm[1].trim();}
+    else if(mm=meta.match(/^Level\s+(\d+)\s+(.+)$/i)){level=+mm[1];school=mm[2].trim();}
+    out.push({id:"sp_"+slug(source)+"_"+slug(name),name,level,school,
+      castingTime:fields["casting time"]||"",range:fields["range"]||"",components:fields["components"]||"",duration:fields["duration"]||"",
+      text:body.join("\n").replace(/\n{3,}/g,"\n\n").trim(),source,_source:source,_kind:"spell"});
+  });
+  return out;
+}
+// Conditions/diseases/status effects. The file lists several sources per name; when an
+// X-prefixed source (e.g. XPHB) shares a name with its legacy version (PHB), keep only the
+// newer one (Batch 14 note).
+function parseConditionsMD(raw,source){
+  const lines=stripMdTokens(raw.replace(/\r/g,"")).split("\n");
+  const out=[];let category="",cur=null;
+  const push=()=>{if(cur&&cur.name){cur.text=cur.body.join("\n").replace(/\n{3,}/g,"\n\n").trim();delete cur.body;out.push(cur);}cur=null;};
+  lines.forEach(raw2=>{const l=raw2.replace(/\s+$/,""),t=l.trim();
+    if(/^###\s+/.test(t)){push();cur={name:t.replace(/^#+\s*/,"").trim(),category,source:"",body:[]};return;}
+    if(/^##\s+/.test(t)){push();category=t.replace(/^#+\s*/,"").trim();return;}
+    if(!cur)return;
+    const sm=t.match(/^\*Source:\s*(.+?)\*$/i);if(sm){cur.source=sm[1].trim();return;}
+    if(/^---$/.test(t))return;
+    cur.body.push(l.replace(/\*+/g,""));});
+  push();
+  const byName={},rank=s=>/^x/i.test(s)?2:1; // prefer XPHB/XDMG over PHB/DMG
+  out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
+  return Object.values(byName).map(c=>Object.assign(c,{id:"cd_"+slug(source)+"_"+slug(c.name),_source:source,_kind:"condition"}));
+}
 
 function openImportModal(){
   openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Copy a creature's text from 5e.tools (or an MM'25-style block) and paste it below. Attacks come in as text; review in the Forge, then Save to Bestiary.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
@@ -1350,7 +1419,7 @@ function wrapStepper(input,step,min){
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
-  loadPresets();
+  loadRefLibs();
   await loadAll();
   loadMonster(blankMonster());
 })();

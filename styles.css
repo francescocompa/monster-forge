@@ -316,6 +316,10 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .preset-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .preset-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
 .preset-row .hint{display:inline}
+.kind-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 6px;border:1px solid var(--line);color:var(--faint);margin-left:4px}
+.kind-badge.k-statblock{color:var(--accent-soft);border-color:#6e3329}
+.kind-badge.k-spell{color:var(--info);border-color:#2f4d6e}
+.kind-badge.k-condition{color:var(--amber);border-color:#5c4d24}
 
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:720px){.app{grid-template-columns:1fr}.app .rail{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}}
