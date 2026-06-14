@@ -436,6 +436,7 @@ function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
   ci.addEventListener("change",()=>{if(ci.value.trim())add(ci.value);}); // datalist pick / commit on blur
   $("#f_cimm_field").addEventListener("click",e=>{if(e.target.id==="f_cimm_field")ci.focus();});}
 function buildCondDatalist(){const dl=$("#condDatalist");if(!dl)return;dl.innerHTML=[...new Set(state.conditions.map(c=>c.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
+function buildSpellDatalist(){const dl=$("#spellDatalist");if(!dl)return;dl.innerHTML=[...new Set(state.spells.map(s=>s.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
 function bindStatic(){
   bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
   bindField("#f_acnote","acnote");bindField("#f_init","init",true);
@@ -445,7 +446,7 @@ function bindStatic(){
     renderPreview();});
   bindField("#f_dmgnote","dmgnote");bindField("#f_gear","gear");bindField("#f_lang","lang");
   bindCimm();
-  $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
+  $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value||"creature";renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
   const itp=$("#f_initprof");itp.addEventListener("click",()=>{const nv=nextTri(itp.dataset.state);M.initProf=nv;paintTri(itp,nv);renderPreview();});
   $("#f_cr").addEventListener("change",()=>{const p=parseCRInput($("#f_cr").value);if(p)setCR(p);else updateCRDisplay();});
@@ -521,8 +522,9 @@ function attackText(e){
   return `*${kind}* ${sgn(atk)}, ${rr}${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
 }
 const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
-// move-up/move-down + delete controls for an entry head (arrows hidden when section auto-sorts)
-function rowCtrls(kind,i){const arrows=(M.sort&&M.sort[kind])?"":`<button class="iconbtn up" data-mv="${kind}:${i}:-1" title="Move up">▲</button><button class="iconbtn down" data-mv="${kind}:${i}:1" title="Move down">▼</button>`;
+// Traits/actions/bonus/reactions are always alpha-sorted; legend/villain/lair keep manual order.
+const ALWAYS_SORTED=new Set(["traits","actions","bonus","reactions"]);
+function rowCtrls(kind,i){const arrows=ALWAYS_SORTED.has(kind)?"":`<button class="iconbtn up" data-mv="${kind}:${i}:-1" title="Move up">▲</button><button class="iconbtn down" data-mv="${kind}:${i}:1" title="Move down">▼</button>`;
   return arrows+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
 function dlFor(kind){return kind==="traits"?"dl-traits":kind==="bonus"?"dl-bonus":kind==="actions"?"dl-textact":"";}
 function entryHTML(arr,kind){return arr.map((e,i)=>{
@@ -531,7 +533,7 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     <textarea placeholder="Response" data-k="${kind}" data-i="${i}" data-f="response">${esc(e.response||"")}</textarea></div>`;}
   if(kind==="villain"){return `<div class="entry"><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select><input type="text" placeholder="Name" data-k="villain" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="villain:${i}">✕</button></div>
     <textarea placeholder="Effect" data-k="villain" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea></div>`;}
-  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);return `<div class="entry"><div class="ehead"><span class="kind">Spellcasting</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
+  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0),dc=e.dc||(8+pb+ab);return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}"><div class="ehead"><span class="kind">Spellcasting</span><span class="entry-dc">DC ${dc}</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <div class="atk-fields" style="grid-template-columns:repeat(3,1fr)">
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
       <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
@@ -540,11 +542,11 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">— each renders on its own line</span></div>
     ${(e.groups||[]).map((g,gi)=>`<div class="rowline">
       <select data-sg="${i}:${gi}:freq" style="flex:none;width:120px">${["At Will","1/Day Each","2/Day Each","3/Day Each","1/Day","2/Day","3/Day"].map(f=>`<option ${f===g.freq?"selected":""}>${f}</option>`).join("")}</select>
-      <input type="text" placeholder="Spell names, comma-separated" value="${esc(g.spells)}" data-sg="${i}:${gi}:spells">
+      <div class="chipfield sgfield" id="sgfield-${i}-${gi}"><span class="chips" id="sgchips-${i}-${gi}"></span><input type="text" class="chipinput sgci" id="sgci-${i}-${gi}" placeholder="add spell…" list="spellDatalist" autocomplete="off"></div>
       <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
     <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
     <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
-  if(e.mode==="attack"){return `<div class="entry"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" list="dl-atk" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
+  if(e.mode==="attack"){return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" list="dl-atk" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <div class="atk-fields">
       <label class="f">Kind<select data-k="${kind}" data-i="${i}" data-f="kind">${["Melee","Ranged","Melee or Ranged"].map(k=>`<option ${k===e.kind?"selected":""}>${k}</option>`).join("")}</select></label>
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
@@ -563,8 +565,18 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
 }).join("");}
 function sortEntries(kind){arrFor(kind).sort((a,b)=>(a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase()));}
+function renderSgChips(ai,gi){
+  const g=M.actions[ai]&&M.actions[ai].groups&&M.actions[ai].groups[gi];
+  const box=$("#sgchips-"+ai+"-"+gi);if(!g||!box)return;
+  const spells=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];
+  const known=n=>state.spells.some(s=>s.name.toLowerCase()===n.toLowerCase());
+  box.innerHTML=spells.map((sp,si)=>`<span class="chip${known(sp)?" known":""}">${esc(sp)}<button class="chipx" data-sgrmsp="${ai}:${gi}:${si}" title="Remove">×</button></span>`).join("");
+  box.querySelectorAll("[data-sgrmsp]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();
+    const[a,g2,s]=b.dataset.sgrmsp.split(":").map(Number);const arr=M.actions[a].groups[g2].spells.split(",").map(x=>x.trim()).filter(Boolean);
+    arr.splice(s,1);M.actions[a].groups[g2].spells=arr.join(", ");renderSgChips(a,g2);renderPreview();}));
+}
 function renderEntries(){
-  ["traits","actions","bonus","reactions"].forEach(k=>{if(M.sort&&M.sort[k])sortEntries(k);});
+  ALWAYS_SORTED.forEach(k=>sortEntries(k));
   $("#traitList").innerHTML=entryHTML(M.traits,"traits");
   $("#actionList").innerHTML=entryHTML(M.actions,"actions");
   $("#bonusList").innerHTML=entryHTML(M.bonus,"bonus");
@@ -573,6 +585,8 @@ function renderEntries(){
   $("#villainList").innerHTML=entryHTML(M.villain.items,"villain");
   $("#lairList").innerHTML=entryHTML(M.lair.items,"lair");
   bindEntries();
+  // populate spell group chip fields after DOM is ready
+  M.actions.forEach((e,i)=>{if(e.mode==="spell")(e.groups||[]).forEach((_,gi)=>renderSgChips(i,gi));});
   $("#cntTraits").textContent=M.traits.length||"";$("#cntActions").textContent=M.actions.length||"";
   $("#cntBonus").textContent=M.bonus.length||"";$("#cntReact").textContent=M.reactions.length||"";
 }
@@ -588,9 +602,18 @@ function bindEntries(){
   $$("#formCol [data-mv]").forEach(el=>el.addEventListener("click",()=>{const[k,i,d]=el.dataset.mv.split(":");moveEntry(k,+i,+d);}));
   $$('#formCol [data-f="name"]').forEach(el=>el.addEventListener("change",()=>autofillEntry(el.dataset.k,+el.dataset.i)));
   $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
-  $$("#formCol [data-sg]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[i,gi,f]=el.dataset.sg.split(":");M.actions[+i].groups[+gi][f]=el.value;if(f==="freq")renderEntries();renderPreview();});});
+  // freq select for spell groups (text input for spells replaced by chip field bound separately)
+  $$("#formCol [data-sg]").forEach(el=>{if(el.tagName!=="SELECT")return;el.addEventListener("change",()=>{const[i,gi,f]=el.dataset.sg.split(":");M.actions[+i].groups[+gi][f]=el.value;renderEntries();renderPreview();});});
   $$("#formCol [data-sgadd]").forEach(el=>el.addEventListener("click",()=>{M.actions[+el.dataset.sgadd].groups.push({freq:"1/Day Each",spells:""});renderEntries();renderPreview();}));
   $$("#formCol [data-sgrm]").forEach(el=>el.addEventListener("click",()=>{const[i,gi]=el.dataset.sgrm.split(":");M.actions[+i].groups.splice(+gi,1);renderEntries();renderPreview();}));
+  // spell group chip inputs
+  $$("#formCol .sgci").forEach(inp=>{
+    const parts=inp.id.replace("sgci-","").split("-");const ai=+parts[0],gi=+parts[1];
+    const add=v=>{v=(v||"").replace(/,$/,"").trim();if(!v)return;const g=M.actions[ai].groups[gi];const cur=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];
+      if(!cur.some(x=>x.toLowerCase()===v.toLowerCase()))cur.push(v);g.spells=cur.join(", ");inp.value="";renderSgChips(ai,gi);renderPreview();};
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();add(inp.value.replace(/,/g,""));}
+      else if(e.key==="Backspace"&&!inp.value){const g=M.actions[ai].groups[gi];const cur=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];if(cur.length){cur.pop();g.spells=cur.join(", ");renderSgChips(ai,gi);renderPreview();}}});
+    inp.addEventListener("change",()=>{if(inp.value)add(inp.value);});});
 }
 function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
 function moveEntry(kind,i,dir){const arr=arrFor(kind),j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];renderEntries();renderPreview();}
@@ -604,7 +627,7 @@ function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;con
   else{const map=kind==="traits"?TRAIT_SNIPS:kind==="bonus"?BONUS_SNIPS:null;
     if(kind==="actions"){const keys=[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)];const p=keys.find(k=>k.toLowerCase()===key);if(!p)return;e.name=p;e.text=actionTextFor(p);}
     else{if(!map)return;const p=findCI(map,key);if(!p)return;e.name=p;e.text=expandSnip(map[p]);}}
-  if(M.sort&&M.sort[kind])sortEntries(kind);renderEntries();renderPreview();}
+  if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 // insert a fresh entry chosen from a section's "From library" dropdown
 function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?val.slice(0,ci):"",name=ci>=0?val.slice(ci+1):val;
   if(kind==="traits")M.traits.push(T(name,expandSnip(TRAIT_SNIPS[name])));
@@ -614,7 +637,7 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
   else if(kind==="legend")M.legend.items.push(T(name,expandSnip(LEGEND_SNIPS[name])));
   else if(kind==="lair")M.lair.items.push(T(name,expandSnip(LAIR_SNIPS[name])));
   else if(kind==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name,text:expandSnip(VILLAIN_SNIPS[name])});
-  if(M.sort&&M.sort[kind])sortEntries(kind);renderEntries();renderPreview();}
+  if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
 function buildLibSelects(){
   const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
@@ -633,8 +656,15 @@ function buildLibSelects(){
   buildDatalist("dl-textact",[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)]);
   buildDatalist("dl-bonus",Object.keys(BONUS_SNIPS));
   buildDatalist("dl-react",Object.keys(REACT_SNIPS));
-  $$("[data-sort]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.sort;M.sort[k]=!M.sort[k];if(M.sort[k])sortEntries(k);b.classList.toggle("on",M.sort[k]);renderEntries();renderPreview();}));
 }
+// Stat focus: highlight the ability cell used by the focused attack/spell entry.
+let _statFocusCell=null;
+function setStatFocus(abil){const inp=$("#ab_"+abil);const cell=inp&&inp.closest(".cell");if(cell===_statFocusCell)return;if(_statFocusCell)_statFocusCell.classList.remove("stat-focus");_statFocusCell=cell;if(cell)cell.classList.add("stat-focus");}
+function clearStatFocus(){if(_statFocusCell)_statFocusCell.classList.remove("stat-focus");_statFocusCell=null;}
+(function bindStatFocus(){const fc=document.getElementById("formCol");if(!fc)return;
+  fc.addEventListener("focusin",e=>{const entry=e.target.closest&&e.target.closest(".entry[data-entry-abil]");if(!entry){clearStatFocus();return;}setStatFocus(entry.dataset.entryAbil);});
+  fc.addEventListener("focusout",e=>{const entry=e.target.closest&&e.target.closest(".entry[data-entry-abil]");if(entry&&entry.contains(e.relatedTarget))return;clearStatFocus();});
+})();
 $$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.add;
   if(k==="reactions")M.reactions.push({mode:"react",name:"",trigger:"",response:""});
   else if(k==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name:"",text:""});
@@ -651,7 +681,7 @@ function loadMonster(m){
   paintTri($("#f_initprof"),M.initProf||"none");updateHpDie();
   $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
-  $("#f_snword").value=M.shortName.word||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
+  $("#f_snword").value=(M.shortName.word==="creature"?"":M.shortName.word)||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
   $("#f_dmgnote").value=M.dmgnote||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
   ABILS.forEach(a=>$("#ab_"+a).value=M[a]);
@@ -661,7 +691,6 @@ function loadMonster(m){
   $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
   $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
-  $$("[data-sort]").forEach(b=>b.classList.toggle("on",!!M.sort[b.dataset.sort]));
   if(M._auto.ac||M._auto.hp)applyCRAuto();
   refreshAbil();renderDmg();renderSkills();renderCimm();renderEntries();renderPreview();
 }
@@ -699,7 +728,8 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells}));
   return{main,groups};}
 function subName(t){return applyRefs(t);}
-function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");}
+function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>");}
+function fmtBlock(t){return esc(String(t||"")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>").replace(/\n{2,}/g,"<br><br>").replace(/\n([-•])\s*/g,"<br><span class=\"blk-item\">").replace(/\n/g,"<br>");}
 // ── Spell / condition references (Batch 14) ──────────────────────────────────
 // Look up uploaded reference data by name (case-insensitive).
 function findSpell(name){const n=String(name||"").trim().toLowerCase();return state.spells.find(s=>(s.name||"").toLowerCase()===n);}
@@ -713,9 +743,9 @@ function refContent(kind,name){
     const meta=s.level===0?(s.school+" cantrip"):s.level?("Level "+s.level+" "+s.school):s.school;
     const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
       .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
-    return `<div class="refcard-h">${esc(s.name)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtInline(s.text).replace(/\n/g,"<br>")}</div>`:""}`;}
+    return `<div class="refcard-h">${esc(s.name)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   const c=findCondition(name);if(!c)return "";
-  return `<div class="refcard-h">${esc(c.name)}${c.source?` <span class="refcard-src">${esc(c.source)}</span>`:""}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtInline(c.text).replace(/\n/g,"<br>")}</div>`:""}`;}
+  return `<div class="refcard-h">${esc(c.name)}${c.source?` <span class="refcard-src">${esc(c.source)}</span>`:""}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
 let _refTimer=null;
 function ensureRefpop(){let p=$("#refpop");if(!p){p=document.createElement("div");p.id="refpop";p.className="refpop";document.body.appendChild(p);
   p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);}return p;}
@@ -1340,8 +1370,8 @@ $("#mdIn").addEventListener("change",e=>{
   files.forEach(f=>{const r=new FileReader();
     r.onload=()=>{const kind=detectMdKind(r.result);let n=0;
       try{
-        if(kind==="spell"){const p=parseSpellsMD(r.result,f.name);state.spells=state.spells.filter(x=>x._source!==f.name).concat(p);n=p.length;saveSpells();}
-        else if(kind==="condition"){const p=parseConditionsMD(r.result,f.name);state.conditions=state.conditions.filter(x=>x._source!==f.name).concat(p);n=p.length;saveConditions();}
+        if(kind==="spell"){const p=parseSpellsMD(r.result,f.name);state.spells=state.spells.filter(x=>x._source!==f.name).concat(p);n=p.length;saveSpells();buildSpellDatalist();}
+        else if(kind==="condition"){const p=parseConditionsMD(r.result,f.name);state.conditions=state.conditions.filter(x=>x._source!==f.name).concat(p);n=p.length;saveConditions();buildCondDatalist();}
         else{const p=parseStatblockMD(r.result,f.name);state.presets=state.presets.filter(x=>x._source!==f.name).concat(p);n=p.length;savePresets();}
       }catch(err){n=0;}
       summary.push(`${f.name}: ${n.toLocaleString()} ${KIND_LABEL[kind]?KIND_LABEL[kind].toLowerCase():kind}`);
@@ -1512,7 +1542,7 @@ function parseSpellsMD(raw,source){
     for(;i<lines.length;i++){const t=lines[i].trim();
       const fm=t.match(/^-\s*\*\*([^:*]+):\*\*\s*(.*)$/);
       if(fm){fields[fm[1].trim().toLowerCase()]=fm[2].trim();continue;}
-      body.push(t.replace(/\*+/g,""));}
+      body.push(t);}
     if(!name)return;
     let level=null,school=meta,mm;
     if(mm=meta.match(/^(.+?)\s+cantrip$/i)){level=0;school=mm[1].trim();}
@@ -1536,7 +1566,7 @@ function parseConditionsMD(raw,source){
     if(!cur)return;
     const sm=t.match(/^\*Source:\s*(.+?)\*$/i);if(sm){cur.source=sm[1].trim();return;}
     if(/^---$/.test(t))return;
-    cur.body.push(l.replace(/\*+/g,""));});
+    cur.body.push(l);});
   push();
   const byName={},rank=s=>/^x/i.test(s)?2:1; // prefer XPHB/XDMG over PHB/DMG
   out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
@@ -1581,7 +1611,7 @@ function wrapStepper(input,step,min){
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
-  loadRefLibs();
+  loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
   loadMonster(blankMonster());
 })();

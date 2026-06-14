@@ -105,7 +105,6 @@
             <div class="fs-sub">Skills</div>
             <div id="skillRows"></div>
             <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
-            <div class="fs-sub">Damage modifiers</div>
             <div id="dmgRows"></div>
             <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
             <div class="grid g2" style="margin-top:11px">
@@ -132,25 +131,25 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Traits <span class="count" id="cntTraits"></span><button class="sortbtn" data-sort="traits" title="Auto-sort A→Z">⇅ A–Z</button></div>
+            <div class="fs-title">Traits <span class="count" id="cntTraits"></span></div>
             <div id="traitList"></div>
             <div class="addrow"><button class="addbtn" data-add="traits" style="flex:2">＋ Add trait</button><select class="libsel" data-lib="traits"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Actions <span class="count" id="cntActions"></span><button class="sortbtn" data-sort="actions" title="Auto-sort A→Z">⇅ A–Z</button></div>
+            <div class="fs-title">Actions <span class="count" id="cntActions"></span></div>
             <div id="actionList"></div>
             <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button><select class="libsel" data-lib="actions"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span><button class="sortbtn" data-sort="bonus" title="Auto-sort A→Z">⇅ A–Z</button></div>
+            <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span></div>
             <div id="bonusList"></div>
             <div class="addrow"><button class="addbtn" data-add="bonus" style="flex:2">＋ Add bonus action</button><select class="libsel" data-lib="bonus"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Reactions <span class="count" id="cntReact"></span><button class="sortbtn" data-sort="reactions" title="Auto-sort A→Z">⇅ A–Z</button></div>
+            <div class="fs-title">Reactions <span class="count" id="cntReact"></span></div>
             <div id="reactList"></div>
             <div class="addrow"><button class="addbtn" data-add="reactions" style="flex:2">＋ Add reaction</button><select class="libsel" data-lib="reactions"></select></div>
           </fieldset>
@@ -222,15 +221,17 @@
         <div class="lib-head">
           <div class="col-head">
             <h2>Bestiary</h2>
-            <div class="ctrl-icons" id="libCtrlIcons"></div>
             <div class="grow"></div>
+            <div class="head-right">
+            <div class="ctrl-icons" id="libCtrlIcons"></div>
             <div class="splitbtn menu-wrap">
-              <button class="btn primary sm" id="libNew" style="width:auto">＋ New creature</button>
+              <button class="btn primary sm" id="libNew" style="width:auto">New</button>
               <button class="kebab split-caret" data-menu="libnew" title="More ways to add">▾</button>
               <div class="menu" id="menu-libnew">
                 <button id="libChassis">⊕ From chassis…</button>
                 <button id="libPaste">⎀ Paste 5etools…</button>
               </div>
+            </div>
             </div>
           </div>
           <div class="ctrl-chips" id="libChips"></div>
@@ -253,6 +254,7 @@
 </div>
 
 <datalist id="condDatalist"></datalist>
+<datalist id="spellDatalist"></datalist>
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 <script>document.write('<script src="app.js?cb='+Date.now()+'"><\/script>');</script>
