@@ -391,7 +391,7 @@ function normalizeMonster(m){
   return m;
 }
 function normalizeAdv(a){
-  a.notes=a.notes||"";a.levels=a.levels||[];
+  a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
     e.combatants=(e.combatants||[]).map(c=>{
@@ -945,7 +945,8 @@ function renderRecords(body,recs,ctrl,desc,opts){
   const add=(k,lab,r)=>{if(!groups.has(k))groups.set(k,{label:lab,items:[]});groups.get(k).items.push(r);};
   recs.forEach(r=>{if(p.multi){const vs=p.get(r)||[];if(!vs.length)add("∅","Untagged",r);else vs.forEach(v=>add(v,p.fmt?p.fmt(v):v,r));}else{const v=p.get(r);add(v??"∅",(v==null||v==="")?"—":(p.fmt?p.fmt(v):v),r);}});
   const keys=[...groups.keys()].sort(groupSorter(ctrl.group));
-  let shown=0;body.innerHTML=keys.map(k=>{const g=groups.get(k),items=g.items.slice(0,Math.max(0,cap-shown));shown+=items.length;return items.length?`<div class="grp"><div class="grp-head">${esc(g.label)}<span class="grp-n">${g.items.length}</span></div><div class="cards">${items.map(opts.cardOf).join("")}</div></div>`:"";}).join("")+(shown<recs.length?capHint(recs.length,shown):"");
+  let shown=0;body.innerHTML=keys.map(k=>{const g=groups.get(k),items=g.items.slice(0,Math.max(0,cap-shown));shown+=items.length;const col=opts.collapsible&&libCollapsed.has(k);return items.length?`<div class="grp${col?" collapsed":""}" data-grpkey="${esc(k)}"><div class="grp-head">${esc(g.label)}<span class="grp-n">${g.items.length}</span><button class="grp-collapse" title="${col?"Expand":"Collapse"}">▾</button></div><div class="cards">${items.map(opts.cardOf).join("")}</div></div>`:"";}).join("")+(shown<recs.length?capHint(recs.length,shown):"");
+  body.querySelectorAll(".grp-head").forEach(h=>{h.addEventListener("click",e=>{if(e.target.closest(".grp-collapse")||e.target.tagName==="BUTTON"){}const grp=h.closest(".grp");const k=grp.dataset.grpkey;libCollapsed.has(k)?libCollapsed.delete(k):libCollapsed.add(k);grp.classList.toggle("collapsed",libCollapsed.has(k));const btn=h.querySelector(".grp-collapse");if(btn)btn.title=libCollapsed.has(k)?"Expand":"Collapse";});});
 }
 function capHint(total,shown){return `<div class="hint" style="margin-top:10px">Showing first ${shown.toLocaleString()} of ${total.toLocaleString()} — refine your search.</div>`;}
 
@@ -964,6 +965,7 @@ const LIB_DESC={search:true,group:true,
     {key:"tag",label:"Tag",cmp:(a,b)=>libFirstTag(a).localeCompare(libFirstTag(b))},
   ]};
 let libCtrl=blankCtrl();
+const libCollapsed=new Set(); // keys of collapsed group headers
 // Presets (built-in chassis + uploaded statblocks) are opt-in: they appear only when the
 // Status filter includes "Preset" or the list is grouped by status (which gets a Preset group).
 function libRecords(){
@@ -978,7 +980,7 @@ function renderLibrary(){
   buildTagDatalist();
   renderCtrlChips($("#libChips"),libCtrl,LIB_DESC,renderLibrary);
   const body=$("#libBody"),recs=ctrlApply(libRecords(),libCtrl,LIB_DESC);
-  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML({m:r.m,src:r.src}):cardHTML(r.m),emptyMsg:libEmptyMsg(),cap:400});
+  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML({m:r.m,src:r.src}):cardHTML(r.m),emptyMsg:libEmptyMsg(),cap:400,collapsible:true});
   wireLibCards(body);
 }
 function wireLibCards(body){
@@ -1156,11 +1158,15 @@ function chassisConflictModal(ch){
 
 function renderAdvList(){
   const box=$("#advItems");
-  box.innerHTML=state.adv.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  const active=state.adv.filter(a=>!a.archived),arch=state.adv.filter(a=>a.archived);
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="nm">${esc(a.name)}</div></div>`).join("");
+  box.innerHTML=html;
   box.querySelectorAll("[data-adv]").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.dataset.adv;renderAdvList();}));
+  const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.width="auto";}
   renderAdvDetail();
 }
-$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:9,uneven:false,levels:[9,9,9,9],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:1,uneven:false,levels:[1,1,1,1],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -1193,21 +1199,40 @@ function renderAdvDetail(){
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",a.name||"Untitled"]);
   const bud=baseBudget(partyOf(a,null));
-  d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2><button class="btn ghost sm" id="delAdv" style="width:auto">Delete adventure</button></div>
+  const budW=bud[2]||1;const budPcts=[Math.round(bud[0]/budW*100),Math.round(bud[1]/budW*100),100];
+  d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2>
+    <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
+    <div class="menu" id="menu-adv-opts">
+      <button id="advDuplicate">Duplicate adventure</button>
+      <button id="advArchive">${a.archived?"Unarchive":"Archive"} adventure</button>
+      <div class="sep"></div>
+      <button class="danger" id="delAdv">Delete adventure</button>
+    </div></div></div>
     <div class="party-bar">
       <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
       <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
       <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="pUneven" ${a.uneven?"checked":""}> Uneven levels</label>
       <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
-      <div class="grow"></div>
-      <div class="hint" style="text-align:right">Base party budget<br><b style="color:var(--amber);font-size:13px">Low ${bud[0].toLocaleString()} · Mod ${bud[1].toLocaleString()} · High ${bud[2].toLocaleString()}</b></div>
+      <div style="flex-basis:100%">
+        <div class="adv-bud-bar">
+          <div class="adv-bud-track">
+            <div class="bud-seg low" style="left:0;width:${budPcts[0]}%"></div>
+            <div class="bud-seg mod" style="left:${budPcts[0]}%;width:${budPcts[1]-budPcts[0]}%"></div>
+            <div class="bud-seg high" style="left:${budPcts[1]}%;width:${100-budPcts[1]}%"></div>
+          </div>
+          <div class="adv-bud-labels"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
+        </div>
+      </div>
     </div>
     <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
     <div class="section-label">Encounters <button class="btn ghost sm" id="addEnc" style="width:auto">＋ Encounter</button></div>
     <div id="encList"></div>
     <div id="archWrap"></div>`;
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
-  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete “${a.name}” and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${a.name}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
+  $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
+  wrapStepper($("#pSize"),1,1);wrapStepper($("#pLevel"),1,1);
   $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   $("#pUneven").addEventListener("change",e=>{a.uneven=e.target.checked;syncLevels(a);saveAdv();renderAdvDetail();});
@@ -1222,7 +1247,12 @@ function renderEncList(a){
   const box=$("#encList");if(!box)return;
   const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
   box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
-  const aw=$("#archWrap");aw.innerHTML=arch.length?`<div class="section-label" style="margin-top:24px">Archived (${arch.length})</div>${arch.map(e=>encHTML(a,e)).join("")}`:"";
+  const aw=$("#archWrap");
+  if(arch.length){
+    aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${arch.length})</button></div><div id="archBody" style="display:none">${arch.map(e=>encHTML(a,e)).join("")}</div>`;
+    const toggle=document.getElementById("archToggle"),body=document.getElementById("archBody");
+    toggle.addEventListener("click",()=>{const open=body.style.display!=="none";body.style.display=open?"none":"block";toggle.classList.toggle("open",!open);});
+  }else{aw.innerHTML="";}
   bindEncEvents(a);
 }
 // Patch an encounter's derived numbers (difficulty pill, budget bar, spent read-out, and each
@@ -1455,7 +1485,7 @@ function parse5etools(raw){
     else if(mt=l.match(/^Immunities\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="imm");if(c.note.length)m.cimm=(m.cimm?m.cimm+", ":"")+c.note.join(", ");}
     else if(mt=l.match(/^Resistances\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="res");if(c.note.length)m.dmgnote=c.note.map(n=>n+" (Resistance)").join("; ");}
     else if(mt=l.match(/^Vulnerabilities\s+(.+)/i)){const c=classifyDmg(mt[1]);Object.keys(c.types).forEach(t=>m.dmg[t]="vuln");}
-    else if(mt=l.match(/^Condition Immunities\s+(.+)/i))m.cimm=(m.cimm?m.cimm+", ":"")+mt[1].trim();
+    else if(mt=l.match(/^Condition Immunities\s+(.+)/i))m.cimm=(m.cimm?m.cimm+", ":"")+mt[1].trim().replace(/\s*;\s*/g,", ");
     else if(mt=l.match(/^Gear\s+(.+)/i))m.gear=mt[1].trim();
     else if(mt=l.match(/^Senses\s+(.+)/i)){m.senses=parseSenses(mt[1]);
       let other=mt[1].replace(/Passive Perception\s+\d+/i,"").replace(/(darkvision|blindsight|tremorsense|truesight)\s*\d+\s*ft\.?/ig,"").replace(/\bblind beyond[^,;]*/i,"").replace(/[,;\s]+$/,"").replace(/^[,;\s]+/,"").trim();
