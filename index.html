@@ -539,27 +539,60 @@ const CHASSIS=[
 
 let state={lib:[],adv:[],selAdv:null};
 let M=null, pendingForge=null;
-let storageOK=(typeof window!=="undefined"&&window.storage&&typeof window.storage.set==="function");
 
-async function safeGet(k){try{return await window.storage.get(k,false);}catch(e){return null;}}
-async function loadAll(){
-  if(!storageOK){showBanner("Storage isn't available here (e.g. the file was opened outside the app). The tool works fully, but nothing is saved between sessions — use Export JSON to keep your work.");return;}
+// ── JSONBin cloud storage ─────────────────────────────────────────────────────
+const JBIN_KEY="$2a$10$L0cZTspHDg9LR7hQqW7lkOCYd2OCGrltTRSNY.JjO8aNU4esyI4EG";
+const JBIN_BASE="https://api.jsonbin.io/v3";
+const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"true"};
+// Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
+function getBinId(k){return localStorage.getItem("mf_bin:"+k)||null;}
+function setBinId(k,id){localStorage.setItem("mf_bin:"+k,id);}
+
+async function jbinGet(k){
+  const id=getBinId(k);
+  if(!id)return null;
   try{
-    const a=await safeGet("library:monsters");state.lib=a?JSON.parse(a.value).map(normalizeMonster):[];
-    const b=await safeGet("library:adventures");state.adv=b?JSON.parse(b.value).map(normalizeAdv):[];
-  }catch(e){/* keys not set yet — fine */}
+    const r=await fetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.record;
+  }catch(e){return null;}
 }
-// debounced writes: edits fire on every keystroke; coalesce them so we don't hit the storage rate limit
+async function jbinSet(k,val){
+  const id=getBinId(k);
+  if(id){
+    // update existing bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("put failed");
+    }catch(e){showBanner("Cloud save failed. Recent edits may not be synced — use Export JSON as a backup.");}
+  } else {
+    // create new bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("create failed");
+      const d=await r.json();
+      setBinId(k,d.metadata.id);
+    }catch(e){showBanner("Cloud storage setup failed. Use Export JSON to keep your work.");}
+  }
+}
+
+async function loadAll(){
+  try{
+    const a=await jbinGet("library:monsters");state.lib=a?a.map(normalizeMonster):[];
+    const b=await jbinGet("library:adventures");state.adv=b?b.map(normalizeAdv):[];
+  }catch(e){/* bins not created yet — fine, will create on first save */}
+}
+// debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
 let _saveTimer=null,_pend={lib:false,adv:false};
 function saveLib(){_pend.lib=true;_schedule();}
 function saveAdv(){_pend.adv=true;_schedule();}
-function _schedule(){if(!storageOK)return;clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,600);}
+function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
 async function _flush(){
-  if(!storageOK)return;
   try{
-    if(_pend.lib){_pend.lib=false;await window.storage.set("library:monsters",JSON.stringify(state.lib),false);}
-    if(_pend.adv){_pend.adv=false;await window.storage.set("library:adventures",JSON.stringify(state.adv),false);}
-  }catch(e){showBanner("A storage write failed (possibly rate-limited). Recent edits may not be saved — Export JSON as a backup.");}
+    if(_pend.lib){_pend.lib=false;await jbinSet("library:monsters",state.lib);}
+    if(_pend.adv){_pend.adv=false;await jbinSet("library:adventures",state.adv);}
+  }catch(e){showBanner("A cloud save failed. Export JSON as a backup.");}
 }
 if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
 
