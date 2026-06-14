@@ -1,0 +1,822 @@
+"use strict";
+const CR_LIST=["0","1/8","1/4","1/2","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"];
+const CR_XP={"0":10,"1/8":25,"1/4":50,"1/2":100,"1":200,"2":450,"3":700,"4":1100,"5":1800,"6":2300,"7":2900,"8":3900,"9":5000,"10":5900,"11":7200,"12":8400,"13":10000,"14":11500,"15":13000,"16":15000,"17":18000,"18":20000,"19":22000,"20":25000,"21":33000,"22":41000,"23":50000,"24":62000,"25":75000,"26":90000,"27":105000,"28":120000,"29":135000,"30":155000};
+const CR_NUM={"0":0,"1/8":.125,"1/4":.25,"1/2":.5};CR_LIST.forEach(c=>{if(!(c in CR_NUM))CR_NUM[c]=Number(c);});
+function pbForCR(cr){const v={"0":2,"1/8":2,"1/4":2,"1/2":2,"1":2,"2":2,"3":2,"4":2,"5":3,"6":3,"7":3,"8":3,"9":4,"10":4,"11":4,"12":4,"13":5,"14":5,"15":5,"16":5,"17":6,"18":6,"19":6,"20":6,"21":7,"22":7,"23":7,"24":7,"25":8,"26":8,"27":8,"28":8,"29":9,"30":9};return v[cr]||2;}
+const BOH={"0":[13,3,2,1,9,0],"1/8":[13,9,3,3,10,1],"1/4":[13,15,3,6,10,1],"1/2":[14,24,4,9,11,2],"1":[14,30,4,12,11,2],"2":[14,45,5,18,12,3],"3":[15,60,5,24,12,3],"4":[15,75,6,30,13,4],"5":[15,90,6,36,13,4],"6":[16,105,7,42,14,4],"7":[16,120,7,48,14,4],"8":[16,135,8,54,15,4],"9":[17,150,8,60,15,4],"10":[17,165,9,66,16,5],"11":[17,180,9,72,16,5],"12":[18,195,10,78,17,5],"13":[18,210,10,84,17,5],"14":[18,225,11,90,18,6],"15":[19,240,11,96,18,6],"16":[19,255,12,102,19,6],"17":[19,270,12,108,19,6],"18":[20,285,13,114,20,7],"19":[20,300,13,120,20,7],"20":[20,315,14,126,21,7],"21":[21,350,14,132,21,7],"22":[21,400,15,138,22,8],"23":[21,450,15,144,22,8],"24":[22,500,16,150,23,8],"25":[22,550,16,156,23,8],"26":[22,600,17,162,24,9],"27":[22,650,17,168,24,9],"28":[22,700,18,174,25,9],"29":[22,750,18,180,25,9],"30":[22,800,19,186,26,9]};
+const BUDGET={1:[50,75,100],2:[100,150,200],3:[150,225,400],4:[250,375,500],5:[500,750,1100],6:[600,1000,1400],7:[750,1300,1700],8:[1000,1700,2100],9:[1300,2000,2600],10:[1600,2300,3100],11:[1900,2900,4100],12:[2200,3700,4700],13:[2600,4200,5400],14:[2900,4900,6200],15:[3300,5400,7800],16:[3800,6100,9800],17:[4500,7200,11700],18:[5000,8700,14200],19:[5500,10700,17200],20:[6400,13200,22000]};
+const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
+const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};
+const ABILS=["str","dex","con","int","wis","cha"];
+const DMG_TYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+const FACTIONS=["Enemy","Ally","Party","Setting"];
+const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
+const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
+const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once per encounter, immediately after another creature's turn, and must use them in order (Action 1, then 2, then 3).";
+
+const mod=s=>Math.floor((Number(s||10)-10)/2);
+const sgn=n=>(n>=0?"+":"")+n;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const diceAvg=d=>{const m=String(d||"").match(/(\d+)\s*d\s*(\d+)/i);return m?Number(m[1])*(Number(m[2])+1)/2:0;};
+const SIZE_DIE={Tiny:"d4",Small:"d6",Medium:"d8",Large:"d10",Huge:"d12",Gargantuan:"d20"};
+// average a full dice expression like "2d6 + 6" or "1d8 - 1"; rounds down, min 1
+function exprAvg(expr){let t=0;let s=String(expr).replace(/\s+/g,"");
+  s=s.replace(/([+-]?)(\d+)d(\d+)/gi,(_,sg,n,f)=>{const v=Number(n)*(Number(f)+1)/2;t+=(sg==="-"?-v:v);return "+";});
+  (s.match(/[+-]?\d+/g)||[]).forEach(x=>t+=Number(x));
+  return Math.max(1,Math.floor(t));}
+// replace [dice] tokens in rendered text with "avg (dice)"
+function avgBrackets(t){return String(t).replace(/\[([^\]]*?\d+\s*[dD]\s*\d+[^\]]*?)\]/g,(_,e)=>exprAvg(e)+" ("+e.trim()+")");}
+function initOf(m){if(m.init!==""&&m.init!=null)return Number(m.init);const pb=pbForCR(m.cr);const b=m.initProf==="exp"?pb*2:m.initProf==="prof"?pb:0;return mod(m.dex)+b;}
+
+function mk(o){return{id:o.id,chassis:true,name:o.name,size:o.size||"Medium",type:o.type||"Humanoid",subtype:o.subtype||"",align:o.align||"Neutral",
+  ac:o.ac,acnote:o.acnote||"",hp:o.hp,hpf:o.hpf||"",spd:o.spd||{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",
+  str:o.s[0],dex:o.s[1],con:o.s[2],int:o.s[3],wis:o.s[4],cha:o.s[5],saves:o.saves||[],skills:o.skills||[],
+  dmg:o.dmg||{},dmgnote:o.dmgnote||"",cimm:o.cimm||"",gear:o.gear||"",senses:o.senses||"",lang:o.lang||"Common",cr:o.cr,xpOver:"",
+  traits:o.traits||[],actions:o.actions||[],bonus:o.bonus||[],reactions:o.reactions||[],
+  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[],regional:""},_auto:{ac:false,hp:false}};}
+const T=(name,text)=>({name,text,mode:"text"});
+const ATK=o=>Object.assign({mode:"attack",name:"",kind:"Melee",ability:"str",atk:"",reach:5,range:"",targets:"",dice:"1d6",addMod:true,dtype:"Slashing",extra:""},o);
+const SPELL=o=>Object.assign({mode:"spell",name:"Spellcasting",ability:"cha",dc:"",atk:"",groups:[{freq:"At Will",spells:""}]},o);
+const CHASSIS=[
+  mk({id:"c_commoner",name:"Commoner",ac:10,hp:4,hpf:"1d8",s:[10,10,10,10,10,10],cr:"0",actions:[ATK({name:"Club",dice:"1d4",addMod:false,dtype:"Bludgeoning",reach:5})]}),
+  mk({id:"c_critter",name:"Critter",size:"Tiny",type:"Beast",ac:11,hp:3,hpf:"1d4",s:[3,14,8,2,12,4],cr:"0",spd:{walk:20,climb:20,fly:0,swim:0,burrow:0,hover:false},lang:"—",skills:[["Perception","prof"]],actions:[ATK({name:"Bite",ability:"dex",dice:"1",addMod:false,dtype:"Piercing"})]}),
+  mk({id:"c_bandit",name:"Bandit",ac:12,acnote:"leather",hp:11,hpf:"2d8+2",s:[11,12,12,10,10,10],cr:"1/8",gear:"Scimitar, Light Crossbow",actions:[ATK({name:"Scimitar",dice:"1d6",addMod:true,dtype:"Slashing"}),ATK({name:"Light Crossbow",kind:"Ranged",ability:"dex",range:"80/320",dice:"1d8",dtype:"Piercing"})]}),
+  mk({id:"c_guard",name:"Guard",ac:16,acnote:"chain shirt, shield",hp:11,hpf:"2d8+2",s:[13,12,12,10,11,10],cr:"1/8",skills:[["Perception","prof"]],gear:"Spear",actions:[ATK({name:"Spear",kind:"Melee or Ranged",range:"20/60",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_cultist",name:"Cultist",ac:12,acnote:"leather",hp:9,hpf:"2d8",s:[11,12,10,10,11,10],cr:"1/8",skills:[["Deception","prof"],["Religion","prof"]],gear:"Ritual Dagger",actions:[ATK({name:"Ritual Dagger",ability:"dex",dice:"1d4",dtype:"Slashing",extra:"plus 2 (1d4) Necrotic damage."})]}),
+  mk({id:"c_skeleton",name:"Skeleton",type:"Undead",ac:14,acnote:"armor scraps",hp:13,hpf:"2d8+4",s:[10,14,15,6,8,5],cr:"1/4",dmg:{Poison:"imm",Bludgeoning:"vuln"},cimm:"Exhaustion, Poisoned",senses:"Darkvision 60 ft.",lang:"understands Common",gear:"Shortsword, Shortbow",actions:[ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing"}),ATK({name:"Shortbow",kind:"Ranged",ability:"dex",range:"80/320",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_wolf",name:"Wolf",type:"Beast",ac:12,hp:11,hpf:"2d8+2",s:[12,15,12,3,12,6],cr:"1/4",spd:{walk:40,climb:0,fly:0,swim:0,burrow:0,hover:false},skills:[["Perception","prof"],["Stealth","prof"]],lang:"—",traits:[T("Pack Tactics","Advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of it.")],actions:[ATK({name:"Bite",ability:"dex",dice:"2d4",dtype:"Piercing",extra:"If the target is a creature, it has the Prone condition (DC 11 Str save negates)."})]}),
+  mk({id:"c_acolyte",name:"Acolyte",ac:13,acnote:"chain shirt",hp:11,hpf:"2d8+2",s:[10,10,11,11,14,11],cr:"1/4",skills:[["Medicine","prof"],["Religion","prof"]],traits:[T("Spellcasting","WIS (save DC 12). At will: Light, Thaumaturgy. 1/day each: Bless, Cure Wounds.")],actions:[ATK({name:"Mace",dice:"1d6",addMod:false,dtype:"Bludgeoning"})]}),
+  mk({id:"c_scout",name:"Scout",ac:13,acnote:"leather",hp:16,hpf:"3d8+3",s:[11,14,12,11,13,11],cr:"1/2",skills:[["Nature","prof"],["Perception","exp"],["Stealth","prof"],["Survival","exp"]],gear:"Shortsword, Longbow",actions:[T("Multiattack","The scout makes two attacks."),ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing"}),ATK({name:"Longbow",kind:"Ranged",ability:"dex",range:"150/600",dice:"1d8",dtype:"Piercing"})]}),
+  mk({id:"c_thug",name:"Thug",ac:11,hp:32,hpf:"5d8+10",s:[15,11,14,10,10,11],cr:"1/2",skills:[["Intimidation","prof"]],gear:"Mace",traits:[T("Pack Tactics","Advantage on an attack roll against a creature if an ally is within 5 feet of it.")],actions:[T("Multiattack","The thug makes two Mace attacks."),ATK({name:"Mace",dice:"1d6",dtype:"Bludgeoning"})]}),
+  mk({id:"c_berserker",name:"Berserker",ac:13,acnote:"hide",hp:67,hpf:"9d8+27",s:[16,12,17,9,11,9],cr:"2",gear:"Greataxe",actions:[ATK({name:"Greataxe",dice:"1d12",dtype:"Slashing"})]}),
+  mk({id:"c_priest",name:"Priest",ac:13,acnote:"chain shirt",hp:38,hpf:"7d8+7",s:[10,10,12,13,16,13],cr:"2",skills:[["Medicine","prof"],["Persuasion","prof"],["Religion","prof"]],traits:[T("Spellcasting","WIS (save DC 13, +5 to hit). At will: Light, Sacred Flame, Thaumaturgy. 1/day each: Dispel Magic, Spirit Guardians.")],actions:[ATK({name:"Mace",dice:"1d6",addMod:false,dtype:"Bludgeoning",extra:"plus 4 (1d8) Radiant damage."})]}),
+  mk({id:"c_ogre",name:"Ogre",size:"Large",type:"Giant",ac:11,hp:68,hpf:"8d10+24",s:[19,8,16,5,7,7],cr:"2",senses:"Darkvision 60 ft.",lang:"Common, Giant",gear:"Greatclub",actions:[ATK({name:"Greatclub",dice:"2d8",dtype:"Bludgeoning"})]}),
+  mk({id:"c_veteran",name:"Veteran",ac:17,acnote:"splint",hp:65,hpf:"10d8+20",s:[16,13,14,10,11,10],cr:"3",skills:[["Athletics","prof"],["Perception","prof"]],gear:"Longsword, Shortsword",actions:[T("Multiattack","The veteran makes two Longsword attacks and one Shortsword attack."),ATK({name:"Longsword",dice:"1d8",dtype:"Slashing"}),ATK({name:"Shortsword",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_knight",name:"Knight",ac:18,acnote:"plate",hp:52,hpf:"8d8+16",s:[16,11,14,11,11,15],cr:"3",saves:["con","wis"],gear:"Greatsword",traits:[T("Brave","The knight has Advantage on saving throws against being Frightened.")],actions:[T("Multiattack","The knight makes two Greatsword attacks."),ATK({name:"Greatsword",dice:"2d6",dtype:"Slashing"})],reactions:[{name:"Parry",trigger:"The knight is hit by a melee attack and can see the attacker.",response:"The knight adds 2 to its AC against that attack.",mode:"react"}]}),
+  mk({id:"c_lycan",name:"Lycanthrope",type:"Monstrosity",ac:15,hp:58,hpf:"9d8+18",s:[15,13,14,10,11,10],cr:"3",dmg:{},dmgnote:"Bludgeoning, Piercing, Slashing from nonmagical, non-silvered attacks (Resistance)",actions:[T("Multiattack","The creature makes two attacks."),ATK({name:"Bite",dice:"1d10",dtype:"Piercing",extra:"If the target is Humanoid, it must succeed on a DC 12 Con save or be cursed with lycanthropy."})]}),
+  mk({id:"c_ettin",name:"Two-Headed Brute",size:"Large",type:"Giant",ac:12,hp:85,hpf:"10d10+30",s:[21,8,17,6,10,8],cr:"4",senses:"Darkvision 60 ft.",lang:"Giant",traits:[T("Two Heads","Advantage on Perception checks and on saves against Blinded, Charmed, Deafened, Frightened, Stunned, and Unconscious.")],actions:[T("Multiattack","The brute makes one Battleaxe attack and one Morningstar attack."),ATK({name:"Battleaxe",dice:"2d8",dtype:"Slashing"}),ATK({name:"Morningstar",dice:"2d8",dtype:"Piercing"})]}),
+  mk({id:"c_gladiator",name:"Champion",ac:16,acnote:"studded leather, shield",hp:112,hpf:"15d8+45",s:[18,15,16,10,12,15],cr:"5",saves:["str","dex","con"],skills:[["Athletics","exp"],["Intimidation","prof"]],gear:"Spear, Shield",actions:[T("Multiattack","The champion makes three Spear attacks."),ATK({name:"Spear",kind:"Melee or Ranged",range:"20/60",dice:"2d6",dtype:"Piercing"})],reactions:[{name:"Parry",trigger:"Hit by a melee attack.",response:"Adds 3 to AC against that attack.",mode:"react"}]}),
+  mk({id:"c_troll",name:"Regenerating Brute",size:"Large",type:"Giant",ac:15,hp:94,hpf:"9d10+45",s:[18,13,20,7,9,7],cr:"5",senses:"Darkvision 60 ft.",traits:[T("Regeneration","Regains 10 HP at the start of its turn. If it takes Acid or Fire damage, this doesn't function on its next turn. It dies only if it starts its turn with 0 HP and doesn't regenerate.")],actions:[T("Multiattack","One Bite and two Claw attacks."),ATK({name:"Bite",dice:"1d10",dtype:"Piercing"}),ATK({name:"Claw",dice:"1d6",dtype:"Slashing"})]}),
+  mk({id:"c_mage",name:"Mage",ac:15,acnote:"Mage Armor",hp:81,hpf:"18d8",s:[9,14,11,17,12,11],cr:"6",saves:["int","wis"],skills:[["Arcana","exp"],["History","prof"]],traits:[T("Spellcasting","INT (save DC 14, +6 to hit). At will: Fire Bolt, Light, Mage Hand. 2/day each: Fireball, Misty Step. 1/day each: Cone of Cold, Wall of Force.")],actions:[ATK({name:"Fire Bolt",kind:"Ranged",ability:"int",range:"120",dice:"2d10",addMod:false,dtype:"Fire"})]}),
+  mk({id:"c_assassin",name:"Assassin",ac:16,acnote:"studded leather",hp:97,hpf:"15d8+30",s:[11,18,14,16,11,10],cr:"8",saves:["dex","int"],skills:[["Acrobatics","prof"],["Perception","prof"],["Stealth","exp"]],dmg:{Poison:"res"},gear:"Shortsword",traits:[T("Assassinate","During the first round, the assassin has Advantage on attacks against any creature that hasn't taken a turn. Any hit against a Surprised creature is a Critical Hit."),T("Sneak Attack (1/Turn)","+17 (5d6) Poison damage when it hits with Advantage or while an ally is within 5 ft. of the target.")],actions:[T("Multiattack","The assassin makes three Shortsword attacks."),ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing",extra:"plus 7 (2d6) Poison damage."})]}),
+  mk({id:"c_commander",name:"Commander",ac:18,acnote:"plate, shield",hp:153,hpf:"18d8+72",s:[18,12,18,12,14,16],cr:"9",saves:["str","con","wis"],skills:[["Athletics","prof"],["Intimidation","prof"],["Perception","prof"]],gear:"Greatsword",traits:[T("Aura of Command","Allies within 30 ft. have Advantage on saves against Frightened and Charmed.")],actions:[T("Multiattack","The commander makes three Greatsword attacks."),ATK({name:"Greatsword",dice:"2d6",dtype:"Slashing"}),T("Rallying Cry (Recharge 5–6)","Each ally within 30 ft. gains 10 temporary HP and can move up to its Speed as a Reaction.")],bonus:[T("Command Ally","One ally within 30 ft. uses its Reaction to make one weapon attack.")]}),
+  mk({id:"c_aberration",name:"Aberrant Horror",size:"Large",type:"Aberration",ac:16,hp:135,hpf:"18d10+36",s:[16,14,15,18,15,18],cr:"10",saves:["con","int","wis"],senses:"Darkvision 120 ft., Truesight 30 ft.",cimm:"Charmed, Frightened",traits:[T("Maddening Presence","A creature that starts its turn within 30 ft. and can see the horror makes a DC 16 Wis save or has Disadvantage on attacks until its next turn.")],actions:[T("Multiattack","The horror makes three Tentacle attacks."),ATK({name:"Tentacle",dice:"2d8",dtype:"Bludgeoning",reach:15,extra:"plus 7 (2d6) Psychic damage."}),T("Mind Blast (Recharge 5–6)","Intelligence Saving Throw: DC 16, each creature in a 60-foot Cone. Failure: 31 (6d8 + 4) Psychic damage and Stunned until the end of its next turn. Success: Half damage.")]}),
+  mk({id:"c_sorcererlord",name:"Sorcerer-Lord",ac:16,hp:144,hpf:"17d8+68",s:[12,16,18,14,13,20],cr:"12",saves:["con","cha"],skills:[["Arcana","prof"],["Deception","prof"]],dmg:{},dmgnote:"damage from spells (Resistance)",traits:[T("Spellcasting","CHA (save DC 18, +10 to hit). At will: Eldritch Blast (3 beams), Detect Magic. 2/day each: Dimension Door, Hold Monster. 1/day each: Finger of Death, Power Word Stun.")],actions:[ATK({name:"Withering Touch",ability:"cha",dice:"4d8",dtype:"Necrotic"})],legend:{on:true,intro:"",items:[T("Blink","The lord teleports up to 30 feet."),T("Drain (Costs 2 Uses)","One creature within 30 ft. makes a DC 18 Con save, taking 16 (3d10) Necrotic damage on a failure.")]}}),
+  mk({id:"c_archfiend",name:"Archfiend",size:"Large",type:"Fiend",ac:19,acnote:"natural armor",hp:262,hpf:"21d10+147",s:[26,15,24,22,18,26],cr:"17",saves:["str","con","wis","cha"],dmg:{Cold:"res",Fire:"imm",Poison:"imm"},cimm:"Charmed, Frightened, Poisoned",senses:"Truesight 120 ft.",traits:[T("Legendary Resistance (3/Day)","If the archfiend fails a save, it can choose to succeed instead."),T("Magic Resistance","Advantage on saves against spells and other magical effects.")],actions:[T("Multiattack","The archfiend makes one Flame Blade attack and one Slam attack."),ATK({name:"Flame Blade",dice:"3d6",reach:10,dtype:"Slashing",extra:"plus 13 (3d8) Fire damage."}),T("Hellfire (Recharge 5–6)","Dexterity Saving Throw: DC 21, each creature in a 30-foot-radius Sphere within 120 ft. Failure: 52 (15d6) Fire damage. Success: Half damage.")],legend:{on:true,intro:"",items:[T("Teleport","The archfiend teleports up to 120 feet."),T("Hurl Flame","Ranged attack, +14, range 120 ft., 13 (3d8) Fire damage."),T("Dread (Costs 2 Uses)","Each creature within 30 ft. makes a DC 21 Wis save or is Frightened until the end of its next turn.")]},lair:{on:true,intro:"",items:[T("Eruption","Magma erupts from a point the archfiend can see within its lair; each creature in a 5-ft radius makes a DC 18 Dex save, taking 11 (2d10) Fire damage on a failure.")],regional:""}}),
+];
+
+let state={lib:[],adv:[],selAdv:null};
+let M=null, pendingForge=null;
+
+// ── JSONBin cloud storage ─────────────────────────────────────────────────────
+const JBIN_KEY="$2a$10$L0cZTspHDg9LR7hQqW7lkOCYd2OCGrltTRSNY.JjO8aNU4esyI4EG";
+const JBIN_BASE="https://api.jsonbin.io/v3";
+const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"true"};
+// Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
+function getBinId(k){return localStorage.getItem("mf_bin:"+k)||null;}
+function setBinId(k,id){localStorage.setItem("mf_bin:"+k,id);}
+
+async function jbinGet(k){
+  const id=getBinId(k);
+  if(!id)return null;
+  try{
+    const r=await fetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.record;
+  }catch(e){return null;}
+}
+async function jbinSet(k,val){
+  const id=getBinId(k);
+  if(id){
+    // update existing bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("put failed");
+    }catch(e){showBanner("Cloud save failed. Recent edits may not be synced — use Export JSON as a backup.");}
+  } else {
+    // create new bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("create failed");
+      const d=await r.json();
+      setBinId(k,d.metadata.id);
+    }catch(e){showBanner("Cloud storage setup failed. Use Export JSON to keep your work.");}
+  }
+}
+
+async function loadAll(){
+  try{
+    const a=await jbinGet("library:monsters");state.lib=a?a.map(normalizeMonster):[];
+    const b=await jbinGet("library:adventures");state.adv=b?b.map(normalizeAdv):[];
+  }catch(e){/* bins not created yet — fine, will create on first save */}
+}
+// debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
+let _saveTimer=null,_pend={lib:false,adv:false};
+function saveLib(){_pend.lib=true;_schedule();}
+function saveAdv(){_pend.adv=true;_schedule();}
+function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
+async function _flush(){
+  try{
+    if(_pend.lib){_pend.lib=false;await jbinSet("library:monsters",state.lib);}
+    if(_pend.adv){_pend.adv=false;await jbinSet("library:adventures",state.adv);}
+  }catch(e){showBanner("A cloud save failed. Export JSON as a backup.");}
+}
+if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),1900);}
+function showBanner(t,withCancel){const b=$("#banner");b.innerHTML=esc(t)+(withCancel?'<button id="bannerCancel">Cancel</button>':"");b.classList.add("show");if(withCancel)$("#bannerCancel").onclick=withCancel;}
+function hideBanner(){$("#banner").classList.remove("show");}
+function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[m.cr]??0);}
+
+function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"creature",proper:false,plural:false},size:"Medium",type:"",subtype:"",align:"",
+  ac:null,acnote:"",hp:null,hpf:"",spd:{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",initProf:"none",
+  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],dmg:{},dmgnote:"",cimm:"",gear:"",
+  senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
+  cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],
+  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
+  _auto:{ac:true,hp:true}};}
+function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
+  const w=String(str||"").match(/^\s*(\d+)\s*ft/i);if(w)s.walk=+w[1];
+  ["climb","fly","swim","burrow"].forEach(k=>{const m=new RegExp(k+"\\s*(\\d+)","i").exec(str||"");if(m)s[k]=+m[1];});
+  return s;}
+function parseSenses(str){const s={darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:/blind beyond/i.test(str||""),other:""};
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>{const m=new RegExp(k+"\\s*(\\d+)","i").exec(str||"");if(m)s[k]=+m[1];});
+  return s;}
+function migrateDefenses(m){
+  const dmg={};let note=[];
+  const apply=(str,st)=>{if(!str)return;String(str).split(",").forEach(tok=>{tok=tok.trim();const hit=DMG_TYPES.find(d=>d.toLowerCase()===tok.toLowerCase());if(hit)dmg[hit]=st;else if(tok)note.push(tok+" ("+({res:"Resistance",imm:"Immunity",vuln:"Vulnerability"}[st])+")");});};
+  apply(m.res,"res");apply(m.dimm,"imm");apply(m.vuln,"vuln");
+  m.dmg=dmg;m.dmgnote=(m.dmgnote?m.dmgnote+"; ":"")+note.join("; ");
+  delete m.res;delete m.dimm;delete m.vuln;
+}
+function normalizeMonster(m){
+  if(!m.spd){m.spd=parseSpeed(m.speed);delete m.speed;}
+  if(typeof m.senses==="string"||m.senses==null)m.senses=parseSenses(m.senses);
+  if(!m.shortName)m.shortName={word:"creature",proper:false,plural:false};
+  if(!m.initProf)m.initProf="none";
+  if(m.res!==undefined||m.dimm!==undefined||m.vuln!==undefined){if(!m.dmg)m.dmg={};migrateDefenses(m);}
+  if(!m.dmg)m.dmg={};
+  if(m.dmgnote===undefined)m.dmgnote="";
+  m.legend=m.legend||{on:false,intro:"",items:[]};m.legend.intro=m.legend.intro||"";
+  m.villain=m.villain||{on:false,intro:"",items:[]};m.villain.intro=m.villain.intro||"";
+  m.lair=m.lair||{on:false,intro:"",items:[]};m.lair.intro=m.lair.intro||"";
+  if(!m.regional)m.regional={on:!!(m.lair&&m.lair.regional),text:(m.lair&&m.lair.regional)||""};
+  if(m.lair&&m.lair.regional!==undefined)delete m.lair.regional;
+  ["traits","actions","bonus","reactions"].forEach(k=>{m[k]=(m[k]||[]).map(e=>e.mode?e:Object.assign({mode:e.trigger!==undefined?"react":"text"},e));});
+  m.legend.items=(m.legend.items||[]).map(e=>e.mode?e:T(e.name,e.text));
+  m.lair.items=(m.lair.items||[]).map(e=>e.mode?e:T(e.name,e.text));
+  m.villain.items=(m.villain.items||[]).map(e=>Object.assign({mode:"villain",round:e.round||1},e));
+  m._auto=m._auto||{ac:false,hp:false};
+  return m;
+}
+function normalizeAdv(a){
+  a.notes=a.notes||"";a.levels=a.levels||[];
+  a.encounters=(a.encounters||[]).map(e=>{
+    e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
+    e.combatants=(e.combatants||[]).map(c=>{
+      if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:c.faction||"Enemy"};
+      c.id=c.id||uid();return c;
+    });
+    return e;
+  });
+  return a;
+}
+
+function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
+function buildDmgGrid(){$("#dmgGrid").innerHTML=DMG_TYPES.map(d=>`<button class="dchip" data-dmg="${d}"><span class="st">–</span>${d}</button>`).join("");
+  $$("#dmgGrid [data-dmg]").forEach(b=>b.addEventListener("click",()=>{const d=b.dataset.dmg;const order=["none","res","imm","vuln"];const cur=M.dmg[d]||"none";const nx=order[(order.indexOf(cur)+1)%4];if(nx==="none")delete M.dmg[d];else M.dmg[d]=nx;paintDmg();renderPreview();}));}
+function paintDmg(){$$("#dmgGrid [data-dmg]").forEach(b=>{const st=M.dmg[b.dataset.dmg]||"none";b.className="dchip"+(st!=="none"?" "+st:"");b.querySelector(".st").textContent={none:"–",res:"R",imm:"I",vuln:"V"}[st];});}
+
+function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
+function bindStatic(){
+  bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
+  bindField("#f_acnote","acnote");bindField("#f_hpf","hpf");bindField("#f_init","init",true);
+  bindField("#f_dmgnote","dmgnote");bindField("#f_cimm","cimm");bindField("#f_gear","gear");bindField("#f_lang","lang");
+  $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
+  $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
+  $("#f_initprof").addEventListener("change",()=>{M.initProf=$("#f_initprof").value;renderPreview();});
+  $("#f_size").addEventListener("change",updateHpDie);
+  $("#f_snplural").addEventListener("change",()=>{M.shortName.plural=$("#f_snplural").checked;renderEntries();renderPreview();});
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).addEventListener("input",()=>{M.senses[k]=Number($("#se_"+k).value||0);renderPreview();}));
+  $("#se_blindBeyond").addEventListener("change",()=>{M.senses.blindBeyond=$("#se_blindBeyond").checked;renderPreview();});
+  $("#se_other").addEventListener("input",()=>{M.senses.other=$("#se_other").value;renderPreview();});
+  $("#f_ac").addEventListener("input",()=>{M.ac=$("#f_ac").value===""?null:Number($("#f_ac").value);M._auto.ac=false;$("#wb_ac").classList.remove("suggested");renderPreview();});
+  $("#f_hp").addEventListener("input",()=>{M.hp=$("#f_hp").value===""?null:Number($("#f_hp").value);M._auto.hp=false;$("#wb_hp").classList.remove("suggested");renderPreview();});
+  ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).addEventListener("input",()=>{M.spd[k]=Number($("#sp_"+k).value||0);renderPreview();}));
+  $("#sp_hover").addEventListener("change",()=>{M.spd.hover=$("#sp_hover").checked;renderPreview();});
+  ABILS.forEach(a=>{
+    $("#ab_"+a).addEventListener("input",()=>{M[a]=Number($("#ab_"+a).value||10);refreshAbil();renderEntries();renderPreview();});
+    $("#sv_"+a).addEventListener("click",()=>{const on=!M.saves.includes(a);M.saves=M.saves.filter(x=>x!==a);if(on)M.saves.push(a);refreshAbil();renderPreview();});
+  });
+  $("#f_legintro").addEventListener("input",()=>{M.legend.intro=$("#f_legintro").value;renderPreview();});
+  $("#f_vilintro").addEventListener("input",()=>{M.villain.intro=$("#f_vilintro").value;renderPreview();});
+  $("#f_lairintro").addEventListener("input",()=>{M.lair.intro=$("#f_lairintro").value;renderPreview();});
+  $("#f_regional").addEventListener("input",()=>{M.regional.text=$("#f_regional").value;renderPreview();});
+  $("#t_legend").addEventListener("change",e=>{M.legend.on=e.target.checked;if(e.target.checked&&!M.legend.intro){M.legend.intro=LEGEND_INTRO;$("#f_legintro").value=LEGEND_INTRO;}$("#legendInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";renderPreview();});
+}
+function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
+  if(M._auto.ac){M.ac=boh[0];$("#f_ac").value=boh[0];$("#wb_ac").classList.add("suggested");}
+  if(M._auto.hp){M.hp=boh[1];$("#f_hp").value=boh[1];$("#wb_hp").classList.add("suggested");}}
+function updateHpDie(){const el=$("#f_hpf");if(!el)return;const sz=$("#f_size");const size=(sz&&sz.value)||M.size;el.placeholder="4"+(SIZE_DIE[size]||"d8")+" + 8";}
+function updateCRDisplay(){const el=$("#f_cr");if(el)el.value="CR "+M.cr;}
+function setCR(cr){M.cr=cr;updateCRDisplay();applyCRAuto();refreshAbil();renderEntries();renderPreview();}
+function buildCRStepper(){const w=$("#wb_cr");if(!w||w.querySelector(".stepbtns"))return;
+  const b=document.createElement("span");b.className="stepbtns";
+  b.innerHTML='<button type="button" data-d="1">▲</button><button type="button" data-d="-1">▼</button>';
+  w.appendChild(b);
+  b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
+    const i=CR_LIST.indexOf(M.cr),ni=clamp(i+(+btn.dataset.d),0,CR_LIST.length-1);
+    if(ni!==i)setCR(CR_LIST[ni]);}));}
+function refreshAbil(){const pb=pbForCR(M.cr);ABILS.forEach(a=>{const m=mod(M[a]);$("#mod_"+a).textContent=sgn(m);const p=M.saves.includes(a);$("#svv_"+a).textContent=sgn(m+(p?pb:0));const b=$("#sv_"+a);b.classList.toggle("active",p);b.setAttribute("aria-pressed",p?"true":"false");});}
+
+function renderSkills(){const box=$("#skillRows");
+  box.innerHTML=M.skills.map((s,i)=>`<div class="rowline">
+    <select data-si="${i}" class="skName">${Object.keys(SKILLS).map(k=>`<option value="${k}" ${k===s[0]?"selected":""}>${k.replace(/_/g," ")}</option>`).join("")}</select>
+    <select data-si="${i}" class="skProf"><option value="prof" ${s[1]!=="exp"?"selected":""}>Proficient</option><option value="exp" ${s[1]==="exp"?"selected":""}>Expertise</option></select>
+    <button class="iconbtn" data-rmskill="${i}">✕</button></div>`).join("");
+  box.querySelectorAll(".skName").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][0]=e.target.value;renderPreview();}));
+  box.querySelectorAll(".skProf").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][1]=e.target.value;renderPreview();}));
+  box.querySelectorAll("[data-rmskill]").forEach(el=>el.addEventListener("click",e=>{M.skills.splice(+e.target.dataset.rmskill,1);renderSkills();renderPreview();}));
+}
+$("#addSkill").addEventListener("click",()=>{M.skills.push(["Perception","prof"]);renderSkills();renderPreview();});
+
+function arrFor(k){return k==="traits"?M.traits:k==="actions"?M.actions:k==="bonus"?M.bonus:k==="reactions"?M.reactions:k==="villain"?M.villain.items:k==="legend"?M.legend.items:k==="lair"?M.lair.items:[];}
+function attackText(e){
+  const pb=pbForCR(M.cr);const ab=mod(M[e.ability]);
+  const atk=e.atk!==""&&e.atk!=null?Number(e.atk):ab+pb;
+  const kind=e.kind==="Ranged"?"Ranged Attack Roll:":e.kind==="Melee or Ranged"?"Melee or Ranged Attack Roll:":"Melee Attack Roll:";
+  let rr=e.kind==="Ranged"?`range ${e.range||"30/120"} ft.`:e.kind==="Melee or Ranged"?`reach ${e.reach||5} ft. or range ${e.range||"20/60"} ft.`:`reach ${e.reach||5} ft.`;
+  const avg=Math.max(1,Math.floor(diceAvg(e.dice)+(e.addMod?ab:0)));
+  const dtxt=e.dice+(e.addMod&&ab!==0?` ${sgn(ab)}`:"");
+  return `*${kind}* ${sgn(atk)}, ${rr}.${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
+}
+const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
+function entryHTML(arr,kind){return arr.map((e,i)=>{
+  if(kind==="reactions"){return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <input type="text" placeholder="Trigger" data-k="${kind}" data-i="${i}" data-f="trigger" value="${esc(e.trigger||"")}" style="margin-bottom:6px">
+    <textarea placeholder="Response" data-k="${kind}" data-i="${i}" data-f="response">${esc(e.response||"")}</textarea></div>`;}
+  if(kind==="villain"){return `<div class="entry"><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select><input type="text" placeholder="Name" data-k="villain" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="villain:${i}">✕</button></div>
+    <textarea placeholder="Effect" data-k="villain" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea></div>`;}
+  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);return `<div class="entry"><div class="ehead"><span class="kind">Spellcasting</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <div class="atk-fields" style="grid-template-columns:repeat(3,1fr)">
+      <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
+      <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
+      <label class="f">Spell atk (auto)<input type="number" placeholder="${sgn(pb+ab)}" data-k="${kind}" data-i="${i}" data-f="atk" value="${e.atk}"></label>
+    </div>
+    <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">— each renders on its own line</span></div>
+    ${(e.groups||[]).map((g,gi)=>`<div class="rowline">
+      <select data-sg="${i}:${gi}:freq" style="flex:none;width:120px">${["At Will","1/Day Each","2/Day Each","3/Day Each","1/Day","2/Day","3/Day"].map(f=>`<option ${f===g.freq?"selected":""}>${f}</option>`).join("")}</select>
+      <input type="text" placeholder="Spell names, comma-separated" value="${esc(g.spells)}" data-sg="${i}:${gi}:spells">
+      <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
+    <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
+    <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
+  if(e.mode==="attack"){return `<div class="entry"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <div class="atk-fields">
+      <label class="f">Kind<select data-k="${kind}" data-i="${i}" data-f="kind">${["Melee","Ranged","Melee or Ranged"].map(k=>`<option ${k===e.kind?"selected":""}>${k}</option>`).join("")}</select></label>
+      <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
+      <label class="f">Atk (auto)<input type="number" placeholder="${sgn(mod(M[e.ability])+pbForCR(M.cr))}" data-k="${kind}" data-i="${i}" data-f="atk" value="${e.atk}"></label>
+      <label class="f">Reach<input type="number" data-k="${kind}" data-i="${i}" data-f="reach" value="${e.reach}"></label>
+      <label class="f">Range<input type="text" placeholder="20/60" data-k="${kind}" data-i="${i}" data-f="range" value="${esc(e.range)}"></label>
+      <label class="f">Dice<input type="text" data-k="${kind}" data-i="${i}" data-f="dice" value="${esc(e.dice)}"></label>
+      <label class="f">Dmg type<select data-k="${kind}" data-i="${i}" data-f="dtype">${DMG_TYPES.map(d=>`<option ${d===e.dtype?"selected":""}>${d}</option>`).join("")}</select></label>
+      <label class="f">Targets<input type="text" placeholder="one target" data-k="${kind}" data-i="${i}" data-f="targets" value="${esc(e.targets)}"></label>
+      <label class="f" style="grid-column:span 2;flex-direction:row;align-items:center;gap:6px;margin-top:18px"><input type="checkbox" data-k="${kind}" data-i="${i}" data-f="addMod" ${e.addMod?"checked":""}> add ability to damage</label>
+    </div>
+    <input type="text" class="atk-extra" placeholder="Rider, e.g. plus 7 (2d6) Poison damage." data-k="${kind}" data-i="${i}" data-f="extra" value="${esc(e.extra)}">
+    <div class="hint" style="margin-top:6px">→ ${esc(attackText(e))}</div></div>`;}
+  return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <textarea placeholder="Description" data-k="${kind}" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea>
+    ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
+}).join("");}
+function renderEntries(){
+  $("#traitList").innerHTML=entryHTML(M.traits,"traits");
+  $("#actionList").innerHTML=entryHTML(M.actions,"actions");
+  $("#bonusList").innerHTML=entryHTML(M.bonus,"bonus");
+  $("#reactList").innerHTML=entryHTML(M.reactions,"reactions");
+  $("#legendList").innerHTML=entryHTML(M.legend.items,"legend");
+  $("#villainList").innerHTML=entryHTML(M.villain.items,"villain");
+  $("#lairList").innerHTML=entryHTML(M.lair.items,"lair");
+  bindEntries();
+  $("#cntTraits").textContent=M.traits.length||"";$("#cntActions").textContent=M.actions.length||"";
+  $("#cntBonus").textContent=M.bonus.length||"";$("#cntReact").textContent=M.reactions.length||"";
+}
+function bindEntries(){
+  $$("#formCol [data-k]").forEach(el=>{
+    const ev=el.type==="checkbox"||el.tagName==="SELECT"?"change":"input";
+    el.addEventListener(ev,()=>{const k=el.dataset.k,i=+el.dataset.i,f=el.dataset.f;
+      let v=el.type==="checkbox"?el.checked:el.value;if(f==="round")v=+v;arrFor(k)[i][f]=v;
+      if(["kind","ability","atk","reach","range","dice","dtype","targets","addMod","extra"].includes(f))renderEntries();
+      renderPreview();});
+  });
+  $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
+  $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
+  $$("#formCol [data-sg]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[i,gi,f]=el.dataset.sg.split(":");M.actions[+i].groups[+gi][f]=el.value;if(f==="freq")renderEntries();renderPreview();});});
+  $$("#formCol [data-sgadd]").forEach(el=>el.addEventListener("click",()=>{M.actions[+el.dataset.sgadd].groups.push({freq:"1/Day Each",spells:""});renderEntries();renderPreview();}));
+  $$("#formCol [data-sgrm]").forEach(el=>el.addEventListener("click",()=>{const[i,gi]=el.dataset.sgrm.split(":");M.actions[+i].groups.splice(+gi,1);renderEntries();renderPreview();}));
+}
+function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
+$$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.add;
+  if(k==="reactions")M.reactions.push({mode:"react",name:"",trigger:"",response:""});
+  else if(k==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name:"",text:""});
+  else arrFor(k).push(T("",""));renderEntries();renderPreview();}));
+$$("[data-addatk]").forEach(b=>b.addEventListener("click",()=>{const best=mod(M.str)>=mod(M.dex)?"str":"dex";M.actions.push(ATK({ability:best}));renderEntries();renderPreview();}));
+$$("[data-addspell]").forEach(b=>b.addEventListener("click",()=>{const best=["int","wis","cha"].reduce((p,a)=>mod(M[a])>mod(M[p])?a:p,"cha");M.actions.push(SPELL({ability:best}));renderEntries();renderPreview();}));
+$$("[data-addmulti]").forEach(b=>b.addEventListener("click",()=>{M.actions.unshift(T("Multiattack","[C] make[s] two attacks."));renderEntries();renderPreview();}));
+
+function loadMonster(m){
+  M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
+  $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
+  $("#f_size").value=M.size;updateCRDisplay();
+  $("#f_ac").value=M.ac??"";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M.hp??"";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
+  $("#f_initprof").value=M.initProf||"none";updateHpDie();
+  $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
+  ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
+  $("#f_snword").value=M.shortName.word||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
+  $("#f_dmgnote").value=M.dmgnote||"";$("#f_cimm").value=M.cimm||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
+  ABILS.forEach(a=>$("#ab_"+a).value=M[a]);
+  $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
+  $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
+  $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
+  $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
+  if(M._auto.ac||M._auto.hp)applyCRAuto();
+  refreshAbil();paintDmg();renderSkills();renderEntries();renderPreview();
+}
+
+function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
+  if(s.climb)p.push(`Climb ${s.climb} ft.`);if(s.fly)p.push(`Fly ${s.fly} ft.${s.hover?" (hover)":""}`);
+  if(s.swim)p.push(`Swim ${s.swim} ft.`);if(s.burrow)p.push(`Burrow ${s.burrow} ft.`);return p.join(", ");}
+function defenseStrings(m){
+  const res=DMG_TYPES.filter(d=>m.dmg[d]==="res"),imm=DMG_TYPES.filter(d=>m.dmg[d]==="imm"),vuln=DMG_TYPES.filter(d=>m.dmg[d]==="vuln");
+  const noteRes=[],noteImm=[],noteVuln=[];
+  (m.dmgnote||"").split(";").map(x=>x.trim()).filter(Boolean).forEach(n=>{if(/vulnerab/i.test(n))noteVuln.push(n.replace(/\s*\(Vulnerability\)/i,""));else if(/immun/i.test(n))noteImm.push(n.replace(/\s*\(Immunity\)/i,""));else noteRes.push(n.replace(/\s*\(Resistance\)/i,""));});
+  return{res:[...res,...noteRes].join(", "),vuln:[...vuln,...noteVuln].join(", "),imm:[[...imm,...noteImm].join(", "),m.cimm].filter(Boolean).join("; ")};
+}
+function sensesStr(m){const s=m.senses||{};let p=[];
+  if(s.darkvision)p.push(`Darkvision ${s.darkvision} ft.`);
+  if(s.blindsight)p.push(`Blindsight ${s.blindsight} ft.${s.blindBeyond?" (blind beyond this radius)":""}`);
+  if(s.tremorsense)p.push(`Tremorsense ${s.tremorsense} ft.`);
+  if(s.truesight)p.push(`Truesight ${s.truesight} ft.`);
+  if(s.other)p.push(s.other);
+  return p.join(", ");}
+function refPhrase(cap){const sn=M.shortName||{word:"creature",proper:false};const w=sn.word||"creature";return sn.proper?w:((cap?"The ":"the ")+w);}
+function applyRefsFor(mon,t){if(!t)return t;const sn=(mon&&mon.shortName)||{word:"creature",proper:false,plural:false};const w=sn.word||"creature";
+  const ph=cap=>sn.proper?w:((cap?"The ":"the ")+w);const sfx=sn.plural?"":"s";
+  return avgBrackets(t.replace(/\[C\]/g,ph(true)).replace(/\[c\]/g,ph(false)).replace(/\[Name\]/g,ph(true)).replace(/\[name\]/g,ph(false)).replace(/\[s\]/g,sfx)
+    .replace(/\{C\}/g,ph(true)).replace(/\{c\}/g,ph(false)).replace(/\{Name\}/g,ph(true)).replace(/\{name\}/g,ph(false)).replace(/\{s\}/g,sfx)
+    .replace(/\bThe creature\b/g,ph(true)).replace(/\bthe creature\b/g,ph(false)));}
+function applyRefs(t){return applyRefsFor(M,t);}
+function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
+  const dc=e.dc!==""&&e.dc!=null?Number(e.dc):8+pb+ab;
+  const atk=e.atk!==""&&e.atk!=null?Number(e.atk):pb+ab;
+  const abName={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"}[e.ability||"cha"];
+  const main=`[C] casts one of the following spells, requiring no Material components and using ${abName} as the spellcasting ability (spell save DC ${dc}, ${sgn(atk)} to hit with spell attacks):`;
+  const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells}));
+  return{main,groups};}
+function subName(t){return applyRefs(t);}
+function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");}
+function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?(sk[1]==="exp"?pb*2:pb):0);}
+// headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
+function mainAttackBonus(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const atk=m.actions.find(e=>e.mode==="attack");
+  if(atk)return{val:atk.atk!==""&&atk.atk!=null?Number(atk.atk):mod(m[atk.ability])+pb,cr:false};
+  return{val:boh?boh[2]:null,cr:true};}
+function mainSaveDC(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const sp=m.actions.find(e=>e.mode==="spell");
+  if(sp)return{val:sp.dc!==""&&sp.dc!=null?Number(sp.dc):8+pb+mod(m[sp.ability]||0),cr:false};
+  return{val:boh?boh[4]:null,cr:true};}
+function renderPreview(){
+  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
+  const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
+  const ab=mainAttackBonus(m),dc=mainSaveDC(m);
+  const chip=(lbl,val,approx,tip)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}</b></div>`;
+  $("#derived").innerHTML=chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
+    +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
+    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"");
+  $("#crTargets").innerHTML=boh?`<b>CR ${m.cr} targets</b> — AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
+  $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
+  const initVal=initOf(m);
+  const def=defenseStrings(m);
+  let h=`<div class="topbar"></div><h2>${esc(m.name||"Unnamed Creature")}</h2>`;
+  h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}</div><hr class="rule">`;
+  h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
+  h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  h+=`</table><hr class="rule thin"><div class="meta">`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}</p>`;
+  if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
+  if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
+  if(def.imm)h+=`<p><span class="k">Immunities</span> ${esc(def.imm)}</p>`;
+  if(m.gear)h+=`<p><span class="k">Gear</span> ${esc(m.gear)}</p>`;
+  const sStr=sensesStr(m);
+  h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
+  h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
+  h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
+  const blk=e=>{
+    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${fmtInline(applyRefs(g.spells))}</p>`).join("");}
+    const body=e.mode==="attack"?attackText(e):e.text;
+    return `<p class="blk"><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+  };
+  const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
+  if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
+  if(m.actions.some(e=>e.name||e.text||e.mode==="spell"))h+=`<h3>Actions</h3>${sec(m.actions)}`;
+  if(m.bonus.some(e=>e.name||e.text))h+=`<h3>Bonus Actions</h3>${sec(m.bonus)}`;
+  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<p class="blk"><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtInline(applyRefs(e.response))}</p>`).join("");
+  if(m.legend.on&&m.legend.items.some(e=>e.name||e.text))h+=`<h3>Legendary Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.legend.intro))}</i></p>${sec(m.legend.items)}`;
+  if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.villain.intro))}</i></p>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(e.text))}</div>`).join("");
+  if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
+  if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
+  $("#statblock").innerHTML=h;
+}
+function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
+function notionSingle(m){
+  const pb=pbForCR(m.cr),xp=xpOf(m),initVal=initOf(m),def=defenseStrings(m);
+  let L=[`## ${m.name}`,`*${[m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" ")}*`,
+    `**AC** ${m.ac??"—"}${m.acnote?` (${m.acnote})`:""}`,`**Initiative** ${sgn(initVal)} (${10+initVal})`,
+    `**HP** ${m.hp??"—"}${m.hpf?` (${m.hpf})`:""}`,`**Speed** ${speedStr(m)}`,"",
+    `| | STR | DEX | CON | INT | WIS | CHA |`,`|---|---|---|---|---|---|---|`,
+    `| Score | ${ABILS.map(a=>m[a]).join(" | ")} |`,`| Mod | ${ABILS.map(a=>sgn(mod(m[a]))).join(" | ")} |`,
+    `| Save | ${ABILS.map(a=>sgn(mod(m[a])+(m.saves.includes(a)?pb:0))).join(" | ")} |`,""];
+  if(m.skills.length)L.push(`**Skills** ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}`);
+  if(def.vuln)L.push(`**Vulnerabilities** ${def.vuln}`);
+  if(def.res)L.push(`**Resistances** ${def.res}`);
+  if(def.imm)L.push(`**Immunities** ${def.imm}`);
+  if(m.gear)L.push(`**Gear** ${m.gear}`);
+  const sStr=sensesStr(m);
+  L.push(`**Senses** ${sStr?sStr+", ":""}Passive Perception ${passivePerc(m)}`);
+  L.push(`**Languages** ${m.lang||"None"}`);
+  L.push(`**CR** ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})`);
+  const line=e=>{
+    if(e.mode==="spell"){const sp=spellLines(e);return [`***${e.name||"Spellcasting"}.*** ${applyRefs(sp.main)}`,...sp.groups.map(g=>`**${g.label}:** ${applyRefs(g.spells)}`)].join("\n");}
+    const body=e.mode==="attack"?attackText(e):applyRefs(e.text);
+    return `***${e.name}.*** ${body}`;};
+  const sec=(t,arr)=>{const f=arr.filter(e=>e.name||e.text||e.mode==="spell");if(!f.length)return;L.push("");if(t)L.push(`### ${t}`);f.forEach(e=>L.push(line(e)));};
+  sec("",m.traits);sec("Actions",m.actions);sec("Bonus Actions",m.bonus);
+  if(m.reactions.some(e=>e.name)){L.push("","### Reactions");m.reactions.filter(e=>e.name).forEach(e=>L.push(`***${e.name}.*** ${e.trigger?`*Trigger:* ${applyRefs(e.trigger)} *Response:* `:""}${applyRefs(e.response||"")}`));}
+  if(m.legend.on&&m.legend.items.some(e=>e.name)){L.push("","### Legendary Actions",`*${applyRefs(m.legend.intro)}*`);m.legend.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
+  if(m.villain.on&&m.villain.items.some(e=>e.name)){L.push("","### Villain Actions",`*${applyRefs(m.villain.intro)}*`);[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name).forEach(e=>L.push(`**Action ${e.round}: ${e.name}.** ${applyRefs(e.text)}`));}
+  if(m.lair.on&&m.lair.items.some(e=>e.name)){L.push("","### Lair Actions");if(m.lair.intro)L.push(`*${applyRefs(m.lair.intro)}*`);m.lair.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
+  if(m.regional.on&&m.regional.text){L.push("","### Regional Effects",applyRefs(m.regional.text));}
+  return L.join("\n");
+}
+function claudeMonster(m){
+  const out=clone(m);delete out._auto;
+  out.derived={pb:pbForCR(m.cr),xp:xpOf(m),speed:speedStr(m),senses:sensesStr(m),defenses:defenseStrings(m),passive_perception:passivePerc(m)};
+  out.rendered_actions=m.actions.map(e=>e.mode==="spell"?{name:e.name||"Spellcasting",text:[applyRefs(spellLines(e).main),...spellLines(e).groups.map(g=>g.label+": "+applyRefs(g.spells))].join("\n")}:e.mode==="attack"?{name:e.name,text:attackText(e)}:{name:e.name,text:applyRefs(e.text)});
+  const payload={forge:"monster",v:2,props:{Name:m.name,AC:m.ac,HP:m.hp,XP:xpOf(m),CR:m.cr,PB:pbForCR(m.cr)},monster:out,notion_single_column:notionSingle(m)};
+  return "<<CLAUDE-FORGE / push this monster to my Notion Statblocks DB in MM25 two-column format; set AC/HP/XP properties; flag if a same-name page exists>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
+}
+
+function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)switchView(b.dataset.view);});
+
+function renderLibrary(){
+  const q=($("#libSearch").value||"").toLowerCase();
+  const filt=state.lib.filter(m=>!q||m.name.toLowerCase().includes(q)||(m.type||"").toLowerCase().includes(q));
+  const body=$("#libBody");
+  if(!state.lib.length){body.innerHTML=`<div class="empty-state">No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.</div>`;return;}
+  body.innerHTML=`<div class="cards">${filt.map(cardHTML).join("")||`<div class="empty-state">No matches.</div>`}</div>`;
+  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap"))return;loadMonster(state.lib.find(x=>x.id===el.dataset.card));switchView("forge");}));
+  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(state.lib.find(x=>x.id===b.dataset.edit));switchView("forge");}));
+  body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(state.lib.find(x=>x.id===b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${state.lib.find(x=>x.id===b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
+  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
+  body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
+}
+function cardHTML(m){return `<div class="card" data-card="${m.id}">
+  <div class="menu-wrap cardmenu">
+    <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
+    <div class="menu" id="menu-lib-${m.id}">
+      <button data-edit="${m.id}">Edit</button>
+      <button data-dup="${m.id}">Duplicate</button>
+      <button data-claude="${m.id}">Copy for Claude</button>
+      <button data-notion="${m.id}">Copy for Notion</button>
+      <div class="sep"></div>
+      <button class="danger" data-del="${m.id}">Delete</button>
+    </div>
+  </div>
+  <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
+  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag">${xpOf(m).toLocaleString()} XP</span></div>
+</div>`;}
+$("#libSearch").addEventListener("input",renderLibrary);
+$("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
+$("#libChassis").addEventListener("click",()=>openChassis());
+$("#newFromChassis").addEventListener("click",()=>openChassis());
+$("#forgeChassis").addEventListener("click",()=>openChassis(true));
+$("#resetForge").addEventListener("click",()=>{loadMonster(blankMonster());toast("Cleared.");});
+
+$("#saveMonster").addEventListener("click",async()=>{
+  if(!validName())return;
+  const rec=clone(M);rec.chassis=false;
+  const i=state.lib.findIndex(x=>x.id===rec.id);
+  if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
+  await saveLib();
+  if(pendingForge){const a=state.adv.find(x=>x.id===pendingForge.advId);const e=a&&a.encounters.find(x=>x.id===pendingForge.encId);
+    if(e){addMonsterCombatant(e,rec.id);await saveAdv();}
+    const pf=pendingForge;pendingForge=null;hideBanner();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
+  toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
+});
+$("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat — I build the Notion page in MM25 format and set its properties.");});
+$("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});
+
+function monsterDirty(){const m=M;
+  if(m.name.trim()||m.type||m.subtype||m.align||m.acnote||m.hpf||m.gear||m.dmgnote||m.cimm)return true;
+  if(m.ac!=null||m.hp!=null||(m.init!==""&&m.init!=null))return true;
+  if((m.lang||"Common")!=="Common"||m.cr!=="1")return true;
+  if(ABILS.some(a=>m[a]!==10))return true;
+  if(m.saves.length||m.skills.length||Object.keys(m.dmg).length)return true;
+  if(m.traits.length||m.actions.length||m.bonus.length||m.reactions.length)return true;
+  if(m.legend.on||m.villain.on||m.lair.on||m.regional.on)return true;
+  const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)return true;
+  const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)return true;
+  if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)return true;
+  return false;}
+function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
+  if(m.name.trim())out.name=m.name;
+  ["type","subtype","align","acnote","hpf","gear","dmgnote","cimm"].forEach(k=>{if(m[k])out[k]=m[k];});
+  if(m.ac!=null)out.ac=m.ac;if(m.hp!=null)out.hp=m.hp;if(m.init!==""&&m.init!=null)out.init=m.init;
+  if((m.lang||"Common")!=="Common")out.lang=m.lang;if(m.cr!=="1")out.cr=m.cr;
+  if(ABILS.some(a=>m[a]!==10))ABILS.forEach(a=>out[a]=m[a]);
+  if(m.saves.length)out.saves=clone(m.saves);if(m.skills.length)out.skills=clone(m.skills);
+  if(Object.keys(m.dmg).length)out.dmg=clone(m.dmg);
+  ["traits","actions","bonus","reactions"].forEach(k=>{if(m[k].length)out[k]=clone(m[k]);});
+  if(m.legend.on)out.legend=clone(m.legend);if(m.villain.on)out.villain=clone(m.villain);
+  if(m.lair.on)out.lair=clone(m.lair);if(m.regional.on)out.regional=clone(m.regional);
+  const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)out.spd=clone(sp);
+  const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)out.senses=clone(se);
+  if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)out.shortName=clone(m.shortName);
+  return out;}
+function applyChassis(ch,keepId,merge){
+  let base;
+  if(merge)base=mergeChassis(ch);
+  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};}
+  loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
+}
+function openChassis(fromForge){
+  const groups={};CHASSIS.forEach(c=>{(groups[c.cr]=groups[c.cr]||[]).push(c);});
+  let h=`<h3>Start from a chassis</h3><p class="hint" style="margin:-4px 0 14px">Generic, editable bases. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>`;
+  CR_LIST.filter(cr=>groups[cr]).forEach(cr=>{h+=`<div class="section-label" style="margin-top:14px">CR ${cr} · ${(CR_XP[cr]||0).toLocaleString()} XP</div><div class="cards">`;groups[cr].forEach(c=>{h+=`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(c.name)}</h4><div class="meta">${esc(c.size+" "+c.type)}</div><div style="margin-top:auto;padding-top:6px"><button class="btn ghost sm" data-pick="${c.id}" style="width:100%">Use as base</button></div></div>`;});h+=`</div>`;});
+  openModalRaw(h);
+  $("#modal").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{
+    const ch=CHASSIS.find(x=>x.id===b.dataset.pick);closeModal();
+    if(fromForge===true&&monsterDirty())chassisConflictModal(ch);
+    else applyChassis(ch,fromForge===true,false);
+  }));
+}
+function chassisConflictModal(ch){
+  openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn ghost sm" id="ccKeep" style="width:auto;justify-content:flex-start">Import chassis, keep my edits <span class="sub">— chassis fills only empty fields</span></button>
+      <button class="btn ghost sm" id="ccOverride" style="width:auto;justify-content:flex-start">Import chassis, override my edits <span class="sub">— discard current edits</span></button>
+      <button class="btn ghost sm" id="ccBack" style="width:auto;justify-content:flex-start">Go back <span class="sub">— keep editing, don't import</span></button>
+    </div>`);
+  $("#ccKeep").addEventListener("click",()=>{closeModal();applyChassis(ch,true,true);});
+  $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});
+  $("#ccBack").addEventListener("click",closeModal);
+}
+
+function renderAdvList(){
+  const box=$("#advItems");
+  box.innerHTML=state.adv.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  box.querySelectorAll("[data-adv]").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.dataset.adv;renderAdvList();}));
+  renderAdvDetail();
+}
+$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:9,uneven:false,levels:[9,9,9,9],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
+function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
+function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
+function baseBudget(p){const lv=partyLevels(p);return [0,1,2].map(di=>lv.reduce((s,l)=>s+BUDGET[clamp(l,1,20)][di],0));}
+function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
+function addMonsterCombatant(enc,monsterId){
+  const cid=uid();
+  enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:"Enemy"});
+  const m=state.lib.find(x=>x.id===monsterId);
+  if(m&&m.lair&&m.lair.on&&(m.lair.items||[]).some(it=>it.name||it.text)){
+    const lines=[];
+    if(m.lair.intro)lines.push(applyRefsFor(m,m.lair.intro));
+    m.lair.items.filter(it=>it.name||it.text).forEach(it=>lines.push(`${it.name?it.name+": ":""}${applyRefsFor(m,it.text)}`));
+    enc.combatants.push({type:"event",id:uid(),name:`${m.name} — Lair Action`,init:"20",text:lines.join("\n"),lairFor:cid});
+  }
+  return cid;
+}
+function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
+function combatXP(c){if(c.type==="monster"&&monOf(c))return xpOf(monOf(c))*Number(c.count||1);const cr=combatCR(c);return cr!=null?(CR_XP[cr]||0)*Number(c.count||1):0;}
+function encBudget(adv,e){
+  const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
+  e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1);}}});
+  return base.map((b,i)=>b+add[i]);
+}
+function encSpent(e){return e.combatants.filter(c=>c.faction==="Enemy"&&c.type!=="event").reduce((s,c)=>s+combatXP(c),0);}
+function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2])return["over","Over High"];if(spent>=bud[2]*0.92)return["high","High"];if(spent>=bud[1]*0.92)return["moderate","Moderate"];if(spent>=bud[0]*0.85)return["low","Low"];return["trivial","Trivial"];}
+
+function renderAdvDetail(){
+  const a=curAdv(),d=$("#advDetail");
+  if(!a){d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  const bud=baseBudget(partyOf(a,null));
+  d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2><button class="btn ghost sm" id="delAdv" style="width:auto">Delete adventure</button></div>
+    <div class="party-bar">
+      <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
+      <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
+      <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="pUneven" ${a.uneven?"checked":""}> Uneven levels</label>
+      <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
+      <div class="grow"></div>
+      <div class="hint" style="text-align:right">Base party budget<br><b style="color:var(--amber);font-size:13px">Low ${bud[0].toLocaleString()} · Mod ${bud[1].toLocaleString()} · High ${bud[2].toLocaleString()}</b></div>
+    </div>
+    <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
+    <div class="section-label">Encounters <button class="btn ghost sm" id="addEnc" style="width:auto">＋ Encounter</button></div>
+    <div id="encList"></div>
+    <div id="archWrap"></div>`;
+  const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
+  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete “${a.name}” and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#pSize").addEventListener("input",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#pLevel").addEventListener("input",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
+  $("#pUneven").addEventListener("change",e=>{a.uneven=e.target.checked;syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
+  $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,combatants:[]});saveAdv();renderAdvDetail();});
+  renderPCgrid(a);renderEncList(a);
+}
+function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
+function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
+
+function renderEncList(a){
+  const box=$("#encList");if(!box)return;
+  const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
+  box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+  const aw=$("#archWrap");aw.innerHTML=arch.length?`<div class="section-label" style="margin-top:24px">Archived (${arch.length})</div>${arch.map(e=>encHTML(a,e)).join("")}`:"";
+  bindEncEvents(a);
+}
+function encHTML(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
+  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
+  const p=partyOf(a,e);
+  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}">
+    <div class="eh">
+      <div class="ehbtns"><button class="iconbtn up" data-encup="${e.id}">▲</button><button class="iconbtn down" data-encdown="${e.id}">▼</button></div>
+      <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
+      <span class="pill ${cls}">${label}</span>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
+        <div class="menu" id="menu-enc-${e.id}">
+          <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
+          <button data-pushenc="${e.id}">Copy encounter for Claude</button>
+          <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
+          <div class="sep"></div>
+          <button class="danger" data-encdel="${e.id}">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div class="budget"><div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+      <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
+      <div class="read">Spent <b>${spent.toLocaleString()} XP</b> of ${bud[2].toLocaleString()} (High)${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}</div>
+    </div>
+    <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
+    <label class="f encnotes">Battlefield notes<textarea data-encnotes="${e.id}" placeholder="Terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
+    <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
+    <div class="addrow">
+      <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="addc-${e.id}" title="More ways to add">⋯</button>
+        <div class="menu" id="menu-addc-${e.id}">
+          <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
+          <button data-addforge="${e.id}">＋ Forge new monster →</button>
+          <button data-addev="${e.id}">＋ Event / entity</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function ovrInner(e){const o=e.partyOverride;return `<div class="row">
+  <label class="f">Size<input type="number" min="1" max="12" value="${o.size}" data-ovrsize="${e.id}" style="width:74px"></label>
+  <label class="f" ${o.uneven?'style="display:none"':""}>Level<input type="number" min="1" max="20" value="${o.level}" data-ovrlevel="${e.id}" style="width:74px"></label>
+  <label class="toggle" style="margin-bottom:8px"><input type="checkbox" data-ovruneven="${e.id}" ${o.uneven?"checked":""}> Uneven</label>
+  </div>${o.uneven?`<div class="pcgrid" style="margin-top:8px">${(o.levels||[]).slice(0,o.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-ovrpc="${e.id}:${i}">`).join("")}</div>`:""}`;}
+function combatHTML(e,c){
+  if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
+  const cls=c.faction==="Ally"?"ally":"";const xp=combatXP(c);
+  if(c.type==="quick")return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
+    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
+  const m=monOf(c);
+  return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${state.lib.map(x=>`<option value="${x.id}" ${x.id===c.monsterId?"selected":""}>${esc(x.name)} (CR ${x.cr})</option>`).join("")}</select></div></div>`;
+}
+function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
+function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
+function bindEncEvents(a){
+  const q=sel=>$$("#advDetail "+sel);
+  q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
+  q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
+  q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
+  q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
+  q("[data-encup]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encup,-1)));
+  q("[data-encdown]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encdown,1)));
+  q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
+  q("[data-ovrsize]").forEach(el=>el.addEventListener("input",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrlevel]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrpc]").forEach(el=>el.addEventListener("input",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>{if(!state.lib.length){toast("Save a creature first, or use Quick / Forge.");return;}addMonsterCombatant(findEnc(a,el.dataset.addmon),state.lib[0].id);saveAdv();renderAdvDetail();}));
+  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
+  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
+  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.addforge);pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}));
+  q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
+  q("[data-cf]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[cid,f]=el.dataset.cf.split(":");const{c}=findCombat(a,cid);if(!c)return;c[f]=(f==="count")?clamp(Number(el.value||1),1,99):el.value;saveAdv();if(["cr","count","faction","monsterId"].includes(f))renderEncList(a);});});
+  q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
+}
+function moveEnc(a,id,dir){
+  const list=a.encounters,i=list.findIndex(e=>e.id===id),e=list[i];
+  const same=list.map((x,ix)=>({x,ix})).filter(o=>o.x.archived===e.archived).map(o=>o.ix);
+  const pos=same.indexOf(i),tgt=same[pos+dir];
+  if(tgt===undefined)return;[list[i],list[tgt]]=[list[tgt],list[i]];saveAdv();renderAdvDetail();
+}
+function pushEncounter(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
+  const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,
+    party:{size:p.size,levels:partyLevels(p),overridden:!!e.partyOverride},
+    battlefield_notes:e.notes||"",
+    budget:{low:bud[0],moderate:bud[1],high:bud[2],spent,reads_as:label,note:"allies (faction Ally) already folded into budget via CR→level"},
+    combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),xp_each:c.type==="monster"&&m?xpOf(m):(combatCR(c)!=null?CR_XP[combatCR(c)]:0),count:Number(c.count),faction:c.faction};}),
+    environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
+  const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
+  copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
+}
+
+function doExportJSON(){
+  const data={kind:"monster-forge",exported:new Date().toISOString(),monsters:state.lib,adventures:state.adv};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
+}
+$("#exportAll").addEventListener("click",doExportJSON);
+$("#topExport").addEventListener("click",doExportJSON);
+$("#importAll").addEventListener("click",()=>$("#fileIn").click());
+$("#topImport").addEventListener("click",()=>$("#fileIn").click());
+$("#topChassis").addEventListener("click",()=>openChassis());
+$("#railCollapse").addEventListener("click",()=>$("#app").classList.add("nav-collapsed"));
+$("#railOpen").addEventListener("click",()=>$("#app").classList.remove("nav-collapsed"));
+$("#fileIn").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
+  r.readAsText(f);e.target.value="";
+});
+
+function openModalRaw(html){$("#modal").innerHTML=html;$("#modalBg").classList.add("show");}
+function closeModal(){$("#modalBg").classList.remove("show");}
+$("#modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
+function copyModal(title,text,hint){
+  openModalRaw(`<h3>${esc(title)}</h3><p class="hint" style="margin:-4px 0 12px">${esc(hint)}</p><textarea id="copyArea" readonly>${esc(text)}</textarea><div class="mrow"><button class="btn ghost sm" id="mClose" style="width:auto">Close</button><button class="btn primary sm" id="mCopy" style="width:auto">Copy to clipboard</button></div>`);
+  $("#mClose").addEventListener("click",closeModal);
+  $("#mCopy").addEventListener("click",async()=>{const ta=$("#copyArea");try{await navigator.clipboard.writeText(text);toast("Copied.");}catch(e){ta.focus();ta.select();try{document.execCommand("copy");toast("Copied.");}catch(_){toast("Select the text and copy manually.");}}});
+  setTimeout(()=>{const ta=$("#copyArea");ta.focus();ta.select();},50);
+}
+function confirmModal(msg,onYes){
+  openModalRaw(`<h3>Confirm</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn ghost sm" id="cNo" style="width:auto">Cancel</button><button class="btn primary sm" id="cYes" style="width:auto">Yes</button></div>`);
+  $("#cNo").addEventListener("click",closeModal);$("#cYes").addEventListener("click",()=>{closeModal();onYes();});
+}
+
+document.addEventListener("click",e=>{
+  const k=e.target.closest(".kebab");
+  document.querySelectorAll(".menu.open").forEach(mn=>{if(!k||mn.id!=="menu-"+k.dataset.menu)mn.classList.remove("open");});
+  if(k){const mn=document.getElementById("menu-"+k.dataset.menu);if(mn){mn.classList.toggle("open");e.stopPropagation();}}
+});
+
+function wrapStepper(input,step,min){
+  if(!input||input.parentNode.classList.contains("stepper"))return;
+  min=(min===undefined?0:min);
+  const w=document.createElement("span");w.className="stepper";
+  input.parentNode.insertBefore(w,input);w.appendChild(input);
+  const b=document.createElement("span");b.className="stepbtns";
+  b.innerHTML='<button type="button" data-d="1">▲</button><button type="button" data-d="-1">▼</button>';
+  w.appendChild(b);
+  b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
+    const base=input.value===""?(input.id==="f_init"?initOf(M):0):Number(input.value||0);
+    const nv=Math.max(min,base+(+btn.dataset.d)*step);
+    input.value=nv;input.dispatchEvent(new Event("input",{bubbles:true}));
+  }));
+}
+
+(async function init(){
+  buildAbilityGrid();buildDmgGrid();
+  fillSelect("#f_size",SIZES);
+  bindStatic();buildCRStepper();
+  ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
+  wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
+  ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
+  await loadAll();
+  loadMonster(blankMonster());
+})();
