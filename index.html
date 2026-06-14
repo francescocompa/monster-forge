@@ -222,6 +222,8 @@
         <div class="lib-head">
           <div class="col-head">
             <h2>Bestiary</h2>
+            <div class="ctrl-icons" id="libCtrlIcons"></div>
+            <div class="grow"></div>
             <div class="splitbtn menu-wrap">
               <button class="btn primary sm" id="libNew" style="width:auto">＋ New creature</button>
               <button class="kebab split-caret" data-menu="libnew" title="More ways to add">▾</button>
@@ -231,27 +233,7 @@
               </div>
             </div>
           </div>
-          <div class="toolbar">
-            <input type="text" class="search" id="libSearch" placeholder="Search name (contains)…">
-            <select class="filt" id="libStatus">
-              <option value="Active">Active</option>
-              <option value="Draft">Draft</option>
-              <option value="Ready">Ready</option>
-              <option value="Archived">Archived</option>
-              <option value="Preset">Preset</option>
-              <option value="All">All statuses</option>
-            </select>
-            <select class="filt" id="libCR"></select>
-            <select class="filt" id="libTag"></select>
-            <div class="grow"></div>
-            <select class="filt" id="libSort">
-              <option value="name">Name</option>
-              <option value="cr">CR</option>
-              <option value="xp">XP</option>
-              <option value="status">Status</option>
-            </select>
-            <button class="btn ghost sm" id="libDir" style="width:auto" title="Toggle sort direction">↑ A–Z</button>
-          </div>
+          <div class="ctrl-chips" id="libChips"></div>
         </div>
         <datalist id="libTagList"></datalist>
         <div id="libBody"></div>
