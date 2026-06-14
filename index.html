@@ -1,187 +1,1268 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.3">
-  <style type="text/css">
-    body {background-color: #0f0f12}
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; min-height: 17.0px}
-    p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px 'Helvetica Neue'; color: #5b616d; -webkit-text-stroke: #5b616d}
-    p.p4 {margin: 0.0px 0.0px 0.0px 0.0px; font: 15.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p5 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 13.0px 'Zapf Dingbats'; color: #ffffff; -webkit-text-stroke: #ffffff}
-    p.p6 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'; color: #ffffff; -webkit-text-stroke: #ffffff}
-    p.p7 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 13.0px 'Zapf Dingbats'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p8 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p9 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 13.0px Menlo; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p10 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5; background-color: #1a1c22}
-    p.p12 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Neue'; color: #5b616d; -webkit-text-stroke: #5b616d}
-    p.p13 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; background-color: #1a1c22}
-    p.p14 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #cf9433; -webkit-text-stroke: #cf9433; background-color: #15161a}
-    p.p15 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; background-color: #0d0d0f; min-height: 16.0px}
-    p.p16 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5; background-color: #15161a}
-    p.p17 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px Times; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; background-color: #0d0d0f}
-    p.p18 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p19 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5; min-height: 13.0px}
-    p.p20 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #5b616d; -webkit-text-stroke: #5b616d}
-    p.p21 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p22 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 13.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; background-color: #0d0d0f; min-height: 16.0px}
-    p.p23 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #cf9433; -webkit-text-stroke: #cf9433}
-    p.p24 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p25 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #5b616d; -webkit-text-stroke: #5b616d; min-height: 13.0px}
-    p.p26 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5; background-color: #15161a}
-    p.p27 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 12.0px 'Helvetica Neue'; color: #9399a5; -webkit-text-stroke: #9399a5}
-    p.p28 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #e0b45d; -webkit-text-stroke: #e0b45d; background-color: #cf9a33; background-color: rgba(207, 154, 51, 0.078); min-height: 13.0px}
-    p.p29 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea; min-height: 16.0px}
-    p.p30 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 11.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea}
-    p.p31 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea}
-    p.p32 {margin: 0.0px 0.0px 11.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #5b616d; -webkit-text-stroke: #5b616d}
-    span.s1 {font-kerning: none}
-    span.s2 {font-kerning: none; background-color: #0d0e10}
-    span.s3 {font-kerning: none; background-color: #d84e3d}
-    span.s4 {font: 12.0px 'PingFang SC'; font-kerning: none}
-    span.s5 {font: 14.0px 'Helvetica Neue'; font-kerning: none; color: #e1e3ea; -webkit-text-stroke: 0px #e1e3ea}
-    span.s6 {font-kerning: none; color: #9399a5; -webkit-text-stroke: 0px #9399a5}
-    span.s7 {font-kerning: none; color: #9399a5; background-color: #15161a; -webkit-text-stroke: 0px #9399a5}
-    span.s8 {font-kerning: none; background-color: #15161a}
-    span.s9 {font-kerning: none; color: #cf9433; background-color: #15161a; -webkit-text-stroke: 0px #cf9433}
-    span.s10 {font: 14.0px 'Helvetica Neue'; font-kerning: none; color: #e1e3ea; background-color: #15161a; -webkit-text-stroke: 0px #e1e3ea}
-    span.s11 {font: 12.0px 'Helvetica Neue'; font-kerning: none; background-color: #15161a}
-    span.s12 {font: 12.0px 'PingFang SC'; font-kerning: none; background-color: #15161a}
-    span.s13 {font: 13.0px Menlo; font-kerning: none; background-color: #d84e3d}
-    span.s14 {font: 14.0px 'Helvetica Neue'; font-kerning: none; color: #e1e3ea; background-color: #0d0e10; -webkit-text-stroke: 0px #e1e3ea}
-    span.s15 {font-kerning: none; color: #e1e3ea; background-color: #1a1c22; -webkit-text-stroke: 0px #e1e3ea}
-    span.s16 {font-kerning: none; background-color: #1a1c22}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monster Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
+  --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
+  --accent:#e2654d; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
+  --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
+  --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
+  --r:7px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
+input,select,textarea{accent-color:var(--accent)}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:1px solid var(--line);border-radius:4px;background:#0e0f12;position:relative;cursor:pointer;flex:none;transition:border-color .12s,background .12s;vertical-align:middle}
+input[type=checkbox]:hover{border-color:var(--accent)}
+input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.stepper{position:relative;display:block}
+.stepper>input{padding-right:24px}
+.stepbtns{position:absolute;right:1px;top:1px;bottom:1px;width:20px;display:flex;flex-direction:column;border-left:1px solid var(--line);border-radius:0 5px 5px 0;overflow:hidden}
+.stepbtns button{flex:1;background:var(--panel2);border:none;color:var(--dim);font-size:7px;line-height:1;padding:0}
+.stepbtns button+button{border-top:1px solid var(--line)}
+.stepbtns button:hover{background:var(--panel3);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent-soft);outline-offset:2px}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:var(--panel3);border-radius:6px;border:3px solid var(--bg)}::-webkit-scrollbar-track{background:transparent}
+
+.app{display:grid;grid-template-columns:206px 1fr;height:100vh;overflow:hidden}
+.rail-collapse{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);border-radius:5px;width:24px;height:24px;display:grid;place-items:center;font-size:15px;flex:none;padding:0}
+.rail-collapse:hover{border-color:var(--accent);color:var(--txt)}
+.rail-open{display:none;position:fixed;top:12px;left:12px;z-index:45;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:7px;width:34px;height:34px;place-items:center;font-size:16px}
+.topbar{display:none;position:fixed;top:10px;right:14px;z-index:45}
+.app.nav-collapsed{grid-template-columns:1fr}
+.app.nav-collapsed .rail{display:none}
+.app.nav-collapsed .rail-open{display:grid}
+.app.nav-collapsed .topbar{display:block}
+.rail{background:#0f1013;border-right:1px solid var(--line);padding:16px 13px;display:flex;flex-direction:column;gap:3px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:0 4px}
+.brand .mk{width:34px;height:34px;flex:none;display:grid;place-items:center}
+.brand .mk svg{display:block}
+.brand h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+.brand h1 small{display:block;font-weight:400;font-size:10px;color:var(--faint);letter-spacing:.16em;text-transform:uppercase;margin-top:2px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;color:var(--dim);padding:9px 11px;border-radius:var(--r);font-size:13px;font-weight:500}
+.nav button .ico{width:16px;text-align:center;font-size:13px;opacity:.85}
+.nav button:hover{background:var(--panel2);color:var(--txt)}
+.nav button.active{background:var(--accent);color:#fff}
+.rail .spacer{flex:1}
+.rail .stash{border-top:1px solid var(--line);padding-top:12px;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.rail .stash .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--faint);padding-left:4px}
+.mini{background:var(--panel2);border:1px solid var(--line);color:var(--dim);padding:7px 9px;border-radius:var(--r);font-size:12px;text-align:left}
+.mini:hover{border-color:var(--accent);color:var(--txt)}
+
+.main{overflow:hidden;display:flex;flex-direction:column}
+.banner{background:rgba(217,169,65,.12);border:1px solid #6d5a26;color:var(--amber-soft);padding:9px 16px;font-size:12px;display:none;align-items:center;gap:12px}
+.banner.show{display:flex}
+.banner button{margin-left:auto;background:none;border:1px solid currentColor;color:inherit;border-radius:5px;padding:3px 10px;font-size:11px}
+.view{flex:1;overflow:hidden;display:none}.view.active{display:flex}
+
+.forge{display:grid;grid-template-columns:1fr 452px;height:100%;overflow:hidden}
+.form-col{overflow-y:auto;padding:20px 24px 90px}
+.preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:13px}
+.col-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
+.col-head h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+.col-head .sub{color:var(--faint);font-size:12px;margin-top:3px}
+
+fieldset.fieldset{border:1px solid var(--line);border-radius:9px;padding:14px 15px;margin:0 0 13px;background:var(--panel)}
+.fs-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--amber);margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fs-title .count{color:var(--faint);font-weight:500;letter-spacing:.03em;text-transform:none}
+.fs-sub{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:14px 0 7px}
+.grid{display:grid;gap:10px;align-items:end}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+.g-name{grid-template-columns:1.5fr .8fr 1fr .9fr}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim)}
+label.f .req{color:var(--accent-soft)}
+input:not([type]),input[type=text],input[type=number],select,textarea{background:#0e0f12;border:1px solid var(--line);border-radius:5px;padding:8px 9px;width:100%;transition:border-color .12s}
+input:not([type]):hover,input:not([type]):focus{border-color:var(--accent);outline:none}
+input:hover,select:hover,textarea:hover{border-color:#3c424c}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+textarea{resize:vertical;min-height:60px;line-height:1.45}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23a4aab4'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+.with-badge{position:relative}
+.with-badge .badge{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;letter-spacing:.06em;color:var(--amber);background:rgba(217,169,65,.14);border:1px solid #6d5a26;border-radius:4px;padding:1px 5px;pointer-events:none;display:none}
+.with-badge.suggested input{color:var(--amber);font-style:italic}
+.with-badge.suggested .badge{display:block}
+
+.abil{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.abil .cell{background:#0e0f12;border:1px solid var(--line);border-radius:6px;padding:8px 5px;text-align:center}
+.abil .cell .ab{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--amber);margin-bottom:5px}
+.abil .cell input{text-align:center;padding:5px 2px;font-size:15px;font-weight:600}
+.abil .cell .mod{font-size:11px;color:var(--faint);margin-top:4px}
+.abil .cell .sv{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:6px;font-size:10px;color:var(--dim)}
+.abil .cell .sv b{font-variant-numeric:tabular-nums}
+
+.rowline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.rowline:last-child{margin-bottom:0}
+.rowline select{flex:1.4}
+.iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;width:30px;height:32px;flex:none;display:grid;place-items:center;font-size:14px}
+.iconbtn.pencil:hover{border-color:var(--accent);color:var(--accent)}
+.menu-wrap{position:relative;flex:none}
+.kebab{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;width:30px;height:32px;flex:none;display:grid;place-items:center;font-size:17px;line-height:1}
+.kebab:hover{border-color:var(--accent);color:var(--txt)}
+.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:178px;z-index:30;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px}
+.menu button:hover{background:var(--panel3)}
+.menu button.danger{color:var(--bad)}.menu button.danger:hover{background:rgba(210,96,74,.16)}
+.menu .sep{height:1px;background:var(--line);margin:4px 2px}
+.iconbtn:hover{border-color:var(--bad);color:var(--bad)}
+.iconbtn.up:hover,.iconbtn.down:hover{border-color:var(--accent);color:var(--accent)}
+.addbtn{background:none;border:1px dashed var(--line);color:var(--dim);border-radius:5px;padding:7px 10px;font-size:12px;letter-spacing:.01em}
+.addbtn:hover{border-color:var(--accent);color:var(--accent)}
+.addrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.addrow .addbtn{flex:1;min-width:120px}
+
+.spd-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.spd-grid label.f input{text-align:center}
+.hover-tog{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);margin-top:9px}
+
+.dmg-grid{display:flex;flex-wrap:wrap;gap:6px}
+.dchip{display:flex;align-items:center;gap:6px;background:#0e0f12;border:1px solid var(--line);border-radius:20px;padding:4px 6px 4px 11px;font-size:12px;color:var(--dim)}
+.dchip .st{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--panel2);color:var(--faint)}
+.dchip.res{border-color:#2f5e3a;color:#8fce9a}.dchip.res .st{background:rgba(95,168,115,.2);color:#8fce9a;border-color:#2f5e3a}
+.dchip.imm{border-color:#2c4d6e;color:#86b6e0}.dchip.imm .st{background:rgba(91,155,213,.2);color:#86b6e0;border-color:#2c4d6e}
+.dchip.vuln{border-color:#6e3329;color:#e89784}.dchip.vuln .st{background:rgba(210,96,74,.22);color:#e89784;border-color:#6e3329}
+
+.entry{border:1px solid var(--line);border-radius:7px;padding:10px;margin-bottom:9px;background:#15171b}
+.entry .ehead{display:flex;gap:7px;margin-bottom:7px;align-items:center}
+.entry .ehead input{flex:1}
+.entry .ehead .kind{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.13);border:1px solid #6e3329;border-radius:4px;padding:3px 7px;flex:none}
+.entry textarea{min-height:48px;margin-bottom:0}
+.atk-fields{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:7px}
+.atk-fields label.f{font-size:10px}
+.atk-extra{margin-top:6px}
+.snips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.snip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;padding:4px 9px;font-size:10.5px}
+.snip:hover{border-color:var(--accent);color:var(--accent-soft)}
+.optfs .fs-title{cursor:default}
+.toggle{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600}
+
+.derived{display:flex;flex-wrap:wrap;gap:6px}
+.dchip2{background:#15171b;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--dim);flex:1;min-width:84px;text-align:center}
+.dchip2 b{display:block;color:var(--txt);font-size:14px;font-weight:600;margin-top:2px}
+.cr-targets{background:rgba(217,169,65,.08);border:1px solid #5c4d24;border-radius:7px;padding:8px 11px;font-size:11px;color:var(--amber-soft)}
+.cr-targets b{color:var(--amber)}
+
+.sb-wrap{flex:none}
+.sb{background:linear-gradient(180deg,var(--sb),var(--sb2));color:var(--txt);border:1px solid var(--sb-edge);border-radius:8px;padding:16px 18px 18px;position:relative;box-shadow:0 8px 28px rgba(0,0,0,.45);font-size:13px;line-height:1.45}
+.sb .topbar{height:4px;margin:-16px -18px 13px;border-radius:8px 8px 0 0;background:linear-gradient(90deg,var(--accent),#8f3527)}
+.sb h2{font-weight:700;color:var(--accent-soft);font-size:21px;margin:0 0 1px;letter-spacing:-.01em;line-height:1.1}
+.sb .typeline{font-style:italic;color:var(--dim);font-size:12px;margin-bottom:9px}
+.sb hr.rule{border:none;border-top:2px solid var(--accent);opacity:.7;margin:8px 0}
+.sb hr.rule.thin{border-top:1px solid var(--line);opacity:1}
+.sb .topstats p,.sb .meta p{margin:1.5px 0;color:var(--txt)}
+.sb .k{color:var(--accent-soft);font-weight:600}
+.sb table.ab{width:100%;border-collapse:collapse;margin:8px 0;table-layout:fixed}
+.sb table.ab td{padding:2px 4px;font-size:12px;text-align:left}
+.sb table.ab td.lbl{width:auto}
+.sb table.ab td.mh,.sb table.ab td.num{width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.sb table.ab .h{color:var(--accent-soft);font-weight:700;font-size:10.5px;letter-spacing:.04em}
+.sb table.ab td.mh{color:var(--accent-soft);font-weight:700;font-size:10.5px}
+.sb table.ab .sc{color:var(--txt);font-weight:600}
+.sb table.ab .num{color:var(--dim)}
+.sb h3{color:var(--accent-soft);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:13px 0 5px;border-bottom:1px solid var(--line);padding-bottom:3px}
+.sb .blk{margin:5px 0;color:var(--txt)}
+.sb .blk .nm{font-style:italic;font-weight:600;color:#fff}
+.sb .va{background:rgba(226,101,77,.08);border-left:2px solid var(--accent);padding:5px 9px;margin:5px 0;border-radius:0 5px 5px 0}
+.sb .va .rd{font-size:9px;font-weight:700;letter-spacing:.07em;color:var(--accent-soft)}
+.sb i{color:var(--amber-soft);font-style:italic}
+
+.outs{display:flex;flex-direction:column;gap:8px}
+.btn{border:none;border-radius:7px;padding:11px 13px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:#e87964}
+.btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}.btn.ghost:hover{border-color:var(--accent);color:#fff}
+.btn.sm{padding:8px 11px;font-size:12px;font-weight:500}
+.btn .sub{font-weight:400;font-size:11px;opacity:.8}
+.hint{font-size:11px;color:var(--faint);line-height:1.45}
+
+.scroll{overflow-y:auto;padding:20px 24px 60px;width:100%}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.toolbar input.search{max-width:280px}.toolbar .grow{flex:1}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;display:flex;flex-direction:column;gap:7px;position:relative;cursor:pointer}
+.card:hover{border-color:var(--accent)}
+.cardmenu{position:absolute;top:9px;right:9px}
+.card h4{margin:0;font-size:16px;font-weight:600;padding-right:30px}
+.card .meta{font-size:11px;color:var(--faint);font-style:italic}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;background:#0e0f12;border:1px solid var(--line);color:var(--dim);border-radius:4px;padding:2px 7px}
+.tag.cr{color:var(--amber);border-color:#5c4d24}
+.card .acts{display:flex;gap:6px;margin-top:auto;padding-top:6px}
+.card .acts button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;padding:6px;font-size:11px}
+.card .acts button:hover{border-color:var(--accent);color:var(--txt)}
+.card .acts button.del:hover{border-color:var(--bad);color:var(--bad)}
+.section-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);margin:22px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.empty-state{text-align:center;color:var(--faint);padding:48px 20px;font-style:italic}
+
+.adv-layout{display:grid;grid-template-columns:236px 1fr;height:100%;overflow:hidden;width:100%}
+.adv-list{border-right:1px solid var(--line);overflow-y:auto;padding:14px 11px}
+.adv-list .ai{padding:10px 11px;border-radius:7px;margin-bottom:4px;cursor:pointer;border:1px solid transparent}
+.adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--panel2);border-color:var(--accent)}
+.adv-list .ai .nm{font-size:14px;font-weight:600}.adv-list .ai .dt{font-size:11px;color:var(--faint)}
+.adv-detail{overflow-y:auto;padding:20px 24px 70px}
+.party-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:14px}
+.pcgrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.pcgrid input{width:52px;text-align:center}
+.advnotes{width:100%;margin-bottom:16px}
+.enc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:13px}
+.enc.arch{opacity:.62}
+.enc .eh{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.enc .eh input.enm{flex:1;font-size:15px;font-weight:600}
+.enc .ehbtns{display:flex;gap:5px}
+.budget{margin:8px 0}
+.budget .bar{height:10px;background:#0e0f12;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.budget .fill{height:100%;transition:width .2s}
+.budget .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px}
+.budget .read{font-size:12px;margin-top:6px;color:var(--dim)}
+.budget .read b{color:var(--txt)}
+.pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.pill.low{background:rgba(95,168,115,.18);color:#8fce9a;border:1px solid #2f5e3a}
+.pill.moderate{background:rgba(217,169,65,.18);color:var(--amber-soft);border:1px solid #5c4d24}
+.pill.high{background:rgba(226,101,77,.18);color:var(--accent-soft);border:1px solid #6e3329}
+.pill.over{background:rgba(210,96,74,.3);color:#f0a08c;border:1px solid #8d4233}
+.pill.trivial{background:var(--panel2);color:var(--faint);border:1px solid var(--line)}
+.ovr{background:#15171b;border:1px solid var(--line);border-radius:7px;padding:10px 12px;margin:9px 0;display:none}
+.ovr.show{display:block}
+.ovr .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.encnotes{margin:9px 0}
+.cbt{border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-bottom:7px;background:#15171b}
+.cbt.ev{border-left:3px solid var(--info)}
+.cbt.ally{border-left:3px solid var(--ok)}
+.cbt .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cbt .top input.nick{min-width:130px}
+.cbt .top input.nick{flex:1;font-weight:600}
+.cbt .top input.cnt{width:54px;text-align:center;flex:none}
+.cbt .top select.fac{width:104px;flex:none}
+.cbt .top select.crsel{width:96px;flex:none}
+.cbt .xpv{font-size:11px;color:var(--faint);min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.cbt .sec{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:11px;color:var(--faint)}
+.cbt .sec select{flex:1;font-size:12px}
+.cbt .sec .lab{flex:none}
+.cbt textarea{margin-top:6px;min-height:42px;font-size:12px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#0e0f12;color:var(--txt);border:1px solid var(--accent);padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal-bg{position:fixed;inset:0;background:rgba(6,7,9,.72);display:none;place-items:center;z-index:50;padding:24px}
+.modal-bg.show{display:grid}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:11px;max-width:580px;width:100%;max-height:82vh;overflow:auto;padding:20px}
+.modal h3{margin:0 0 12px;font-size:17px}
+.modal textarea{min-height:210px;font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre}
+.modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+
+@media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:720px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}.rail{flex-direction:row;align-items:center;padding:10px;overflow-x:auto}.brand{margin:0 14px 0 0}.rail .spacer,.rail .stash,.rail-collapse{display:none}.nav{flex-direction:row}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}.topbar{display:block}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
 </head>
 <body>
-<p class="p1"><span class="s1"></span><br></p>
-<h1 style="margin: 0.0px 0.0px 0.0px 0.0px; font: 15.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea"><span class="s2">Monster Forge</span></h1>
-<p class="p3"><span class="s2">D&amp;D Builder</span></p>
-<p class="p4"><span class="s2">‹</span></p>
-<p class="p5"><span class="s3">✦</span></p>
-<p class="p6"><span class="s3">Forge</span></p>
-<p class="p7"><span class="s2">❖</span></p>
-<p class="p8"><span class="s2">Bestiary</span></p>
-<p class="p9"><span class="s2">⚔</span></p>
-<p class="p8"><span class="s2">Adventures</span></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p3"><span class="s2">LIBRARY</span></p>
-<p class="p10"><span class="s4">＋</span><span class="s1"> New from chassis</span></p>
-<p class="p10"><span class="s1">⭳ Export JSON</span></p>
-<p class="p10"><span class="s1">⭱ Import JSON</span></p>
-<h2 style="margin: 0.0px 0.0px 0.0px 0.0px; font: 20.0px 'Helvetica Neue'; color: #e1e3ea; -webkit-text-stroke: #e1e3ea"><span class="s1">New Creature</span></h2>
-<p class="p12"><span class="s1">PB &amp; XP derive from CR. Empty AC/HP/attack fields pre-fill from CR as suggestions.</span></p>
-<p class="p13"><span class="s1">Load chassisClear</span></p>
-<p class="p14"><span class="s1">IDENTITY</span><span class="s5"> </span><span class="s6">Name</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Size</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Type</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">CR</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Subtype / tag</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Alignment</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p3"><span class="s7">SHORT NAME </span><span class="s8">— fills “the ___” in trait/action text. Use [C]/[c] for capitalized/lowercase, [s] for the verb -s.</span></p>
-<p class="p16"><span class="s1">Word</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Article</span></p>
-<p class="p17"><span class="s1">Common (“the …”)Proper name (no article)</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Plural</span></p>
-<p class="p18"><span class="s9">CORE STATS</span><span class="s10"> </span><span class="s8">Armor Class</span></p>
-<p class="p19"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">AC note</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p18"><span class="s8">Hit Points</span></p>
-<p class="p19"><span class="s1"></span><br></p>
-<p class="p18"><span class="s8">HP formula</span></p>
-<p class="p20"><span class="s8">(optional)</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p21"><span class="s8">SPEED</span></p>
-<p class="p16"><span class="s1">Walk</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Climb</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Fly</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Swim</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Burrow</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p18"><span class="s11">Fly speed can hover</span><span class="s10"> </span><span class="s8">Initiative override</span></p>
-<p class="p20"><span class="s8">(blank = DEX)</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p23"><span class="s8">ABILITIES &amp; SAVES</span></p>
-<p class="p20"><span class="s8">tick to add save proficiency</span></p>
-<p class="p23"><span class="s8">SKILLS, DEFENSES &amp; SENSES</span></p>
-<p class="p21"><span class="s8">SKILLS</span></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p24"><span class="s12">＋</span><span class="s8"> Add skill</span></p>
-<p class="p3"><span class="s7">DAMAGE TYPES </span><span class="s8">— click to cycle: none → Resist → Immune → Vulnerable</span></p>
-<p class="p18"><span class="s8">Defense note</span></p>
-<p class="p20"><span class="s8">(e.g. nonmagical attacks)</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Condition Immunities</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Gear</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Languages</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p3"><span class="s7">SENSES </span><span class="s8">— Passive Perception is added automatically</span></p>
-<p class="p16"><span class="s1">Darkvision</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Blindsight</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Tremorsense</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Truesight</span></p>
-<p class="p22"><span class="s1"></span><br></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Blind beyond blindsight radius</span><span class="s5"> </span><span class="s1">Other senses</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p23"><span class="s8">TRAITS</span></p>
-<p class="p25"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p26"><span class="s4">＋</span><span class="s1"> Add trait</span></p>
-<p class="p23"><span class="s8">ACTIONS</span></p>
-<p class="p25"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p27"><span class="s12">＋</span><span class="s8"> Attack (guided)</span></p>
-<p class="p27"><span class="s12">＋</span><span class="s8"> Spellcasting</span></p>
-<p class="p27"><span class="s12">＋</span><span class="s8"> Multiattack</span></p>
-<p class="p27"><span class="s12">＋</span><span class="s8"> Custom action</span></p>
-<p class="p23"><span class="s8">BONUS ACTIONS</span></p>
-<p class="p25"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p26"><span class="s4">＋</span><span class="s1"> Add bonus action</span></p>
-<p class="p23"><span class="s8">REACTIONS</span></p>
-<p class="p25"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"></span><br></p>
-<p class="p26"><span class="s4">＋</span><span class="s1"> Add reaction</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Legendary Actions</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p18"><span class="s8">Villain Actions</span></p>
-<p class="p20"><span class="s8">· MCDM</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p18"><span class="s8">Lair Actions</span></p>
-<p class="p20"><span class="s8">· 2014 style</span></p>
-<p class="p15"><span class="s1"></span><br></p>
-<p class="p16"><span class="s1">Regional Effects</span></p>
-<p class="p28"><span class="s1"></span><br></p>
-<p class="p29"><span class="s1"></span><br></p>
-<p class="p6"><span class="s13">⚒</span><span class="s3"> Save to Bestiary</span><span class="s14"> </span><span class="s15">Copy for Claude</span></p>
-<p class="p30"><span class="s16">→ push to Notion</span></p>
-<p class="p31"><span class="s16">Copy for Notion</span></p>
-<p class="p30"><span class="s16">manual · single-column</span></p>
-<p class="p32"><span class="s2">“Copy for Claude” sends structured data — paste in chat and I build the Notion page in MM25 two-column format and set AC/HP/XP/CR. “Copy for Notion” is the no-tokens fallback (single-column paste; set properties by hand).</span></p>
-<p class="p15"><span class="s1"></span><br></p>
+<div class="app" id="app">
+  <button class="rail-open" id="railOpen" title="Show sidebar">☰</button>
+  <div class="topbar"><div class="menu-wrap">
+    <button class="kebab" data-menu="top" title="Menu">⋯</button>
+    <div class="menu" id="menu-top">
+      <button id="topChassis">＋ New from chassis</button>
+      <button id="topExport">⭳ Export JSON</button>
+      <button id="topImport">⭱ Import JSON</button>
+    </div>
+  </div></div>
+  <aside class="rail">
+    <div class="brand"><div class="mk"><svg viewBox="0 0 218 218" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;fill-rule:evenodd;clip-rule:evenodd"><g transform="matrix(1,0,0,1,-15677.305548,317.051763)"><g><g transform="matrix(1,0,0,1,4055.091762,-399.036614)"><g transform="matrix(0.295356,0,0,0.295356,7361.209891,-144.454498)"><circle cx="14794.084" cy="1134.084" r="269.084" style="fill:white"/></g><g transform="matrix(0.243651,0,0,0.243651,8065.594198,-106.848163)"><path d="M15047.865,1459.543C15046.83,1461.515 15044.787,1462.75 15042.56,1462.75C15040.333,1462.75 15038.289,1461.515 15037.254,1459.543C15002.022,1391.268 14981.438,1308.96 14981.438,1220.401C14981.438,1131.842 15002.022,1049.535 15037.254,981.259C15038.289,979.288 15040.333,978.053 15042.56,978.053C15044.787,978.053 15046.83,979.288 15047.865,981.259C15083.097,1049.535 15103.681,1131.842 15103.681,1220.401C15103.681,1308.96 15083.097,1391.268 15047.865,1459.543Z"/></g><g transform="matrix(0.254131,0,0,0.254131,7910.572095,-125.185219)"><path d="M14698.383,1466.807C14696.295,1453.91 14692.015,1441.465 14685.728,1430.012C14655.251,1374.219 14638,1310.223 14638,1242.229C14638,1178.529 14653.141,1118.338 14680.016,1065.061C14690.071,1045.192 14696.999,1023.891 14700.556,1001.909C14705.901,971.195 14712.277,931.796 14712.277,931.796C14713.069,926.904 14716.904,923.069 14721.796,922.277C14721.796,922.277 14776.873,913.364 14807.651,908.383C14820.548,906.295 14832.993,902.015 14844.447,895.728C14900.239,865.251 14964.235,848 15032.229,848C15095.929,848 15156.12,863.141 15209.398,890.016C15229.266,900.071 15250.568,906.999 15272.549,910.556C15303.264,915.901 15342.662,922.277 15342.662,922.277C15347.554,923.069 15351.389,926.904 15352.181,931.796C15352.181,931.796 15361.094,986.873 15366.075,1017.651C15368.163,1030.548 15372.443,1042.993 15378.73,1054.447C15409.208,1110.239 15426.458,1174.235 15426.458,1242.229C15426.458,1305.929 15411.318,1366.12 15384.442,1419.398C15374.388,1439.266 15367.46,1460.568 15363.902,1482.549C15358.557,1513.264 15352.181,1552.662 15352.181,1552.662C15351.389,1557.554 15347.554,1561.389 15342.662,1562.181C15342.662,1562.181 15287.585,1571.094 15256.807,1576.075C15243.91,1578.163 15231.465,1582.443 15220.012,1588.73C15164.219,1619.208 15100.223,1636.458 15032.229,1636.458C14968.529,1636.458 14908.338,1621.318 14855.061,1594.442C14835.192,1584.388 14813.891,1577.46 14791.909,1573.902C14761.195,1568.557 14721.796,1562.181 14721.796,1562.181C14716.904,1561.389 14713.069,1557.554 14712.277,1552.662C14712.277,1552.662 14703.364,1497.585 14698.383,1466.807ZM14773.353,1066.81C14739.364,1116.847 14719.495,1177.236 14719.495,1242.229C14719.495,1307.222 14739.364,1367.611 14773.353,1417.648L14875.249,1384.724C14879.359,1383.396 14883.867,1384.482 14886.921,1387.537C14889.976,1390.591 14891.062,1395.099 14889.734,1399.21L14856.81,1501.105C14906.847,1535.095 14967.236,1554.964 15032.229,1554.964C15097.222,1554.964 15157.611,1535.095 15207.648,1501.105L15174.724,1399.21C15173.396,1395.099 15174.482,1390.591 15177.537,1387.537C15180.591,1384.482 15185.099,1383.396 15189.21,1384.724L15291.105,1417.648C15325.095,1367.611 15344.964,1307.222 15344.964,1242.229C15344.964,1177.236 15325.095,1116.847 15291.105,1066.81L15189.21,1099.734C15185.099,1101.062 15180.591,1099.976 15177.537,1096.921C15174.482,1093.867 15173.396,1089.359 15174.724,1085.249L15207.648,983.353C15157.611,949.364 15097.222,929.495 15032.229,929.495C14967.236,929.495 14906.847,949.364 14856.81,983.353L14890.014,1086.115C14891.288,1090.059 14890.246,1094.384 14887.315,1097.315C14884.384,1100.246 14880.059,1101.288 14876.115,1100.014L14773.353,1066.81Z"/></g></g><g transform="matrix(0.254131,0,0,0.254131,11965.663858,-524.221833)"><path d="M14666.013,1472.048C14664.523,1462.844 14661.469,1453.963 14656.982,1445.79L14656.951,1445.732C14623.921,1385.268 14605.209,1315.917 14605.209,1242.229C14605.209,1173.218 14621.623,1108.011 14650.739,1050.292L14650.758,1050.255C14659.289,1033.396 14665.167,1015.322 14668.186,996.67L14668.25,996.287C14673.566,965.741 14679.907,926.558 14679.907,926.558C14682.955,907.722 14697.722,892.955 14716.558,889.907L14802.41,876.013C14811.614,874.523 14820.495,871.469 14828.669,866.982L14828.726,866.951C14889.191,833.921 14958.542,815.209 15032.229,815.209C15101.24,815.209 15166.447,831.623 15224.167,860.739L15224.204,860.758C15241.062,869.289 15259.136,875.167 15277.788,878.186L15278.172,878.25C15308.718,883.566 15347.9,889.907 15347.9,889.907C15366.736,892.955 15381.503,907.722 15384.552,926.558L15398.445,1012.41C15399.935,1021.614 15402.99,1030.495 15407.476,1038.669L15407.507,1038.726C15440.537,1099.191 15459.25,1168.542 15459.25,1242.229C15459.25,1311.24 15442.836,1376.447 15413.719,1434.167L15413.701,1434.204C15405.17,1451.062 15399.291,1469.136 15396.273,1487.788L15396.208,1488.172C15390.892,1518.718 15384.552,1557.9 15384.551,1557.9C15381.503,1576.736 15366.736,1591.503 15347.9,1594.552L15262.048,1608.445C15252.844,1609.935 15243.963,1612.99 15235.79,1617.476L15235.732,1617.507C15175.268,1650.537 15105.917,1669.25 15032.229,1669.25C14963.218,1669.25 14898.011,1652.836 14840.292,1623.719L14840.255,1623.701C14823.396,1615.17 14805.322,1609.291 14786.67,1606.273L14786.287,1606.208C14755.741,1600.892 14716.558,1594.552 14716.558,1594.551C14697.722,1591.503 14682.955,1576.736 14679.907,1557.9L14666.013,1472.048ZM14698.383,1466.807L14712.277,1552.662C14713.069,1557.554 14716.904,1561.389 14721.796,1562.181C14721.796,1562.181 14761.195,1568.557 14791.909,1573.902C14813.891,1577.46 14835.192,1584.388 14855.061,1594.442C14908.338,1621.318 14968.529,1636.458 15032.229,1636.458C15100.223,1636.458 15164.219,1619.208 15220.012,1588.73C15231.465,1582.443 15243.91,1578.163 15256.807,1576.075L15342.662,1562.181C15347.554,1561.389 15351.389,1557.554 15352.181,1552.662C15352.181,1552.662 15358.557,1513.264 15363.902,1482.549C15367.46,1460.568 15374.388,1439.266 15384.442,1419.398C15411.318,1366.12 15426.458,1305.929 15426.458,1242.229C15426.458,1174.235 15409.208,1110.239 15378.73,1054.447C15372.443,1042.993 15368.163,1030.548 15366.075,1017.651L15352.181,931.796C15351.389,926.904 15347.554,923.069 15342.662,922.277C15342.662,922.277 15303.264,915.901 15272.549,910.556C15250.568,906.999 15229.266,900.071 15209.398,890.016C15156.12,863.141 15095.929,848 15032.229,848C14964.235,848 14900.239,865.251 14844.447,895.728C14832.993,902.015 14820.548,906.295 14807.651,908.383L14721.796,922.277C14716.904,923.069 14713.069,926.904 14712.277,931.796C14712.277,931.796 14705.901,971.195 14700.556,1001.909C14696.999,1023.891 14690.071,1045.192 14680.016,1065.061C14653.141,1118.338 14638,1178.529 14638,1242.229C14638,1310.223 14655.251,1374.219 14685.728,1430.012C14692.015,1441.465 14696.295,1453.91 14698.383,1466.807ZM14773.353,1066.81L14876.115,1100.014C14880.059,1101.288 14884.384,1100.246 14887.315,1097.315C14890.246,1094.384 14891.288,1090.059 14890.014,1086.115L14856.81,983.353C14906.847,949.364 14967.236,929.495 15032.229,929.495C15097.222,929.495 15157.611,949.364 15207.648,983.353L15174.724,1085.249C15173.396,1089.359 15174.482,1093.867 15177.537,1096.921C15180.591,1099.976 15185.099,1101.062 15189.21,1099.734L15291.105,1066.81C15325.095,1116.847 15344.964,1177.236 15344.964,1242.229C15344.964,1307.222 15325.095,1367.611 15291.105,1417.648L15189.21,1384.724C15185.099,1383.396 15180.591,1384.482 15177.537,1387.537C15174.482,1390.591 15173.396,1395.099 15174.724,1399.21L15207.648,1501.105C15157.611,1535.095 15097.222,1554.964 15032.229,1554.964C14967.236,1554.964 14906.847,1535.095 14856.81,1501.105L14889.734,1399.21C14891.062,1395.099 14889.976,1390.591 14886.921,1387.537C14883.867,1384.482 14879.359,1383.396 14875.249,1384.724L14773.353,1417.648C14739.364,1367.611 14719.495,1307.222 14719.495,1242.229C14719.495,1177.236 14739.364,1116.847 14773.353,1066.81ZM14787.709,1105.909C14765.146,1146.257 14752.286,1192.754 14752.286,1242.229C14752.286,1291.705 14765.146,1338.201 14787.709,1378.549L14865.166,1353.521C14880.992,1348.408 14898.348,1352.59 14910.109,1364.35C14921.869,1376.11 14926.05,1393.466 14920.937,1409.292L14895.91,1486.75C14936.258,1509.313 14982.754,1522.172 15032.229,1522.172C15081.705,1522.172 15128.201,1509.313 15168.549,1486.749L15143.521,1409.292C15138.408,1393.466 15142.59,1376.11 15154.35,1364.35C15166.11,1352.59 15183.466,1348.408 15199.292,1353.521L15276.75,1378.549C15280.806,1371.294 15284.549,1363.842 15287.96,1356.208C15303.521,1321.385 15312.172,1282.809 15312.172,1242.229C15312.172,1192.754 15299.313,1146.257 15276.749,1105.909L15199.292,1130.937C15183.466,1136.05 15166.11,1131.869 15154.35,1120.109C15142.59,1108.348 15138.408,1090.992 15143.521,1075.167L15168.549,997.709C15128.201,975.145 15081.705,962.286 15032.229,962.286C14982.754,962.286 14936.257,975.146 14895.909,997.709L14921.217,1076.032C14926.277,1091.692 14922.139,1108.866 14910.502,1120.502C14898.866,1132.139 14881.692,1136.277 14866.032,1131.217L14787.709,1105.909Z" style="fill:white"/></g></g></g></svg></div><h1>Monster Forge<small>D&amp;D 2024</small></h1><button class="rail-collapse" id="railCollapse" title="Hide sidebar">‹</button></div>
+    <nav class="nav" id="nav">
+      <button data-view="forge" class="active"><span class="ico">✦</span>Forge</button>
+      <button data-view="library"><span class="ico">❖</span>Bestiary</button>
+      <button data-view="adventures"><span class="ico">⚔</span>Adventures</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="stash">
+      <span class="lbl">Library</span>
+      <button class="mini" id="newFromChassis">＋ New from chassis</button>
+      <button class="mini" id="exportAll">⭳ Export JSON</button>
+      <button class="mini" id="importAll">⭱ Import JSON</button>
+      <input type="file" id="fileIn" accept="application/json" style="display:none">
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="banner" id="banner"></div>
+
+    <section class="view active" id="view-forge">
+      <div class="forge">
+        <div class="form-col" id="formCol">
+          <div class="col-head">
+            <div><h2 id="forgeTitle">New Creature</h2><div class="sub">PB &amp; XP derive from CR. Empty AC/HP/attack fields pre-fill from CR as suggestions.</div></div>
+            <div style="display:flex;gap:8px"><button class="btn ghost sm" id="forgeChassis" style="width:auto">Load chassis</button><button class="btn ghost sm" id="resetForge" style="width:auto">Clear</button></div>
+          </div>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Identity</div>
+            <div class="grid g-name">
+              <label class="f">Name<input type="text" id="f_name" placeholder="Creature name"></label>
+              <label class="f">Size<select id="f_size"></select></label>
+              <label class="f">Type<input type="text" id="f_type" placeholder="Undead"></label>
+              <label class="f">CR<select id="f_cr"></select></label>
+            </div>
+            <div class="grid g2" style="margin-top:10px">
+              <label class="f">Subtype / tag<input type="text" id="f_subtype" placeholder="Spirit"></label>
+              <label class="f">Alignment<input type="text" id="f_align" placeholder="Lawful Evil"></label>
+            </div>
+            <div class="fs-sub">Short name <span style="color:var(--faint);text-transform:none;letter-spacing:0">— fills “the ___” in trait/action text. Use [C]/[c] for capitalized/lowercase, [s] for the verb -s.</span></div>
+            <div class="grid" style="grid-template-columns:1.2fr 1fr auto;align-items:end">
+              <label class="f">Word<input type="text" id="f_snword" placeholder="creature"></label>
+              <label class="f">Article<select id="f_snproper"><option value="common">Common (“the …”)</option><option value="proper">Proper name (no article)</option></select></label>
+              <label class="toggle" style="margin-bottom:9px"><input type="checkbox" id="f_snplural"> Plural</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Core stats</div>
+            <div class="grid g3">
+              <label class="f">Armor Class<span class="with-badge" id="wb_ac"><input type="number" id="f_ac"><span class="badge">≈CR</span></span></label>
+              <label class="f">AC note<input type="text" id="f_acnote" placeholder="natural armor"></label>
+              <label class="f">Hit Points<span class="with-badge" id="wb_hp"><input type="number" id="f_hp"><span class="badge">≈CR</span></span></label>
+            </div>
+            <label class="f" style="margin-top:10px">HP formula <span style="color:var(--faint)">(optional)</span><input type="text" id="f_hpf" placeholder="4d8 + 4"></label>
+            <div class="fs-sub">Speed</div>
+            <div class="spd-grid">
+              <label class="f">Walk<input type="number" id="sp_walk" value="30"></label>
+              <label class="f">Climb<input type="number" id="sp_climb" placeholder="0"></label>
+              <label class="f">Fly<input type="number" id="sp_fly" placeholder="0"></label>
+              <label class="f">Swim<input type="number" id="sp_swim" placeholder="0"></label>
+              <label class="f">Burrow<input type="number" id="sp_burrow" placeholder="0"></label>
+            </div>
+            <label class="hover-tog"><input type="checkbox" id="sp_hover"> Fly speed can hover</label>
+            <label class="f" style="margin-top:10px">Initiative override <span style="color:var(--faint)">(blank = DEX)</span><input type="number" id="f_init" placeholder="auto"></label>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Abilities &amp; saves <span class="count">tick to add save proficiency</span></div>
+            <div class="abil" id="abilGrid"></div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Skills, defenses &amp; senses</div>
+            <div class="fs-sub">Skills</div>
+            <div id="skillRows"></div>
+            <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
+            <div class="fs-sub">Damage types <span style="color:var(--faint);text-transform:none;letter-spacing:0">— click to cycle: none → Resist → Immune → Vulnerable</span></div>
+            <div class="dmg-grid" id="dmgGrid"></div>
+            <div class="grid g2" style="margin-top:11px">
+              <label class="f">Defense note <span style="color:var(--faint)">(e.g. nonmagical attacks)</span><input type="text" id="f_dmgnote" placeholder="…from nonmagical attacks"></label>
+              <label class="f">Condition Immunities<input type="text" id="f_cimm" placeholder="Charmed, Frightened"></label>
+            </div>
+            <div class="grid g2" style="margin-top:10px">
+              <label class="f">Gear<input type="text" id="f_gear" placeholder="Longsword, Shield"></label>
+              <label class="f">Languages<input type="text" id="f_lang" placeholder="Common"></label>
+            </div>
+            <div class="fs-sub">Senses <span style="color:var(--faint);text-transform:none;letter-spacing:0">— Passive Perception is added automatically</span></div>
+            <div class="spd-grid" style="grid-template-columns:repeat(4,1fr)">
+              <label class="f">Darkvision<input type="number" id="se_darkvision" placeholder="0"></label>
+              <label class="f">Blindsight<input type="number" id="se_blindsight" placeholder="0"></label>
+              <label class="f">Tremorsense<input type="number" id="se_tremorsense" placeholder="0"></label>
+              <label class="f">Truesight<input type="number" id="se_truesight" placeholder="0"></label>
+            </div>
+            <div style="display:flex;gap:14px;align-items:center;margin-top:9px;flex-wrap:wrap">
+              <label class="toggle"><input type="checkbox" id="se_blindBeyond"> Blind beyond blindsight radius</label>
+              <label class="f" style="flex:1;min-width:160px">Other senses<input type="text" id="se_other" placeholder="e.g. Devil's Sight 120 ft."></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Traits <span class="count" id="cntTraits"></span></div>
+            <div id="traitList"></div>
+            <button class="addbtn" data-add="traits" style="width:100%;margin-top:6px">＋ Add trait</button>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Actions <span class="count" id="cntActions"></span></div>
+            <div id="actionList"></div>
+            <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button></div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span></div>
+            <div id="bonusList"></div>
+            <button class="addbtn" data-add="bonus" style="width:100%;margin-top:6px">＋ Add bonus action</button>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <div class="fs-title">Reactions <span class="count" id="cntReact"></span></div>
+            <div id="reactList"></div>
+            <button class="addbtn" data-add="reactions" style="width:100%;margin-top:6px">＋ Add reaction</button>
+          </fieldset>
+
+          <fieldset class="fieldset optfs" id="fsLegend">
+            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_legend"> Legendary Actions</label></div>
+            <div id="legendInner" style="display:none">
+              <label class="f">Intro line<textarea id="f_legintro"></textarea></label>
+              <div id="legendList" style="margin-top:9px"></div>
+              <button class="addbtn" data-add="legend" style="width:100%;margin-top:6px">＋ Add legendary action</button>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset optfs" id="fsVillain">
+            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_villain"> Villain Actions <span style="color:var(--faint)">· MCDM</span></label></div>
+            <div id="villainInner" style="display:none">
+              <label class="f">Intro line<textarea id="f_vilintro"></textarea></label>
+              <div id="villainList" style="margin-top:9px"></div>
+              <button class="addbtn" data-add="villain" style="width:100%;margin-top:6px">＋ Add villain action</button>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset optfs" id="fsLair">
+            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_lair"> Lair Actions <span style="color:var(--faint)">· 2014 style</span></label></div>
+            <div id="lairInner" style="display:none">
+              <label class="f">Intro line<textarea id="f_lairintro"></textarea></label>
+              <div id="lairList" style="margin-top:9px"></div>
+              <button class="addbtn" data-add="lair" style="width:100%;margin-top:6px">＋ Add lair action</button>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset optfs" id="fsRegional">
+            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_regional"> Regional Effects</label></div>
+            <div id="regionalInner" style="display:none">
+              <label class="f">Effects<textarea id="f_regional" placeholder="The region containing the lair is warped, creating the following effects: …"></textarea></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="preview-col">
+          <div class="derived" id="derived"></div>
+          <div class="cr-targets" id="crTargets"></div>
+          <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
+          <div class="outs">
+            <button class="btn primary" id="saveMonster">⚒ Save to Bestiary</button>
+            <button class="btn ghost" id="pushClaude">Copy for Claude <span class="sub">→ push to Notion</span></button>
+            <button class="btn ghost" id="copyNotion">Copy for Notion <span class="sub">manual · single-column</span></button>
+            <p class="hint">“Copy for Claude” sends structured data — paste in chat and I build the Notion page in MM25 two-column format and set AC/HP/XP/CR. “Copy for Notion” is the no-tokens fallback (single-column paste; set properties by hand).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-library">
+      <div class="scroll">
+        <div class="col-head"><h2>Bestiary</h2></div>
+        <div class="toolbar">
+          <input type="text" class="search" id="libSearch" placeholder="Search by name or type…">
+          <div class="grow"></div>
+          <button class="btn ghost sm" id="libNew" style="width:auto">＋ New creature</button>
+          <button class="btn ghost sm" id="libChassis" style="width:auto">From chassis</button>
+        </div>
+        <div id="libBody"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-adventures">
+      <div class="adv-layout">
+        <div class="adv-list">
+          <button class="btn primary sm" id="newAdv" style="margin-bottom:12px">＋ New adventure</button>
+          <div id="advItems"></div>
+        </div>
+        <div class="adv-detail" id="advDetail"><div class="empty-state">Select or create an adventure.</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<script>
+"use strict";
+const CR_LIST=["0","1/8","1/4","1/2","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"];
+const CR_XP={"0":10,"1/8":25,"1/4":50,"1/2":100,"1":200,"2":450,"3":700,"4":1100,"5":1800,"6":2300,"7":2900,"8":3900,"9":5000,"10":5900,"11":7200,"12":8400,"13":10000,"14":11500,"15":13000,"16":15000,"17":18000,"18":20000,"19":22000,"20":25000,"21":33000,"22":41000,"23":50000,"24":62000,"25":75000,"26":90000,"27":105000,"28":120000,"29":135000,"30":155000};
+const CR_NUM={"0":0,"1/8":.125,"1/4":.25,"1/2":.5};CR_LIST.forEach(c=>{if(!(c in CR_NUM))CR_NUM[c]=Number(c);});
+function pbForCR(cr){const v={"0":2,"1/8":2,"1/4":2,"1/2":2,"1":2,"2":2,"3":2,"4":2,"5":3,"6":3,"7":3,"8":3,"9":4,"10":4,"11":4,"12":4,"13":5,"14":5,"15":5,"16":5,"17":6,"18":6,"19":6,"20":6,"21":7,"22":7,"23":7,"24":7,"25":8,"26":8,"27":8,"28":8,"29":9,"30":9};return v[cr]||2;}
+const BOH={"0":[13,3,2,1,9,0],"1/8":[13,9,3,3,10,1],"1/4":[13,15,3,6,10,1],"1/2":[14,24,4,9,11,2],"1":[14,30,4,12,11,2],"2":[14,45,5,18,12,3],"3":[15,60,5,24,12,3],"4":[15,75,6,30,13,4],"5":[15,90,6,36,13,4],"6":[16,105,7,42,14,4],"7":[16,120,7,48,14,4],"8":[16,135,8,54,15,4],"9":[17,150,8,60,15,4],"10":[17,165,9,66,16,5],"11":[17,180,9,72,16,5],"12":[18,195,10,78,17,5],"13":[18,210,10,84,17,5],"14":[18,225,11,90,18,6],"15":[19,240,11,96,18,6],"16":[19,255,12,102,19,6],"17":[19,270,12,108,19,6],"18":[20,285,13,114,20,7],"19":[20,300,13,120,20,7],"20":[20,315,14,126,21,7],"21":[21,350,14,132,21,7],"22":[21,400,15,138,22,8],"23":[21,450,15,144,22,8],"24":[22,500,16,150,23,8],"25":[22,550,16,156,23,8],"26":[22,600,17,162,24,9],"27":[22,650,17,168,24,9],"28":[22,700,18,174,25,9],"29":[22,750,18,180,25,9],"30":[22,800,19,186,26,9]};
+const BUDGET={1:[50,75,100],2:[100,150,200],3:[150,225,400],4:[250,375,500],5:[500,750,1100],6:[600,1000,1400],7:[750,1300,1700],8:[1000,1700,2100],9:[1300,2000,2600],10:[1600,2300,3100],11:[1900,2900,4100],12:[2200,3700,4700],13:[2600,4200,5400],14:[2900,4900,6200],15:[3300,5400,7800],16:[3800,6100,9800],17:[4500,7200,11700],18:[5000,8700,14200],19:[5500,10700,17200],20:[6400,13200,22000]};
+const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
+const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};
+const ABILS=["str","dex","con","int","wis","cha"];
+const DMG_TYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+const FACTIONS=["Enemy","Ally","Party","Setting"];
+const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
+const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
+const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once per encounter, immediately after another creature's turn, and must use them in order (Action 1, then 2, then 3).";
+
+const mod=s=>Math.floor((Number(s||10)-10)/2);
+const sgn=n=>(n>=0?"+":"")+n;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const diceAvg=d=>{const m=String(d||"").match(/(\d+)\s*d\s*(\d+)/i);return m?Number(m[1])*(Number(m[2])+1)/2:0;};
+
+function mk(o){return{id:o.id,chassis:true,name:o.name,size:o.size||"Medium",type:o.type||"Humanoid",subtype:o.subtype||"",align:o.align||"Neutral",
+  ac:o.ac,acnote:o.acnote||"",hp:o.hp,hpf:o.hpf||"",spd:o.spd||{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",
+  str:o.s[0],dex:o.s[1],con:o.s[2],int:o.s[3],wis:o.s[4],cha:o.s[5],saves:o.saves||[],skills:o.skills||[],
+  dmg:o.dmg||{},dmgnote:o.dmgnote||"",cimm:o.cimm||"",gear:o.gear||"",senses:o.senses||"",lang:o.lang||"Common",cr:o.cr,xpOver:"",
+  traits:o.traits||[],actions:o.actions||[],bonus:o.bonus||[],reactions:o.reactions||[],
+  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[],regional:""},_auto:{ac:false,hp:false}};}
+const T=(name,text)=>({name,text,mode:"text"});
+const ATK=o=>Object.assign({mode:"attack",name:"",kind:"Melee",ability:"str",atk:"",reach:5,range:"",targets:"",dice:"1d6",addMod:true,dtype:"Slashing",extra:""},o);
+const SPELL=o=>Object.assign({mode:"spell",name:"Spellcasting",ability:"cha",dc:"",atk:"",groups:[{freq:"At Will",spells:""}]},o);
+const CHASSIS=[
+  mk({id:"c_commoner",name:"Commoner",ac:10,hp:4,hpf:"1d8",s:[10,10,10,10,10,10],cr:"0",actions:[ATK({name:"Club",dice:"1d4",addMod:false,dtype:"Bludgeoning",reach:5})]}),
+  mk({id:"c_critter",name:"Critter",size:"Tiny",type:"Beast",ac:11,hp:3,hpf:"1d4",s:[3,14,8,2,12,4],cr:"0",spd:{walk:20,climb:20,fly:0,swim:0,burrow:0,hover:false},lang:"—",skills:[["Perception","prof"]],actions:[ATK({name:"Bite",ability:"dex",dice:"1",addMod:false,dtype:"Piercing"})]}),
+  mk({id:"c_bandit",name:"Bandit",ac:12,acnote:"leather",hp:11,hpf:"2d8+2",s:[11,12,12,10,10,10],cr:"1/8",gear:"Scimitar, Light Crossbow",actions:[ATK({name:"Scimitar",dice:"1d6",addMod:true,dtype:"Slashing"}),ATK({name:"Light Crossbow",kind:"Ranged",ability:"dex",range:"80/320",dice:"1d8",dtype:"Piercing"})]}),
+  mk({id:"c_guard",name:"Guard",ac:16,acnote:"chain shirt, shield",hp:11,hpf:"2d8+2",s:[13,12,12,10,11,10],cr:"1/8",skills:[["Perception","prof"]],gear:"Spear",actions:[ATK({name:"Spear",kind:"Melee or Ranged",range:"20/60",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_cultist",name:"Cultist",ac:12,acnote:"leather",hp:9,hpf:"2d8",s:[11,12,10,10,11,10],cr:"1/8",skills:[["Deception","prof"],["Religion","prof"]],gear:"Ritual Dagger",actions:[ATK({name:"Ritual Dagger",ability:"dex",dice:"1d4",dtype:"Slashing",extra:"plus 2 (1d4) Necrotic damage."})]}),
+  mk({id:"c_skeleton",name:"Skeleton",type:"Undead",ac:14,acnote:"armor scraps",hp:13,hpf:"2d8+4",s:[10,14,15,6,8,5],cr:"1/4",dmg:{Poison:"imm",Bludgeoning:"vuln"},cimm:"Exhaustion, Poisoned",senses:"Darkvision 60 ft.",lang:"understands Common",gear:"Shortsword, Shortbow",actions:[ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing"}),ATK({name:"Shortbow",kind:"Ranged",ability:"dex",range:"80/320",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_wolf",name:"Wolf",type:"Beast",ac:12,hp:11,hpf:"2d8+2",s:[12,15,12,3,12,6],cr:"1/4",spd:{walk:40,climb:0,fly:0,swim:0,burrow:0,hover:false},skills:[["Perception","prof"],["Stealth","prof"]],lang:"—",traits:[T("Pack Tactics","Advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of it.")],actions:[ATK({name:"Bite",ability:"dex",dice:"2d4",dtype:"Piercing",extra:"If the target is a creature, it has the Prone condition (DC 11 Str save negates)."})]}),
+  mk({id:"c_acolyte",name:"Acolyte",ac:13,acnote:"chain shirt",hp:11,hpf:"2d8+2",s:[10,10,11,11,14,11],cr:"1/4",skills:[["Medicine","prof"],["Religion","prof"]],traits:[T("Spellcasting","WIS (save DC 12). At will: Light, Thaumaturgy. 1/day each: Bless, Cure Wounds.")],actions:[ATK({name:"Mace",dice:"1d6",addMod:false,dtype:"Bludgeoning"})]}),
+  mk({id:"c_scout",name:"Scout",ac:13,acnote:"leather",hp:16,hpf:"3d8+3",s:[11,14,12,11,13,11],cr:"1/2",skills:[["Nature","prof"],["Perception","exp"],["Stealth","prof"],["Survival","exp"]],gear:"Shortsword, Longbow",actions:[T("Multiattack","The scout makes two attacks."),ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing"}),ATK({name:"Longbow",kind:"Ranged",ability:"dex",range:"150/600",dice:"1d8",dtype:"Piercing"})]}),
+  mk({id:"c_thug",name:"Thug",ac:11,hp:32,hpf:"5d8+10",s:[15,11,14,10,10,11],cr:"1/2",skills:[["Intimidation","prof"]],gear:"Mace",traits:[T("Pack Tactics","Advantage on an attack roll against a creature if an ally is within 5 feet of it.")],actions:[T("Multiattack","The thug makes two Mace attacks."),ATK({name:"Mace",dice:"1d6",dtype:"Bludgeoning"})]}),
+  mk({id:"c_berserker",name:"Berserker",ac:13,acnote:"hide",hp:67,hpf:"9d8+27",s:[16,12,17,9,11,9],cr:"2",gear:"Greataxe",actions:[ATK({name:"Greataxe",dice:"1d12",dtype:"Slashing"})]}),
+  mk({id:"c_priest",name:"Priest",ac:13,acnote:"chain shirt",hp:38,hpf:"7d8+7",s:[10,10,12,13,16,13],cr:"2",skills:[["Medicine","prof"],["Persuasion","prof"],["Religion","prof"]],traits:[T("Spellcasting","WIS (save DC 13, +5 to hit). At will: Light, Sacred Flame, Thaumaturgy. 1/day each: Dispel Magic, Spirit Guardians.")],actions:[ATK({name:"Mace",dice:"1d6",addMod:false,dtype:"Bludgeoning",extra:"plus 4 (1d8) Radiant damage."})]}),
+  mk({id:"c_ogre",name:"Ogre",size:"Large",type:"Giant",ac:11,hp:68,hpf:"8d10+24",s:[19,8,16,5,7,7],cr:"2",senses:"Darkvision 60 ft.",lang:"Common, Giant",gear:"Greatclub",actions:[ATK({name:"Greatclub",dice:"2d8",dtype:"Bludgeoning"})]}),
+  mk({id:"c_veteran",name:"Veteran",ac:17,acnote:"splint",hp:65,hpf:"10d8+20",s:[16,13,14,10,11,10],cr:"3",skills:[["Athletics","prof"],["Perception","prof"]],gear:"Longsword, Shortsword",actions:[T("Multiattack","The veteran makes two Longsword attacks and one Shortsword attack."),ATK({name:"Longsword",dice:"1d8",dtype:"Slashing"}),ATK({name:"Shortsword",dice:"1d6",dtype:"Piercing"})]}),
+  mk({id:"c_knight",name:"Knight",ac:18,acnote:"plate",hp:52,hpf:"8d8+16",s:[16,11,14,11,11,15],cr:"3",saves:["con","wis"],gear:"Greatsword",traits:[T("Brave","The knight has Advantage on saving throws against being Frightened.")],actions:[T("Multiattack","The knight makes two Greatsword attacks."),ATK({name:"Greatsword",dice:"2d6",dtype:"Slashing"})],reactions:[{name:"Parry",trigger:"The knight is hit by a melee attack and can see the attacker.",response:"The knight adds 2 to its AC against that attack.",mode:"react"}]}),
+  mk({id:"c_lycan",name:"Lycanthrope",type:"Monstrosity",ac:15,hp:58,hpf:"9d8+18",s:[15,13,14,10,11,10],cr:"3",dmg:{},dmgnote:"Bludgeoning, Piercing, Slashing from nonmagical, non-silvered attacks (Resistance)",actions:[T("Multiattack","The creature makes two attacks."),ATK({name:"Bite",dice:"1d10",dtype:"Piercing",extra:"If the target is Humanoid, it must succeed on a DC 12 Con save or be cursed with lycanthropy."})]}),
+  mk({id:"c_ettin",name:"Two-Headed Brute",size:"Large",type:"Giant",ac:12,hp:85,hpf:"10d10+30",s:[21,8,17,6,10,8],cr:"4",senses:"Darkvision 60 ft.",lang:"Giant",traits:[T("Two Heads","Advantage on Perception checks and on saves against Blinded, Charmed, Deafened, Frightened, Stunned, and Unconscious.")],actions:[T("Multiattack","The brute makes one Battleaxe attack and one Morningstar attack."),ATK({name:"Battleaxe",dice:"2d8",dtype:"Slashing"}),ATK({name:"Morningstar",dice:"2d8",dtype:"Piercing"})]}),
+  mk({id:"c_gladiator",name:"Champion",ac:16,acnote:"studded leather, shield",hp:112,hpf:"15d8+45",s:[18,15,16,10,12,15],cr:"5",saves:["str","dex","con"],skills:[["Athletics","exp"],["Intimidation","prof"]],gear:"Spear, Shield",actions:[T("Multiattack","The champion makes three Spear attacks."),ATK({name:"Spear",kind:"Melee or Ranged",range:"20/60",dice:"2d6",dtype:"Piercing"})],reactions:[{name:"Parry",trigger:"Hit by a melee attack.",response:"Adds 3 to AC against that attack.",mode:"react"}]}),
+  mk({id:"c_troll",name:"Regenerating Brute",size:"Large",type:"Giant",ac:15,hp:94,hpf:"9d10+45",s:[18,13,20,7,9,7],cr:"5",senses:"Darkvision 60 ft.",traits:[T("Regeneration","Regains 10 HP at the start of its turn. If it takes Acid or Fire damage, this doesn't function on its next turn. It dies only if it starts its turn with 0 HP and doesn't regenerate.")],actions:[T("Multiattack","One Bite and two Claw attacks."),ATK({name:"Bite",dice:"1d10",dtype:"Piercing"}),ATK({name:"Claw",dice:"1d6",dtype:"Slashing"})]}),
+  mk({id:"c_mage",name:"Mage",ac:15,acnote:"Mage Armor",hp:81,hpf:"18d8",s:[9,14,11,17,12,11],cr:"6",saves:["int","wis"],skills:[["Arcana","exp"],["History","prof"]],traits:[T("Spellcasting","INT (save DC 14, +6 to hit). At will: Fire Bolt, Light, Mage Hand. 2/day each: Fireball, Misty Step. 1/day each: Cone of Cold, Wall of Force.")],actions:[ATK({name:"Fire Bolt",kind:"Ranged",ability:"int",range:"120",dice:"2d10",addMod:false,dtype:"Fire"})]}),
+  mk({id:"c_assassin",name:"Assassin",ac:16,acnote:"studded leather",hp:97,hpf:"15d8+30",s:[11,18,14,16,11,10],cr:"8",saves:["dex","int"],skills:[["Acrobatics","prof"],["Perception","prof"],["Stealth","exp"]],dmg:{Poison:"res"},gear:"Shortsword",traits:[T("Assassinate","During the first round, the assassin has Advantage on attacks against any creature that hasn't taken a turn. Any hit against a Surprised creature is a Critical Hit."),T("Sneak Attack (1/Turn)","+17 (5d6) Poison damage when it hits with Advantage or while an ally is within 5 ft. of the target.")],actions:[T("Multiattack","The assassin makes three Shortsword attacks."),ATK({name:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing",extra:"plus 7 (2d6) Poison damage."})]}),
+  mk({id:"c_commander",name:"Commander",ac:18,acnote:"plate, shield",hp:153,hpf:"18d8+72",s:[18,12,18,12,14,16],cr:"9",saves:["str","con","wis"],skills:[["Athletics","prof"],["Intimidation","prof"],["Perception","prof"]],gear:"Greatsword",traits:[T("Aura of Command","Allies within 30 ft. have Advantage on saves against Frightened and Charmed.")],actions:[T("Multiattack","The commander makes three Greatsword attacks."),ATK({name:"Greatsword",dice:"2d6",dtype:"Slashing"}),T("Rallying Cry (Recharge 5–6)","Each ally within 30 ft. gains 10 temporary HP and can move up to its Speed as a Reaction.")],bonus:[T("Command Ally","One ally within 30 ft. uses its Reaction to make one weapon attack.")]}),
+  mk({id:"c_aberration",name:"Aberrant Horror",size:"Large",type:"Aberration",ac:16,hp:135,hpf:"18d10+36",s:[16,14,15,18,15,18],cr:"10",saves:["con","int","wis"],senses:"Darkvision 120 ft., Truesight 30 ft.",cimm:"Charmed, Frightened",traits:[T("Maddening Presence","A creature that starts its turn within 30 ft. and can see the horror makes a DC 16 Wis save or has Disadvantage on attacks until its next turn.")],actions:[T("Multiattack","The horror makes three Tentacle attacks."),ATK({name:"Tentacle",dice:"2d8",dtype:"Bludgeoning",reach:15,extra:"plus 7 (2d6) Psychic damage."}),T("Mind Blast (Recharge 5–6)","Intelligence Saving Throw: DC 16, each creature in a 60-foot Cone. Failure: 31 (6d8 + 4) Psychic damage and Stunned until the end of its next turn. Success: Half damage.")]}),
+  mk({id:"c_sorcererlord",name:"Sorcerer-Lord",ac:16,hp:144,hpf:"17d8+68",s:[12,16,18,14,13,20],cr:"12",saves:["con","cha"],skills:[["Arcana","prof"],["Deception","prof"]],dmg:{},dmgnote:"damage from spells (Resistance)",traits:[T("Spellcasting","CHA (save DC 18, +10 to hit). At will: Eldritch Blast (3 beams), Detect Magic. 2/day each: Dimension Door, Hold Monster. 1/day each: Finger of Death, Power Word Stun.")],actions:[ATK({name:"Withering Touch",ability:"cha",dice:"4d8",dtype:"Necrotic"})],legend:{on:true,intro:"",items:[T("Blink","The lord teleports up to 30 feet."),T("Drain (Costs 2 Uses)","One creature within 30 ft. makes a DC 18 Con save, taking 16 (3d10) Necrotic damage on a failure.")]}}),
+  mk({id:"c_archfiend",name:"Archfiend",size:"Large",type:"Fiend",ac:19,acnote:"natural armor",hp:262,hpf:"21d10+147",s:[26,15,24,22,18,26],cr:"17",saves:["str","con","wis","cha"],dmg:{Cold:"res",Fire:"imm",Poison:"imm"},cimm:"Charmed, Frightened, Poisoned",senses:"Truesight 120 ft.",traits:[T("Legendary Resistance (3/Day)","If the archfiend fails a save, it can choose to succeed instead."),T("Magic Resistance","Advantage on saves against spells and other magical effects.")],actions:[T("Multiattack","The archfiend makes one Flame Blade attack and one Slam attack."),ATK({name:"Flame Blade",dice:"3d6",reach:10,dtype:"Slashing",extra:"plus 13 (3d8) Fire damage."}),T("Hellfire (Recharge 5–6)","Dexterity Saving Throw: DC 21, each creature in a 30-foot-radius Sphere within 120 ft. Failure: 52 (15d6) Fire damage. Success: Half damage.")],legend:{on:true,intro:"",items:[T("Teleport","The archfiend teleports up to 120 feet."),T("Hurl Flame","Ranged attack, +14, range 120 ft., 13 (3d8) Fire damage."),T("Dread (Costs 2 Uses)","Each creature within 30 ft. makes a DC 21 Wis save or is Frightened until the end of its next turn.")]},lair:{on:true,intro:"",items:[T("Eruption","Magma erupts from a point the archfiend can see within its lair; each creature in a 5-ft radius makes a DC 18 Dex save, taking 11 (2d10) Fire damage on a failure.")],regional:""}}),
+];
+
+let state={lib:[],adv:[],selAdv:null};
+let M=null, pendingForge=null;
+
+// ── JSONBin cloud storage ─────────────────────────────────────────────────────
+const JBIN_KEY="$2a$10$L0cZTspHDg9LR7hQqW7lkOCYd2OCGrltTRSNY.JjO8aNU4esyI4EG";
+const JBIN_BASE="https://api.jsonbin.io/v3";
+const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"true"};
+// Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
+function getBinId(k){return localStorage.getItem("mf_bin:"+k)||null;}
+function setBinId(k,id){localStorage.setItem("mf_bin:"+k,id);}
+
+async function jbinGet(k){
+  const id=getBinId(k);
+  if(!id)return null;
+  try{
+    const r=await fetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.record;
+  }catch(e){return null;}
+}
+async function jbinSet(k,val){
+  const id=getBinId(k);
+  if(id){
+    // update existing bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("put failed");
+    }catch(e){showBanner("Cloud save failed. Recent edits may not be synced — use Export JSON as a backup.");}
+  } else {
+    // create new bin
+    try{
+      const r=await fetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
+      if(!r.ok)throw new Error("create failed");
+      const d=await r.json();
+      setBinId(k,d.metadata.id);
+    }catch(e){showBanner("Cloud storage setup failed. Use Export JSON to keep your work.");}
+  }
+}
+
+async function loadAll(){
+  try{
+    const a=await jbinGet("library:monsters");state.lib=a?a.map(normalizeMonster):[];
+    const b=await jbinGet("library:adventures");state.adv=b?b.map(normalizeAdv):[];
+  }catch(e){/* bins not created yet — fine, will create on first save */}
+}
+// debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
+let _saveTimer=null,_pend={lib:false,adv:false};
+function saveLib(){_pend.lib=true;_schedule();}
+function saveAdv(){_pend.adv=true;_schedule();}
+function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
+async function _flush(){
+  try{
+    if(_pend.lib){_pend.lib=false;await jbinSet("library:monsters",state.lib);}
+    if(_pend.adv){_pend.adv=false;await jbinSet("library:adventures",state.adv);}
+  }catch(e){showBanner("A cloud save failed. Export JSON as a backup.");}
+}
+if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),1900);}
+function showBanner(t,withCancel){const b=$("#banner");b.innerHTML=esc(t)+(withCancel?'<button id="bannerCancel">Cancel</button>':"");b.classList.add("show");if(withCancel)$("#bannerCancel").onclick=withCancel;}
+function hideBanner(){$("#banner").classList.remove("show");}
+function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[m.cr]??0);}
+
+function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"creature",proper:false,plural:false},size:"Medium",type:"",subtype:"",align:"",
+  ac:null,acnote:"",hp:null,hpf:"",spd:{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",
+  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],dmg:{},dmgnote:"",cimm:"",gear:"",
+  senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
+  cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],
+  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
+  _auto:{ac:true,hp:true}};}
+function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
+  const w=String(str||"").match(/^\s*(\d+)\s*ft/i);if(w)s.walk=+w[1];
+  ["climb","fly","swim","burrow"].forEach(k=>{const m=new RegExp(k+"\\s*(\\d+)","i").exec(str||"");if(m)s[k]=+m[1];});
+  return s;}
+function parseSenses(str){const s={darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:/blind beyond/i.test(str||""),other:""};
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>{const m=new RegExp(k+"\\s*(\\d+)","i").exec(str||"");if(m)s[k]=+m[1];});
+  return s;}
+function migrateDefenses(m){
+  const dmg={};let note=[];
+  const apply=(str,st)=>{if(!str)return;String(str).split(",").forEach(tok=>{tok=tok.trim();const hit=DMG_TYPES.find(d=>d.toLowerCase()===tok.toLowerCase());if(hit)dmg[hit]=st;else if(tok)note.push(tok+" ("+({res:"Resistance",imm:"Immunity",vuln:"Vulnerability"}[st])+")");});};
+  apply(m.res,"res");apply(m.dimm,"imm");apply(m.vuln,"vuln");
+  m.dmg=dmg;m.dmgnote=(m.dmgnote?m.dmgnote+"; ":"")+note.join("; ");
+  delete m.res;delete m.dimm;delete m.vuln;
+}
+function normalizeMonster(m){
+  if(!m.spd){m.spd=parseSpeed(m.speed);delete m.speed;}
+  if(typeof m.senses==="string"||m.senses==null)m.senses=parseSenses(m.senses);
+  if(!m.shortName)m.shortName={word:"creature",proper:false,plural:false};
+  if(m.res!==undefined||m.dimm!==undefined||m.vuln!==undefined){if(!m.dmg)m.dmg={};migrateDefenses(m);}
+  if(!m.dmg)m.dmg={};
+  if(m.dmgnote===undefined)m.dmgnote="";
+  m.legend=m.legend||{on:false,intro:"",items:[]};m.legend.intro=m.legend.intro||"";
+  m.villain=m.villain||{on:false,intro:"",items:[]};m.villain.intro=m.villain.intro||"";
+  m.lair=m.lair||{on:false,intro:"",items:[]};m.lair.intro=m.lair.intro||"";
+  if(!m.regional)m.regional={on:!!(m.lair&&m.lair.regional),text:(m.lair&&m.lair.regional)||""};
+  if(m.lair&&m.lair.regional!==undefined)delete m.lair.regional;
+  ["traits","actions","bonus","reactions"].forEach(k=>{m[k]=(m[k]||[]).map(e=>e.mode?e:Object.assign({mode:e.trigger!==undefined?"react":"text"},e));});
+  m.legend.items=(m.legend.items||[]).map(e=>e.mode?e:T(e.name,e.text));
+  m.lair.items=(m.lair.items||[]).map(e=>e.mode?e:T(e.name,e.text));
+  m.villain.items=(m.villain.items||[]).map(e=>Object.assign({mode:"villain",round:e.round||1},e));
+  m._auto=m._auto||{ac:false,hp:false};
+  return m;
+}
+function normalizeAdv(a){
+  a.notes=a.notes||"";a.levels=a.levels||[];
+  a.encounters=(a.encounters||[]).map(e=>{
+    e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
+    e.combatants=(e.combatants||[]).map(c=>{
+      if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:c.faction||"Enemy"};
+      c.id=c.id||uid();return c;
+    });
+    return e;
+  });
+  return a;
+}
+
+function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}"><div class="mod" id="mod_${a}">+0</div><label class="sv"><input type="checkbox" id="sv_${a}"> save <b id="svv_${a}">+0</b></label></div>`).join("");}
+function buildDmgGrid(){$("#dmgGrid").innerHTML=DMG_TYPES.map(d=>`<button class="dchip" data-dmg="${d}"><span class="st">–</span>${d}</button>`).join("");
+  $$("#dmgGrid [data-dmg]").forEach(b=>b.addEventListener("click",()=>{const d=b.dataset.dmg;const order=["none","res","imm","vuln"];const cur=M.dmg[d]||"none";const nx=order[(order.indexOf(cur)+1)%4];if(nx==="none")delete M.dmg[d];else M.dmg[d]=nx;paintDmg();renderPreview();}));}
+function paintDmg(){$$("#dmgGrid [data-dmg]").forEach(b=>{const st=M.dmg[b.dataset.dmg]||"none";b.className="dchip"+(st!=="none"?" "+st:"");b.querySelector(".st").textContent={none:"–",res:"R",imm:"I",vuln:"V"}[st];});}
+
+function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
+function bindStatic(){
+  bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
+  bindField("#f_acnote","acnote");bindField("#f_hpf","hpf");bindField("#f_init","init",true);
+  bindField("#f_dmgnote","dmgnote");bindField("#f_cimm","cimm");bindField("#f_gear","gear");bindField("#f_lang","lang");
+  $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
+  $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").value==="proper";renderEntries();renderPreview();});
+  $("#f_snplural").addEventListener("change",()=>{M.shortName.plural=$("#f_snplural").checked;renderEntries();renderPreview();});
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).addEventListener("input",()=>{M.senses[k]=Number($("#se_"+k).value||0);renderPreview();}));
+  $("#se_blindBeyond").addEventListener("change",()=>{M.senses.blindBeyond=$("#se_blindBeyond").checked;renderPreview();});
+  $("#se_other").addEventListener("input",()=>{M.senses.other=$("#se_other").value;renderPreview();});
+  $("#f_ac").addEventListener("input",()=>{M.ac=$("#f_ac").value===""?null:Number($("#f_ac").value);M._auto.ac=false;$("#wb_ac").classList.remove("suggested");renderPreview();});
+  $("#f_hp").addEventListener("input",()=>{M.hp=$("#f_hp").value===""?null:Number($("#f_hp").value);M._auto.hp=false;$("#wb_hp").classList.remove("suggested");renderPreview();});
+  ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).addEventListener("input",()=>{M.spd[k]=Number($("#sp_"+k).value||0);renderPreview();}));
+  $("#sp_hover").addEventListener("change",()=>{M.spd.hover=$("#sp_hover").checked;renderPreview();});
+  $("#f_cr").addEventListener("change",()=>{M.cr=$("#f_cr").value;applyCRAuto();refreshAbil();renderEntries();renderPreview();});
+  ABILS.forEach(a=>{
+    $("#ab_"+a).addEventListener("input",()=>{M[a]=Number($("#ab_"+a).value||10);refreshAbil();renderEntries();renderPreview();});
+    $("#sv_"+a).addEventListener("change",()=>{M.saves=M.saves.filter(x=>x!==a);if($("#sv_"+a).checked)M.saves.push(a);refreshAbil();renderPreview();});
+  });
+  $("#f_legintro").addEventListener("input",()=>{M.legend.intro=$("#f_legintro").value;renderPreview();});
+  $("#f_vilintro").addEventListener("input",()=>{M.villain.intro=$("#f_vilintro").value;renderPreview();});
+  $("#f_lairintro").addEventListener("input",()=>{M.lair.intro=$("#f_lairintro").value;renderPreview();});
+  $("#f_regional").addEventListener("input",()=>{M.regional.text=$("#f_regional").value;renderPreview();});
+  $("#t_legend").addEventListener("change",e=>{M.legend.on=e.target.checked;if(e.target.checked&&!M.legend.intro){M.legend.intro=LEGEND_INTRO;$("#f_legintro").value=LEGEND_INTRO;}$("#legendInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";renderPreview();});
+}
+function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
+  if(M._auto.ac){M.ac=boh[0];$("#f_ac").value=boh[0];$("#wb_ac").classList.add("suggested");}
+  if(M._auto.hp){M.hp=boh[1];$("#f_hp").value=boh[1];$("#wb_hp").classList.add("suggested");}}
+function refreshAbil(){const pb=pbForCR(M.cr);ABILS.forEach(a=>{const m=mod(M[a]);$("#mod_"+a).textContent=sgn(m);const p=M.saves.includes(a);$("#svv_"+a).textContent=sgn(m+(p?pb:0));$("#sv_"+a).checked=p;});}
+
+function renderSkills(){const box=$("#skillRows");
+  box.innerHTML=M.skills.map((s,i)=>`<div class="rowline">
+    <select data-si="${i}" class="skName">${Object.keys(SKILLS).map(k=>`<option value="${k}" ${k===s[0]?"selected":""}>${k.replace(/_/g," ")}</option>`).join("")}</select>
+    <select data-si="${i}" class="skProf"><option value="prof" ${s[1]!=="exp"?"selected":""}>Proficient</option><option value="exp" ${s[1]==="exp"?"selected":""}>Expertise</option></select>
+    <button class="iconbtn" data-rmskill="${i}">✕</button></div>`).join("");
+  box.querySelectorAll(".skName").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][0]=e.target.value;renderPreview();}));
+  box.querySelectorAll(".skProf").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][1]=e.target.value;renderPreview();}));
+  box.querySelectorAll("[data-rmskill]").forEach(el=>el.addEventListener("click",e=>{M.skills.splice(+e.target.dataset.rmskill,1);renderSkills();renderPreview();}));
+}
+$("#addSkill").addEventListener("click",()=>{M.skills.push(["Perception","prof"]);renderSkills();renderPreview();});
+
+function arrFor(k){return k==="traits"?M.traits:k==="actions"?M.actions:k==="bonus"?M.bonus:k==="reactions"?M.reactions:k==="villain"?M.villain.items:k==="legend"?M.legend.items:k==="lair"?M.lair.items:[];}
+function attackText(e){
+  const pb=pbForCR(M.cr);const ab=mod(M[e.ability]);
+  const atk=e.atk!==""&&e.atk!=null?Number(e.atk):ab+pb;
+  const kind=e.kind==="Ranged"?"Ranged Attack Roll:":e.kind==="Melee or Ranged"?"Melee or Ranged Attack Roll:":"Melee Attack Roll:";
+  let rr=e.kind==="Ranged"?`range ${e.range||"30/120"} ft.`:e.kind==="Melee or Ranged"?`reach ${e.reach||5} ft. or range ${e.range||"20/60"} ft.`:`reach ${e.reach||5} ft.`;
+  const avg=Math.max(1,Math.floor(diceAvg(e.dice)+(e.addMod?ab:0)));
+  const dtxt=e.dice+(e.addMod&&ab!==0?` ${sgn(ab)}`:"");
+  return `*${kind}* ${sgn(atk)}, ${rr}.${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
+}
+const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
+function entryHTML(arr,kind){return arr.map((e,i)=>{
+  if(kind==="reactions"){return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <input type="text" placeholder="Trigger" data-k="${kind}" data-i="${i}" data-f="trigger" value="${esc(e.trigger||"")}" style="margin-bottom:6px">
+    <textarea placeholder="Response" data-k="${kind}" data-i="${i}" data-f="response">${esc(e.response||"")}</textarea></div>`;}
+  if(kind==="villain"){return `<div class="entry"><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select><input type="text" placeholder="Name" data-k="villain" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="villain:${i}">✕</button></div>
+    <textarea placeholder="Effect" data-k="villain" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea></div>`;}
+  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);return `<div class="entry"><div class="ehead"><span class="kind">Spellcasting</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <div class="atk-fields" style="grid-template-columns:repeat(3,1fr)">
+      <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
+      <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
+      <label class="f">Spell atk (auto)<input type="number" placeholder="${sgn(pb+ab)}" data-k="${kind}" data-i="${i}" data-f="atk" value="${e.atk}"></label>
+    </div>
+    <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">— each renders on its own line</span></div>
+    ${(e.groups||[]).map((g,gi)=>`<div class="rowline">
+      <select data-sg="${i}:${gi}:freq" style="flex:none;width:120px">${["At Will","1/Day Each","2/Day Each","3/Day Each","1/Day","2/Day","3/Day"].map(f=>`<option ${f===g.freq?"selected":""}>${f}</option>`).join("")}</select>
+      <input type="text" placeholder="Spell names, comma-separated" value="${esc(g.spells)}" data-sg="${i}:${gi}:spells">
+      <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
+    <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
+    <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
+  if(e.mode==="attack"){return `<div class="entry"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <div class="atk-fields">
+      <label class="f">Kind<select data-k="${kind}" data-i="${i}" data-f="kind">${["Melee","Ranged","Melee or Ranged"].map(k=>`<option ${k===e.kind?"selected":""}>${k}</option>`).join("")}</select></label>
+      <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
+      <label class="f">Atk (auto)<input type="number" placeholder="${sgn(mod(M[e.ability])+pbForCR(M.cr))}" data-k="${kind}" data-i="${i}" data-f="atk" value="${e.atk}"></label>
+      <label class="f">Reach<input type="number" data-k="${kind}" data-i="${i}" data-f="reach" value="${e.reach}"></label>
+      <label class="f">Range<input type="text" placeholder="20/60" data-k="${kind}" data-i="${i}" data-f="range" value="${esc(e.range)}"></label>
+      <label class="f">Dice<input type="text" data-k="${kind}" data-i="${i}" data-f="dice" value="${esc(e.dice)}"></label>
+      <label class="f">Dmg type<select data-k="${kind}" data-i="${i}" data-f="dtype">${DMG_TYPES.map(d=>`<option ${d===e.dtype?"selected":""}>${d}</option>`).join("")}</select></label>
+      <label class="f">Targets<input type="text" placeholder="one target" data-k="${kind}" data-i="${i}" data-f="targets" value="${esc(e.targets)}"></label>
+      <label class="f" style="grid-column:span 2;flex-direction:row;align-items:center;gap:6px;margin-top:18px"><input type="checkbox" data-k="${kind}" data-i="${i}" data-f="addMod" ${e.addMod?"checked":""}> add ability to damage</label>
+    </div>
+    <input type="text" class="atk-extra" placeholder="Rider, e.g. plus 7 (2d6) Poison damage." data-k="${kind}" data-i="${i}" data-f="extra" value="${esc(e.extra)}">
+    <div class="hint" style="margin-top:6px">→ ${esc(attackText(e))}</div></div>`;}
+  return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+    <textarea placeholder="Description" data-k="${kind}" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea>
+    ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
+}).join("");}
+function renderEntries(){
+  $("#traitList").innerHTML=entryHTML(M.traits,"traits");
+  $("#actionList").innerHTML=entryHTML(M.actions,"actions");
+  $("#bonusList").innerHTML=entryHTML(M.bonus,"bonus");
+  $("#reactList").innerHTML=entryHTML(M.reactions,"reactions");
+  $("#legendList").innerHTML=entryHTML(M.legend.items,"legend");
+  $("#villainList").innerHTML=entryHTML(M.villain.items,"villain");
+  $("#lairList").innerHTML=entryHTML(M.lair.items,"lair");
+  bindEntries();
+  $("#cntTraits").textContent=M.traits.length||"";$("#cntActions").textContent=M.actions.length||"";
+  $("#cntBonus").textContent=M.bonus.length||"";$("#cntReact").textContent=M.reactions.length||"";
+}
+function bindEntries(){
+  $$("#formCol [data-k]").forEach(el=>{
+    const ev=el.type==="checkbox"||el.tagName==="SELECT"?"change":"input";
+    el.addEventListener(ev,()=>{const k=el.dataset.k,i=+el.dataset.i,f=el.dataset.f;
+      let v=el.type==="checkbox"?el.checked:el.value;if(f==="round")v=+v;arrFor(k)[i][f]=v;
+      if(["kind","ability","atk","reach","range","dice","dtype","targets","addMod","extra"].includes(f))renderEntries();
+      renderPreview();});
+  });
+  $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
+  $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
+  $$("#formCol [data-sg]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[i,gi,f]=el.dataset.sg.split(":");M.actions[+i].groups[+gi][f]=el.value;if(f==="freq")renderEntries();renderPreview();});});
+  $$("#formCol [data-sgadd]").forEach(el=>el.addEventListener("click",()=>{M.actions[+el.dataset.sgadd].groups.push({freq:"1/Day Each",spells:""});renderEntries();renderPreview();}));
+  $$("#formCol [data-sgrm]").forEach(el=>el.addEventListener("click",()=>{const[i,gi]=el.dataset.sgrm.split(":");M.actions[+i].groups.splice(+gi,1);renderEntries();renderPreview();}));
+}
+function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
+$$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.add;
+  if(k==="reactions")M.reactions.push({mode:"react",name:"",trigger:"",response:""});
+  else if(k==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name:"",text:""});
+  else arrFor(k).push(T("",""));renderEntries();renderPreview();}));
+$$("[data-addatk]").forEach(b=>b.addEventListener("click",()=>{const best=mod(M.str)>=mod(M.dex)?"str":"dex";M.actions.push(ATK({ability:best}));renderEntries();renderPreview();}));
+$$("[data-addspell]").forEach(b=>b.addEventListener("click",()=>{const best=["int","wis","cha"].reduce((p,a)=>mod(M[a])>mod(M[p])?a:p,"cha");M.actions.push(SPELL({ability:best}));renderEntries();renderPreview();}));
+$$("[data-addmulti]").forEach(b=>b.addEventListener("click",()=>{M.actions.unshift(T("Multiattack","[C] make[s] two attacks."));renderEntries();renderPreview();}));
+
+function loadMonster(m){
+  M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
+  $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
+  $("#f_size").value=M.size;$("#f_cr").value=M.cr;
+  $("#f_ac").value=M.ac??"";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M.hp??"";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
+  $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
+  ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
+  $("#f_snword").value=M.shortName.word||"";$("#f_snproper").value=M.shortName.proper?"proper":"common";$("#f_snplural").checked=!!M.shortName.plural;
+  ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
+  $("#f_dmgnote").value=M.dmgnote||"";$("#f_cimm").value=M.cimm||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
+  ABILS.forEach(a=>$("#ab_"+a).value=M[a]);
+  $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
+  $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
+  $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
+  $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
+  if(M._auto.ac||M._auto.hp)applyCRAuto();
+  refreshAbil();paintDmg();renderSkills();renderEntries();renderPreview();
+}
+
+function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
+  if(s.climb)p.push(`Climb ${s.climb} ft.`);if(s.fly)p.push(`Fly ${s.fly} ft.${s.hover?" (hover)":""}`);
+  if(s.swim)p.push(`Swim ${s.swim} ft.`);if(s.burrow)p.push(`Burrow ${s.burrow} ft.`);return p.join(", ");}
+function defenseStrings(m){
+  const res=DMG_TYPES.filter(d=>m.dmg[d]==="res"),imm=DMG_TYPES.filter(d=>m.dmg[d]==="imm"),vuln=DMG_TYPES.filter(d=>m.dmg[d]==="vuln");
+  const noteRes=[],noteImm=[],noteVuln=[];
+  (m.dmgnote||"").split(";").map(x=>x.trim()).filter(Boolean).forEach(n=>{if(/vulnerab/i.test(n))noteVuln.push(n.replace(/\s*\(Vulnerability\)/i,""));else if(/immun/i.test(n))noteImm.push(n.replace(/\s*\(Immunity\)/i,""));else noteRes.push(n.replace(/\s*\(Resistance\)/i,""));});
+  return{res:[...res,...noteRes].join(", "),vuln:[...vuln,...noteVuln].join(", "),imm:[[...imm,...noteImm].join(", "),m.cimm].filter(Boolean).join("; ")};
+}
+function sensesStr(m){const s=m.senses||{};let p=[];
+  if(s.darkvision)p.push(`Darkvision ${s.darkvision} ft.`);
+  if(s.blindsight)p.push(`Blindsight ${s.blindsight} ft.${s.blindBeyond?" (blind beyond this radius)":""}`);
+  if(s.tremorsense)p.push(`Tremorsense ${s.tremorsense} ft.`);
+  if(s.truesight)p.push(`Truesight ${s.truesight} ft.`);
+  if(s.other)p.push(s.other);
+  return p.join(", ");}
+function refPhrase(cap){const sn=M.shortName||{word:"creature",proper:false};const w=sn.word||"creature";return sn.proper?w:((cap?"The ":"the ")+w);}
+function applyRefsFor(mon,t){if(!t)return t;const sn=(mon&&mon.shortName)||{word:"creature",proper:false,plural:false};const w=sn.word||"creature";
+  const ph=cap=>sn.proper?w:((cap?"The ":"the ")+w);const sfx=sn.plural?"":"s";
+  return t.replace(/\[C\]/g,ph(true)).replace(/\[c\]/g,ph(false)).replace(/\[Name\]/g,ph(true)).replace(/\[name\]/g,ph(false)).replace(/\[s\]/g,sfx)
+    .replace(/\{C\}/g,ph(true)).replace(/\{c\}/g,ph(false)).replace(/\{Name\}/g,ph(true)).replace(/\{name\}/g,ph(false)).replace(/\{s\}/g,sfx)
+    .replace(/\bThe creature\b/g,ph(true)).replace(/\bthe creature\b/g,ph(false));}
+function applyRefs(t){return applyRefsFor(M,t);}
+function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
+  const dc=e.dc!==""&&e.dc!=null?Number(e.dc):8+pb+ab;
+  const atk=e.atk!==""&&e.atk!=null?Number(e.atk):pb+ab;
+  const abName={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"}[e.ability||"cha"];
+  const main=`[C] casts one of the following spells, requiring no Material components and using ${abName} as the spellcasting ability (spell save DC ${dc}, ${sgn(atk)} to hit with spell attacks):`;
+  const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells}));
+  return{main,groups};}
+function subName(t){return applyRefs(t);}
+function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");}
+function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?(sk[1]==="exp"?pb*2:pb):0);}
+function renderPreview(){
+  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
+  $("#derived").innerHTML=`<div class="dchip2">PB<b>${sgn(pb)}</b></div><div class="dchip2">XP<b>${xp.toLocaleString()}</b></div><div class="dchip2">Pass. Perc.<b>${passivePerc(m)}</b></div>`;
+  $("#crTargets").innerHTML=boh?`<b>CR ${m.cr} targets</b> — AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
+  $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
+  const initVal=m.init!==""&&m.init!=null?Number(m.init):mod(m.dex);
+  const def=defenseStrings(m);
+  let h=`<div class="topbar"></div><h2>${esc(m.name||"Unnamed Creature")}</h2>`;
+  h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}</div><hr class="rule">`;
+  h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
+  h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  h+=`</table><hr class="rule thin"><div class="meta">`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}</p>`;
+  if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
+  if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
+  if(def.imm)h+=`<p><span class="k">Immunities</span> ${esc(def.imm)}</p>`;
+  if(m.gear)h+=`<p><span class="k">Gear</span> ${esc(m.gear)}</p>`;
+  const sStr=sensesStr(m);
+  h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
+  h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
+  h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
+  const blk=e=>{
+    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${fmtInline(applyRefs(g.spells))}</p>`).join("");}
+    const body=e.mode==="attack"?attackText(e):e.text;
+    return `<p class="blk"><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+  };
+  const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
+  if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
+  if(m.actions.some(e=>e.name||e.text||e.mode==="spell"))h+=`<h3>Actions</h3>${sec(m.actions)}`;
+  if(m.bonus.some(e=>e.name||e.text))h+=`<h3>Bonus Actions</h3>${sec(m.bonus)}`;
+  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<p class="blk"><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtInline(applyRefs(e.response))}</p>`).join("");
+  if(m.legend.on&&m.legend.items.some(e=>e.name||e.text))h+=`<h3>Legendary Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.legend.intro))}</i></p>${sec(m.legend.items)}`;
+  if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.villain.intro))}</i></p>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(e.text))}</div>`).join("");
+  if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
+  if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
+  $("#statblock").innerHTML=h;
+}
+function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
+function notionSingle(m){
+  const pb=pbForCR(m.cr),xp=xpOf(m),initVal=m.init!==""&&m.init!=null?Number(m.init):mod(m.dex),def=defenseStrings(m);
+  let L=[`## ${m.name}`,`*${[m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" ")}*`,
+    `**AC** ${m.ac??"—"}${m.acnote?` (${m.acnote})`:""}`,`**Initiative** ${sgn(initVal)} (${10+initVal})`,
+    `**HP** ${m.hp??"—"}${m.hpf?` (${m.hpf})`:""}`,`**Speed** ${speedStr(m)}`,"",
+    `| | STR | DEX | CON | INT | WIS | CHA |`,`|---|---|---|---|---|---|---|`,
+    `| Score | ${ABILS.map(a=>m[a]).join(" | ")} |`,`| Mod | ${ABILS.map(a=>sgn(mod(m[a]))).join(" | ")} |`,
+    `| Save | ${ABILS.map(a=>sgn(mod(m[a])+(m.saves.includes(a)?pb:0))).join(" | ")} |`,""];
+  if(m.skills.length)L.push(`**Skills** ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}`);
+  if(def.vuln)L.push(`**Vulnerabilities** ${def.vuln}`);
+  if(def.res)L.push(`**Resistances** ${def.res}`);
+  if(def.imm)L.push(`**Immunities** ${def.imm}`);
+  if(m.gear)L.push(`**Gear** ${m.gear}`);
+  const sStr=sensesStr(m);
+  L.push(`**Senses** ${sStr?sStr+", ":""}Passive Perception ${passivePerc(m)}`);
+  L.push(`**Languages** ${m.lang||"None"}`);
+  L.push(`**CR** ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})`);
+  const line=e=>{
+    if(e.mode==="spell"){const sp=spellLines(e);return [`***${e.name||"Spellcasting"}.*** ${applyRefs(sp.main)}`,...sp.groups.map(g=>`**${g.label}:** ${applyRefs(g.spells)}`)].join("\n");}
+    const body=e.mode==="attack"?attackText(e):applyRefs(e.text);
+    return `***${e.name}.*** ${body}`;};
+  const sec=(t,arr)=>{const f=arr.filter(e=>e.name||e.text||e.mode==="spell");if(!f.length)return;L.push("");if(t)L.push(`### ${t}`);f.forEach(e=>L.push(line(e)));};
+  sec("",m.traits);sec("Actions",m.actions);sec("Bonus Actions",m.bonus);
+  if(m.reactions.some(e=>e.name)){L.push("","### Reactions");m.reactions.filter(e=>e.name).forEach(e=>L.push(`***${e.name}.*** ${e.trigger?`*Trigger:* ${applyRefs(e.trigger)} *Response:* `:""}${applyRefs(e.response||"")}`));}
+  if(m.legend.on&&m.legend.items.some(e=>e.name)){L.push("","### Legendary Actions",`*${applyRefs(m.legend.intro)}*`);m.legend.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
+  if(m.villain.on&&m.villain.items.some(e=>e.name)){L.push("","### Villain Actions",`*${applyRefs(m.villain.intro)}*`);[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name).forEach(e=>L.push(`**Action ${e.round}: ${e.name}.** ${applyRefs(e.text)}`));}
+  if(m.lair.on&&m.lair.items.some(e=>e.name)){L.push("","### Lair Actions");if(m.lair.intro)L.push(`*${applyRefs(m.lair.intro)}*`);m.lair.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
+  if(m.regional.on&&m.regional.text){L.push("","### Regional Effects",applyRefs(m.regional.text));}
+  return L.join("\n");
+}
+function claudeMonster(m){
+  const out=clone(m);delete out._auto;
+  out.derived={pb:pbForCR(m.cr),xp:xpOf(m),speed:speedStr(m),senses:sensesStr(m),defenses:defenseStrings(m),passive_perception:passivePerc(m)};
+  out.rendered_actions=m.actions.map(e=>e.mode==="spell"?{name:e.name||"Spellcasting",text:[applyRefs(spellLines(e).main),...spellLines(e).groups.map(g=>g.label+": "+applyRefs(g.spells))].join("\n")}:e.mode==="attack"?{name:e.name,text:attackText(e)}:{name:e.name,text:applyRefs(e.text)});
+  const payload={forge:"monster",v:2,props:{Name:m.name,AC:m.ac,HP:m.hp,XP:xpOf(m),CR:m.cr,PB:pbForCR(m.cr)},monster:out,notion_single_column:notionSingle(m)};
+  return "<<CLAUDE-FORGE / push this monster to my Notion Statblocks DB in MM25 two-column format; set AC/HP/XP properties; flag if a same-name page exists>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
+}
+
+function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)switchView(b.dataset.view);});
+
+function renderLibrary(){
+  const q=($("#libSearch").value||"").toLowerCase();
+  const filt=state.lib.filter(m=>!q||m.name.toLowerCase().includes(q)||(m.type||"").toLowerCase().includes(q));
+  const body=$("#libBody");
+  if(!state.lib.length){body.innerHTML=`<div class="empty-state">No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.</div>`;return;}
+  body.innerHTML=`<div class="cards">${filt.map(cardHTML).join("")||`<div class="empty-state">No matches.</div>`}</div>`;
+  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap"))return;loadMonster(state.lib.find(x=>x.id===el.dataset.card));switchView("forge");}));
+  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(state.lib.find(x=>x.id===b.dataset.edit));switchView("forge");}));
+  body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(state.lib.find(x=>x.id===b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${state.lib.find(x=>x.id===b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
+  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
+  body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(state.lib.find(x=>x.id===b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
+}
+function cardHTML(m){return `<div class="card" data-card="${m.id}">
+  <div class="menu-wrap cardmenu">
+    <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
+    <div class="menu" id="menu-lib-${m.id}">
+      <button data-edit="${m.id}">Edit</button>
+      <button data-dup="${m.id}">Duplicate</button>
+      <button data-claude="${m.id}">Copy for Claude</button>
+      <button data-notion="${m.id}">Copy for Notion</button>
+      <div class="sep"></div>
+      <button class="danger" data-del="${m.id}">Delete</button>
+    </div>
+  </div>
+  <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
+  <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag">${xpOf(m).toLocaleString()} XP</span></div>
+</div>`;}
+$("#libSearch").addEventListener("input",renderLibrary);
+$("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
+$("#libChassis").addEventListener("click",()=>openChassis());
+$("#newFromChassis").addEventListener("click",()=>openChassis());
+$("#forgeChassis").addEventListener("click",()=>openChassis(true));
+$("#resetForge").addEventListener("click",()=>{loadMonster(blankMonster());toast("Cleared.");});
+
+$("#saveMonster").addEventListener("click",async()=>{
+  if(!validName())return;
+  const rec=clone(M);rec.chassis=false;
+  const i=state.lib.findIndex(x=>x.id===rec.id);
+  if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
+  await saveLib();
+  if(pendingForge){const a=state.adv.find(x=>x.id===pendingForge.advId);const e=a&&a.encounters.find(x=>x.id===pendingForge.encId);
+    if(e){addMonsterCombatant(e,rec.id);await saveAdv();}
+    const pf=pendingForge;pendingForge=null;hideBanner();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
+  toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
+});
+$("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat — I build the Notion page in MM25 format and set its properties.");});
+$("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});
+
+function monsterDirty(){const m=M;
+  if(m.name.trim()||m.type||m.subtype||m.align||m.acnote||m.hpf||m.gear||m.dmgnote||m.cimm)return true;
+  if(m.ac!=null||m.hp!=null||(m.init!==""&&m.init!=null))return true;
+  if((m.lang||"Common")!=="Common"||m.cr!=="1")return true;
+  if(ABILS.some(a=>m[a]!==10))return true;
+  if(m.saves.length||m.skills.length||Object.keys(m.dmg).length)return true;
+  if(m.traits.length||m.actions.length||m.bonus.length||m.reactions.length)return true;
+  if(m.legend.on||m.villain.on||m.lair.on||m.regional.on)return true;
+  const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)return true;
+  const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)return true;
+  if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)return true;
+  return false;}
+function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
+  if(m.name.trim())out.name=m.name;
+  ["type","subtype","align","acnote","hpf","gear","dmgnote","cimm"].forEach(k=>{if(m[k])out[k]=m[k];});
+  if(m.ac!=null)out.ac=m.ac;if(m.hp!=null)out.hp=m.hp;if(m.init!==""&&m.init!=null)out.init=m.init;
+  if((m.lang||"Common")!=="Common")out.lang=m.lang;if(m.cr!=="1")out.cr=m.cr;
+  if(ABILS.some(a=>m[a]!==10))ABILS.forEach(a=>out[a]=m[a]);
+  if(m.saves.length)out.saves=clone(m.saves);if(m.skills.length)out.skills=clone(m.skills);
+  if(Object.keys(m.dmg).length)out.dmg=clone(m.dmg);
+  ["traits","actions","bonus","reactions"].forEach(k=>{if(m[k].length)out[k]=clone(m[k]);});
+  if(m.legend.on)out.legend=clone(m.legend);if(m.villain.on)out.villain=clone(m.villain);
+  if(m.lair.on)out.lair=clone(m.lair);if(m.regional.on)out.regional=clone(m.regional);
+  const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)out.spd=clone(sp);
+  const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)out.senses=clone(se);
+  if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)out.shortName=clone(m.shortName);
+  return out;}
+function applyChassis(ch,keepId,merge){
+  let base;
+  if(merge)base=mergeChassis(ch);
+  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};}
+  loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
+}
+function openChassis(fromForge){
+  const groups={};CHASSIS.forEach(c=>{(groups[c.cr]=groups[c.cr]||[]).push(c);});
+  let h=`<h3>Start from a chassis</h3><p class="hint" style="margin:-4px 0 14px">Generic, editable bases. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>`;
+  CR_LIST.filter(cr=>groups[cr]).forEach(cr=>{h+=`<div class="section-label" style="margin-top:14px">CR ${cr} · ${(CR_XP[cr]||0).toLocaleString()} XP</div><div class="cards">`;groups[cr].forEach(c=>{h+=`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(c.name)}</h4><div class="meta">${esc(c.size+" "+c.type)}</div><div style="margin-top:auto;padding-top:6px"><button class="btn ghost sm" data-pick="${c.id}" style="width:100%">Use as base</button></div></div>`;});h+=`</div>`;});
+  openModalRaw(h);
+  $("#modal").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{
+    const ch=CHASSIS.find(x=>x.id===b.dataset.pick);closeModal();
+    if(fromForge===true&&monsterDirty())chassisConflictModal(ch);
+    else applyChassis(ch,fromForge===true,false);
+  }));
+}
+function chassisConflictModal(ch){
+  openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn ghost sm" id="ccKeep" style="width:auto;justify-content:flex-start">Import chassis, keep my edits <span class="sub">— chassis fills only empty fields</span></button>
+      <button class="btn ghost sm" id="ccOverride" style="width:auto;justify-content:flex-start">Import chassis, override my edits <span class="sub">— discard current edits</span></button>
+      <button class="btn ghost sm" id="ccBack" style="width:auto;justify-content:flex-start">Go back <span class="sub">— keep editing, don't import</span></button>
+    </div>`);
+  $("#ccKeep").addEventListener("click",()=>{closeModal();applyChassis(ch,true,true);});
+  $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});
+  $("#ccBack").addEventListener("click",closeModal);
+}
+
+function renderAdvList(){
+  const box=$("#advItems");
+  box.innerHTML=state.adv.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  box.querySelectorAll("[data-adv]").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.dataset.adv;renderAdvList();}));
+  renderAdvDetail();
+}
+$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:9,uneven:false,levels:[9,9,9,9],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
+function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
+function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
+function baseBudget(p){const lv=partyLevels(p);return [0,1,2].map(di=>lv.reduce((s,l)=>s+BUDGET[clamp(l,1,20)][di],0));}
+function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
+function addMonsterCombatant(enc,monsterId){
+  const cid=uid();
+  enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:"Enemy"});
+  const m=state.lib.find(x=>x.id===monsterId);
+  if(m&&m.lair&&m.lair.on&&(m.lair.items||[]).some(it=>it.name||it.text)){
+    const lines=[];
+    if(m.lair.intro)lines.push(applyRefsFor(m,m.lair.intro));
+    m.lair.items.filter(it=>it.name||it.text).forEach(it=>lines.push(`${it.name?it.name+": ":""}${applyRefsFor(m,it.text)}`));
+    enc.combatants.push({type:"event",id:uid(),name:`${m.name} — Lair Action`,init:"20",text:lines.join("\n"),lairFor:cid});
+  }
+  return cid;
+}
+function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
+function combatXP(c){if(c.type==="monster"&&monOf(c))return xpOf(monOf(c))*Number(c.count||1);const cr=combatCR(c);return cr!=null?(CR_XP[cr]||0)*Number(c.count||1):0;}
+function encBudget(adv,e){
+  const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
+  e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1);}}});
+  return base.map((b,i)=>b+add[i]);
+}
+function encSpent(e){return e.combatants.filter(c=>c.faction==="Enemy"&&c.type!=="event").reduce((s,c)=>s+combatXP(c),0);}
+function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2])return["over","Over High"];if(spent>=bud[2]*0.92)return["high","High"];if(spent>=bud[1]*0.92)return["moderate","Moderate"];if(spent>=bud[0]*0.85)return["low","Low"];return["trivial","Trivial"];}
+
+function renderAdvDetail(){
+  const a=curAdv(),d=$("#advDetail");
+  if(!a){d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  const bud=baseBudget(partyOf(a,null));
+  d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2><button class="btn ghost sm" id="delAdv" style="width:auto">Delete adventure</button></div>
+    <div class="party-bar">
+      <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
+      <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
+      <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="pUneven" ${a.uneven?"checked":""}> Uneven levels</label>
+      <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
+      <div class="grow"></div>
+      <div class="hint" style="text-align:right">Base party budget<br><b style="color:var(--amber);font-size:13px">Low ${bud[0].toLocaleString()} · Mod ${bud[1].toLocaleString()} · High ${bud[2].toLocaleString()}</b></div>
+    </div>
+    <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
+    <div class="section-label">Encounters <button class="btn ghost sm" id="addEnc" style="width:auto">＋ Encounter</button></div>
+    <div id="encList"></div>
+    <div id="archWrap"></div>`;
+  const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
+  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete “${a.name}” and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#pSize").addEventListener("input",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#pLevel").addEventListener("input",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
+  $("#pUneven").addEventListener("change",e=>{a.uneven=e.target.checked;syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
+  $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,combatants:[]});saveAdv();renderAdvDetail();});
+  renderPCgrid(a);renderEncList(a);
+}
+function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
+function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
+
+function renderEncList(a){
+  const box=$("#encList");if(!box)return;
+  const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
+  box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+  const aw=$("#archWrap");aw.innerHTML=arch.length?`<div class="section-label" style="margin-top:24px">Archived (${arch.length})</div>${arch.map(e=>encHTML(a,e)).join("")}`:"";
+  bindEncEvents(a);
+}
+function encHTML(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
+  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
+  const p=partyOf(a,e);
+  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}">
+    <div class="eh">
+      <div class="ehbtns"><button class="iconbtn up" data-encup="${e.id}">▲</button><button class="iconbtn down" data-encdown="${e.id}">▼</button></div>
+      <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
+      <span class="pill ${cls}">${label}</span>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
+        <div class="menu" id="menu-enc-${e.id}">
+          <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
+          <button data-pushenc="${e.id}">Copy encounter for Claude</button>
+          <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
+          <div class="sep"></div>
+          <button class="danger" data-encdel="${e.id}">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div class="budget"><div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+      <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
+      <div class="read">Spent <b>${spent.toLocaleString()} XP</b> of ${bud[2].toLocaleString()} (High)${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}</div>
+    </div>
+    <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
+    <label class="f encnotes">Battlefield notes<textarea data-encnotes="${e.id}" placeholder="Terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
+    <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
+    <div class="addrow">
+      <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="addc-${e.id}" title="More ways to add">⋯</button>
+        <div class="menu" id="menu-addc-${e.id}">
+          <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
+          <button data-addforge="${e.id}">＋ Forge new monster →</button>
+          <button data-addev="${e.id}">＋ Event / entity</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function ovrInner(e){const o=e.partyOverride;return `<div class="row">
+  <label class="f">Size<input type="number" min="1" max="12" value="${o.size}" data-ovrsize="${e.id}" style="width:74px"></label>
+  <label class="f" ${o.uneven?'style="display:none"':""}>Level<input type="number" min="1" max="20" value="${o.level}" data-ovrlevel="${e.id}" style="width:74px"></label>
+  <label class="toggle" style="margin-bottom:8px"><input type="checkbox" data-ovruneven="${e.id}" ${o.uneven?"checked":""}> Uneven</label>
+  </div>${o.uneven?`<div class="pcgrid" style="margin-top:8px">${(o.levels||[]).slice(0,o.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-ovrpc="${e.id}:${i}">`).join("")}</div>`:""}`;}
+function combatHTML(e,c){
+  if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
+  const cls=c.faction==="Ally"?"ally":"";const xp=combatXP(c);
+  if(c.type==="quick")return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
+    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
+  const m=monOf(c);
+  return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${state.lib.map(x=>`<option value="${x.id}" ${x.id===c.monsterId?"selected":""}>${esc(x.name)} (CR ${x.cr})</option>`).join("")}</select></div></div>`;
+}
+function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
+function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
+function bindEncEvents(a){
+  const q=sel=>$$("#advDetail "+sel);
+  q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
+  q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
+  q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
+  q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
+  q("[data-encup]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encup,-1)));
+  q("[data-encdown]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encdown,1)));
+  q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
+  q("[data-ovrsize]").forEach(el=>el.addEventListener("input",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrlevel]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrpc]").forEach(el=>el.addEventListener("input",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>{if(!state.lib.length){toast("Save a creature first, or use Quick / Forge.");return;}addMonsterCombatant(findEnc(a,el.dataset.addmon),state.lib[0].id);saveAdv();renderAdvDetail();}));
+  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
+  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
+  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.addforge);pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}));
+  q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
+  q("[data-cf]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[cid,f]=el.dataset.cf.split(":");const{c}=findCombat(a,cid);if(!c)return;c[f]=(f==="count")?clamp(Number(el.value||1),1,99):el.value;saveAdv();if(["cr","count","faction","monsterId"].includes(f))renderEncList(a);});});
+  q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
+}
+function moveEnc(a,id,dir){
+  const list=a.encounters,i=list.findIndex(e=>e.id===id),e=list[i];
+  const same=list.map((x,ix)=>({x,ix})).filter(o=>o.x.archived===e.archived).map(o=>o.ix);
+  const pos=same.indexOf(i),tgt=same[pos+dir];
+  if(tgt===undefined)return;[list[i],list[tgt]]=[list[tgt],list[i]];saveAdv();renderAdvDetail();
+}
+function pushEncounter(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
+  const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,
+    party:{size:p.size,levels:partyLevels(p),overridden:!!e.partyOverride},
+    battlefield_notes:e.notes||"",
+    budget:{low:bud[0],moderate:bud[1],high:bud[2],spent,reads_as:label,note:"allies (faction Ally) already folded into budget via CR→level"},
+    combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),xp_each:c.type==="monster"&&m?xpOf(m):(combatCR(c)!=null?CR_XP[combatCR(c)]:0),count:Number(c.count),faction:c.faction};}),
+    environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
+  const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
+  copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
+}
+
+function doExportJSON(){
+  const data={kind:"monster-forge",exported:new Date().toISOString(),monsters:state.lib,adventures:state.adv};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
+}
+$("#exportAll").addEventListener("click",doExportJSON);
+$("#topExport").addEventListener("click",doExportJSON);
+$("#importAll").addEventListener("click",()=>$("#fileIn").click());
+$("#topImport").addEventListener("click",()=>$("#fileIn").click());
+$("#topChassis").addEventListener("click",()=>openChassis());
+$("#railCollapse").addEventListener("click",()=>$("#app").classList.add("nav-collapsed"));
+$("#railOpen").addEventListener("click",()=>$("#app").classList.remove("nav-collapsed"));
+$("#fileIn").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
+  r.readAsText(f);e.target.value="";
+});
+
+function openModalRaw(html){$("#modal").innerHTML=html;$("#modalBg").classList.add("show");}
+function closeModal(){$("#modalBg").classList.remove("show");}
+$("#modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
+function copyModal(title,text,hint){
+  openModalRaw(`<h3>${esc(title)}</h3><p class="hint" style="margin:-4px 0 12px">${esc(hint)}</p><textarea id="copyArea" readonly>${esc(text)}</textarea><div class="mrow"><button class="btn ghost sm" id="mClose" style="width:auto">Close</button><button class="btn primary sm" id="mCopy" style="width:auto">Copy to clipboard</button></div>`);
+  $("#mClose").addEventListener("click",closeModal);
+  $("#mCopy").addEventListener("click",async()=>{const ta=$("#copyArea");try{await navigator.clipboard.writeText(text);toast("Copied.");}catch(e){ta.focus();ta.select();try{document.execCommand("copy");toast("Copied.");}catch(_){toast("Select the text and copy manually.");}}});
+  setTimeout(()=>{const ta=$("#copyArea");ta.focus();ta.select();},50);
+}
+function confirmModal(msg,onYes){
+  openModalRaw(`<h3>Confirm</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn ghost sm" id="cNo" style="width:auto">Cancel</button><button class="btn primary sm" id="cYes" style="width:auto">Yes</button></div>`);
+  $("#cNo").addEventListener("click",closeModal);$("#cYes").addEventListener("click",()=>{closeModal();onYes();});
+}
+
+document.addEventListener("click",e=>{
+  const k=e.target.closest(".kebab");
+  document.querySelectorAll(".menu.open").forEach(mn=>{if(!k||mn.id!=="menu-"+k.dataset.menu)mn.classList.remove("open");});
+  if(k){const mn=document.getElementById("menu-"+k.dataset.menu);if(mn){mn.classList.toggle("open");e.stopPropagation();}}
+});
+
+function wrapStepper(input,step){
+  if(!input||input.parentNode.classList.contains("stepper"))return;
+  const w=document.createElement("span");w.className="stepper";
+  input.parentNode.insertBefore(w,input);w.appendChild(input);
+  const b=document.createElement("span");b.className="stepbtns";
+  b.innerHTML='<button type="button" data-d="1">▲</button><button type="button" data-d="-1">▼</button>';
+  w.appendChild(b);
+  b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
+    const nv=Math.max(0,Number(input.value||0)+(+btn.dataset.d)*step);
+    input.value=nv;input.dispatchEvent(new Event("input",{bubbles:true}));
+  }));
+}
+
+(async function init(){
+  buildAbilityGrid();buildDmgGrid();
+  fillSelect("#f_size",SIZES);fillSelect("#f_cr",CR_LIST,c=>`CR ${c}`);
+  bindStatic();
+  ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
+  await loadAll();
+  loadMonster(blankMonster());
+})();
+</script>
 </body>
 </html>
