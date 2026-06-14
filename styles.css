@@ -28,17 +28,22 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:var(--panel3);border-radius:6px;border:3px solid var(--bg)}::-webkit-scrollbar-track{background:transparent}
 
 .app{display:grid;grid-template-columns:206px 1fr;height:100vh;overflow:hidden}
-.rail-collapse{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);border-radius:5px;width:24px;height:24px;display:grid;place-items:center;font-size:15px;flex:none;padding:0}
-.rail-collapse:hover{border-color:var(--accent);color:var(--txt)}
-.rail-open{display:none;position:fixed;top:12px;left:12px;z-index:49;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:7px;width:34px;height:34px;place-items:center;font-size:16px;line-height:1;padding:0}
-.topbar{display:none;position:fixed;top:10px;right:14px;z-index:45}
 .app.nav-collapsed{grid-template-columns:1fr}
 .app.nav-collapsed .rail{display:none}
-.app.nav-collapsed .rail-open{display:grid}
-/* hover the collapsed-sidebar button to reveal a floating mini sidebar; stays open while hovered */
-.app.nav-collapsed .rail-open:hover ~ .rail,
-.app.nav-collapsed .rail:hover{display:flex;position:fixed;top:8px;left:8px;bottom:8px;width:204px;z-index:48;overflow-y:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
-.app.nav-collapsed .topbar{display:block}
+/* collapsed: hover the left edge, or open the drawer, to reveal a floating COMPACT sidebar —
+   the spacer is dropped so the stash sits directly under the nav (no empty gap) */
+.app.nav-collapsed .rail:hover,
+.app.sidebar-open .rail{display:flex;position:fixed;top:46px;left:8px;width:206px;max-height:calc(100vh - 54px);z-index:48;overflow-y:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.app.nav-collapsed .rail:hover .spacer,
+.app.sidebar-open .rail .spacer{display:none}
+/* slim header bar present on every view: borderless burger + breadcrumb path */
+.appbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);flex:none}
+.appbar-burger{background:none;border:none;color:var(--dim);font-size:18px;line-height:1;padding:2px 4px;border-radius:5px}
+.appbar-burger:hover{color:var(--txt)}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:13px;min-width:0;overflow:hidden}
+.crumbs .cur{color:var(--txt);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumbs .up{color:var(--dim);white-space:nowrap}
+.crumbs .sep{color:var(--faint)}
 .rail{background:#0f1013;border-right:1px solid var(--line);padding:16px 13px;display:flex;flex-direction:column;gap:3px}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:0 4px}
 .brand .mk{width:34px;height:34px;flex:none;display:grid;place-items:center;background:var(--accent);border-radius:var(--r);padding:6px;box-sizing:border-box}
@@ -286,5 +291,5 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:720px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}.rail{flex-direction:row;align-items:center;padding:10px;overflow-x:auto}.brand{margin:0 14px 0 0}.rail .spacer,.rail .stash,.rail-collapse,.rail .nav{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}.topbar{display:block}}
+@media (max-width:720px){.app{grid-template-columns:1fr}.app .rail{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}

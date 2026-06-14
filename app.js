@@ -265,9 +265,10 @@ async function _flush(){
   let okAll=true;
   if(_pend.lib){_pend.lib=false;if(!await jbinSet("library:monsters",state.lib))okAll=false;}
   if(_pend.adv){_pend.adv=false;if(!await jbinSet("library:adventures",state.adv))okAll=false;}
-  if(okAll){setDirty(false);}
-  else{setDirty(true);showBanner("Cloud save failed — your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}
+  if(okAll){setDirty(false);_cloudWarned=false;hideBanner();}
+  else{setDirty(true);if(!_cloudWarned){_cloudWarned=true;showBanner("Cloud save failed — your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}}
 }
+let _cloudWarned=false; // show the cloud-failure banner once, not on every debounced save
 if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -692,10 +693,10 @@ function claudeMonster(m){
   return "<<CLAUDE-FORGE / push this monster to my Notion Statblocks DB in MM25 two-column format; set AC/HP/XP properties; flag if a same-name page exists>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
 }
 
-function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
-$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)switchView(b.dataset.view);});
-// burger (narrow-width) menu mirrors the nav tabs; the global click handler closes the menu after
-$("#menu-top").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)switchView(b.dataset.view);});
+const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures"};
+function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
+function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 function renderLibrary(){
   const q=($("#libSearch").value||"").toLowerCase();
@@ -728,7 +729,6 @@ function cardHTML(m){return `<div class="card" data-card="${m.id}">
 $("#libSearch").addEventListener("input",renderLibrary);
 $("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
 $("#libChassis").addEventListener("click",()=>openChassis());
-$("#newFromChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
 $("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any unsaved edits to this creature will be lost.",()=>{loadMonster(blankMonster());toast("Cleared.");}));
 
@@ -838,7 +838,8 @@ function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2]
 
 function renderAdvDetail(){
   const a=curAdv(),d=$("#advDetail");
-  if(!a){d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  setCrumbs(["Adventures",a.name||"Untitled"]);
   const bud=baseBudget(partyOf(a,null));
   d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2><button class="btn ghost sm" id="delAdv" style="width:auto">Delete adventure</button></div>
     <div class="party-bar">
@@ -855,8 +856,8 @@ function renderAdvDetail(){
     <div id="archWrap"></div>`;
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete “${a.name}” and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
-  $("#pSize").addEventListener("input",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
-  $("#pLevel").addEventListener("input",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
+  $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   $("#pUneven").addEventListener("change",e=>{a.uneven=e.target.checked;syncLevels(a);saveAdv();renderAdvDetail();});
   $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
   $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,combatants:[]});saveAdv();renderAdvDetail();});
@@ -993,15 +994,16 @@ function doExportJSON(){
   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
 }
 $("#exportAll").addEventListener("click",doExportJSON);
-$("#topExport").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
-$("#topImport").addEventListener("click",()=>$("#fileIn").click());
-$("#topChassis").addEventListener("click",()=>openChassis());
-$("#topPaste").addEventListener("click",openImportModal);
 $("#pasteStatblock").addEventListener("click",openImportModal);
 $("#libPaste").addEventListener("click",openImportModal);
-$("#railCollapse").addEventListener("click",()=>$("#app").classList.add("nav-collapsed"));
-$("#railOpen").addEventListener("click",()=>$("#app").classList.remove("nav-collapsed"));
+// Single sidebar toggle in the appbar. Wide screens dock/undock (hover reveals when
+// collapsed); narrow screens open the floating drawer (no hover on touch).
+$("#navToggle").addEventListener("click",e=>{e.stopPropagation();const app=$("#app");
+  if(window.matchMedia("(max-width:720px)").matches)app.classList.toggle("sidebar-open");
+  else app.classList.toggle("nav-collapsed");});
+// tapping outside the open drawer closes it
+document.addEventListener("click",e=>{const app=$("#app");if(app.classList.contains("sidebar-open")&&!e.target.closest(".rail")&&!e.target.closest("#navToggle"))app.classList.remove("sidebar-open");});
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
