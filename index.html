@@ -45,7 +45,7 @@
         <div class="form-col" id="formCol">
           <div class="col-head">
             <div><h2 id="forgeTitle">New Creature</h2><div class="sub">PB &amp; XP derive from CR. Empty AC/HP/attack fields pre-fill from CR as suggestions.</div></div>
-            <div style="display:flex;gap:8px"><button class="btn ghost sm" id="forgeChassis" style="width:auto">Load chassis</button><button class="btn ghost sm" id="resetForge" style="width:auto">Clear</button></div>
+            <div style="display:flex;gap:8px"><button class="btn ghost sm" id="forgeChassis" style="width:auto">Load chassis</button></div>
           </div>
 
           <fieldset class="fieldset">
@@ -54,7 +54,7 @@
               <label class="f">Name<input type="text" id="f_name" placeholder="Creature name"></label>
               <label class="f">Size<select id="f_size"></select></label>
               <label class="f">Type<input type="text" id="f_type" placeholder="Undead"></label>
-              <label class="f"><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" readonly aria-label="Challenge Rating"></span></label>
+              <label class="f">CR<span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Subtype / tag<input type="text" id="f_subtype" placeholder="Spirit"></label>
@@ -70,12 +70,16 @@
 
           <fieldset class="fieldset">
             <div class="fs-title">Core stats</div>
-            <div class="grid g3">
+            <div class="grid g-core">
               <label class="f">Armor Class<span class="with-badge" id="wb_ac"><input type="number" id="f_ac"><span class="badge">≈CR</span></span></label>
               <label class="f">AC note<input type="text" id="f_acnote" placeholder="natural armor"></label>
-              <label class="f">Hit Points<span class="with-badge" id="wb_hp"><input type="number" id="f_hp"><span class="badge">≈CR</span></span></label>
+              <label class="f">Initiative <span style="color:var(--faint)">(blank = auto)</span><input type="number" id="f_init" placeholder="auto"></label>
+              <label class="f">Proficiency<button type="button" class="tritog" id="f_initprof" title="Initiative proficiency"></button></label>
             </div>
-            <label class="f" style="margin-top:10px">HP formula <span style="color:var(--faint)">(optional)</span><input type="text" id="f_hpf" placeholder="4d8 + 4"></label>
+            <div class="grid g2" style="margin-top:10px">
+              <label class="f">Hit Points<span class="with-badge" id="wb_hp"><input type="number" id="f_hp"><span class="badge">≈CR</span></span></label>
+              <label class="f">HP formula <span style="color:var(--faint)">(optional)</span><input type="text" id="f_hpf" placeholder="4d8 + 4"></label>
+            </div>
             <div class="fs-sub">Speed</div>
             <div class="spd-grid">
               <label class="f">Walk<input type="number" id="sp_walk" value="30"></label>
@@ -85,10 +89,6 @@
               <label class="f">Burrow<input type="number" id="sp_burrow" placeholder="0"></label>
             </div>
             <label class="hover-tog"><input type="checkbox" id="sp_hover"> Fly speed can hover</label>
-            <div class="grid g2" style="margin-top:10px;align-items:end">
-              <label class="f">Initiative proficiency<select id="f_initprof"><option value="none">None (DEX only)</option><option value="prof">Proficient (+PB)</option><option value="exp">Expertise (+2× PB)</option></select></label>
-              <label class="f">Initiative override <span style="color:var(--faint)">(blank = auto)</span><input type="number" id="f_init" placeholder="auto"></label>
-            </div>
           </fieldset>
 
           <fieldset class="fieldset">
@@ -118,37 +118,37 @@
               <label class="f">Tremorsense<input type="number" id="se_tremorsense" placeholder="0"></label>
               <label class="f">Truesight<input type="number" id="se_truesight" placeholder="0"></label>
             </div>
-            <div style="display:flex;gap:14px;align-items:center;margin-top:9px;flex-wrap:wrap">
-              <label class="toggle"><input type="checkbox" id="se_blindBeyond"> Blind beyond blindsight radius</label>
+            <div style="display:flex;gap:14px;align-items:flex-end;margin-top:9px;flex-wrap:wrap">
+              <label class="toggle" style="margin-bottom:9px"><input type="checkbox" id="se_blindBeyond"> Blind beyond blindsight radius</label>
               <label class="f" style="flex:1;min-width:160px">Other senses<input type="text" id="se_other" placeholder="e.g. Devil's Sight 120 ft."></label>
             </div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Traits <span class="count" id="cntTraits"></span></div>
+            <div class="fs-title">Traits <span class="count" id="cntTraits"></span><button class="sortbtn" data-sort="traits" title="Auto-sort A→Z">⇅ A–Z</button></div>
             <div id="traitList"></div>
-            <button class="addbtn" data-add="traits" style="width:100%;margin-top:6px">＋ Add trait</button>
+            <div class="addrow"><button class="addbtn" data-add="traits" style="flex:2">＋ Add trait</button><select class="libsel" data-lib="traits"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Actions <span class="count" id="cntActions"></span></div>
+            <div class="fs-title">Actions <span class="count" id="cntActions"></span><button class="sortbtn" data-sort="actions" title="Auto-sort A→Z">⇅ A–Z</button></div>
             <div id="actionList"></div>
-            <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button></div>
+            <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button><select class="libsel" data-lib="actions"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span></div>
+            <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span><button class="sortbtn" data-sort="bonus" title="Auto-sort A→Z">⇅ A–Z</button></div>
             <div id="bonusList"></div>
-            <button class="addbtn" data-add="bonus" style="width:100%;margin-top:6px">＋ Add bonus action</button>
+            <div class="addrow"><button class="addbtn" data-add="bonus" style="flex:2">＋ Add bonus action</button><select class="libsel" data-lib="bonus"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
-            <div class="fs-title">Reactions <span class="count" id="cntReact"></span></div>
+            <div class="fs-title">Reactions <span class="count" id="cntReact"></span><button class="sortbtn" data-sort="reactions" title="Auto-sort A→Z">⇅ A–Z</button></div>
             <div id="reactList"></div>
-            <button class="addbtn" data-add="reactions" style="width:100%;margin-top:6px">＋ Add reaction</button>
+            <div class="addrow"><button class="addbtn" data-add="reactions" style="flex:2">＋ Add reaction</button><select class="libsel" data-lib="reactions"></select></div>
           </fieldset>
 
-          <fieldset class="fieldset optfs" id="fsLegend">
+          <fieldset class="fieldset optfs collapsed" id="fsLegend">
             <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_legend"> Legendary Actions</label></div>
             <div id="legendInner" style="display:none">
               <label class="f">Intro line<textarea id="f_legintro"></textarea></label>
@@ -157,7 +157,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs" id="fsVillain">
+          <fieldset class="fieldset optfs collapsed" id="fsVillain">
             <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_villain"> Villain Actions <span style="color:var(--faint)">· MCDM</span></label></div>
             <div id="villainInner" style="display:none">
               <label class="f">Intro line<textarea id="f_vilintro"></textarea></label>
@@ -166,7 +166,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs" id="fsLair">
+          <fieldset class="fieldset optfs collapsed" id="fsLair">
             <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_lair"> Lair Actions <span style="color:var(--faint)">· 2014 style</span></label></div>
             <div id="lairInner" style="display:none">
               <label class="f">Intro line<textarea id="f_lairintro"></textarea></label>
@@ -175,7 +175,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs" id="fsRegional">
+          <fieldset class="fieldset optfs collapsed" id="fsRegional">
             <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_regional"> Regional Effects</label></div>
             <div id="regionalInner" style="display:none">
               <label class="f">Effects<textarea id="f_regional" placeholder="The region containing the lair is warped, creating the following effects: …"></textarea></label>
@@ -200,9 +200,18 @@
           <div class="cr-targets" id="crTargets"></div>
           <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
           <div class="outs">
-            <button class="btn primary" id="saveMonster">⚒ Save to Bestiary</button>
-            <button class="btn ghost" id="pushClaude">Copy for Claude <span class="sub">→ push to Notion</span></button>
-            <button class="btn ghost" id="copyNotion">Copy for Notion <span class="sub">manual · single-column</span></button>
+            <div class="save-row">
+              <button class="btn primary" id="saveMonster">⚒ Save to Bestiary</button>
+              <div class="menu-wrap">
+                <button class="kebab" data-menu="forge" title="More">⋯</button>
+                <div class="menu up" id="menu-forge">
+                  <button id="pushClaude">Copy for Claude <span class="sub">→ push to Notion</span></button>
+                  <button id="copyNotion">Copy for Notion <span class="sub">manual · single-column</span></button>
+                  <div class="sep"></div>
+                  <button class="danger" id="clearForge">Clear forge</button>
+                </div>
+              </div>
+            </div>
             <p class="hint">“Copy for Claude” sends structured data — paste in chat and I build the Notion page in MM25 two-column format and set AC/HP/XP/CR. “Copy for Notion” is the no-tokens fallback (single-column paste; set properties by hand).</p>
           </div>
         </div>

@@ -37,6 +37,116 @@ function mk(o){return{id:o.id,chassis:true,name:o.name,size:o.size||"Medium",typ
 const T=(name,text)=>({name,text,mode:"text"});
 const ATK=o=>Object.assign({mode:"attack",name:"",kind:"Melee",ability:"str",atk:"",reach:5,range:"",targets:"",dice:"1d6",addMod:true,dtype:"Slashing",extra:""},o);
 const SPELL=o=>Object.assign({mode:"spell",name:"Spellcasting",ability:"cha",dc:"",atk:"",groups:[{freq:"At Will",spells:""}]},o);
+
+// ── Snippet library ───────────────────────────────────────────────────────────
+// Canonical 2024-style wording, genericised with [C]/[c]/[s] reference tokens and
+// {DC} (expands to 8 + PB + best ability mod). Inserted via the per-section
+// "From library" dropdowns or by typing a known name into an entry's Name field.
+const TRAIT_SNIPS={
+  "Aggressive":"As a Bonus Action, [c] moves up to its Speed toward an enemy it can see.",
+  "Amorphous":"[C] can move through a space as narrow as 1 inch without expending extra movement to do so.",
+  "Amphibious":"[C] can breathe air and water.",
+  "Beast Whisperer":"[C] can communicate with Beasts as if they shared a language.",
+  "Brave":"[C] has Advantage on saving throws against being Frightened.",
+  "Charge":"If [c] moves at least 20 feet straight toward a target and then hits it with a melee attack on the same turn, the target takes an extra 7 (2d6) damage of the attack's type.",
+  "Death Burst":"[C] explodes when it dies. Dexterity Saving Throw: DC {DC}, each creature in a 5-foot Emanation originating from [c]. Failure: 5 (2d4) damage. Success: Half damage.",
+  "Devil's Sight":"Magical Darkness doesn't impede [c]'s Darkvision.",
+  "Echolocation":"[C] can't use [c]'s Blindsight while it has the Deafened condition.",
+  "False Appearance":"While [c] remains motionless, it is indistinguishable from an ordinary object.",
+  "Flyby":"[C] doesn't provoke an Opportunity Attack when it flies out of an enemy's reach.",
+  "Hold Breath":"[C] can hold its breath for 1 hour.",
+  "Incorporeal Movement":"[C] can move through other creatures and objects as if they were Difficult Terrain. [C] takes 5 (1d10) Force damage if it ends its turn inside an object.",
+  "Keen Hearing and Sight":"[C] has Advantage on Wisdom (Perception) checks that rely on hearing or sight.",
+  "Keen Senses":"[C] has Advantage on Wisdom (Perception) checks that rely on hearing, sight, or smell.",
+  "Keen Smell":"[C] has Advantage on Wisdom (Perception) checks that rely on smell.",
+  "Legendary Resistance (3/Day)":"If [c] fails a saving throw, it can choose to succeed instead.",
+  "Magic Resistance":"[C] has Advantage on saving throws against spells and other magical effects.",
+  "Nimble Escape":"[C] takes the Disengage or Hide action.",
+  "Pack Tactics":"[C] has Advantage on an attack roll against a creature if at least one of [c]'s allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition.",
+  "Pounce":"If [c] moves at least 20 feet straight toward a creature and then hits it with a melee attack on the same turn, the target must succeed on a DC {DC} Strength saving throw or have the Prone condition. If the target is Prone, [c] can make one melee attack against it as a Bonus Action.",
+  "Reckless":"At the start of its turn, [c] can gain Advantage on melee attack rolls during that turn, but attack rolls against it have Advantage until the start of its next turn.",
+  "Regeneration":"[C] regains 10 Hit Points at the start of each of its turns. If [c] takes Acid or Fire damage, this trait doesn't function on [c]'s next turn. [C] dies only if it starts its turn with 0 Hit Points and doesn't regenerate.",
+  "Rejuvenation":"If [c] is destroyed, it gains a new body in 1d10 days, regaining all its Hit Points and becoming active again. The new body appears within [c]'s lair.",
+  "Relentless":"If [c] takes damage that would reduce it to 0 Hit Points, it drops to 1 Hit Point instead (recharges after a Short or Long Rest).",
+  "Shapechanger":"[C] can shape-shift into a Beast or Humanoid, or back into its true form, as a Bonus Action. Its game statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
+  "Siege Monster":"[C] deals double damage to objects and structures.",
+  "Sneak Attack":"Once per turn, [c] deals an extra 7 (2d6) damage to a creature it hits with an attack roll if [c] has Advantage on the roll, or if another enemy of the target is within 5 feet of it, that enemy doesn't have the Incapacitated condition, and [c] doesn't have Disadvantage on the roll.",
+  "Spell Immunity":"[C] is immune to three spells chosen by its creator. Typical choices are Heat Metal, Lightning Bolt, and Magic Missile.",
+  "Spider Climb":"[C] can climb difficult surfaces, including along ceilings, without needing to make an ability check.",
+  "Standing Leap":"[C]'s Long Jump is up to 30 feet and its High Jump is up to 15 feet, with or without a running start.",
+  "Sunlight Sensitivity":"While in sunlight, [c] has Disadvantage on ability checks and attack rolls.",
+  "Sure-Footed":"[C] has Advantage on Strength and Dexterity saving throws made against effects that would knock it Prone.",
+  "Turn Resistance":"[C] has Advantage on saving throws against any effect that turns Undead.",
+  "Two Heads":"[C] has Advantage on saving throws against being Blinded, Charmed, Deafened, Frightened, Stunned, or knocked Unconscious.",
+  "Undead Fortitude":"If damage reduces [c] to 0 Hit Points, it makes a Constitution saving throw (DC 5 plus the damage taken) unless the damage is Radiant or from a Critical Hit. On a success, [c] drops to 1 Hit Point instead.",
+  "Water Breathing":"[C] can breathe only underwater.",
+  "Web Sense":"While in contact with a web, [c] knows the exact location of any other creature in contact with the same web.",
+  "Web Walker":"[C] ignores movement restrictions caused by webs.",
+};
+// guided-attack presets: starting points for the guided builder (dice & type are editable suggestions)
+const ATK_PRESETS={
+  "Bite":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Piercing",reach:5},
+  "Claw":{kind:"Melee",ability:"str",dice:"1d4",dtype:"Slashing",reach:5},
+  "Slam":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Bludgeoning",reach:5},
+  "Gore":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Piercing",reach:5},
+  "Tail":{kind:"Melee",ability:"str",dice:"1d8",dtype:"Bludgeoning",reach:10},
+  "Tentacle":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Bludgeoning",reach:10},
+  "Sting":{kind:"Melee",ability:"str",dice:"1d4",dtype:"Piercing",reach:5},
+  "Tusk":{kind:"Melee",ability:"str",dice:"1d8",dtype:"Piercing",reach:5},
+  "Hooves":{kind:"Melee",ability:"str",dice:"2d4",dtype:"Bludgeoning",reach:5},
+  "Fist":{kind:"Melee",ability:"str",dice:"1d4",dtype:"Bludgeoning",reach:5},
+  "Longsword":{kind:"Melee",ability:"str",dice:"1d8",dtype:"Slashing",reach:5},
+  "Shortsword":{kind:"Melee",ability:"dex",dice:"1d6",dtype:"Piercing",reach:5},
+  "Greatsword":{kind:"Melee",ability:"str",dice:"2d6",dtype:"Slashing",reach:5},
+  "Greataxe":{kind:"Melee",ability:"str",dice:"1d12",dtype:"Slashing",reach:5},
+  "Battleaxe":{kind:"Melee",ability:"str",dice:"1d8",dtype:"Slashing",reach:5},
+  "Mace":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Bludgeoning",reach:5},
+  "Warhammer":{kind:"Melee",ability:"str",dice:"1d8",dtype:"Bludgeoning",reach:5},
+  "Maul":{kind:"Melee",ability:"str",dice:"2d6",dtype:"Bludgeoning",reach:5},
+  "Spear":{kind:"Melee or Ranged",ability:"str",dice:"1d6",dtype:"Piercing",reach:5,range:"20/60"},
+  "Halberd":{kind:"Melee",ability:"str",dice:"1d10",dtype:"Slashing",reach:10},
+  "Glaive":{kind:"Melee",ability:"str",dice:"1d10",dtype:"Slashing",reach:10},
+  "Pike":{kind:"Melee",ability:"str",dice:"1d10",dtype:"Piercing",reach:10},
+  "Dagger":{kind:"Melee or Ranged",ability:"dex",dice:"1d4",dtype:"Piercing",reach:5,range:"20/60"},
+  "Scimitar":{kind:"Melee",ability:"dex",dice:"1d6",dtype:"Slashing",reach:5},
+  "Rapier":{kind:"Melee",ability:"dex",dice:"1d8",dtype:"Piercing",reach:5},
+  "Quarterstaff":{kind:"Melee",ability:"str",dice:"1d6",dtype:"Bludgeoning",reach:5},
+  "Longbow":{kind:"Ranged",ability:"dex",dice:"1d8",dtype:"Piercing",range:"150/600"},
+  "Shortbow":{kind:"Ranged",ability:"dex",dice:"1d6",dtype:"Piercing",range:"80/320"},
+  "Light Crossbow":{kind:"Ranged",ability:"dex",dice:"1d8",dtype:"Piercing",range:"80/320"},
+  "Heavy Crossbow":{kind:"Ranged",ability:"dex",dice:"1d10",dtype:"Piercing",range:"100/400"},
+  "Hand Crossbow":{kind:"Ranged",ability:"dex",dice:"1d6",dtype:"Piercing",range:"30/120"},
+  "Sling":{kind:"Ranged",ability:"dex",dice:"1d4",dtype:"Bludgeoning",range:"30/120"},
+  "Javelin":{kind:"Melee or Ranged",ability:"str",dice:"1d6",dtype:"Piercing",reach:5,range:"30/120"},
+  "Dart":{kind:"Ranged",ability:"dex",dice:"1d4",dtype:"Piercing",range:"20/60"},
+  "Fire Bolt":{kind:"Ranged",ability:"cha",dice:"1d10",dtype:"Fire",addMod:false,range:"120"},
+  "Ray of Frost":{kind:"Ranged",ability:"cha",dice:"1d8",dtype:"Cold",addMod:false,range:"60",extra:"plus the target's Speed decreases by 10 feet until the start of [c]'s next turn."},
+  "Eldritch Blast":{kind:"Ranged",ability:"cha",dice:"1d10",dtype:"Force",addMod:false,range:"120"},
+  "Poison Spray":{kind:"Ranged",ability:"cha",dice:"1d12",dtype:"Poison",addMod:false,range:"10"},
+  "Acid Splash":{kind:"Ranged",ability:"cha",dice:"1d6",dtype:"Acid",addMod:false,range:"60"},
+};
+const TEXT_ACTIONS={
+  "Frightful Presence":"Each creature of [c]'s choice within 120 feet of [c] and aware of it must succeed on a DC {DC} Wisdom saving throw or have the Frightened condition for 1 minute. A Frightened creature repeats the save at the end of each of its turns, ending the effect on itself on a success.",
+  "Teleport":"[C] teleports up to 30 feet to an unoccupied space it can see.",
+  "Change Shape":"[C] transforms into a Beast or Humanoid of challenge rating equal to or less than its own, or back into its true form. Its game statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
+};
+const BONUS_SNIPS={
+  "Nimble Escape":"[C] takes the Disengage or Hide action.",
+  "Leadership":"For 1 minute, [c] can utter a special command or warning whenever a nonhostile creature it can see within 30 feet of it makes an attack roll or a saving throw. The creature can add a d4 to its roll provided it can hear and understand [c]. This effect ends if [c] has the Incapacitated condition.",
+  "Frightful Presence":TEXT_ACTIONS["Frightful Presence"],
+  "Teleport":TEXT_ACTIONS["Teleport"],
+  "Change Shape":TEXT_ACTIONS["Change Shape"],
+};
+const REACT_SNIPS={
+  "Parry":{trigger:"[C] is hit by a melee attack roll while holding a weapon.",response:"[C] adds 2 to its AC against that attack, possibly causing it to miss."},
+  "Riposte":{trigger:"[C] is hit by a melee attack roll while holding a weapon.",response:"[C] adds 3 to its AC against that attack, possibly causing it to miss. On a miss, [c] makes one melee attack against the triggering creature if it is within range."},
+  "Redirect Attack":{trigger:"A creature [c] can see makes an attack roll against it.",response:"[C] chooses a Small or Medium ally within 5 feet of itself. [C] and that ally swap places, and the ally becomes the target of the attack instead."},
+  "Shield":{trigger:"[C] is hit by an attack roll or targeted by the Magic Missile spell.",response:"[C] casts the Shield spell, gaining a +5 bonus to AC until the start of its next turn, including against the triggering attack."},
+  "Uncanny Dodge":{trigger:"[C] is hit by an attack roll that it can see.",response:"[C] halves the damage (round down) it takes from that attack."},
+  "Deflect Missiles":{trigger:"[C] is hit by a ranged attack roll and takes Bludgeoning, Piercing, or Slashing damage.",response:"[C] reduces the damage by 1d10 plus its Dexterity modifier."},
+  "Opportunity Attack":{trigger:"A creature [c] can see leaves [c]'s reach.",response:"[C] makes one melee attack against the triggering creature."},
+};
+const LIB_PROMPT='<option value="">＋ From library…</option>';
 const CHASSIS=[
   mk({id:"c_commoner",name:"Commoner",ac:10,hp:4,hpf:"1d8",s:[10,10,10,10,10,10],cr:"0",actions:[ATK({name:"Club",dice:"1d4",addMod:false,dtype:"Bludgeoning",reach:5})]}),
   mk({id:"c_critter",name:"Critter",size:"Tiny",type:"Beast",ac:11,hp:3,hpf:"1d4",s:[3,14,8,2,12,4],cr:"0",spd:{walk:20,climb:20,fly:0,swim:0,burrow:0,hover:false},lang:"—",skills:[["Perception","prof"]],actions:[ATK({name:"Bite",ability:"dex",dice:"1",addMod:false,dtype:"Piercing"})]}),
@@ -137,7 +247,7 @@ function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"c
   ac:null,acnote:"",hp:null,hpf:"",spd:{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",initProf:"none",
   str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],dmg:{},dmgnote:"",cimm:"",gear:"",
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
-  cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],
+  cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
   _auto:{ac:true,hp:true}};}
 function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
@@ -172,6 +282,7 @@ function normalizeMonster(m){
   m.lair.items=(m.lair.items||[]).map(e=>e.mode?e:T(e.name,e.text));
   m.villain.items=(m.villain.items||[]).map(e=>Object.assign({mode:"villain",round:e.round||1},e));
   m._auto=m._auto||{ac:false,hp:false};
+  m.sort=m.sort||{};
   return m;
 }
 function normalizeAdv(a){
@@ -200,7 +311,8 @@ function bindStatic(){
   bindField("#f_dmgnote","dmgnote");bindField("#f_cimm","cimm");bindField("#f_gear","gear");bindField("#f_lang","lang");
   $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value;renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
-  $("#f_initprof").addEventListener("change",()=>{M.initProf=$("#f_initprof").value;renderPreview();});
+  const itp=$("#f_initprof");itp.addEventListener("click",()=>{const nv=nextTri(itp.dataset.state);M.initProf=nv;paintTri(itp,nv);renderPreview();});
+  $("#f_cr").addEventListener("change",()=>{const p=parseCRInput($("#f_cr").value);if(p)setCR(p);else updateCRDisplay();});
   $("#f_size").addEventListener("change",updateHpDie);
   $("#f_snplural").addEventListener("change",()=>{M.shortName.plural=$("#f_snplural").checked;renderEntries();renderPreview();});
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).addEventListener("input",()=>{M.senses[k]=Number($("#se_"+k).value||0);renderPreview();}));
@@ -218,16 +330,24 @@ function bindStatic(){
   $("#f_vilintro").addEventListener("input",()=>{M.villain.intro=$("#f_vilintro").value;renderPreview();});
   $("#f_lairintro").addEventListener("input",()=>{M.lair.intro=$("#f_lairintro").value;renderPreview();});
   $("#f_regional").addEventListener("input",()=>{M.regional.text=$("#f_regional").value;renderPreview();});
-  $("#t_legend").addEventListener("change",e=>{M.legend.on=e.target.checked;if(e.target.checked&&!M.legend.intro){M.legend.intro=LEGEND_INTRO;$("#f_legintro").value=LEGEND_INTRO;}$("#legendInner").style.display=e.target.checked?"":"none";renderPreview();});
-  $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";renderPreview();});
-  $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";renderPreview();});
-  $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";renderPreview();});
+  $("#t_legend").addEventListener("change",e=>{M.legend.on=e.target.checked;if(e.target.checked&&!M.legend.intro){M.legend.intro=LEGEND_INTRO;$("#f_legintro").value=LEGEND_INTRO;}$("#legendInner").style.display=e.target.checked?"":"none";$("#fsLegend").classList.toggle("collapsed",!e.target.checked);renderPreview();});
+  $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";$("#fsVillain").classList.toggle("collapsed",!e.target.checked);renderPreview();});
+  $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
+  $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
 }
 function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
   if(M._auto.ac){M.ac=boh[0];$("#f_ac").value=boh[0];$("#wb_ac").classList.add("suggested");}
   if(M._auto.hp){M.hp=boh[1];$("#f_hp").value=boh[1];$("#wb_hp").classList.add("suggested");}}
 function updateHpDie(){const el=$("#f_hpf");if(!el)return;const sz=$("#f_size");const size=(sz&&sz.value)||M.size;el.placeholder="4"+(SIZE_DIE[size]||"d8")+" + 8";}
-function updateCRDisplay(){const el=$("#f_cr");if(el)el.value="CR "+M.cr;}
+function updateCRDisplay(){const el=$("#f_cr");if(el)el.value=M.cr;}
+function parseCRInput(v){v=String(v).trim().replace(/^cr\s*/i,"");if(CR_LIST.includes(v))return v;
+  const frac={"0.125":"1/8",".125":"1/8","0.25":"1/4",".25":"1/4","0.5":"1/2",".5":"1/2","⅛":"1/8","¼":"1/4","½":"1/2"};if(frac[v])return frac[v];
+  const n=Number(v);if(!isNaN(n)&&v!==""){if(n>0&&n<.1875)return "1/8";if(n<.375)return "1/4";if(n<.75)return "1/2";const i=String(Math.round(n));if(CR_LIST.includes(i))return i;}
+  return null;}
+// tri-state proficiency toggle, shared by Initiative and each Skill row
+const PROF3=[["none","No prof."],["prof","Proficient"],["exp","Expertise"]];
+function paintTri(el,val,states){states=states||PROF3;const s=states.find(x=>x[0]===val)||states[0];el.dataset.state=s[0];el.textContent=s[1];el.classList.toggle("on",s[0]!=="none");el.classList.toggle("exp",s[0]==="exp");}
+function nextTri(val,states){states=states||PROF3;const i=states.findIndex(x=>x[0]===val);return states[(i+1)%states.length][0];}
 function setCR(cr){M.cr=cr;updateCRDisplay();applyCRAuto();refreshAbil();renderEntries();renderPreview();}
 function buildCRStepper(){const w=$("#wb_cr");if(!w||w.querySelector(".stepbtns"))return;
   const b=document.createElement("span");b.className="stepbtns";
@@ -241,10 +361,10 @@ function refreshAbil(){const pb=pbForCR(M.cr);ABILS.forEach(a=>{const m=mod(M[a]
 function renderSkills(){const box=$("#skillRows");
   box.innerHTML=M.skills.map((s,i)=>`<div class="rowline">
     <select data-si="${i}" class="skName">${Object.keys(SKILLS).map(k=>`<option value="${k}" ${k===s[0]?"selected":""}>${k.replace(/_/g," ")}</option>`).join("")}</select>
-    <select data-si="${i}" class="skProf"><option value="prof" ${s[1]!=="exp"?"selected":""}>Proficient</option><option value="exp" ${s[1]==="exp"?"selected":""}>Expertise</option></select>
+    <button type="button" class="tritog skProf" data-si="${i}"></button>
     <button class="iconbtn" data-rmskill="${i}">✕</button></div>`).join("");
   box.querySelectorAll(".skName").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][0]=e.target.value;renderPreview();}));
-  box.querySelectorAll(".skProf").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][1]=e.target.value;renderPreview();}));
+  box.querySelectorAll(".skProf").forEach(el=>{paintTri(el,M.skills[+el.dataset.si][1]||"prof");el.addEventListener("click",()=>{const i=+el.dataset.si;const nv=nextTri(M.skills[i][1]||"prof");M.skills[i][1]=nv;paintTri(el,nv);renderPreview();});});
   box.querySelectorAll("[data-rmskill]").forEach(el=>el.addEventListener("click",e=>{M.skills.splice(+e.target.dataset.rmskill,1);renderSkills();renderPreview();}));
 }
 $("#addSkill").addEventListener("click",()=>{M.skills.push(["Perception","prof"]);renderSkills();renderPreview();});
@@ -257,16 +377,20 @@ function attackText(e){
   let rr=e.kind==="Ranged"?`range ${e.range||"30/120"} ft.`:e.kind==="Melee or Ranged"?`reach ${e.reach||5} ft. or range ${e.range||"20/60"} ft.`:`reach ${e.reach||5} ft.`;
   const avg=Math.max(1,Math.floor(diceAvg(e.dice)+(e.addMod?ab:0)));
   const dtxt=e.dice+(e.addMod&&ab!==0?` ${sgn(ab)}`:"");
-  return `*${kind}* ${sgn(atk)}, ${rr}.${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
+  return `*${kind}* ${sgn(atk)}, ${rr}${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
 }
 const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
+// move-up/move-down + delete controls for an entry head (arrows hidden when section auto-sorts)
+function rowCtrls(kind,i){const arrows=(M.sort&&M.sort[kind])?"":`<button class="iconbtn up" data-mv="${kind}:${i}:-1" title="Move up">▲</button><button class="iconbtn down" data-mv="${kind}:${i}:1" title="Move down">▼</button>`;
+  return arrows+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
+function dlFor(kind){return kind==="traits"?"dl-traits":kind==="bonus"?"dl-bonus":kind==="actions"?"dl-textact":"";}
 function entryHTML(arr,kind){return arr.map((e,i)=>{
-  if(kind==="reactions"){return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+  if(kind==="reactions"){return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" list="dl-react" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <input type="text" placeholder="Trigger" data-k="${kind}" data-i="${i}" data-f="trigger" value="${esc(e.trigger||"")}" style="margin-bottom:6px">
     <textarea placeholder="Response" data-k="${kind}" data-i="${i}" data-f="response">${esc(e.response||"")}</textarea></div>`;}
   if(kind==="villain"){return `<div class="entry"><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select><input type="text" placeholder="Name" data-k="villain" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="villain:${i}">✕</button></div>
     <textarea placeholder="Effect" data-k="villain" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea></div>`;}
-  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);return `<div class="entry"><div class="ehead"><span class="kind">Spellcasting</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);return `<div class="entry"><div class="ehead"><span class="kind">Spellcasting</span><input type="text" placeholder="Spellcasting" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <div class="atk-fields" style="grid-template-columns:repeat(3,1fr)">
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
       <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
@@ -279,7 +403,7 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
       <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
     <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
     <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
-  if(e.mode==="attack"){return `<div class="entry"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+  if(e.mode==="attack"){return `<div class="entry"><div class="ehead"><span class="kind">Attack</span><input type="text" placeholder="Attack name" list="dl-atk" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <div class="atk-fields">
       <label class="f">Kind<select data-k="${kind}" data-i="${i}" data-f="kind">${["Melee","Ranged","Melee or Ranged"].map(k=>`<option ${k===e.kind?"selected":""}>${k}</option>`).join("")}</select></label>
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
@@ -293,11 +417,13 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     </div>
     <input type="text" class="atk-extra" placeholder="Rider, e.g. plus 7 (2d6) Poison damage." data-k="${kind}" data-i="${i}" data-f="extra" value="${esc(e.extra)}">
     <div class="hint" style="margin-top:6px">→ ${esc(attackText(e))}</div></div>`;}
-  return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}"><button class="iconbtn" data-rm="${kind}:${i}">✕</button></div>
+  return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name"${dlFor(kind)?` list="${dlFor(kind)}"`:""} data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <textarea placeholder="Description" data-k="${kind}" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea>
     ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
 }).join("");}
+function sortEntries(kind){arrFor(kind).sort((a,b)=>(a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase()));}
 function renderEntries(){
+  ["traits","actions","bonus","reactions"].forEach(k=>{if(M.sort&&M.sort[k])sortEntries(k);});
   $("#traitList").innerHTML=entryHTML(M.traits,"traits");
   $("#actionList").innerHTML=entryHTML(M.actions,"actions");
   $("#bonusList").innerHTML=entryHTML(M.bonus,"bonus");
@@ -318,12 +444,50 @@ function bindEntries(){
       renderPreview();});
   });
   $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
+  $$("#formCol [data-mv]").forEach(el=>el.addEventListener("click",()=>{const[k,i,d]=el.dataset.mv.split(":");moveEntry(k,+i,+d);}));
+  $$('#formCol [data-f="name"]').forEach(el=>el.addEventListener("change",()=>autofillEntry(el.dataset.k,+el.dataset.i)));
   $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
   $$("#formCol [data-sg]").forEach(el=>{const ev=el.tagName==="SELECT"?"change":"input";el.addEventListener(ev,()=>{const[i,gi,f]=el.dataset.sg.split(":");M.actions[+i].groups[+gi][f]=el.value;if(f==="freq")renderEntries();renderPreview();});});
   $$("#formCol [data-sgadd]").forEach(el=>el.addEventListener("click",()=>{M.actions[+el.dataset.sgadd].groups.push({freq:"1/Day Each",spells:""});renderEntries();renderPreview();}));
   $$("#formCol [data-sgrm]").forEach(el=>el.addEventListener("click",()=>{const[i,gi]=el.dataset.sgrm.split(":");M.actions[+i].groups.splice(+gi,1);renderEntries();renderPreview();}));
 }
 function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
+function moveEntry(kind,i,dir){const arr=arrFor(kind),j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];renderEntries();renderPreview();}
+function findCI(map,key){return Object.keys(map).find(k=>k.toLowerCase()===key);}
+// plain-text rendering for an action snippet (text action, or an attack preset as prose)
+function actionTextFor(name){if(TEXT_ACTIONS[name])return expandSnip(TEXT_ACTIONS[name]);if(ATK_PRESETS[name])return attackText(ATK(Object.assign({name},ATK_PRESETS[name])));return null;}
+// type-to-autofill: typing a known snippet name into an entry's Name field fills it in
+function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;const key=e.name.trim().toLowerCase();
+  if(e.mode==="attack"){const p=findCI(ATK_PRESETS,key);if(p)Object.assign(e,clone(ATK_PRESETS[p]),{mode:"attack",name:p});else return;}
+  else if(e.mode==="react"){const p=findCI(REACT_SNIPS,key);if(!p)return;e.name=p;e.trigger=expandSnip(REACT_SNIPS[p].trigger);e.response=expandSnip(REACT_SNIPS[p].response);}
+  else{const map=kind==="traits"?TRAIT_SNIPS:kind==="bonus"?BONUS_SNIPS:null;
+    if(kind==="actions"){const keys=[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)];const p=keys.find(k=>k.toLowerCase()===key);if(!p)return;e.name=p;e.text=actionTextFor(p);}
+    else{if(!map)return;const p=findCI(map,key);if(!p)return;e.name=p;e.text=expandSnip(map[p]);}}
+  if(M.sort&&M.sort[kind])sortEntries(kind);renderEntries();renderPreview();}
+// insert a fresh entry chosen from a section's "From library" dropdown
+function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?val.slice(0,ci):"",name=ci>=0?val.slice(ci+1):val;
+  if(kind==="traits")M.traits.push(T(name,expandSnip(TRAIT_SNIPS[name])));
+  else if(kind==="actions"){if(pre==="atk")M.actions.push(ATK(Object.assign({name},clone(ATK_PRESETS[name]))));else M.actions.push(T(name,expandSnip(TEXT_ACTIONS[name])));}
+  else if(kind==="bonus")M.bonus.push(T(name,expandSnip(BONUS_SNIPS[name])));
+  else if(kind==="reactions"){const s=REACT_SNIPS[name];M.reactions.push({mode:"react",name,trigger:expandSnip(s.trigger),response:expandSnip(s.response)});}
+  if(M.sort&&M.sort[kind])sortEntries(kind);renderEntries();renderPreview();}
+function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
+function buildLibSelects(){
+  const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
+  const list=names=>names.map(n=>opt(n,n)).join("");
+  const pre=(p,names)=>names.map(n=>opt(p+":"+n,n)).join("");
+  $('[data-lib="traits"]').innerHTML=LIB_PROMPT+list(Object.keys(TRAIT_SNIPS));
+  $('[data-lib="actions"]').innerHTML=LIB_PROMPT+`<optgroup label="Attacks — guided">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
+  $('[data-lib="bonus"]').innerHTML=LIB_PROMPT+pre("txt",Object.keys(BONUS_SNIPS));
+  $('[data-lib="reactions"]').innerHTML=LIB_PROMPT+pre("react",Object.keys(REACT_SNIPS));
+  $$("[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
+  buildDatalist("dl-traits",Object.keys(TRAIT_SNIPS));
+  buildDatalist("dl-atk",Object.keys(ATK_PRESETS));
+  buildDatalist("dl-textact",[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)]);
+  buildDatalist("dl-bonus",Object.keys(BONUS_SNIPS));
+  buildDatalist("dl-react",Object.keys(REACT_SNIPS));
+  $$("[data-sort]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.sort;M.sort[k]=!M.sort[k];if(M.sort[k])sortEntries(k);b.classList.toggle("on",M.sort[k]);renderEntries();renderPreview();}));
+}
 $$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.add;
   if(k==="reactions")M.reactions.push({mode:"react",name:"",trigger:"",response:""});
   else if(k==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name:"",text:""});
@@ -337,7 +501,7 @@ function loadMonster(m){
   $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
   $("#f_size").value=M.size;updateCRDisplay();
   $("#f_ac").value=M.ac??"";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M.hp??"";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
-  $("#f_initprof").value=M.initProf||"none";updateHpDie();
+  paintTri($("#f_initprof"),M.initProf||"none");updateHpDie();
   $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
   $("#f_snword").value=M.shortName.word||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
@@ -348,6 +512,9 @@ function loadMonster(m){
   $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
   $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
   $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
+  $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
+  $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
+  $$("[data-sort]").forEach(b=>b.classList.toggle("on",!!M.sort[b.dataset.sort]));
   if(M._auto.ac||M._auto.hp)applyCRAuto();
   refreshAbil();paintDmg();renderSkills();renderEntries();renderPreview();
 }
@@ -384,7 +551,8 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   return{main,groups};}
 function subName(t){return applyRefs(t);}
 function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");}
-function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?(sk[1]==="exp"?pb*2:pb):0);}
+function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
+function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
 function mainAttackBonus(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const atk=m.actions.find(e=>e.mode==="attack");
   if(atk)return{val:atk.atk!==""&&atk.atk!=null?Number(atk.atk):mod(m[atk.ability])+pb,cr:false};
@@ -410,7 +578,7 @@ function renderPreview(){
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
-  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}</p>`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
   if(def.imm)h+=`<p><span class="k">Immunities</span> ${esc(def.imm)}</p>`;
@@ -444,7 +612,7 @@ function notionSingle(m){
     `| | STR | DEX | CON | INT | WIS | CHA |`,`|---|---|---|---|---|---|---|`,
     `| Score | ${ABILS.map(a=>m[a]).join(" | ")} |`,`| Mod | ${ABILS.map(a=>sgn(mod(m[a]))).join(" | ")} |`,
     `| Save | ${ABILS.map(a=>sgn(mod(m[a])+(m.saves.includes(a)?pb:0))).join(" | ")} |`,""];
-  if(m.skills.length)L.push(`**Skills** ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+(s[1]==="exp"?pb*2:pb))}`).join(", ")}`);
+  if(m.skills.length)L.push(`**Skills** ${m.skills.map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}`);
   if(def.vuln)L.push(`**Vulnerabilities** ${def.vuln}`);
   if(def.res)L.push(`**Resistances** ${def.res}`);
   if(def.imm)L.push(`**Immunities** ${def.imm}`);
@@ -510,7 +678,7 @@ $("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchVie
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#newFromChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
-$("#resetForge").addEventListener("click",()=>{loadMonster(blankMonster());toast("Cleared.");});
+$("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any unsaved edits to this creature will be lost.",()=>{loadMonster(blankMonster());toast("Cleared.");}));
 
 $("#saveMonster").addEventListener("click",async()=>{
   if(!validName())return;
@@ -813,7 +981,7 @@ function wrapStepper(input,step,min){
 (async function init(){
   buildAbilityGrid();buildDmgGrid();
   fillSelect("#f_size",SIZES);
-  bindStatic();buildCRStepper();
+  bindStatic();buildCRStepper();buildLibSelects();
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
