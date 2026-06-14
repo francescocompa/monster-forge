@@ -7,7 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=9">
+<!-- Per-load cache-bust: GitHub Pages' CDN otherwise serves a stale app.js against fresh
+     index.html/styles.css, and the old JS throws on elements that no longer exist, killing
+     init. A unique query each load forces the CDN to fetch the current files. -->
+<script>document.write('<link rel="stylesheet" href="styles.css?cb='+Date.now()+'">');</script>
 </head>
 <body>
 <div class="app" id="app">
@@ -38,7 +41,7 @@
       <div class="forge">
         <div class="form-col" id="formCol">
           <div class="col-head">
-            <div><h2 id="forgeTitle">New Creature</h2><div class="sub">PB &amp; XP derive from CR. Empty AC/HP/attack fields pre-fill from CR as suggestions.</div></div>
+            <div><h2 id="forgeTitle">New Creature</h2></div>
             <div style="display:flex;gap:8px"><button class="btn ghost sm" id="forgeChassis" style="width:auto">Load chassis</button></div>
           </div>
 
@@ -240,6 +243,6 @@
 
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
-<script src="app.js?v=9"></script>
+<script>document.write('<script src="app.js?cb='+Date.now()+'"><\/script>');</script>
 </body>
 </html>

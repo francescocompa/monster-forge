@@ -180,7 +180,9 @@ let state={lib:[],adv:[],selAdv:null};
 let M=null, pendingForge=null;
 
 // ── JSONBin cloud storage ─────────────────────────────────────────────────────
-const JBIN_KEY="$2a$10$L0cZTspHDg9LR7hQqW7lkOCYd2OCGrltTRSNY.JjO8aNU4esyI4EG";
+// Personal-use master key (full CRUD). The previous value was a read-only ACCESS key,
+// which is why every create/write returned 401 "Invalid X-Master-Key".
+const JBIN_KEY="$2a$10$O99keLRG2gcLv9rw7bX1KOacdL.mv/OuBSrg2m6FqHf3k2CTBG3KK";
 const JBIN_BASE="https://api.jsonbin.io/v3";
 const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"true"};
 // Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
@@ -873,6 +875,19 @@ function renderEncList(a){
   const aw=$("#archWrap");aw.innerHTML=arch.length?`<div class="section-label" style="margin-top:24px">Archived (${arch.length})</div>${arch.map(e=>encHTML(a,e)).join("")}`:"";
   bindEncEvents(a);
 }
+// Patch an encounter's derived numbers (difficulty pill, budget bar, spent read-out, and each
+// combatant's XP) in place — used on count edits so we never rebuild (and refocus) the input.
+function updateEncMeta(a,e){
+  const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
+  const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
+  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
+  const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
+  const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
+  const p=partyOf(a,e),read=root.querySelector(".budget .read");
+  if(read)read.innerHTML=`Spent <b>${spent.toLocaleString()} XP</b> of ${bud[2].toLocaleString()} (High)${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
+}
 function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
@@ -959,14 +974,15 @@ function bindEncEvents(a){
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
-    const store=()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=(f==="count")?clamp(Number(el.value||1),1,99):el.value;saveAdv();};
-    if(el.tagName==="SELECT"){el.addEventListener("change",()=>{store();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});}
-    else if(el.type==="number"){
-      // re-rendering on every keystroke would steal focus mid-typing — store live, refresh totals on commit
-      el.addEventListener("input",store);
-      el.addEventListener("change",()=>{store();renderEncList(a);});
+    if(el.tagName==="SELECT"){
+      el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});
+    } else if(el.type==="number"){
+      // count: patch derived totals in place. Never re-render the input — keyboard arrows and the
+      // native spinner fire change/input immediately (not just on blur) and would drop focus.
+      el.addEventListener("input",()=>{const{e,c}=findCombat(a,cid);if(!c)return;c[f]=clamp(Number(el.value||1),1,99);saveAdv();updateEncMeta(a,e);});
+    } else {
+      el.addEventListener("input",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();}); // free-text: no re-render
     }
-    else el.addEventListener("input",store); // free-text fields drive no re-render
   });
   q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
 }
@@ -997,13 +1013,21 @@ $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
 $("#pasteStatblock").addEventListener("click",openImportModal);
 $("#libPaste").addEventListener("click",openImportModal);
-// Single sidebar toggle in the appbar. Wide screens dock/undock (hover reveals when
-// collapsed); narrow screens open the floating drawer (no hover on touch).
+// Single sidebar toggle in the appbar. Wide screens dock/undock; narrow screens open the
+// floating drawer (no hover on touch).
 $("#navToggle").addEventListener("click",e=>{e.stopPropagation();const app=$("#app");
   if(window.matchMedia("(max-width:720px)").matches)app.classList.toggle("sidebar-open");
-  else app.classList.toggle("nav-collapsed");});
+  else{app.classList.toggle("nav-collapsed");app.classList.remove("sidebar-open");}});
 // tapping outside the open drawer closes it
 document.addEventListener("click",e=>{const app=$("#app");if(app.classList.contains("sidebar-open")&&!e.target.closest(".rail")&&!e.target.closest("#navToggle"))app.classList.remove("sidebar-open");});
+// Wide screens: hovering the burger reveals the flying sidebar; it stays while the pointer is
+// over the burger or the rail, and closes after a short grace period (tolerance) once you leave both.
+(function(){const app=$("#app"),burger=$("#navToggle"),rail=$(".rail");let t;
+  const show=()=>{clearTimeout(t);if(app.classList.contains("nav-collapsed")&&!window.matchMedia("(max-width:720px)").matches)app.classList.add("sidebar-open");};
+  const hide=()=>{clearTimeout(t);t=setTimeout(()=>app.classList.remove("sidebar-open"),350);};
+  burger.addEventListener("mouseenter",show);burger.addEventListener("mouseleave",hide);
+  rail.addEventListener("mouseenter",()=>clearTimeout(t));rail.addEventListener("mouseleave",hide);
+})();
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
