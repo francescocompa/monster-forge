@@ -259,6 +259,15 @@ async function jbinGet(k){
 // returns true on a confirmed write, false otherwise
 async function jbinSet(k,val){
   const id=getBinId(k);
+  // JSONBin rejects an empty bin ("Bin cannot be blank", HTTP 400), so an empty library/adventure
+  // list can't be PUT. Treat "empty" as "delete the bin": loadAll reads a missing bin (noBin) as
+  // empty and keeps the local mirror, and the next non-empty save recreates the bin via POST.
+  if(isBlankVal(val)){
+    if(!id)return true; // nothing stored yet — already in sync
+    const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"DELETE",headers:{"X-Master-Key":JBIN_KEY}});
+    if(r&&(r.ok||r.status===404)){localStorage.removeItem("mf_bin:"+k);return true;}
+    return false;
+  }
   if(id){
     const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
     return !!(r&&r.ok);
@@ -267,6 +276,7 @@ async function jbinSet(k,val){
   if(r&&r.ok){try{const d=await r.json();setBinId(k,d.metadata.id);return true;}catch(e){return false;}}
   return false;
 }
+function isBlankVal(val){return val==null||(Array.isArray(val)?val.length===0:(typeof val==="object"&&Object.keys(val).length===0));}
 
 async function loadAll(){
   // 1. instant hydrate from the local mirror so the UI is never empty while the cloud loads
