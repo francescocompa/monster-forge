@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 33 — Bestiary batch ops + MCDM minions (B36–B37)
+- **Multi-select bestiary cards:** Cmd/Ctrl-click toggles a card and Shift-click
+  extends a range; a floating bar shows the count with **Set status** (bulk) and
+  **Clear**. Plain click still opens the creature.
+- **Drag to restatus:** when the Bestiary is grouped by status, dragging a card
+  onto another status group sets that status (a multi-selection moves together).
+- **Minion flag (MCDM):** a new **Minion · MCDM** toggle adds the Flee Mortals
+  **Minion** + **Minion Group** traits, shows a **MINION** tag on the stat block,
+  and renders attack damage as **fixed values** (no dice). It's fully reversible —
+  flat damage and the badge are render-time, so toggling off restores rolled
+  damage and removes the traits with no data loss.
+- (Noted for later: reflecting minion economics in the encounter XP/CR budget.)
+
 ## Batch 32 — Native dropdowns + parser fixes (B34–B35)
 - **Form dropdowns → native:** form-field `<select>`s now use the browser's own
   dropdown (native arrow + native option list), and the whole app is pinned to

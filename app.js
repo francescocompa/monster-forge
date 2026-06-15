@@ -179,7 +179,7 @@ function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"c
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
-  status:"Draft",tags:[],archived:false,
+  status:"Draft",tags:[],archived:false,minion:false,
   _auto:{ac:true,hp:true}};}
 function migrateDefenses(m){
   const dmg={};let note=[];
@@ -212,6 +212,7 @@ function normalizeMonster(m){
   if(typeof m.tag==="string"){m.tags=m.tag?[m.tag]:[];delete m.tag;} // migrate single tag → tags[]
   if(!Array.isArray(m.tags))m.tags=[];
   m.archived=!!m.archived;
+  m.minion=!!m.minion;
   return m;
 }
 function normalizeAdv(a){
@@ -296,6 +297,7 @@ function bindStatic(){
   $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";$("#fsVillain").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
+  $("#t_minion").addEventListener("change",e=>{$("#minionInner").style.display=e.target.checked?"":"none";$("#fsMinion").classList.toggle("collapsed",!e.target.checked);applyMinion(e.target.checked);});
   document.getElementById("previewToggle").addEventListener("click",()=>setPreviewCollapsed(true));
   document.getElementById("pfExpand").addEventListener("click",()=>setPreviewCollapsed(false));
   document.getElementById("pfSave").addEventListener("click",()=>document.getElementById("saveMonster").click());
@@ -358,7 +360,22 @@ function attackText(e){
   let rr=e.kind==="Ranged"?`range ${e.range||"30/120"} ft.`:e.kind==="Melee or Ranged"?`reach ${e.reach||5} ft. or range ${e.range||"20/60"} ft.`:`reach ${e.reach||5} ft.`;
   const avg=Math.max(1,Math.floor(diceAvg(e.dice)+(e.addMod?ab:0)));
   const dtxt=e.dice+(e.addMod&&ab!==0?` ${sgn(ab)}`:"");
-  return `*${kind}* ${sgn(atk)}, ${rr}${e.targets?` ${e.targets}.`:""} *Hit:* ${avg} (${dtxt}) ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
+  // MCDM minions deal fixed damage — show the flat value with no dice expression.
+  const hit=M.minion?`${avg}`:`${avg} (${dtxt})`;
+  return `*${kind}* ${sgn(atk)}, ${rr}${e.targets?` ${e.targets}.`:""} *Hit:* ${hit} ${e.dtype} damage.${e.extra?` ${e.extra}`:""}`;
+}
+// MCDM minion flag: adds the Minion + Minion Group traits (flat damage & badge are render-time
+// via attackText/renderPreview reading M.minion, so toggling off fully reverts with no data loss).
+function applyMinion(on){
+  M.minion=on;
+  const has=re=>M.traits.some(t=>re.test(t.name||""));
+  if(on){
+    if(!has(/^Minion$/i))M.traits.push(T("Minion",MINION_TRAIT_TEXT));
+    if(!has(/^Minion Group$/i))M.traits.push(T("Minion Group",MINION_GROUP_TEXT));
+  }else{
+    M.traits=M.traits.filter(t=>!/^Minion( Group)?$/i.test(t.name||""));
+  }
+  renderEntries();renderPreview();
 }
 const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
 // Traits/bonus/reactions are always alpha-sorted; actions keep statblock/manual order
@@ -591,6 +608,7 @@ function loadMonster(m){
   $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
   $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
   $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
+  $("#t_minion").checked=!!M.minion;$("#minionInner").style.display=M.minion?"":"none";$("#fsMinion").classList.toggle("collapsed",!M.minion);
   $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
   if(M._auto.ac||M._auto.hp)applyCRAuto();
@@ -689,7 +707,7 @@ function renderPreview(){
   const initVal=initOf(m);
   const def=defenseStrings(m);
   let h=`<div class="topbar"></div><h2>${esc(m.name||"Unnamed Creature")}</h2>`;
-  h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}</div><hr class="rule">`;
+  h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}${m.minion?` <span class="minion-tag">Minion</span>`:""}</div><hr class="rule">`;
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
@@ -917,7 +935,13 @@ function renderLibrary(){
 }
 function wireLibCards(body){
   const find=id=>state.lib.find(x=>x.id===id);
-  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest(".menu-wrap")||e.target.closest(".tags")||e.target.closest(".card-tags"))return;loadMonster(find(el.dataset.card));switchView("forge");}));
+  body.querySelectorAll("[data-card]").forEach(el=>el.addEventListener("click",e=>{
+    if(e.target.closest(".menu-wrap")||e.target.closest(".tags")||e.target.closest(".card-tags"))return;
+    const id=el.dataset.card;
+    if(e.metaKey||e.ctrlKey){e.preventDefault();toggleLibSel(id);libSelAnchor=id;return;}
+    if(e.shiftKey){e.preventDefault();selectLibRange(id,body);return;}
+    if(libSel.size)clearLibSel();
+    loadMonster(find(id));switchView("forge");}));
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(find(b.dataset.edit));switchView("forge");}));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
@@ -928,6 +952,43 @@ function wireLibCards(body){
   body.querySelectorAll("[data-addtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openTagAdd(find(b.dataset.addtag),b);}));
   body.querySelectorAll("[data-rmtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const m=find(b.dataset.rmtag);m.tags=(m.tags||[]).filter(t=>t!==b.dataset.tagval);saveLib();renderLibrary();}));
   body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(ch)applyChassis(ch,false,false);}));
+  applyLibSelMarks(body);renderLibBatchBar();bindLibDrag(body);
+}
+// Bestiary multi-select (modifier-click) + batch status bar. Cmd/Ctrl-click toggles a card,
+// Shift-click extends a range; a floating bar applies a status to all selected.
+const libSel=new Set();let libSelAnchor=null,libDragId=null;
+function applyLibSelMarks(body){body.querySelectorAll("[data-card]").forEach(el=>el.classList.toggle("selected",libSel.has(el.dataset.card)));}
+function toggleLibSel(id){libSel.has(id)?libSel.delete(id):libSel.add(id);const el=document.querySelector(`#libBody [data-card="${id}"]`);if(el)el.classList.toggle("selected",libSel.has(id));renderLibBatchBar();}
+function selectLibRange(id,body){const ids=[...body.querySelectorAll("[data-card]")].map(el=>el.dataset.card);const a=ids.indexOf(libSelAnchor),b=ids.indexOf(id);if(a<0||b<0){toggleLibSel(id);libSelAnchor=id;return;}const lo=Math.min(a,b),hi=Math.max(a,b);for(let i=lo;i<=hi;i++)libSel.add(ids[i]);applyLibSelMarks(body);renderLibBatchBar();}
+function clearLibSel(){libSel.clear();document.querySelectorAll("#libBody .card.selected").forEach(el=>el.classList.remove("selected"));renderLibBatchBar();}
+function renderLibBatchBar(){
+  let bar=document.getElementById("libBatchBar");
+  if(!libSel.size){if(bar)bar.remove();return;}
+  if(!bar){bar=document.createElement("div");bar.id="libBatchBar";bar.className="batch-bar";document.body.appendChild(bar);}
+  bar.innerHTML=`<span class="bb-n">${libSel.size} selected</span><button class="btn sm" id="bbStatus">Set status ▾</button><button class="btn ghost sm" id="bbClear">Clear</button>`;
+  bar.querySelector("#bbStatus").addEventListener("click",e=>{e.stopPropagation();const opts=STATUSES.filter(s=>s!=="Preset");const p=showPopover(e.currentTarget,opts.map(s=>`<button class="popitem" data-s="${s}">${s}</button>`).join(""));p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();batchSetStatus(b.dataset.s);}));});
+  bar.querySelector("#bbClear").addEventListener("click",()=>clearLibSel());
+}
+function batchSetStatus(status){let n=0;libSel.forEach(id=>{const m=state.lib.find(x=>x.id===id);if(m){m.status=status;m.archived=(status==="Archived");n++;}});clearLibSel();saveLib();renderLibrary();toast(`Set ${n} to ${status}.`);}
+// Drag a card onto another status group (only when grouped by status) to restatus it.
+function libDragInert(t){return dragInert(t)||!!(t&&t.closest(".statchip,.tagchip,.addtag,.cardmenu,.chipx"));}
+function bindLibDrag(body){
+  if(libCtrl.group!=="status")return;
+  const ASSIGN=["Draft","Ready","Archived"];
+  body.querySelectorAll(".card[data-card]").forEach(card=>{
+    card.addEventListener("dragstart",ev=>{if(libDragInert(ev.target)){ev.preventDefault();return;}libDragId=card.dataset.card;ev.dataTransfer.effectAllowed="move";try{ev.dataTransfer.setData("text/plain",libDragId);}catch(_){}requestAnimationFrame(()=>card.classList.add("dragging"));});
+    card.addEventListener("dragend",()=>{card.classList.remove("dragging");libDragId=null;body.querySelectorAll(".grp.drop-into").forEach(g=>g.classList.remove("drop-into"));});
+  });
+  body.querySelectorAll(".grp[data-grpkey]").forEach(grp=>{
+    const st=grp.dataset.grpkey;if(!ASSIGN.includes(st))return;
+    grp.addEventListener("dragover",ev=>{if(!libDragId)return;ev.preventDefault();grp.classList.add("drop-into");});
+    grp.addEventListener("dragleave",ev=>{if(!grp.contains(ev.relatedTarget))grp.classList.remove("drop-into");});
+    grp.addEventListener("drop",ev=>{if(!libDragId)return;ev.preventDefault();grp.classList.remove("drop-into");
+      const id=libDragId;libDragId=null;
+      const ids=(libSel.has(id)&&libSel.size>1)?[...libSel]:[id];
+      let n=0;ids.forEach(x=>{const m=state.lib.find(y=>y.id===x);if(m&&m.status!==st){m.status=st;m.archived=(st==="Archived");n++;}});
+      if(n){if(libSel.size>1)clearLibSel();saveLib();renderLibrary();toast(`Moved ${n} to ${st}.`);}});
+  });
 }
 // Small floating popover used by the status & tag-add chips.
 let _pop=null;
@@ -950,7 +1011,7 @@ let crTargetsHTML="";
 function refreshForgeStatus(){const el=$("#forgeStatus");if(!el)return;el.className="tag st st-"+(M.status||"Draft")+" statchip";el.innerHTML=esc(M.status||"Draft")+' <span class="caret">▾</span>';}
 function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>`<button class="popitem${s===M.status?" on":""}" data-s="${s}">${s}</button>`).join(""));
   p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();M.status=b.dataset.s;refreshForgeStatus();renderPreview();}));}
-function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}">
+function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}" draggable="true">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
     <div class="menu" id="menu-lib-${m.id}">
