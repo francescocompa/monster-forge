@@ -657,20 +657,20 @@ function buildLibSelects(){
   const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
   const list=names=>names.map(n=>opt(n,n)).join("");
   const pre=(p,names)=>names.map(n=>opt(p+":"+n,n)).join("");
-  $('[data-lib="traits"]').innerHTML=LIB_PROMPT+list(Object.keys(TRAIT_SNIPS));
-  $('[data-lib="actions"]').innerHTML=LIB_PROMPT+`<optgroup label="Attacks — guided">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
-  $('[data-lib="bonus"]').innerHTML=LIB_PROMPT+pre("txt",Object.keys(BONUS_SNIPS));
-  $('[data-lib="reactions"]').innerHTML=LIB_PROMPT+pre("react",Object.keys(REACT_SNIPS));
-  $('[data-lib="legend"]').innerHTML=LIB_PROMPT+list(Object.keys(LEGEND_SNIPS));
-  $('[data-lib="villain"]').innerHTML=LIB_PROMPT+list(Object.keys(VILLAIN_SNIPS));
-  $('[data-lib="lair"]').innerHTML=LIB_PROMPT+list(Object.keys(LAIR_SNIPS));
-  $$("[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
-  $$(".libsel-btn[data-lib]").forEach(btn=>{btn.addEventListener("click",()=>{const sel=btn.nextElementSibling;try{sel.showPicker();}catch(e){sel.focus();}});});
-  const cimmBtn=$("#cimmLibBtn"),cimmSel=$("#cimm-sel");
-  if(cimmBtn&&cimmSel){
+  const ls=k=>document.querySelector(`select[data-lib="${k}"]`);
+  ls("traits").innerHTML=LIB_PROMPT+list(Object.keys(TRAIT_SNIPS));
+  ls("actions").innerHTML=LIB_PROMPT+`<optgroup label="Attacks — guided">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
+  ls("bonus").innerHTML=LIB_PROMPT+pre("txt",Object.keys(BONUS_SNIPS));
+  ls("reactions").innerHTML=LIB_PROMPT+pre("react",Object.keys(REACT_SNIPS));
+  ls("legend").innerHTML=LIB_PROMPT+list(Object.keys(LEGEND_SNIPS));
+  ls("villain").innerHTML=LIB_PROMPT+list(Object.keys(VILLAIN_SNIPS));
+  ls("lair").innerHTML=LIB_PROMPT+list(Object.keys(LAIR_SNIPS));
+  $$("select[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
+  const cimmSel=$("#cimm-sel");
+  if(cimmSel){
     const rebuildCimmSel=()=>{cimmSel.innerHTML="<option value=''>Pick condition…</option>"+(state.conditions||[]).map(c=>`<option value="${esc(c.name||c)}">${esc(c.name||c)}</option>`).join("");};
     rebuildCimmSel();
-    cimmBtn.addEventListener("click",()=>{rebuildCimmSel();try{cimmSel.showPicker();}catch(e){cimmSel.focus();}});
+    cimmSel.addEventListener("mousedown",rebuildCimmSel); // refresh just before the native list opens
     cimmSel.addEventListener("change",()=>{const v=cimmSel.value;if(v){const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");renderCimm();renderPreview();cimmSel.value="";}});
   }
   buildDatalist("dl-traits",Object.keys(TRAIT_SNIPS));
@@ -1643,7 +1643,7 @@ function openImportModal(){
 }
 
 document.addEventListener("click",e=>{
-  const k=e.target.closest(".kebab");
+  const k=e.target.closest("[data-menu]");
   document.querySelectorAll(".menu.open").forEach(mn=>{if(!k||mn.id!=="menu-"+k.dataset.menu)mn.classList.remove("open");});
   if(k){const mn=document.getElementById("menu-"+k.dataset.menu);if(mn){mn.classList.toggle("open");e.stopPropagation();}}
 });
