@@ -67,15 +67,14 @@
               <label class="f">Name<input type="text" id="f_name" placeholder="Creature name"></label>
               <label class="f">Size<select id="f_size"></select></label>
               <label class="f">Type<input type="text" id="f_type" list="dl-type" placeholder="Undead"></label>
-              <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" title="CR targets" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
+              <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Subtype / tag<input type="text" id="f_subtype" list="dl-subtype" placeholder="Spirit"></label>
               <label class="f">Alignment<input type="text" id="f_align" list="dl-align" placeholder="Lawful Evil"></label>
             </div>
-            <div class="fs-sub">Short name <span style="color:var(--faint);text-transform:none;letter-spacing:0">— the noun used for “the ___” references in text</span></div>
-            <div class="grid" style="grid-template-columns:1.6fr auto auto;align-items:end">
-              <label class="f">Word<input type="text" id="f_snword" placeholder="creature"></label>
+            <div class="grid" style="grid-template-columns:1.6fr auto auto;align-items:end;margin-top:14px">
+              <label class="f"><span class="cr-lbl">Short name <button type="button" class="cr-help" id="snHelp" aria-label="Short name help">?</button></span><input type="text" id="f_snword" placeholder="creature"></label>
               <label class="toggle" style="margin-bottom:9px"><input type="checkbox" id="f_snproper"> Proper name <span style="color:var(--faint);font-weight:400">(no “the”)</span></label>
               <label class="toggle" style="margin-bottom:9px"><input type="checkbox" id="f_snplural"> Plural</label>
             </div>
@@ -86,12 +85,12 @@
             <div class="grid g-core">
               <label class="f">Armor Class<span class="with-badge" id="wb_ac"><input type="number" id="f_ac"><span class="badge">≈CR</span></span></label>
               <label class="f">AC note<input type="text" id="f_acnote" placeholder="natural armor"></label>
-              <label class="f">Initiative <span style="color:var(--faint)">(blank = auto)</span><input type="number" id="f_init" placeholder="auto"></label>
+              <label class="f">Initiative<input type="number" id="f_init" placeholder="auto"></label>
               <label class="f">Proficiency<button type="button" class="tritog" id="f_initprof" title="Initiative proficiency"></button></label>
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Hit Points<span class="with-badge" id="wb_hp"><input type="number" id="f_hp"><span class="badge">≈CR</span></span></label>
-              <label class="f">HP formula <span style="color:var(--faint)">(optional)</span><input type="text" id="f_hpf" placeholder="4d8 + 4"></label>
+              <label class="f">HP formula<input type="text" id="f_hpf" placeholder="4d8 + 4"></label>
             </div>
             <div class="fs-sub">Speed</div>
             <div class="spd-grid">
@@ -114,6 +113,7 @@
             <div class="fs-sub">Skills</div>
             <div id="skillRows"></div>
             <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
+            <div class="fs-sub" style="margin-top:16px">Damage modifier</div>
             <div id="dmgRows"></div>
             <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
             <div class="grid g2" style="margin-top:11px">
@@ -129,7 +129,7 @@
               <label class="f">Gear<input type="text" id="f_gear" placeholder="Longsword, Shield"></label>
               <label class="f">Languages<input type="text" id="f_lang" placeholder="Common"></label>
             </div>
-            <div class="fs-sub">Senses <span style="color:var(--faint);text-transform:none;letter-spacing:0">— Passive Perception is added automatically</span></div>
+            <div class="fs-sub">Senses</div>
             <div class="spd-grid" style="grid-template-columns:repeat(4,1fr)">
               <label class="f">Darkvision<input type="number" id="se_darkvision" placeholder="0"></label>
               <label class="f">Blindsight<input type="number" id="se_blindsight" placeholder="0"></label>

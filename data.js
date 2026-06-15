@@ -32,9 +32,9 @@ function alignFromArr(a){
   if((a.includes("G")&&a.includes("E"))&&lawc)return M[lawc]+" any alignment";
   return [...new Set(words)].join(" ");
 }
-const FACTIONS=["Enemy","Ally","Setting"];
-function migrateFaction(f){return f==="Party"?"Ally":(FACTIONS.includes(f)?f:"Enemy");}
-function facClass(f){return f==="Ally"?"ally":f==="Setting"?"setting":"enemy";}
+const FACTIONS=["Enemy","Ally","Neutral"];
+function migrateFaction(f){return f==="Party"?"Ally":f==="Setting"?"Neutral":(FACTIONS.includes(f)?f:"Enemy");}
+function facClass(f){return f==="Ally"?"ally":(f==="Neutral"||f==="Setting")?"setting":"enemy";}
 const STATUSES=["Draft","Ready","Archived"]; // bestiary workflow status (Batch 13)
 const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
 const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";

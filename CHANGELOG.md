@@ -4,6 +4,27 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 31 — Forge field, ability & popover polish (B31–B33)
+- **Field cleanup:** removed the inline `(blank = auto)`, `(optional)` and
+  "Passive Perception is added automatically" hints from the Initiative, HP-formula
+  and Senses fields.
+- **Short name:** the `Word` field is retitled **Short name** with a `?` custom
+  popover carrying the explainer; the old standalone label/comment line is gone.
+- **Damage modifier:** the resist/immune/vuln list under Skills now has a
+  **Damage modifier** sub-title with more breathing room above it; the
+  "No damage modifiers…" placeholder text is removed when nothing is set.
+- **Setting faction → Neutral:** the third combatant faction is renamed
+  `Neutral` (old `Setting` data migrates automatically; keeps its styling).
+- **Ability scores:** numbers are centred in their boxes ignoring the steppers;
+  a value of `10` shows as the placeholder (`10`) and behaves as 10 with no need
+  to clear. The stepper treats a blank ability as 10.
+- **Number of monsters:** combatant count shows `1` as a placeholder, behaving as
+  1 without needing a typed value.
+- **CR field** is left-aligned.
+- **CR / Short-name popovers:** the default browser `title` tooltip on the CR `?`
+  is removed; both `?` buttons now open a single custom popover centred over the
+  icon with a balloon **tail** (`tail-pop`).
+
 ## Batch 30 — Reference popovers + preset-manager refinements
 - Spell/condition hover cards already render the structured 5etools fields; the
   **source id** (e.g. `XPHB`) is now shown instead of the source filename, with

@@ -229,7 +229,7 @@ function normalizeAdv(a){
 }
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
-function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
 // Damage modifiers — same shape as the Skills section: one row per type = name select +
 // 3-state toggle (Resist/Immune/Vulnerable) + remove. "All Physical" expands to B/P/S.
 const DMG3=[["res","Resist"],["imm","Immune"],["vuln","Vulnerable"]];
@@ -240,7 +240,7 @@ function renderDmg(){const box=$("#dmgRows");if(!box)return;
   box.innerHTML=entries.length?entries.map(([type,st])=>`<div class="rowline">
     <select data-dt="${esc(type)}" class="dmgName">${DMG_SELECT.map(d=>`<option value="${d}" ${d===type?"selected":""}>${d}</option>`).join("")}</select>
     <button type="button" class="tritog dmgState" data-dt="${esc(type)}"></button>
-    <button class="iconbtn" data-rmdmg="${esc(type)}">✕</button></div>`).join(""):`<div class="hint" style="margin:2px 0">No damage modifiers — add resistances, immunities, or vulnerabilities.</div>`;
+    <button class="iconbtn" data-rmdmg="${esc(type)}">✕</button></div>`).join(""):"";
   box.querySelectorAll(".dmgName").forEach(el=>el.addEventListener("change",e=>{const old=e.target.dataset.dt,val=e.target.value,st=M.dmg[old]||"res";delete M.dmg[old];if(val==="All Physical")PHYS.forEach(t=>M.dmg[t]=st);else M.dmg[val]=st;renderDmg();renderPreview();}));
   box.querySelectorAll(".dmgState").forEach(el=>{const t=el.dataset.dt;paintTri(el,M.dmg[t]||"res",DMG3);el.addEventListener("click",()=>{const nv=nextTri(M.dmg[t]||"res",DMG3);M.dmg[t]=nv;paintTri(el,nv,DMG3);renderPreview();});});
   box.querySelectorAll("[data-rmdmg]").forEach(el=>el.addEventListener("click",()=>{delete M.dmg[el.dataset.rmdmg];renderDmg();renderPreview();}));
@@ -586,7 +586,7 @@ function loadMonster(m){
   $("#f_snword").value=(M.shortName.word==="creature"?"":M.shortName.word)||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
   $("#f_dmgnote").value=M.dmgnote||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
-  ABILS.forEach(a=>$("#ab_"+a).value=M[a]);
+  ABILS.forEach(a=>$("#ab_"+a).value=(M[a]===10?"":M[a]));
   $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
   $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
   $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
@@ -1002,10 +1002,17 @@ $("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal(
 $("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});
 $("#forgeSaveFab").addEventListener("click",()=>$("#saveMonster").click());
 $("#forgeStatus").addEventListener("click",e=>{e.stopPropagation();openForgeStatusMenu(e.currentTarget);});
-function showCrHelp(anchor){showPopover(anchor,`<div class="cr-pop">${crTargetsHTML||"Set a Challenge Rating to see its AC / HP / attack / DC targets."}</div>`);}
+// Popover with a balloon "tail" pointing at the anchor icon, centred horizontally over it.
+function tailPopover(anchor,html){const p=showPopover(anchor,html);p.classList.add("tail-pop");const ar=anchor.getBoundingClientRect();const pr=p.getBoundingClientRect();const below=pr.top>=ar.bottom-1;p.classList.toggle("tail-up",below);p.classList.toggle("tail-down",!below);let left=ar.left+ar.width/2-pr.width/2;left=Math.max(8,Math.min(left,window.innerWidth-pr.width-8));p.style.left=left+"px";p.style.setProperty("--tail-x",(ar.left+ar.width/2-left)+"px");return p;}
+function showCrHelp(anchor){tailPopover(anchor,`<div class="cr-pop">${crTargetsHTML||"Set a Challenge Rating to see its AC / HP / attack / DC targets."}</div>`);}
 $("#crHelp").addEventListener("click",e=>{e.stopPropagation();showCrHelp(e.currentTarget);});
 $("#crHelp").addEventListener("mouseenter",e=>showCrHelp(e.currentTarget));
 $("#crHelp").addEventListener("mouseleave",()=>closePopover());
+const SN_HELP="The noun used for 'the ___' references in text — e.g. set it to 'dragon' and [c] becomes 'the dragon'. Turn on Proper name to drop the article.";
+function showSnHelp(anchor){tailPopover(anchor,`<div class="cr-pop">${SN_HELP}</div>`);}
+$("#snHelp").addEventListener("click",e=>{e.stopPropagation();showSnHelp(e.currentTarget);});
+$("#snHelp").addEventListener("mouseenter",e=>showSnHelp(e.currentTarget));
+$("#snHelp").addEventListener("mouseleave",()=>closePopover());
 
 function monsterDirty(){const m=M;
   if(m.name.trim()||m.type||m.subtype||m.align||m.acnote||m.hpf||m.gear||m.dmgnote||m.cimm)return true;
@@ -1374,14 +1381,14 @@ function combatHTML(e,c){
   if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
     <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
     <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
-    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
   const m=monOf(c);
   return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
     <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-    <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
+    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${state.lib.map(x=>`<option value="${x.id}" ${x.id===c.monsterId?"selected":""}>${esc(x.name)} (CR ${x.cr})</option>`).join("")}</select></div></div>`;
@@ -1652,7 +1659,7 @@ function wrapStepper(input,step,min){
   b.innerHTML='<button type="button" data-d="1">▲</button><button type="button" data-d="-1">▼</button>';
   w.appendChild(b);
   b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
-    const base=input.value===""?(input.id==="f_init"?initOf(M):0):Number(input.value||0);
+    const base=input.value===""?(input.id==="f_init"?initOf(M):(input.id&&input.id.startsWith("ab_")?Number(M[input.id.slice(3)]||10):0)):Number(input.value||0);
     const nv=Math.max(min,base+(+btn.dataset.d)*step);
     input.value=nv;input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
   }));
