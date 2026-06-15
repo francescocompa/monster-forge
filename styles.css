@@ -86,9 +86,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .sb-copy-btn{background:transparent;border-color:transparent;width:26px;height:26px;color:var(--faint)}
 .sb-copy-btn:hover{background:transparent;border-color:transparent;color:var(--accent-soft)}
 .sb-copy-btn svg{width:15px;height:15px;fill:currentColor}
-/* Desktop Save FAB (mirrors the Adventures #addEnc FAB). Hidden when the floating
-   preview card — which carries its own Save — is showing. */
-.forge-save-fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;padding:11px 20px;border-radius:24px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+/* Standard accent floating main-action button — bottom-right on every page.
+   Single-action variant (.fab) for Forge Save and Adventures + Encounter;
+   split variant (.fab-split) for the Bestiary New (keeps its caret menu). */
+.fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;padding:11px 20px;border-radius:24px;background:var(--accent)!important;color:#fff!important;border:none!important;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.fab:hover{background:#e87964!important}
+.fab-split.menu-wrap{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:stretch;border-radius:24px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.fab-split .btn{position:static;width:auto!important;padding:11px 16px 11px 20px;border-radius:24px 0 0 24px;background:var(--accent)!important;color:#fff!important;border:none!important}
+.fab-split .btn:hover{background:#e87964!important}
+.fab-split .split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 24px 24px 0;width:36px;padding-right:6px}
+.fab-split .split-caret:hover{background:#e87964;color:#fff}
+.fab-split .menu{top:auto;bottom:calc(100% + 6px);right:0}
 .forge.preview-hidden .forge-save-fab{display:none}
 .section-div{border:none;border-top:1px solid var(--line);margin:18px 0 14px}
 .bracket-help{padding:0 2px}
@@ -202,7 +210,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
-.fs-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:20px;height:20px;display:grid;place-items:center;padding:0;flex:none;margin-left:-2px;border-radius:4px;transition:background .12s,color .12s}
+.fs-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:20px;height:20px;display:grid;place-items:center;padding:0;flex:none;margin-left:auto;border-radius:4px;transition:background .12s,color .12s}
 .fs-collapse:hover{color:var(--txt);background:var(--panel2)}
 .fs-collapse svg{display:block;transition:transform .15s}
 .fs-collapse.closed svg{transform:rotate(-90deg)}
@@ -281,7 +289,8 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}
 .adv-detail{overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
-.adv-back{display:none;align-items:center;gap:2px;background:none;border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.adv-back{display:none;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;width:32px;height:32px;flex:none;padding:0;cursor:pointer}
+.adv-back svg{display:block}
 .adv-back:hover{border-color:var(--accent);color:var(--txt)}
 .party-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:14px}
 .pcgrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.pcgrid input{width:52px;text-align:center}
@@ -527,9 +536,6 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .pf-expand{background:none;border:1px solid var(--line);color:var(--faint);border-radius:5px;width:28px;height:28px;flex:none;display:grid;place-items:center;font-size:11px;cursor:pointer}
 .pf-expand:hover{color:var(--txt);border-color:var(--accent)}
 
-/* + Encounter is a floating bottom-right action on every viewport. */
-#addEnc{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;padding:11px 18px;border-radius:24px;background:var(--panel2);border-color:var(--line);box-shadow:0 6px 18px rgba(0,0,0,.5)}
-#addEnc:hover{border-color:var(--accent)}
 #encList,#archWrap{padding-bottom:8px}
 
 /* New adventure button mobile: bottom of list */
@@ -538,7 +544,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   .adv-list #newAdv{order:10;margin-top:10px;margin-bottom:0}
   .adv-layout:not(.detail-open) .adv-detail{display:none}
   .adv-layout.detail-open .adv-list{display:none}
-  .adv-back{display:inline-flex;flex:none}
+  .adv-back{display:grid;flex:none}
 }
 
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
