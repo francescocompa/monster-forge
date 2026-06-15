@@ -433,8 +433,8 @@ function renderCimm(){const box=$("#cimmChips");if(!box)return;const list=cimmLi
   box.innerHTML=list.map((c,i)=>`<span class="chip${findCondition(c)?" known":""}">${esc(c)}<button class="chipx" data-rmcimm="${i}" title="Remove">×</button></span>`).join("");
   box.querySelectorAll("[data-rmcimm]").forEach(b=>b.addEventListener("click",()=>{const a=cimmList();a.splice(+b.dataset.rmcimm,1);M.cimm=a.join(", ");renderCimm();renderPreview();}));}
 function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
-  const add=v=>{v=(v||"").trim();if(!v)return;const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");ci.value="";renderCimm();renderPreview();};
-  ci.addEventListener("input",()=>{if(ci.value.includes(",")){const p=ci.value.split(",");p.slice(0,-1).forEach(add);ci.value=p[p.length-1];}});
+  const add=v=>{v=(v||"").replace(/;/g,",").split(",").map(x=>x.trim()).filter(Boolean);const a=cimmList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.cimm=a.join(", ");ci.value="";renderCimm();renderPreview();};
+  ci.addEventListener("input",()=>{if(/[,;]/.test(ci.value)){const p=ci.value.split(/[,;]/);p.slice(0,-1).forEach(x=>add(x));ci.value=p[p.length-1];}});
   ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add(ci.value);}else if(e.key==="Backspace"&&!ci.value){const a=cimmList();if(a.length){a.pop();M.cimm=a.join(", ");renderCimm();renderPreview();}}});
   ci.addEventListener("change",()=>{if(ci.value.trim())add(ci.value);}); // datalist pick / commit on blur
   $("#f_cimm_field").addEventListener("click",e=>{if(e.target.id==="f_cimm_field")ci.focus();});}
@@ -839,8 +839,10 @@ function renderPreview(){
   $("#derived").innerHTML=chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
     +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
     +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"");
-  $("#crTargets").innerHTML=boh?`<b>CR ${m.cr} targets</b> — AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
+  crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
   $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
+  const pvn=$("#previewName");if(pvn)pvn.textContent=m.name||"New Creature";
+  refreshForgeStatus();
   if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
   const initVal=initOf(m);
   const def=defenseStrings(m);
@@ -1078,6 +1080,11 @@ function openTagAdd(m,anchor){if(!m)return;const p=showPopover(anchor,`<input ty
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit(inp.value);}else if(e.key==="Escape")closePopover();});
   inp.addEventListener("input",()=>{if(inp.value.includes(","))commit(inp.value);});}
 function setStatus(m,status){if(!m)return;m.status=status;m.archived=(status==="Archived");saveLib();renderLibrary();}
+// Forge status chip — sets the working copy's status (persisted on Save to Bestiary).
+let crTargetsHTML="";
+function refreshForgeStatus(){const el=$("#forgeStatus");if(!el)return;el.className="tag st st-"+(M.status||"Draft")+" statchip";el.innerHTML=esc(M.status||"Draft")+' <span class="caret">▾</span>';}
+function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>`<button class="popitem${s===M.status?" on":""}" data-s="${s}">${s}</button>`).join(""));
+  p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();M.status=b.dataset.s;refreshForgeStatus();renderPreview();}));}
 function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
@@ -1130,6 +1137,9 @@ $("#saveMonster").addEventListener("click",async()=>{
 });
 $("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat — I build the Notion page in MM25 format and set its properties.");});
 $("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});
+$("#forgeSaveFab").addEventListener("click",()=>$("#saveMonster").click());
+$("#forgeStatus").addEventListener("click",e=>{e.stopPropagation();openForgeStatusMenu(e.currentTarget);});
+$("#crHelp").addEventListener("click",e=>{e.stopPropagation();showPopover(e.currentTarget,`<div class="cr-pop">${crTargetsHTML||"Set a Challenge Rating to see its AC / HP / attack / DC targets."}</div>`);});
 
 function monsterDirty(){const m=M;
   if(m.name.trim()||m.type||m.subtype||m.align||m.acnote||m.hpf||m.gear||m.dmgnote||m.cimm)return true;

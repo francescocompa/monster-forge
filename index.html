@@ -44,12 +44,20 @@
       <div class="forge">
         <div class="form-col" id="formCol">
           <div class="col-head">
-            <h2 id="forgeTitle">New Creature</h2>
-            <div class="forge-actions">
-              <button class="btn ghost sm" id="forgePaste" style="width:auto">⎀ Paste 5etools</button>
-              <button class="btn ghost sm" id="forgeChassis" style="width:auto">⊕ Load chassis</button>
-              <button class="btn ghost sm" id="clearForge" style="width:auto">Clear</button>
-              <button class="btn primary sm" id="saveMonster" style="width:auto">⚒ Save to Bestiary</button>
+            <div class="ch-left">
+              <h2 id="forgeTitle">New Creature</h2>
+              <span class="tag st st-Draft statchip" id="forgeStatus" title="Bestiary status">Draft <span class="caret">▾</span></span>
+            </div>
+            <div class="menu-wrap" style="flex:none">
+              <button class="kebab" data-menu="forge-acts" title="Forge actions">⋯</button>
+              <div class="menu" id="menu-forge-acts">
+                <button id="forgePaste">⎀ Paste 5etools…</button>
+                <button id="forgeChassis">⊕ Load chassis…</button>
+                <div class="sep"></div>
+                <button id="saveMonster">⚒ Save to Bestiary</button>
+                <div class="sep"></div>
+                <button class="danger" id="clearForge">Clear</button>
+              </div>
             </div>
           </div>
 
@@ -59,7 +67,7 @@
               <label class="f">Name<input type="text" id="f_name" placeholder="Creature name"></label>
               <label class="f">Size<select id="f_size"></select></label>
               <label class="f">Type<input type="text" id="f_type" placeholder="Undead"></label>
-              <label class="f">CR<span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
+              <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" title="CR targets" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Subtype / tag<input type="text" id="f_subtype" placeholder="Spirit"></label>
@@ -208,16 +216,20 @@
 
         <div class="preview-col" id="previewCol">
           <button class="preview-toggle" id="previewToggle" title="Collapse preview">◀</button>
-          <div class="derived" id="derived"></div>
-          <div class="cr-targets" id="crTargets"></div>
-          <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
-          <div class="outs">
-            <div class="save-row">
-              <button id="pushClaude" class="btn ghost sm" style="width:auto">Copy for Claude</button>
-              <button id="copyNotion" class="btn ghost sm" style="width:auto">Copy for Notion</button>
+          <div class="preview-head">
+            <span class="pv-name" id="previewName">New Creature</span>
+            <div class="menu-wrap" style="flex:none">
+              <button class="kebab" data-menu="pv-copy" title="Export options">⋯</button>
+              <div class="menu" id="menu-pv-copy">
+                <button id="pushClaude">Copy for Claude</button>
+                <button id="copyNotion">Copy for Notion</button>
+              </div>
             </div>
           </div>
+          <div class="derived" id="derived"></div>
+          <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
         </div>
+        <button class="btn primary sm forge-save-fab" id="forgeSaveFab" title="Save to Bestiary">⚒ Save</button>
       </div>
     </section>
 
