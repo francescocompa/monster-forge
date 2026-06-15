@@ -254,16 +254,23 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .adv-list .ai .ai-kbtn{background:none;border:1px solid transparent;color:var(--faint);border-radius:5px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:15px;line-height:1;cursor:pointer}
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}
-.adv-detail{overflow-y:auto;padding:20px 24px 70px}
+.adv-detail{overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
 .party-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:14px}
 .pcgrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.pcgrid input{width:52px;text-align:center}
 .advnotes{width:100%;margin-bottom:16px}
-.enc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:13px}
+.enc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:18px}
 .enc.arch{opacity:.62}
+.enc{position:relative}
 .enc.collapsed{padding:9px 15px;cursor:grab}
 .enc.collapsed:active{cursor:grabbing}
-.enc.dragging{opacity:.5}
-.enc.drop-target{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+/* While dragging: shrink the card (and the drag-image snapshot) to just its header. */
+.enc.dragging{opacity:.55;cursor:grabbing}
+.enc.dragging .budget,.enc.dragging .encnotes,.enc.dragging .ovr,.enc.dragging [data-combat],.enc.dragging .addrow{display:none}
+.enc.dragging .eh{margin-bottom:0}
+/* Drop-line indicator sitting in the gap above/below the hovered card. */
+.enc.drop-before::before,.enc.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent)}
+.enc.drop-before::before{top:-10px}
+.enc.drop-after::after{bottom:-10px}
 .enc .eh{display:flex;gap:8px;align-items:center;margin-bottom:9px}
 .enc.collapsed .eh{margin-bottom:0}
 .enc .eh input.enm{flex:1;min-width:120px;font-size:15px;font-weight:600}
@@ -484,13 +491,15 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .pf-expand{background:none;border:1px solid var(--line);color:var(--faint);border-radius:5px;width:28px;height:28px;flex:none;display:grid;place-items:center;font-size:11px;cursor:pointer}
 .pf-expand:hover{color:var(--txt);border-color:var(--accent)}
 
+/* + Encounter is a floating bottom-right action on every viewport. */
+#addEnc{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;padding:11px 18px;border-radius:24px;background:var(--panel2);border-color:var(--line);box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#addEnc:hover{border-color:var(--accent)}
+#encList,#archWrap{padding-bottom:8px}
+
 /* New adventure button mobile: bottom of list */
 @media (max-width:720px){
   .adv-list{display:flex;flex-direction:column}
   .adv-list #newAdv{order:10;margin-top:10px;margin-bottom:0}
-  /* + Encounter becomes a floating bottom action on mobile */
-  #addEnc{position:fixed;right:16px;bottom:16px;z-index:40;width:auto!important;padding:11px 18px;border-radius:24px;background:var(--panel2);box-shadow:0 6px 18px rgba(0,0,0,.5)}
-  #encList,#archWrap{padding-bottom:60px}
 }
 
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}

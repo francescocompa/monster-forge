@@ -1354,8 +1354,8 @@ function encHTML(a,e){
         </div>
       </div>
     </div>`;
-  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed" data-enc="${e.id}">${head}</div>`;
-  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}">
+  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed" data-enc="${e.id}" draggable="true">${head}</div>`;
+  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}" draggable="true">
     ${head}
     <div class="budget">
       <div class="bartrack">
@@ -1451,27 +1451,42 @@ function moveEncTo(a,id,where){
   tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
   group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderAdvDetail();
 }
-function reorderEncTo(a,fromId,toId){
-  if(!fromId||fromId===toId)return;
+function reorderEncRel(a,fromId,toId,after){
+  if(!fromId||!toId||fromId===toId)return;
   const from=findEnc(a,fromId),to=findEnc(a,toId);
   if(!from||!to||from.archived!==to.archived)return;
   const group=a.encounters.filter(x=>x.archived===from.archived);
-  group.splice(group.indexOf(from),1);group.splice(group.indexOf(to),0,from);
+  group.splice(group.indexOf(from),1);
+  let idx=group.indexOf(to);if(after)idx++;
+  group.splice(idx,0,from);
   setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
 }
-let dragEncId=null;
+let dragEncId=null,dropTarget=null;
 // Skip drag-init when the press starts on an interactive control inside the card so editing
 // inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
 function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
+function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));}
 function bindEncDrag(a,q){
   q(".enc[data-enc]").forEach(enc=>{
-    enc.addEventListener("pointerdown",ev=>{if(dragInert(ev.target))return;enc.setAttribute("draggable","true");});
-    enc.addEventListener("pointerup",()=>enc.removeAttribute("draggable"));
-    enc.addEventListener("dragstart",ev=>{if(dragInert(ev.target)){ev.preventDefault();return;}dragEncId=enc.dataset.enc;enc.classList.add("dragging");ev.dataTransfer.effectAllowed="move";});
-    enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");enc.removeAttribute("draggable");$$("#advDetail .enc.drop-target").forEach(x=>x.classList.remove("drop-target"));dragEncId=null;});
-    enc.addEventListener("dragover",ev=>{if(dragEncId&&dragEncId!==enc.dataset.enc){ev.preventDefault();enc.classList.add("drop-target");}});
-    enc.addEventListener("dragleave",()=>enc.classList.remove("drop-target"));
-    enc.addEventListener("drop",ev=>{ev.preventDefault();enc.classList.remove("drop-target");reorderEncTo(a,dragEncId,enc.dataset.enc);});
+    enc.addEventListener("dragstart",ev=>{
+      if(dragInert(ev.target)){ev.preventDefault();return;}
+      dragEncId=enc.dataset.enc;dropTarget=null;ev.dataTransfer.effectAllowed="move";
+      // Collapse the card body synchronously so the browser's drag-image snapshot (taken right
+      // after this handler returns) — and the source row — stay small while dragging.
+      enc.classList.add("dragging");
+    });
+    enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");clearDropMarks();dragEncId=null;dropTarget=null;});
+    enc.addEventListener("dragover",ev=>{
+      if(!dragEncId||dragEncId===enc.dataset.enc)return;
+      const from=findEnc(a,dragEncId),to=findEnc(a,enc.dataset.enc);
+      if(!from||!to||from.archived!==to.archived)return;
+      ev.preventDefault();
+      const r=enc.getBoundingClientRect(),after=ev.clientY>r.top+r.height/2;
+      clearDropMarks();enc.classList.add(after?"drop-after":"drop-before");
+      dropTarget={id:enc.dataset.enc,after};
+    });
+    enc.addEventListener("drop",ev=>{ev.preventDefault();const dt=dropTarget,id=dragEncId;clearDropMarks();
+      if(dt)reorderEncRel(a,id,dt.id,dt.after);});
   });
 }
 function bindEncTarget(a,q){
