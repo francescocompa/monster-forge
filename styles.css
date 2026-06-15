@@ -199,6 +199,15 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .snip:hover{border-color:var(--accent);color:var(--accent-soft)}
 .optfs .fs-title{cursor:default}
 .optfs.collapsed .fs-title{margin-bottom:0}
+/* B24: collapsible main build blocks. No layout shift — fieldset top padding is
+   unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
+.fs-title.fs-clickable{cursor:pointer}
+.fs-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:20px;height:20px;display:grid;place-items:center;padding:0;flex:none;margin-left:-2px;border-radius:4px;transition:background .12s,color .12s}
+.fs-collapse:hover{color:var(--txt);background:var(--panel2)}
+.fs-collapse svg{display:block;transition:transform .15s}
+.fs-collapse.closed svg{transform:rotate(-90deg)}
+.fieldset.fs-collapsed>*:not(.fs-title){display:none}
+.fieldset.fs-collapsed .fs-title{margin-bottom:0}
 .rowline .tritog{flex:1}
 .toggle{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600}
 
