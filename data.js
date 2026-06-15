@@ -9,6 +9,29 @@ const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
 const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};
 const ABILS=["str","dex","con","int","wis","cha"];
 const DMG_TYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+// ── 5etools JSON code maps (Batch 28 — JSON ingestion) ───────────────────────
+const SIZE_CODE={T:"Tiny",S:"Small",M:"Medium",L:"Large",H:"Huge",G:"Gargantuan"};
+const SPELL_SCHOOL={A:"Abjuration",C:"Conjuration",D:"Divination",E:"Enchantment",V:"Evocation",I:"Illusion",N:"Necromancy",T:"Transmutation",P:"Psionic"};
+// lowercase 5etools skill name (e.g. "animal handling") → SKILLS key ("Animal_Handling")
+const SKILL_LOOKUP={};Object.keys(SKILLS).forEach(k=>{SKILL_LOOKUP[k.replace(/_/g," ").toLowerCase()]=k;});
+// 5etools alignment arrays → display string. Handles two-axis combos, chance objects,
+// the special axis-neutral codes (NX/NY) and the "any" wildcards. Best-effort; leaves
+// genuinely unmappable input empty so the field can stay blank.
+function alignFromArr(a){
+  if(!a||!a.length)return "";
+  if(typeof a[0]==="object")a=a[0].alignment||a[0].special&&[]||[]; // chance-weighted → first option
+  if(!a.length)return "";
+  const M={L:"Lawful",C:"Chaotic",N:"Neutral",G:"Good",E:"Evil",U:"Unaligned",A:"Any",NX:"Neutral",NY:"Neutral"};
+  if(a.length===1)return a[0]==="A"?"Any alignment":(M[a[0]]||"");
+  if(a.includes("A"))return "Any alignment";
+  const words=a.map(x=>M[x]||"").filter(Boolean);
+  if(words.every(w=>w==="Neutral"))return "Neutral";
+  // collapse a single-axis wildcard like ["L","NX","C","E"] → "Any Evil alignment"
+  const moral=a.find(x=>x==="G"||x==="E"),lawc=a.find(x=>x==="L"||x==="C");
+  if((a.includes("L")&&a.includes("C"))&&moral)return "Any "+M[moral]+" alignment";
+  if((a.includes("G")&&a.includes("E"))&&lawc)return M[lawc]+" any alignment";
+  return [...new Set(words)].join(" ");
+}
 const FACTIONS=["Enemy","Ally","Setting"];
 function migrateFaction(f){return f==="Party"?"Ally":(FACTIONS.includes(f)?f:"Enemy");}
 function facClass(f){return f==="Ally"?"ally":f==="Setting"?"setting":"enemy";}
