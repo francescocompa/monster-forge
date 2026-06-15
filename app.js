@@ -9,7 +9,9 @@ const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
 const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};
 const ABILS=["str","dex","con","int","wis","cha"];
 const DMG_TYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
-const FACTIONS=["Enemy","Ally","Party","Setting"];
+const FACTIONS=["Enemy","Ally","Setting"];
+function migrateFaction(f){return f==="Party"?"Ally":(FACTIONS.includes(f)?f:"Enemy");}
+function facClass(f){return f==="Ally"?"ally":f==="Setting"?"setting":"enemy";}
 const STATUSES=["Draft","Ready","Archived"]; // bestiary workflow status (Batch 13)
 const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
 const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
@@ -394,9 +396,10 @@ function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
+    e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
     e.combatants=(e.combatants||[]).map(c=>{
-      if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:c.faction||"Enemy"};
-      c.id=c.id||uid();return c;
+      if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:"Enemy"};
+      c.id=c.id||uid();if(c.faction)c.faction=migrateFaction(c.faction);return c;
     });
     return e;
   });
@@ -556,7 +559,8 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">— each renders on its own line</span></div>
     ${(e.groups||[]).map((g,gi)=>`<div class="rowline">
       <select data-sg="${i}:${gi}:freq" style="flex:none;width:120px">${["At Will","1/Day Each","2/Day Each","3/Day Each","1/Day","2/Day","3/Day"].map(f=>`<option ${f===g.freq?"selected":""}>${f}</option>`).join("")}</select>
-      <div class="chipfield sgfield" id="sgfield-${i}-${gi}"><span class="chips" id="sgchips-${i}-${gi}"></span><input type="text" class="chipinput sgci" id="sgci-${i}-${gi}" placeholder="add spell…" list="spellDatalist" autocomplete="off"></div>
+      <div class="chipfield sgfield" id="sgfield-${i}-${gi}"><span class="chips" id="sgchips-${i}-${gi}"></span><input type="text" class="chipinput sgci" id="sgci-${i}-${gi}" placeholder="add spell…" autocomplete="off"></div>
+      <span class="libsel-wrap" title="From spell library"><button class="libsel-btn" type="button" tabindex="-1">${BOOK_SVG}</button><select class="libsel" data-spellsel="${i}:${gi}"></select></span>
       <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
     <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
     <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
@@ -628,6 +632,15 @@ function bindEntries(){
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();add(inp.value.replace(/,/g,""));}
       else if(e.key==="Backspace"&&!inp.value){const g=M.actions[ai].groups[gi];const cur=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];if(cur.length){cur.pop();g.spells=cur.join(", ");renderSgChips(ai,gi);renderPreview();}}});
     inp.addEventListener("change",()=>{if(inp.value)add(inp.value);});});
+  // spell group "from library" native dropdowns (grouped by source) overlaid on the book icon
+  $$("#formCol select[data-spellsel]").forEach(sel=>{
+    sel.innerHTML=groupedRefOptions(state.spells||[],"Add spell…");
+    sel.addEventListener("mousedown",()=>{sel.innerHTML=groupedRefOptions(state.spells||[],"Add spell…");});
+    sel.addEventListener("change",()=>{const[i,gi]=sel.dataset.spellsel.split(":").map(Number);const v=sel.value;sel.value="";if(!v)return;
+      const g=M.actions[i]&&M.actions[i].groups&&M.actions[i].groups[gi];if(!g)return;
+      const cur=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];
+      if(!cur.some(x=>x.toLowerCase()===v.toLowerCase()))cur.push(v);g.spells=cur.join(", ");renderSgChips(i,gi);renderPreview();});
+  });
 }
 function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
 function moveEntry(kind,i,dir){const arr=arrFor(kind),j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];renderEntries();renderPreview();}
@@ -653,6 +666,16 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
   else if(kind==="villain")M.villain.items.push({mode:"villain",round:Math.min(3,M.villain.items.length+1),name,text:expandSnip(VILLAIN_SNIPS[name])});
   if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
+const BOOK_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg>';
+// Native <select> options for a preset reference list (spells / conditions), grouped by source
+// (PHB, XGE…) via <optgroup>. Items are {name,_source} (or bare strings).
+function groupedRefOptions(items,placeholder){
+  const groups={};
+  (items||[]).forEach(it=>{const name=it.name||it;const src=it._source||"Other";(groups[src]=groups[src]||[]).push(name);});
+  const srcs=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  const pretty=s=>s.replace(/\.md$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;
+  return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(pretty(s))}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
+}
 function buildLibSelects(){
   const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
   const list=names=>names.map(n=>opt(n,n)).join("");
@@ -668,7 +691,7 @@ function buildLibSelects(){
   $$("select[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
   const cimmSel=$("#cimm-sel");
   if(cimmSel){
-    const rebuildCimmSel=()=>{cimmSel.innerHTML="<option value=''>Pick condition…</option>"+(state.conditions||[]).map(c=>`<option value="${esc(c.name||c)}">${esc(c.name||c)}</option>`).join("");};
+    const rebuildCimmSel=()=>{cimmSel.innerHTML=groupedRefOptions(state.conditions||[],"Pick condition…");};
     rebuildCimmSel();
     cimmSel.addEventListener("mousedown",rebuildCimmSel); // refresh just before the native list opens
     cimmSel.addEventListener("change",()=>{const v=cimmSel.value;if(v){const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");renderCimm();renderPreview();cimmSel.value="";}});
@@ -1275,7 +1298,7 @@ function renderEncList(a){
   const box=$("#encList");if(!box)return;
   const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
   box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
-  const addBtn=$("#addEnc");if(addBtn)addBtn.className=`btn ${active.length===0?"primary":"ghost"} sm`;
+  const addBtn=$("#addEnc");if(addBtn)addBtn.className="btn ghost sm";
   const aw=$("#archWrap");
   if(arch.length){
     aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${arch.length})</button></div><div id="archBody" style="display:none">${arch.map(e=>encHTML(a,e)).join("")}</div>`;
@@ -1284,8 +1307,16 @@ function renderEncList(a){
   }else{aw.innerHTML="";}
   bindEncEvents(a);
 }
-// Patch an encounter's derived numbers (difficulty pill, budget bar, spent read-out, and each
-// combatant's XP) in place — used on count edits so we never rebuild (and refocus) the input.
+// Effective XP target for an encounter (defaults to the Moderate budget until the DM drags it).
+function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[1];}
+function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
+function encReadHTML(a,e,bud,spent){
+  const p=partyOf(a,e),tgt=encTargetVal(e,bud),d=spent-tgt;
+  const dtxt=d===0?`<span style="color:var(--ok)">on target</span>`:d>0?`<span style="color:var(--accent)">+${d.toLocaleString()} over target</span>`:`<span style="color:var(--dim)">${Math.abs(d).toLocaleString()} under target</span>`;
+  return `Spent <b>${spent.toLocaleString()} XP</b> · target ${tgt.toLocaleString()} · ${dtxt}${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+}
+// Patch an encounter's derived numbers (difficulty pill, budget bar, target marker, read-out, and
+// each combatant's XP) in place — used on count/target edits so we never rebuild (and refocus) the input.
 function updateEncMeta(a,e){
   const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
@@ -1293,20 +1324,22 @@ function updateEncMeta(a,e){
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
   const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
-  const p=partyOf(a,e),read=root.querySelector(".budget .read");
-  if(read)read.innerHTML=`Spent <b>${spent.toLocaleString()} XP</b> of ${bud[2].toLocaleString()} (High)${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  const tgt=root.querySelector(".budget .tgt");if(tgt)tgt.style.left=(bud[2]?encTargetVal(e,bud)/bud[2]*100:0)+"%";
+  const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
+  const sum=root.querySelector(".enc-sum");if(sum)sum.textContent=`${spent.toLocaleString()} XP · ${combCount(e)} combatant${combCount(e)===1?"":"s"}`;
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
 function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
-  const p=partyOf(a,e);
-  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}">
-    <div class="eh">
-      <div class="ehbtns"><button class="iconbtn up" data-encup="${e.id}">▲</button><button class="iconbtn down" data-encdown="${e.id}">▼</button></div>
+  const tgt=encTargetVal(e,bud),tgtPct=bud[2]?tgt/bud[2]*100:0;
+  const head=`<div class="eh">
+      <button class="drag-handle" data-draghandle title="Drag to reorder">⠿</button>
+      <button class="enc-collapse" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}">${e.collapsed?"▸":"▾"}</button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
       <span class="pill ${cls}">${label}</span>
+      ${e.collapsed?`<span class="enc-sum">${spent.toLocaleString()} XP · ${combCount(e)} combatant${combCount(e)===1?"":"s"}</span>`:""}
       <div class="menu-wrap">
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
         <div class="menu" id="menu-enc-${e.id}">
@@ -1314,13 +1347,26 @@ function encHTML(a,e){
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
           <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
           <div class="sep"></div>
+          <div class="menu-lbl">Move</div>
+          <button data-encmove="${e.id}:top">Move to top</button>
+          <button data-encmove="${e.id}:up">Move up</button>
+          <button data-encmove="${e.id}:down">Move down</button>
+          <button data-encmove="${e.id}:bottom">Move to bottom</button>
+          <div class="sep"></div>
           <button class="danger" data-encdel="${e.id}">Delete</button>
         </div>
       </div>
-    </div>
-    <div class="budget"><div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+    </div>`;
+  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed" data-enc="${e.id}">${head}</div>`;
+  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}">
+    ${head}
+    <div class="budget">
+      <div class="bartrack">
+        <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+        <div class="tgt" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${tgt.toLocaleString()} XP</span></div>
+      </div>
       <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
-      <div class="read">Spent <b>${spent.toLocaleString()} XP</b> of ${bud[2].toLocaleString()} (High)${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}</div>
+      <div class="read">${encReadHTML(a,e,bud,spent)}</div>
     </div>
     <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
     <label class="f encnotes">Battlefield notes<textarea data-encnotes="${e.id}" placeholder="Terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
@@ -1345,19 +1391,20 @@ function ovrInner(e){const o=e.partyOverride;return `<div class="row">
   </div>${o.uneven?`<div class="pcgrid" style="margin-top:8px">${(o.levels||[]).slice(0,o.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-ovrpc="${e.id}:${i}">`).join("")}</div>`:""}`;}
 function combatHTML(e,c){
   if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
-  const cls=c.faction==="Ally"?"ally":"";const xp=combatXP(c);
-  if(c.type==="quick")return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+  const fc=facClass(c.faction);const xp=combatXP(c);
+  const facSel=`<select class="fac ${fc}" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>`;
+  if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
     <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
     <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
     <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
-    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
   const m=monOf(c);
-  return `<div class="cbt ${cls}" data-cid="${c.id}"><div class="top">
+  return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
     <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
     <input class="cnt" type="number" min="1" value="${c.count}" data-cf="${c.id}:count">
-    <select class="fac" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>
+    ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${state.lib.map(x=>`<option value="${x.id}" ${x.id===c.monsterId?"selected":""}>${esc(x.name)} (CR ${x.cr})</option>`).join("")}</select></div></div>`;
 }
@@ -1369,14 +1416,16 @@ function bindEncEvents(a){
   q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
   q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
   q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
-  q("[data-encup]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encup,-1)));
-  q("[data-encdown]").forEach(el=>el.addEventListener("click",()=>moveEnc(a,el.dataset.encdown,1)));
+  q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
+  q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
+  bindEncDrag(a,q);
+  bindEncTarget(a,q);
   q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
   q("[data-ovrsize]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
   q("[data-ovrlevel]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
   q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
-  q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>{if(!state.lib.length){toast("Save a creature first, or use Quick / Forge.");return;}addMonsterCombatant(findEnc(a,el.dataset.addmon),state.lib[0].id);saveAdv();renderAdvDetail();}));
+  q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
   q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
   q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.addforge);pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}));
@@ -1395,11 +1444,78 @@ function bindEncEvents(a){
   });
   q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
 }
-function moveEnc(a,id,dir){
-  const list=a.encounters,i=list.findIndex(e=>e.id===id),e=list[i];
-  const same=list.map((x,ix)=>({x,ix})).filter(o=>o.x.archived===e.archived).map(o=>o.ix);
-  const pos=same.indexOf(i),tgt=same[pos+dir];
-  if(tgt===undefined)return;[list[i],list[tgt]]=[list[tgt],list[i]];saveAdv();renderAdvDetail();
+// Encounters share one array but render in two groups (active / archived). Reorder within a group,
+// then write the regrouped order back into the slots that group occupied so the other group is untouched.
+function setGroupOrder(a,archived,group){let k=0;a.encounters.forEach((e,i)=>{if(e.archived===archived)a.encounters[i]=group[k++];});}
+function moveEncTo(a,id,where){
+  const e=findEnc(a,id);if(!e)return;
+  const group=a.encounters.filter(x=>x.archived===e.archived),pos=group.indexOf(e);
+  let tgt=where==="up"?pos-1:where==="down"?pos+1:where==="top"?0:group.length-1;
+  tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
+  group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderAdvDetail();
+}
+function reorderEncTo(a,fromId,toId){
+  if(!fromId||fromId===toId)return;
+  const from=findEnc(a,fromId),to=findEnc(a,toId);
+  if(!from||!to||from.archived!==to.archived)return;
+  const group=a.encounters.filter(x=>x.archived===from.archived);
+  group.splice(group.indexOf(from),1);group.splice(group.indexOf(to),0,from);
+  setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
+}
+let dragEncId=null;
+function bindEncDrag(a,q){
+  q(".enc[data-enc]").forEach(enc=>{
+    const h=enc.querySelector("[data-draghandle]");
+    if(h){h.addEventListener("mousedown",()=>enc.setAttribute("draggable","true"));
+      h.addEventListener("mouseup",()=>enc.removeAttribute("draggable"));}
+    enc.addEventListener("dragstart",ev=>{dragEncId=enc.dataset.enc;enc.classList.add("dragging");ev.dataTransfer.effectAllowed="move";});
+    enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");enc.removeAttribute("draggable");$$("#advDetail .enc.drop-target").forEach(x=>x.classList.remove("drop-target"));dragEncId=null;});
+    enc.addEventListener("dragover",ev=>{if(dragEncId&&dragEncId!==enc.dataset.enc){ev.preventDefault();enc.classList.add("drop-target");}});
+    enc.addEventListener("dragleave",()=>enc.classList.remove("drop-target"));
+    enc.addEventListener("drop",ev=>{ev.preventDefault();enc.classList.remove("drop-target");reorderEncTo(a,dragEncId,enc.dataset.enc);});
+  });
+}
+function bindEncTarget(a,q){
+  q("[data-enctgt]").forEach(handle=>{
+    const enc=handle.closest(".enc"),e=findEnc(a,enc.dataset.enctgt||handle.dataset.enctgt);if(!e)return;
+    const track=handle.parentElement,tip=handle.querySelector(".tgt-tip");let dragging=false;
+    const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
+      let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
+      e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";updateEncMeta(a,e);};
+    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}});
+    handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
+    handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});
+  });
+}
+function openBestiaryPicker(a,e){
+  if(!e)return;
+  if(!state.lib.length){toast("No saved creatures yet — Forge one, or use Quick / Forge from the ⋯ menu.");return;}
+  const ctrl=blankCtrl();ctrl.sort.key="name";
+  const pool=()=>state.lib.map(m=>({m}));
+  const desc={search:true,group:true,
+    params:[
+      {key:"type",label:"Type",get:r=>r.m.type||"—",values:()=>[...new Set(state.lib.map(m=>m.type||"—"))].sort()},
+      {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(state.lib.map(m=>m.cr))].sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0))},
+    ],
+    sortKeys:[
+      {key:"name",label:"Name",cmp:(x,y)=>x.m.name.localeCompare(y.m.name)},
+      {key:"cr",label:"CR",cmp:(x,y)=>(CR_NUM[x.m.cr]??0)-(CR_NUM[y.m.cr]??0)},
+    ]};
+  openModalRaw(`<h3>Add combatant — pick from Bestiary</h3>
+    <p class="hint" style="margin:-4px 0 10px">Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.</p>
+    <div class="ctrl-icons" id="bpCtrlIcons"></div>
+    <div class="ctrl-chips" id="bpChips"></div>
+    <div id="bpBody"></div>
+    <div class="mrow"><button class="btn ghost sm" id="bpClose" style="width:auto;margin-left:auto">Done</button></div>`);
+  const cardOf=o=>`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">＋ Add</button></div></div>`;
+  function draw(){
+    renderCtrlChips($("#bpChips"),ctrl,desc,draw);
+    renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
+    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
+  }
+  bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
+  draw();
+  $("#bpClose").addEventListener("click",closeModal);
 }
 function pushEncounter(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
