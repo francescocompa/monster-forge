@@ -1,5 +1,5 @@
 "use strict";
-let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],books:{},disabledLibs:[]};
+let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{}};
 let M=null, pendingForge=null;
 const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statblock, kept but off by default
 
@@ -8,7 +8,7 @@ const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statb
 // and conditions/glossary terms. Stored in localStorage only (never JSONBin / never
 // the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
 // in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
-const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs";
+const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta";
 function loadPresets(){try{state.presets=(JSON.parse(localStorage.getItem(PRESET_KEY))||[]).map(normalizeMonster);}catch(e){state.presets=[];}}
 function savePresets(){try{localStorage.setItem(PRESET_KEY,JSON.stringify(state.presets));}catch(e){toast("Couldn't store presets — device storage may be full.");}}
 function loadSpells(){try{state.spells=JSON.parse(localStorage.getItem(SPELL_KEY))||[];}catch(e){state.spells=[];}}
@@ -19,11 +19,20 @@ function loadBooks(){try{state.books=JSON.parse(localStorage.getItem(BOOK_KEY))|
 function saveBooks(){try{localStorage.setItem(BOOK_KEY,JSON.stringify(state.books));}catch(e){/* reference only - non-fatal */}}
 function loadDisabled(){try{state.disabledLibs=JSON.parse(localStorage.getItem(DISLIB_KEY))||[];}catch(e){state.disabledLibs=[];}}
 function saveDisabled(){try{localStorage.setItem(DISLIB_KEY,JSON.stringify(state.disabledLibs));}catch(e){/* non-fatal */}}
-function loadRefLibs(){loadBooks();loadDisabled();loadPresets();loadSpells();loadConditions();reannotateBooks();}
+function loadLegGroups(){try{state.legendaryGroups=JSON.parse(localStorage.getItem(LEGGRP_KEY))||{};}catch(e){state.legendaryGroups={};}}
+function saveLegGroups(){try{localStorage.setItem(LEGGRP_KEY,JSON.stringify(state.legendaryGroups));}catch(e){/* non-fatal */}}
+function loadRefMeta(){try{state.refMeta=JSON.parse(localStorage.getItem(REFMETA_KEY))||{};}catch(e){state.refMeta={};}}
+function saveRefMeta(){try{localStorage.setItem(REFMETA_KEY,JSON.stringify(state.refMeta));}catch(e){/* non-fatal */}}
+function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();loadPresets();loadSpells();loadConditions();reannotateBooks();reapplyLegGroups();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
 function reannotateBooks(){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
   state.presets.forEach(ann);state.spells.forEach(ann);state.conditions.forEach(ann);}
+// Re-apply lair/regional from the loaded legendarygroups onto any preset that references one
+// (so uploading the groups file after a bestiary, or in a later session, still fills them in).
+function reapplyLegGroups(){const map=state.legendaryGroups||{};let any=false;
+  state.presets.forEach(m=>{if(!m._legGroup)return;const g=map[((m._legGroup.name||"")+"|"+(m._legGroup.source||"")).toLowerCase()];if(g){applyLegendaryGroup(m,g);any=true;}});
+  if(any)savePresets();}
 // ---- Library enable/disable ----
 const LIBSEP="";
 function libKey(kind,source){return kind+LIBSEP+(source||"");}
@@ -727,13 +736,13 @@ function notionSingle(m){
   const line=e=>{
     if(e.mode==="spell"){const sp=spellLines(e);return [`***${e.name||"Spellcasting"}.*** ${applyRefs(sp.main)}`,...sp.groups.map(g=>`**${g.label}:** ${applyRefs(g.spells)}`)].join("\n");}
     const body=e.mode==="attack"?attackText(e):applyRefs(e.text);
-    return `***${e.name}.*** ${body}`;};
+    return e.name?`***${e.name}.*** ${body}`:body;};
   const sec=(t,arr)=>{const f=arr.filter(e=>e.name||e.text||e.mode==="spell");if(!f.length)return;L.push("");if(t)L.push(`### ${t}`);f.forEach(e=>L.push(line(e)));};
   sec("",m.traits);sec("Actions",m.actions);sec("Bonus Actions",m.bonus);
   if(m.reactions.some(e=>e.name)){L.push("","### Reactions");m.reactions.filter(e=>e.name).forEach(e=>L.push(`***${e.name}.*** ${e.trigger?`*Trigger:* ${applyRefs(e.trigger)} *Response:* `:""}${applyRefs(e.response||"")}`));}
   if(m.legend.on&&m.legend.items.some(e=>e.name)){L.push("","### Legendary Actions",`*${applyRefs(m.legend.intro)}*`);m.legend.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
   if(m.villain.on&&m.villain.items.some(e=>e.name)){L.push("","### Villain Actions",`*${applyRefs(m.villain.intro)}*`);[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name).forEach(e=>L.push(`**Action ${e.round}: ${e.name}.** ${applyRefs(e.text)}`));}
-  if(m.lair.on&&m.lair.items.some(e=>e.name)){L.push("","### Lair Actions");if(m.lair.intro)L.push(`*${applyRefs(m.lair.intro)}*`);m.lair.items.filter(e=>e.name).forEach(e=>L.push(line(e)));}
+  if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){L.push("","### Lair Actions");if(m.lair.intro)L.push(`*${applyRefs(m.lair.intro)}*`);m.lair.items.filter(e=>e.name||e.text).forEach(e=>L.push(line(e)));}
   if(m.regional.on&&m.regional.text){L.push("","### Regional Effects",applyRefs(m.regional.text));}
   return L.join("\n");
 }
@@ -1063,14 +1072,28 @@ function removeLib(kind,name){
   const i=state.disabledLibs.indexOf(libKey(kind,name));if(i>=0){state.disabledLibs.splice(i,1);saveDisabled();}
   presetSel.delete(libKey(kind,name));
 }
+// Remove a reference sheet (books / legendary groups). Already-applied book labels and
+// lair/regional stay on imported presets; this just stops future application.
+function removeReference(k){
+  if(k==="books"){state.books={};delete state.refMeta.books;saveBooks();saveRefMeta();reannotateBooks();}
+  else if(k==="leg"){state.legendaryGroups={};delete state.refMeta.legGroups;saveLegGroups();saveRefMeta();}
+  presetModal();
+}
 const GROUP_LABELS={core:"Core",supplement:"Supplements","supplement-alt":"Supplements (alt)",setting:"Settings","setting-alt":"Settings (alt)",adventure:"Adventures",screen:"Screens","organized-play":"Organized Play",other:"Other"};
 const groupLabel=g=>g?(GROUP_LABELS[g]||g.replace(/(^|[-\s])\w/g,c=>c.toUpperCase()).replace(/-/g," ")):"Ungrouped";
-let presetCtrl=blankCtrl();
+const PRESET_HINT="Upload native 5etools <code>.json</code> files — <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles + groups), or <b>legendarygroups.json</b> (lair actions &amp; regional effects). The kind is auto-detected. Everything is parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
+let presetCtrl=blankCtrl();presetCtrl.group="group";
 const presetSel=new Set();
+function prUpdateSelUI(){
+  const modal=$("#modal");if(!modal)return;
+  modal.querySelectorAll(".preset-row").forEach(row=>{const on=presetSel.has(libKey(row.dataset.kind,row.dataset.name));row.classList.toggle("picked",on);const cb=row.querySelector(".lib-sel");if(cb)cb.checked=on;});
+  modal.querySelectorAll(".lib-grp").forEach(grp=>{const rows=[...grp.querySelectorAll(".preset-row")];const sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;const cb=grp.querySelector(".grp-sel");if(cb){cb.checked=rows.length>0&&sel===rows.length;cb.indeterminate=sel>0&&sel<rows.length;}});
+  const act=$("#prActions"),n=presetSel.size;if(act){act.classList.toggle("show",n>0);const s=act.querySelector(".sel-n");if(s)s.textContent=n+" selected";}
+}
 function presetModal(){
   const libs=presetLibraries();
   const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
-  const desc={search:true,group:false,
+  const desc={search:true,group:true,
     params:[
       {key:"type",label:"Type",fmt:v=>KIND_LABEL[v]||v,get:r=>r.lib.kind,values:()=>[...new Set(libs.map(L=>L.kind))]},
       {key:"group",label:"Group",fmt:v=>groupLabel(v),get:r=>r.lib.group||"",values:()=>[...new Set(libs.map(L=>L.group).filter(Boolean))].sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)))},
@@ -1082,46 +1105,52 @@ function presetModal(){
     ]};
   let recs=libs.map(L=>({m:{name:(L.book||L.name),type:KIND_LABEL[L.kind]},lib:L}));
   recs=ctrlApply(recs,presetCtrl,desc);
-  // visually group the filtered libraries by their book group, each with a master switch
+  // group the filtered rows by the active group-by control (None / Type / Group)
+  const gk=presetCtrl.group,gmap=new Map();
+  recs.forEach(r=>{let key,label;
+    if(gk==="type"){key="t:"+r.lib.kind;label=KIND_LABEL[r.lib.kind]||r.lib.kind;}
+    else if(gk==="group"){key="g:"+(r.lib.group||"");label=groupLabel(r.lib.group);}
+    else{key="__all";label="All libraries";}
+    if(!gmap.has(key))gmap.set(key,{label,items:[]});gmap.get(key).items.push(r.lib);});
   const order=["core","supplement","supplement-alt","setting","setting-alt","adventure","screen","organized-play","other",""];
-  const byGrp=new Map();recs.forEach(r=>{const g=r.lib.group||"";if(!byGrp.has(g))byGrp.set(g,[]);byGrp.get(g).push(r.lib);});
-  const grpKeys=[...byGrp.keys()].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||groupLabel(a).localeCompare(groupLabel(b));});
-  let h=`<h3>Preset libraries</h3><p class="hint" style="margin:-4px 0 12px">Upload native 5etools <code>.json</code> files — <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, or a <b>books.json</b> reference sheet. The kind is auto-detected. Parsed in your browser, stored only on this device — never sent to the cloud or committed to the repo. Toggle a library off to hide it from the app without deleting it.</p>`;
-  h+=`<div class="lib-toolbar"><div class="ctrl-icons" id="prCtrlIcons"></div><div class="lib-bulk"><label class="lib-all"><input type="checkbox" id="libMaster">Select all</label><button class="btn ghost sm" id="bulkEnable" disabled>Enable</button><button class="btn ghost sm" id="bulkDisable" disabled>Disable</button><button class="btn ghost sm danger" id="bulkRemove" disabled>Remove</button></div></div>`;
-  h+=`<div class="ctrl-chips" id="prChips"></div>`;
+  let grpKeys=[...gmap.keys()];
+  if(gk==="group")grpKeys.sort((a,b)=>{const ga=a.slice(2),gb=b.slice(2),ia=order.indexOf(ga),ib=order.indexOf(gb);return (ia<0?99:ia)-(ib<0?99:ib)||gmap.get(a).label.localeCompare(gmap.get(b).label);});
+  else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
+  let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
+  h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
+  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><button class="btn ghost xs" data-act="enable">Enable</button><button class="btn ghost xs" data-act="disable">Disable</button><button class="btn ghost xs danger" data-act="remove">Remove</button></div>`;
+  h+=`<div class="lib-scroll">`;
   if(!libs.length)h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   else if(!recs.length)h+=`<div class="empty-state" style="padding:26px">No libraries match these filters.</div>`;
-  else h+=`<div class="lib-groups">`+grpKeys.map(g=>{
-    const items=byGrp.get(g);const all=libs.filter(L=>(L.group||"")===g);
-    const onCount=all.filter(L=>L.enabled).length,allOn=onCount===all.length,allOff=onCount===0;
-    return `<div class="lib-grp"><div class="lib-grp-head"><label class="switch"><input type="checkbox" class="grp-tog" data-grp="${esc(g)}" ${allOn?"checked":""} ${allOn||allOff?"":"data-mixed=1"}><span class="sl"></span></label><span class="lib-grp-name">${esc(groupLabel(g))}</span><span class="grp-n">${all.length}</span></div>`
-      +items.map(L=>{const sel=presetSel.has(libKey(L.kind,L.name));
+  else h+=grpKeys.map(k=>{const g=gmap.get(k);
+    const sel=g.items.filter(L=>presetSel.has(libKey(L.kind,L.name))).length,allOn=sel===g.items.length;
+    return `<div class="lib-grp" data-grpkey="${esc(k)}"><div class="lib-grp-head"><span class="lib-grp-name">${esc(g.label)}</span><span class="grp-n">${g.items.length}</span><label class="lib-check grp" title="Select all in group"><input type="checkbox" class="grp-sel"${allOn?" checked":""}></label></div>`
+      +g.items.map(L=>{const isSel=presetSel.has(libKey(L.kind,L.name));
         const sub=[L.group?groupLabel(L.group):"",L.count.toLocaleString()+" entries",(L.book?esc(L.name):"")].filter(Boolean).join(" · ");
-        return `<div class="preset-row${L.enabled?"":" off"}" data-kind="${esc(L.kind)}" data-name="${esc(L.name)}"><input type="checkbox" class="lib-sel"${sel?" checked":""}><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span></div><div class="hint lib-sub">${sub}</div></div><label class="switch"><input type="checkbox" class="lib-tog"${L.enabled?" checked":""}><span class="sl"></span></label><button class="iconbtn lib-rm" title="Remove library">✕</button></div>`;}).join("")
-      +`</div>`;}).join("")+`</div>`;
-  h+=`<div class="mrow"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .json files</button></div>`;
-  openModalRaw(h);
+        return `<div class="preset-row${L.enabled?"":" off"}${isSel?" picked":""}" data-kind="${esc(L.kind)}" data-name="${esc(L.name)}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span>${L.enabled?"":'<span class="off-badge">Off</span>'}</div><div class="hint lib-sub">${sub}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="lib-sel"${isSel?" checked":""}></label></div>`;}).join("")
+      +`</div>`;}).join("");
+  h+=`</div>`;
+  // reference sheets — subdued, outside any grouping
+  const refs=[];
+  if(state.refMeta.books&&Object.keys(state.books).length)refs.push({k:"books",label:"Book reference",file:state.refMeta.books.file,count:Object.keys(state.books).length,unit:"sources"});
+  if(state.refMeta.legGroups&&Object.keys(state.legendaryGroups).length)refs.push({k:"leg",label:"Legendary groups",file:state.refMeta.legGroups.file,count:Object.keys(state.legendaryGroups).length,unit:"groups"});
+  if(refs.length)h+=`<div class="lib-refs">`+refs.map(r=>`<div class="lib-ref"><span class="ref-meta">${esc(r.label)} · ${r.count.toLocaleString()} ${r.unit}<span class="hint"> · ${esc(r.file)}</span></span><button class="ref-x" data-refx="${esc(r.k)}" title="Remove reference">✕</button></div>`).join("")+`</div>`;
+  h+=`<div class="lib-foot"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .json files</button></div>`;
+  openModalRaw(`<div class="preset-mgr">${h}</div>`);
   bindCtrlIcons($("#prCtrlIcons"),presetCtrl,desc,presetModal);
   renderCtrlChips($("#prChips"),presetCtrl,desc,presetModal);
   $("#prClose").addEventListener("click",closeModal);
   $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
-  // selection + master
-  const updateBulk=()=>{const n=presetSel.size;["bulkEnable","bulkDisable","bulkRemove"].forEach(id=>{const b=$("#"+id);if(b)b.disabled=!n;});
-    const m=$("#libMaster");if(m){m.checked=recs.length>0&&recs.every(r=>presetSel.has(libKey(r.lib.kind,r.lib.name)));m.indeterminate=!m.checked&&recs.some(r=>presetSel.has(libKey(r.lib.kind,r.lib.name)));}};
-  updateBulk();
-  $("#modal").querySelectorAll(".grp-tog[data-mixed]").forEach(c=>c.indeterminate=true);
-  $("#libMaster").addEventListener("change",e=>{if(e.target.checked)recs.forEach(r=>presetSel.add(libKey(r.lib.kind,r.lib.name)));else recs.forEach(r=>presetSel.delete(libKey(r.lib.kind,r.lib.name)));presetModal();});
-  $("#modal").querySelectorAll(".preset-row").forEach(row=>{const kind=row.dataset.kind,name=row.dataset.name,k=libKey(kind,name);
-    row.querySelector(".lib-sel").addEventListener("change",e=>{if(e.target.checked)presetSel.add(k);else presetSel.delete(k);updateBulk();row.classList.toggle("picked",e.target.checked);});
-    row.querySelector(".lib-tog").addEventListener("change",e=>{setLibEnabled(kind,name,e.target.checked);refreshLibPools();presetModal();});
-    row.querySelector(".lib-rm").addEventListener("click",()=>confirmModal(`Remove "${name}"? Its presets are deleted from this device.`,()=>{removeLib(kind,name);refreshLibPools();toast(`Removed “${name}”.`);presetModal();}));
-  });
-  $("#modal").querySelectorAll(".grp-tog").forEach(c=>c.addEventListener("change",e=>{const g=c.dataset.grp,on=e.target.checked;
-    libs.filter(L=>(L.group||"")===g).forEach(L=>setLibEnabled(L.kind,L.name,on));refreshLibPools();presetModal();}));
-  const bulk=fn=>{[...presetSel].forEach(k=>{const sep=k.indexOf(LIBSEP);fn(k.slice(0,sep),k.slice(sep+LIBSEP.length));});refreshLibPools();presetModal();};
-  $("#bulkEnable").addEventListener("click",()=>bulk((kd,nm)=>setLibEnabled(kd,nm,true)));
-  $("#bulkDisable").addEventListener("click",()=>bulk((kd,nm)=>setLibEnabled(kd,nm,false)));
-  $("#bulkRemove").addEventListener("click",()=>{const n=presetSel.size;confirmModal(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>bulk((kd,nm)=>removeLib(kd,nm)));});
+  $("#prHelp").addEventListener("click",e=>{e.stopPropagation();showPopover($("#prHelp"),`<div class="help-pop">${PRESET_HINT}</div>`);});
+  $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmModal(`Remove this reference sheet?`,()=>removeReference(k));}));
+  $("#modal").querySelectorAll(".lib-sel").forEach(cb=>cb.addEventListener("change",()=>{const row=cb.closest(".preset-row"),key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);prUpdateSelUI();}));
+  $("#modal").querySelectorAll(".grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
+  const split=k=>{const i=k.indexOf(LIBSEP);return[k.slice(0,i),k.slice(i+LIBSEP.length)];};
+  $("#prActions").querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{const act=b.dataset.act,keys=[...presetSel];
+    if(act==="remove"){const n=keys.length;confirmModal(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>{keys.forEach(k=>{const p=split(k);removeLib(p[0],p[1]);});refreshLibPools();presetModal();});return;}
+    keys.forEach(k=>{const p=split(k);setLibEnabled(p[0],p[1],act==="enable");});refreshLibPools();presetModal();}));
+  $("#modal").querySelectorAll(".grp-sel").forEach(c=>{const grp=c.closest(".lib-grp"),rows=[...grp.querySelectorAll(".preset-row")],sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;c.indeterminate=sel>0&&sel<rows.length;});
+  prUpdateSelUI();
 }
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
@@ -1504,23 +1533,30 @@ $("#mdIn").addEventListener("change",e=>{
   const files=[...e.target.files];if(!files.length)return;
   Promise.all(files.map(f=>f.text().then(txt=>{let json=null;try{json=JSON.parse(txt);}catch(_){}return{name:f.name,json};})))
     .then(loaded=>{
-      // 1. books.json first so bestiary/spell/condition loads can annotate from it
-      let bookAdded=false;
-      loaded.forEach(L=>{if(L.json&&detectJsonKind(L.json)==="book"){Object.assign(state.books,parseBooksJSON(L.json));bookAdded=true;}});
+      // 1. reference sheets first so bestiary/spell/condition loads can use them
+      let bookAdded=false,legAdded=false;
+      loaded.forEach(L=>{const k=L.json&&detectJsonKind(L.json);
+        if(k==="book"){Object.assign(state.books,parseBooksJSON(L.json));bookAdded=true;state.refMeta.books={file:L.name,count:Object.keys(parseBooksJSON(L.json)).length};}
+        if(k==="legendaryGroup"){Object.assign(state.legendaryGroups,parseLegendaryGroupsJSON(L.json));legAdded=true;state.refMeta.legGroups={file:L.name,count:((L.json.legendaryGroup||[]).length)};}});
       if(bookAdded){saveBooks();reannotateBooks();}
-      // 2. add this batch's raw monsters to the session base index before resolving copies
+      if(legAdded){saveLegGroups();}
+      if(bookAdded||legAdded)saveRefMeta();
+      // 2. base indexes (raw monsters + legendary groups) across this batch + the session
       loaded.forEach(L=>{if(L.json&&L.json.monster)L.json.monster.forEach(m=>{if(m&&m.name)sessionBestiaryIndex.set(((m.name||"")+"|"+(m.source||"")).toLowerCase(),m);});});
+      const legIdx=new Map();Object.keys(state.legendaryGroups).forEach(k=>legIdx.set(k,state.legendaryGroups[k]));
       const summary=[];
       loaded.forEach(L=>{
         const kind=L.json?detectJsonKind(L.json):null;
         if(!kind){summary.push(`${L.name}: not recognised 5etools JSON`);return;}
         try{
           if(kind==="book"){summary.push(`${L.name}: ${Object.keys(parseBooksJSON(L.json)).length} book refs`);}
+          else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
           else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
           else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
-          else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
+          else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
         }catch(err){summary.push(`${L.name}: failed to parse`);}
       });
+      if(legAdded)reapplyLegGroups(); // backfill lair/regional onto already-loaded bestiaries
       toast(`Loaded — ${summary.join("; ")}`);
       if($("#modalBg").classList.contains("show"))presetModal();
     });

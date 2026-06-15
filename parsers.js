@@ -168,7 +168,7 @@ function renderSpellcasting(sc){
 }
 
 // Map one resolved 5etools monster object onto a Forge monster.
-function mapMonsterJSON(mon){
+function mapMonsterJSON(mon,legGroups){
   const m=blankMonster();m._auto={ac:false,hp:false};
   m.name=mon.name||"Unnamed";
   if(Array.isArray(mon.size)&&mon.size.length)m.size=SIZE_CODE[mon.size[0]]||m.size;
@@ -229,7 +229,26 @@ function mapMonsterJSON(mon){
     return tm?{mode:"react",name:richStrip(e.name||""),trigger:tm[1].trim(),response:tm[2].trim()}:{mode:"react",name:richStrip(e.name||""),trigger:"",response:body};});
   if(mon.legendary){const intro=entriesToText(mon.legendaryHeader||[]);m.legend={on:true,intro,items:toEntries(mon.legendary)};}
   if(mon.mythic){const intro=entriesToText(mon.mythicHeader||[]);if(!m.legend.on)m.legend={on:true,intro,items:[]};m.legend.items=m.legend.items.concat(toEntries(mon.mythic));}
+  // Lair actions & regional effects live in a separate legendarygroups file, referenced
+  // by name|source. Stash the ref so a later legendarygroups upload can be re-applied.
+  if(mon.legendaryGroup){m._legGroup={name:mon.legendaryGroup.name,source:mon.legendaryGroup.source};
+    const grp=legGroups&&legGroups.get((m._legGroup.name+"|"+(m._legGroup.source||"")).toLowerCase());
+    if(grp)applyLegendaryGroup(m,grp);}
   return m;
+}
+// legendarygroups.json → name|source → raw group. Build an index across blobs.
+function parseLegendaryGroupsJSON(json){const map={};((json&&json.legendaryGroup)||[]).forEach(g=>{if(g&&g.name)map[(g.name+"|"+(g.source||"")).toLowerCase()]=g;});return map;}
+function legGroupIndex(jsonBlobs){const idx=new Map();[].concat(jsonBlobs||[]).forEach(j=>{((j&&j.legendaryGroup)||[]).forEach(g=>{if(g&&g.name)idx.set((g.name+"|"+(g.source||"")).toLowerCase(),g);});});return idx;}
+// Split a lairActions/regionalEffects block (leading prose + a {type:list}) into the
+// Forge's intro + named-less items. Mutates m.lair / m.regional in place.
+function applyLegendaryGroup(m,grp){
+  if(grp.lairActions){const intro=[],items=[];let started=false;
+    [].concat(grp.lairActions).forEach(e=>{
+      if(typeof e==="string"){if(started)items.push(T("",richStrip(e)));else intro.push(richStrip(e));}
+      else if(e&&e.type==="list"){started=true;(e.items||[]).forEach(it=>items.push(T("",entriesToText(it))));}
+      else{started=true;items.push(T("",entriesToText(e)));}});
+    m.lair={on:true,intro:intro.join("\n"),items};}
+  if(grp.regionalEffects){m.regional={on:true,text:entriesToText(grp.regionalEffects)};}
 }
 
 // ── _copy / _mod resolution ───────────────────────────────────────────────────
@@ -291,14 +310,14 @@ function bestiaryIndex(jsonBlobs){const idx=new Map();[].concat(jsonBlobs||[]).f
 
 // Parse a bestiary JSON file → {monsters:[…], skipped:n}. `index` is a shared base index
 // (build it across the whole upload batch + session so cross-file _copy resolves).
-function parseBestiaryJSON(json,fileName,booksMap,index){
+function parseBestiaryJSON(json,fileName,booksMap,index,legGroups){
   index=index||bestiaryIndex([json]);
   const out=[];let skipped=0;const used={};
   ((json&&json.monster)||[]).forEach(mon=>{
     if(!mon||!mon.name)return;
     let resolved=mon;
     if(mon._copy){resolved=resolveCopy(mon,index);if(!resolved){skipped++;return;}}
-    let m;try{m=mapMonsterJSON(resolved);}catch(e){skipped++;return;}
+    let m;try{m=mapMonsterJSON(resolved,legGroups);}catch(e){skipped++;return;}
     m._preset=true;m._kind="statblock";m.chassis=true;m._source=fileName;
     annotateBook(m,mon.source,booksMap);
     let id="p_"+slug(fileName)+"_"+slug(m.name);if(used[id])id+="_"+(++used[id]);used[id]=(used[id]||0)+1;
@@ -358,6 +377,7 @@ function parseConditionsJSON(json,fileName,booksMap){
 function detectJsonKind(json){
   if(!json||typeof json!=="object")return null;
   if(json.book)return "book";
+  if(json.legendaryGroup)return "legendaryGroup";
   if(json.monster)return "statblock";
   if(json.spell)return "spell";
   if(json.condition||json.disease||json.status)return "condition";
