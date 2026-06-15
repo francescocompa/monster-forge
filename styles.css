@@ -261,12 +261,16 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .enc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:18px}
 .enc.arch{opacity:.62}
 .enc{position:relative}
-.enc.collapsed{padding:9px 15px;cursor:grab}
+/* Collapsed: keep the SAME top padding as expanded so the header doesn't shift
+   vertically when toggling; only trim the bottom for a compact look. */
+.enc.collapsed{padding:13px 15px 11px;cursor:grab}
 .enc.collapsed:active{cursor:grabbing}
-/* While dragging: shrink the card (and the drag-image snapshot) to just its header. */
-.enc.dragging{opacity:.55;cursor:grabbing}
-.enc.dragging .budget,.enc.dragging .encnotes,.enc.dragging .ovr,.enc.dragging [data-combat],.enc.dragging .addrow{display:none}
-.enc.dragging .eh{margin-bottom:0}
+/* While dragging: fade the source in place. We deliberately do NOT hide the body
+   (that reflows the list and shifts drop targets mid-gesture) — the drag-image is
+   the header element instead, set via setDragImage in dragstart. */
+.enc.dragging{opacity:.4;cursor:grabbing}
+.enc .eh{cursor:grab}
+.enc .eh input.enm{cursor:text}
 /* Drop-line indicator sitting in the gap above/below the hovered card. */
 .enc.drop-before::before,.enc.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent)}
 .enc.drop-before::before{top:-10px}

@@ -806,7 +806,8 @@ function refContent(kind,name){
     const meta=s.level===0?(s.school+" cantrip"):s.level?("Level "+s.level+" "+s.school):s.school;
     const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
       .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
-    return `<div class="refcard-h">${esc(s.name)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
+    const ssrc=prettySource(s._source||s.source||"");
+    return `<div class="refcard-h">${esc(s.name)}${ssrc?` <span class="refcard-src">${esc(ssrc)}</span>`:""}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   const c=findCondition(name);if(!c)return "";
   return `<div class="refcard-h">${esc(c.name)}${c.source?` <span class="refcard-src">${esc(c.source)}</span>`:""}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
 let _refTimer=null;
@@ -1489,9 +1490,12 @@ function bindEncDrag(a,q){
     enc.addEventListener("dragstart",ev=>{
       if(dragInert(ev.target)){ev.preventDefault();return;}
       dragEncId=enc.dataset.enc;dropTarget=null;ev.dataTransfer.effectAllowed="move";
-      // Collapse the card body synchronously so the browser's drag-image snapshot (taken right
-      // after this handler returns) — and the source row — stay small while dragging.
-      enc.classList.add("dragging");
+      try{ev.dataTransfer.setData("text/plain",enc.dataset.enc);}catch(_){}
+      // Use the header as a compact drag-image instead of hiding the body — hiding reflowed the
+      // list mid-gesture and made drop targets jump (the "buggy drag"). Fade is applied after the
+      // snapshot via rAF so the source stays full-height (stable targets) but visibly inert.
+      const eh=enc.querySelector(".eh");if(eh)try{ev.dataTransfer.setDragImage(eh,14,14);}catch(_){}
+      requestAnimationFrame(()=>enc.classList.add("dragging"));
     });
     enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");clearDropMarks();dragEncId=null;dropTarget=null;});
     enc.addEventListener("dragover",ev=>{
