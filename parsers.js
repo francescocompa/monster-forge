@@ -4,6 +4,8 @@
 // (blankMonster from app.js; mod/T/SKILLS/DMG_TYPES/CR_LIST/pbForCR from data.js)
 // resolve via the shared global lexical environment.
 
+const ABIL_FULL={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
+
 function parseSpeed(str){const s={walk:0,climb:0,fly:0,swim:0,burrow:0,hover:/hover/i.test(str||"")};
   const w=String(str||"").match(/^\s*(\d+)\s*ft/i);if(w)s.walk=+w[1];
   ["climb","fly","swim","burrow"].forEach(k=>{const m=new RegExp(k+"\\s*(\\d+)","i").exec(str||"");if(m)s[k]=+m[1];});
@@ -116,6 +118,14 @@ function richStrip(s){
   s=s.replace(/\{@dc\s+([^}|]+)(?:\|[^}]*)?\}/gi,(_,n)=>"DC "+n.trim());
   s=s.replace(/\{@recharge(\s+\d+)?\}/gi,(m,n)=>n?`(Recharge ${n.trim()}–6)`:"(Recharge 5–6)");
   s=s.replace(/\{@(?:damage|dice|scaledamage|scaledice|autodice)\s+([^}|]+)(?:\|[^}]*)?\}/gi,(_,d)=>d.trim());
+  // 2024 action/reaction markup (must precede the generic collapses below). Trigger/Response
+  // are emitted plain so reaction parsing can split them; saves use the house italic wording.
+  s=s.replace(/\{@actTrigger\}/gi,"Trigger: ");
+  s=s.replace(/\{@actResponse(?:\s+[^}]*)?\}/gi,"Response: ");
+  s=s.replace(/\{@actSave\s+([a-z|]+)\}/gi,(_,ab)=>"*"+ab.split("|").map(a=>ABIL_FULL[a.toLowerCase()]||a.toUpperCase()).join(" or ")+" Saving Throw:*");
+  s=s.replace(/\{@actSaveSuccessOrFail(?:\s+[^}]*)?\}/gi,"*Failure or Success:*");
+  s=s.replace(/\{@actSaveFail(?:\s+[^}]*)?\}/gi,"*Failure:*");
+  s=s.replace(/\{@actSaveSuccess(?:\s+[^}]*)?\}/gi,"*Success:*");
   // generic links: keep the display text (3+ parts → trailing override, else first segment)
   s=s.replace(/\{@[a-z]+\s+([^}]*?)\}/gi,(_,body)=>{const parts=body.split("|");
     let txt=(parts.length>=3&&parts[parts.length-1].trim())?parts[parts.length-1]:parts[0];

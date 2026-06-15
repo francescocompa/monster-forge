@@ -5,6 +5,7 @@
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   --r:7px;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -12,6 +13,8 @@ body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,sans-se
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
 input,select,textarea{accent-color:var(--accent)}
+/* Keep autofilled fields dark — browsers otherwise paint a white/yellow box on autofill/datalist pick */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,textarea:-webkit-autofill,select:-webkit-autofill{-webkit-box-shadow:0 0 0 40px #0e0f12 inset!important;-webkit-text-fill-color:var(--txt)!important;caret-color:var(--txt)}
 input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:1px solid var(--line);border-radius:4px;background:#0e0f12;position:relative;cursor:pointer;flex:none;transition:border-color .12s,background .12s;vertical-align:middle}
 input[type=checkbox]:hover{border-color:var(--accent)}
 input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
@@ -118,7 +121,8 @@ input:hover,select:hover,textarea:hover{border-color:#3c424c}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{resize:vertical;min-height:60px;line-height:1.45}
 textarea::-webkit-resizer{background:linear-gradient(135deg,transparent 0 45%,var(--faint) 45% 55%,transparent 55% 70%,var(--faint) 70% 80%,transparent 80%);border-radius:0 0 5px 0}
-select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23a4aab4'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+/* Form selects use the native browser dropdown (own arrow + native option list, dark via color-scheme) */
+select{padding-right:24px}
 .with-badge{position:relative}
 .with-badge .badge{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;letter-spacing:.06em;color:var(--amber);background:rgba(217,169,65,.14);border:1px solid #6d5a26;border-radius:4px;padding:1px 5px;pointer-events:none;display:none}
 .with-badge.suggested input{color:var(--amber);font-style:italic}
@@ -395,6 +399,8 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .chassis-tools{margin-bottom:14px}
 .src-badge{align-self:flex-start;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);background:#0e0f12;border:1px solid var(--line);border-radius:4px;padding:2px 6px}
 .src-badge.built{color:var(--accent-soft);border-color:#6e3329}
+.src-badge.srcdrop{cursor:pointer;font-family:inherit;line-height:1.2}
+.src-badge.srcdrop:hover{border-color:var(--accent);color:var(--txt)}
 .preset-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .preset-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
 .preset-row .hint{display:inline}

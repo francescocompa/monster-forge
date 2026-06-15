@@ -491,7 +491,7 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
 const BOOK_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg>';
 // Short, human label for a preset source filename (e.g. "PHB24_Spells.md" → "PHB24").
-function prettySource(s){return (s||"").replace(/\.md$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;}
+function prettySource(s){return (s||"").replace(/\.(md|json)$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;}
 // Native <select> options for a preset reference list (conditions), grouped by source
 // (PHB, XGE…) via <optgroup>. Items are {name,_source} (or bare strings).
 function groupedRefOptions(items,placeholder){
@@ -909,9 +909,11 @@ function buildTagDatalist(){const dl=$("#libTagList");if(dl)dl.innerHTML=[...new
 function renderLibrary(){
   buildTagDatalist();buildMonsterDatalists();
   renderCtrlChips($("#libChips"),libCtrl,LIB_DESC,renderLibrary);
-  const body=$("#libBody"),recs=ctrlApply(libRecords(),libCtrl,LIB_DESC);
-  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML({m:r.m,src:r.src}):cardHTML(r.m),emptyMsg:libEmptyMsg(),cap:400,collapsible:true});
+  const body=$("#libBody");let recs=ctrlApply(libRecords(),libCtrl,LIB_DESC);
+  if(libCtrl.group!=="source")recs=collapseVariants(recs,r=>r.preset);
+  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML(r):cardHTML(r.m),emptyMsg:libEmptyMsg(),cap:400,collapsible:true});
   wireLibCards(body);
+  bindSrcDrops(body,recs,renderLibrary);
 }
 function wireLibCards(body){
   const find=id=>state.lib.find(x=>x.id===id);
@@ -975,8 +977,47 @@ function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" arch
 // "Preset" status view: built-in chassis + uploaded statblock presets, de-emphasised (like
 // Archived). These are reference bases — clicking one loads a fresh copy into the Forge.
 function presetPool(){return [...CHASSIS.map(m=>({m,src:"Built-in"})),...enPresets().map(m=>({m,src:m._source||"Uploaded"}))];}
+
+// Same-name visual grouping (no data merge): collapse records sharing a name into one
+// representative carrying every source variant. XMM then XPHB are preferred as the default
+// active variant; the source tag becomes a dropdown to switch between them.
+const SRC_RANK={XMM:0,XPHB:1};
+function srcOf(m){return m&&(m._srcCode||m._source)||"";}
+function srcRank(s){const k=(s||"").toUpperCase();return k in SRC_RANK?SRC_RANK[k]:50;}
+const variantSel=new Map(); // name(lowercased) -> chosen variant src
+function collapseVariants(recs,canMerge){
+  const seen=new Map(),out=[];
+  recs.forEach(r=>{
+    if(canMerge&&!canMerge(r)){out.push(r);return;}
+    const key=(r.m.name||"").toLowerCase();
+    if(seen.has(key)){seen.get(key).variants.push(r);return;}
+    const rep=Object.assign({},r,{variants:[r]});seen.set(key,rep);out.push(rep);
+  });
+  out.forEach(rep=>{if(rep.variants&&rep.variants.length>1){
+    rep.variants.sort((a,b)=>srcRank(srcOf(a.m))-srcRank(srcOf(b.m))||String(a.src).localeCompare(String(b.src)));
+    const chosen=variantSel.get((rep.m.name||"").toLowerCase());
+    const active=rep.variants.find(v=>String(v.src)===chosen)||rep.variants[0];
+    rep.m=active.m;rep.src=active.src;}});
+  return out;
+}
+function srcLbl(s){return s==="Built-in"?"Built-in":prettySource(s);}
+function srcBadgeHTML(o){
+  const vs=o.variants||[o],built=o.src==="Built-in";
+  if(vs.length<2)return `<span class="src-badge${built?" built":""}">${esc(srcLbl(o.src))}</span>`;
+  return `<button type="button" class="src-badge srcdrop${built?" built":""}" data-srcdrop="${esc(o.m.name||"")}" title="${vs.length} sources — click to switch">${esc(srcLbl(o.src))} ▾</button>`;
+}
+function bindSrcDrops(body,recs,redraw){
+  body.querySelectorAll("[data-srcdrop]").forEach(btn=>btn.addEventListener("click",e=>{
+    e.stopPropagation();e.preventDefault();
+    const key=btn.dataset.srcdrop.toLowerCase();
+    const rep=recs.find(r=>r.variants&&r.variants.length>1&&(r.m.name||"").toLowerCase()===key);
+    if(!rep)return;
+    const p=showPopover(btn,rep.variants.map(v=>`<button class="popitem${String(v.src)===String(rep.src)?" on":""}" data-srcv="${esc(String(v.src))}">${esc(srcLbl(v.src))} <span style="color:var(--faint);font-size:11px">CR ${esc(v.m.cr)}</span></button>`).join(""));
+    p.querySelectorAll("[data-srcv]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();variantSel.set(key,b.dataset.srcv);closePopover();redraw();}));
+  }));
+}
 function presetCardHTML(o){const m=o.m;return `<div class="card preset" data-pick="${esc(m.id)}" title="Use as base">
-  <span class="src-badge${o.src==="Built-in"?" built":""}">${esc(o.src)}</span>
+  ${srcBadgeHTML(o)}
   <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
   <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag st st-Preset">Preset</span></div>
 </div>`;}
@@ -1066,11 +1107,13 @@ function openChassis(fromForge){
     <div class="ctrl-icons" id="chCtrlIcons"></div>
     <div class="ctrl-chips" id="chChips"></div>
     <div id="chBody"></div>`);
-  const cardOf=o=>`<div class="card" style="cursor:default"><span class="src-badge${o.src==="Built-in"?" built":""}">${esc(o.src)}</span><h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">Use as base</button></div></div>`;
+  const cardOf=o=>`<div class="card" style="cursor:default">${srcBadgeHTML(o)}<h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">Use as base</button></div></div>`;
   function draw(){
     renderCtrlChips($("#chChips"),ctrl,desc,draw);
-    const body=$("#chBody"),recs=ctrlApply(chPool(),ctrl,desc);
+    const body=$("#chBody");let recs=ctrlApply(chPool(),ctrl,desc);
+    if(ctrl.group!=="source")recs=collapseVariants(recs);
     renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries…”) to add more bases."}`,cap:200});
+    bindSrcDrops(body,recs,draw);
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;closeModal();
       if(fromForge===true&&monsterDirty())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
   }

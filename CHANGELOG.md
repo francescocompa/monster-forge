@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 32 — Native dropdowns + parser fixes (B34–B35)
+- **Form dropdowns → native:** form-field `<select>`s now use the browser's own
+  dropdown (native arrow + native option list), and the whole app is pinned to
+  `color-scheme:dark` so those native menus, number spinners and autofill render
+  dark instead of flashing to a light theme.
+- **White-mode bug fixed:** a global `:-webkit-autofill` override keeps a field
+  dark after the browser autofills/datalist-picks it (e.g. Languages).
+- **Reactions parser (2024 jargon):** `richStrip` now translates the 2024
+  `{@actTrigger}` / `{@actResponse}` / `{@actSave}` / `{@actSaveFail}` /
+  `{@actSaveSuccess}` markup, so reactions like **Eldritch Eddy**'s "Eldritch
+  Overload" import with their Trigger/Response split and house-style saving-throw
+  wording intact.
+- **Same-name monsters grouped:** in the chassis picker and the Bestiary preset
+  view, creatures sharing a name collapse into one card whose **source tag is a
+  dropdown** of every source; XMM then XPHB are preferred as the default variant.
+  (Visual only — each source stays its own underlying record.)
+
 ## Batch 31 — Forge field, ability & popover polish (B31–B33)
 - **Field cleanup:** removed the inline `(blank = auto)`, `(optional)` and
   "Passive Perception is added automatically" hints from the Initiative, HP-formula
