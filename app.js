@@ -1326,7 +1326,6 @@ function updateEncMeta(a,e){
   const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
   const tgt=root.querySelector(".budget .tgt");if(tgt)tgt.style.left=(bud[2]?encTargetVal(e,bud)/bud[2]*100:0)+"%";
   const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
-  const sum=root.querySelector(".enc-sum");if(sum)sum.textContent=`${spent.toLocaleString()} XP · ${combCount(e)} combatant${combCount(e)===1?"":"s"}`;
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
 function encHTML(a,e){
@@ -1335,11 +1334,9 @@ function encHTML(a,e){
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const tgt=encTargetVal(e,bud),tgtPct=bud[2]?tgt/bud[2]*100:0;
   const head=`<div class="eh">
-      <button class="drag-handle" data-draghandle title="Drag to reorder">⠿</button>
-      <button class="enc-collapse" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}">${e.collapsed?"▸":"▾"}</button>
+      <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
       <span class="pill ${cls}">${label}</span>
-      ${e.collapsed?`<span class="enc-sum">${spent.toLocaleString()} XP · ${combCount(e)} combatant${combCount(e)===1?"":"s"}</span>`:""}
       <div class="menu-wrap">
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
         <div class="menu" id="menu-enc-${e.id}">
@@ -1374,7 +1371,7 @@ function encHTML(a,e){
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
       <div class="menu-wrap">
-        <button class="kebab" data-menu="addc-${e.id}" title="More ways to add">⋯</button>
+        <button class="kebab addc-plus" data-menu="addc-${e.id}" title="More ways to add" aria-label="More ways to add">＋</button>
         <div class="menu" id="menu-addc-${e.id}">
           <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
           <button data-addforge="${e.id}">＋ Forge new monster →</button>
@@ -1463,12 +1460,14 @@ function reorderEncTo(a,fromId,toId){
   setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
 }
 let dragEncId=null;
+// Skip drag-init when the press starts on an interactive control inside the card so editing
+// inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
+function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
 function bindEncDrag(a,q){
   q(".enc[data-enc]").forEach(enc=>{
-    const h=enc.querySelector("[data-draghandle]");
-    if(h){h.addEventListener("mousedown",()=>enc.setAttribute("draggable","true"));
-      h.addEventListener("mouseup",()=>enc.removeAttribute("draggable"));}
-    enc.addEventListener("dragstart",ev=>{dragEncId=enc.dataset.enc;enc.classList.add("dragging");ev.dataTransfer.effectAllowed="move";});
+    enc.addEventListener("pointerdown",ev=>{if(dragInert(ev.target))return;enc.setAttribute("draggable","true");});
+    enc.addEventListener("pointerup",()=>enc.removeAttribute("draggable"));
+    enc.addEventListener("dragstart",ev=>{if(dragInert(ev.target)){ev.preventDefault();return;}dragEncId=enc.dataset.enc;enc.classList.add("dragging");ev.dataTransfer.effectAllowed="move";});
     enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");enc.removeAttribute("draggable");$$("#advDetail .enc.drop-target").forEach(x=>x.classList.remove("drop-target"));dragEncId=null;});
     enc.addEventListener("dragover",ev=>{if(dragEncId&&dragEncId!==enc.dataset.enc){ev.preventDefault();enc.classList.add("drop-target");}});
     enc.addEventListener("dragleave",()=>enc.classList.remove("drop-target"));
@@ -1775,7 +1774,7 @@ function wrapStepper(input,step,min){
   b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
     const base=input.value===""?(input.id==="f_init"?initOf(M):0):Number(input.value||0);
     const nv=Math.max(min,base+(+btn.dataset.d)*step);
-    input.value=nv;input.dispatchEvent(new Event("input",{bubbles:true}));
+    input.value=nv;input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
   }));
 }
 
