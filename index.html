@@ -216,18 +216,17 @@
 
         <div class="preview-col" id="previewCol">
           <button class="preview-toggle" id="previewToggle" title="Collapse preview">◀</button>
-          <div class="preview-head">
-            <span class="pv-name" id="previewName">New Creature</span>
-            <div class="menu-wrap" style="flex:none">
-              <button class="kebab" data-menu="pv-copy" title="Export options">⋯</button>
+          <div class="derived" id="derived"></div>
+          <div class="sb-wrap">
+            <div class="menu-wrap sb-copy">
+              <button class="kebab sb-copy-btn" data-menu="pv-copy" title="Export options"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M224 64C188.7 64 160 92.7 160 128L160 384C160 419.3 188.7 448 224 448L448 448C483.3 448 512 419.3 512 384L512 128C512 92.7 483.3 64 448 64L224 64zM128 192C92.7 192 64 220.7 64 256L64 512C64 547.3 92.7 576 128 576L352 576C387.3 576 416 547.3 416 512L416 480L352 480L352 512L128 512L128 256L160 256L160 192L128 192z"/></svg></button>
               <div class="menu" id="menu-pv-copy">
                 <button id="pushClaude">Copy for Claude</button>
                 <button id="copyNotion">Copy for Notion</button>
               </div>
             </div>
+            <div class="sb" id="statblock"></div>
           </div>
-          <div class="derived" id="derived"></div>
-          <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
         </div>
         <button class="btn primary sm forge-save-fab" id="forgeSaveFab" title="Save to Bestiary">⚒ Save</button>
       </div>
