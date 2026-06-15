@@ -471,6 +471,20 @@ function bindStatic(){
   $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";$("#fsVillain").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
+  document.getElementById("previewToggle").addEventListener("click",()=>setPreviewCollapsed(true));
+  document.getElementById("pfExpand").addEventListener("click",()=>setPreviewCollapsed(false));
+  document.getElementById("pfSave").addEventListener("click",()=>document.getElementById("saveMonster").click());
+  document.getElementById("pfClaude").addEventListener("click",()=>document.getElementById("pushClaude").click());
+  document.getElementById("pfNotion").addEventListener("click",()=>document.getElementById("copyNotion").click());
+}
+let previewCollapsed=false;
+function setPreviewCollapsed(v){
+  previewCollapsed=v;
+  const forge=document.querySelector(".forge");
+  const fl=document.getElementById("previewFloat");
+  if(forge)forge.classList.toggle("preview-hidden",v);
+  if(fl)fl.classList.toggle("show",v);
+  if(v){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=M.name||"New Creature";}
 }
 // while HP is still auto (not manually set), derive it from a valid HP formula if present, else from CR
 function syncAutoHP(){if(!M._auto.hp)return;const f=M.hpf||"";const badge=$("#wb_hp .badge");
@@ -651,6 +665,14 @@ function buildLibSelects(){
   $('[data-lib="villain"]').innerHTML=LIB_PROMPT+list(Object.keys(VILLAIN_SNIPS));
   $('[data-lib="lair"]').innerHTML=LIB_PROMPT+list(Object.keys(LAIR_SNIPS));
   $$("[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
+  $$(".libsel-btn[data-lib]").forEach(btn=>{btn.addEventListener("click",()=>{const sel=btn.nextElementSibling;try{sel.showPicker();}catch(e){sel.focus();}});});
+  const cimmBtn=$("#cimmLibBtn"),cimmSel=$("#cimm-sel");
+  if(cimmBtn&&cimmSel){
+    const rebuildCimmSel=()=>{cimmSel.innerHTML="<option value=''>Pick condition…</option>"+(state.conditions||[]).map(c=>`<option value="${esc(c.name||c)}">${esc(c.name||c)}</option>`).join("");};
+    rebuildCimmSel();
+    cimmBtn.addEventListener("click",()=>{rebuildCimmSel();try{cimmSel.showPicker();}catch(e){cimmSel.focus();}});
+    cimmSel.addEventListener("change",()=>{const v=cimmSel.value;if(v){const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");renderCimm();renderPreview();cimmSel.value="";}});
+  }
   buildDatalist("dl-traits",Object.keys(TRAIT_SNIPS));
   buildDatalist("dl-atk",Object.keys(ATK_PRESETS));
   buildDatalist("dl-textact",[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)]);
@@ -777,6 +799,7 @@ function renderPreview(){
     +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"");
   $("#crTargets").innerHTML=boh?`<b>CR ${m.cr} targets</b> — AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
   $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
+  if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
   const initVal=initOf(m);
   const def=defenseStrings(m);
   let h=`<div class="topbar"></div><h2>${esc(m.name||"Unnamed Creature")}</h2>`;
@@ -1156,14 +1179,18 @@ function chassisConflictModal(ch){
   $("#ccBack").addEventListener("click",closeModal);
 }
 
+function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}"><button data-aim-dup="${a.id}">Duplicate</button><button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button><div class="sep"></div><button class="danger" data-aim-del="${a.id}">Delete</button></div></div>`;}
 function renderAdvList(){
   const box=$("#advItems");
   const active=state.adv.filter(a=>!a.archived),arch=state.adv.filter(a=>a.archived);
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
-  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="nm">${esc(a.name)}</div></div>`).join("");
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="ai-info"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="ai-info"><div class="nm">${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
-  box.querySelectorAll("[data-adv]").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.dataset.adv;renderAdvList();}));
-  const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.width="auto";}
+  box.querySelectorAll(".ai-info").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.closest("[data-adv]").dataset.adv;renderAdvList();}));
+  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=src.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${src.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
+  const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.removeProperty("width");}
   renderAdvDetail();
 }
 $("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:1,uneven:false,levels:[1,1,1,1],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
@@ -1203,6 +1230,8 @@ function renderAdvDetail(){
   d.innerHTML=`<div class="col-head"><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
+      <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
+      <div class="sep"></div>
       <button id="advDuplicate">Duplicate adventure</button>
       <button id="advArchive">${a.archived?"Unarchive":"Archive"} adventure</button>
       <div class="sep"></div>
@@ -1211,7 +1240,6 @@ function renderAdvDetail(){
     <div class="party-bar">
       <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
       <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
-      <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="pUneven" ${a.uneven?"checked":""}> Uneven levels</label>
       <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
       <div style="flex-basis:100%">
         <div class="adv-bud-bar">
@@ -1232,10 +1260,10 @@ function renderAdvDetail(){
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${a.name}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
   $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
+  $("#advToggleUneven").addEventListener("click",()=>{a.uneven=!a.uneven;syncLevels(a);saveAdv();renderAdvDetail();});
   wrapStepper($("#pSize"),1,1);wrapStepper($("#pLevel"),1,1);
   $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
-  $("#pUneven").addEventListener("change",e=>{a.uneven=e.target.checked;syncLevels(a);saveAdv();renderAdvDetail();});
   $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
   $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,combatants:[]});saveAdv();renderAdvDetail();});
   renderPCgrid(a);renderEncList(a);
@@ -1247,6 +1275,7 @@ function renderEncList(a){
   const box=$("#encList");if(!box)return;
   const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
   box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+  const addBtn=$("#addEnc");if(addBtn)addBtn.className=`btn ${active.length===0?"primary":"ghost"} sm`;
   const aw=$("#archWrap");
   if(arch.length){
     aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${arch.length})</button></div><div id="archBody" style="display:none">${arch.map(e=>encHTML(a,e)).join("")}</div>`;

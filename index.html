@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monster Forge</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -110,7 +111,11 @@
             <div class="grid g2" style="margin-top:11px">
               <label class="f">Defense note<input type="text" id="f_dmgnote" placeholder="…from nonmagical attacks"></label>
               <label class="f">Condition Immunities
-                <div class="chipfield" id="f_cimm_field"><span class="chips" id="cimmChips"></span><input type="text" id="f_cimm_input" class="chipinput" placeholder="add condition…" list="condDatalist" autocomplete="off"></div>
+                <div style="display:flex;gap:5px;align-items:flex-start">
+                  <div class="chipfield" id="f_cimm_field" style="flex:1"><span class="chips" id="cimmChips"></span><input type="text" id="f_cimm_input" class="chipinput" placeholder="add condition…" list="condDatalist" autocomplete="off"></div>
+                  <button class="libsel-btn" id="cimmLibBtn" type="button" title="Pick condition"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button>
+                  <select id="cimm-sel" style="display:none;position:absolute"></select>
+                </div>
               </label>
             </div>
             <div class="grid g2" style="margin-top:10px">
@@ -133,25 +138,25 @@
           <fieldset class="fieldset">
             <div class="fs-title">Traits <span class="count" id="cntTraits"></span></div>
             <div id="traitList"></div>
-            <div class="addrow"><button class="addbtn" data-add="traits" style="flex:2">＋ Add trait</button><select class="libsel" data-lib="traits"></select></div>
+            <div class="addrow"><button class="addbtn" data-add="traits" style="flex:2">＋ Add trait</button><button class="libsel-btn" type="button" title="From library" data-lib="traits"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="traits" style="display:none;position:absolute"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
             <div class="fs-title">Actions <span class="count" id="cntActions"></span></div>
             <div id="actionList"></div>
-            <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button><select class="libsel" data-lib="actions"></select></div>
+            <div class="addrow"><button class="addbtn" data-addatk="actions">＋ Attack (guided)</button><button class="addbtn" data-addspell="actions">＋ Spellcasting</button><button class="addbtn" data-addmulti="actions">＋ Multiattack</button><button class="addbtn" data-add="actions">＋ Custom action</button><button class="libsel-btn" type="button" title="From library" data-lib="actions"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="actions" style="display:none;position:absolute"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
             <div class="fs-title">Bonus Actions <span class="count" id="cntBonus"></span></div>
             <div id="bonusList"></div>
-            <div class="addrow"><button class="addbtn" data-add="bonus" style="flex:2">＋ Add bonus action</button><select class="libsel" data-lib="bonus"></select></div>
+            <div class="addrow"><button class="addbtn" data-add="bonus" style="flex:2">＋ Add bonus action</button><button class="libsel-btn" type="button" title="From library" data-lib="bonus"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="bonus" style="display:none;position:absolute"></select></div>
           </fieldset>
 
           <fieldset class="fieldset">
             <div class="fs-title">Reactions <span class="count" id="cntReact"></span></div>
             <div id="reactList"></div>
-            <div class="addrow"><button class="addbtn" data-add="reactions" style="flex:2">＋ Add reaction</button><select class="libsel" data-lib="reactions"></select></div>
+            <div class="addrow"><button class="addbtn" data-add="reactions" style="flex:2">＋ Add reaction</button><button class="libsel-btn" type="button" title="From library" data-lib="reactions"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="reactions" style="display:none;position:absolute"></select></div>
           </fieldset>
 
           <fieldset class="fieldset optfs collapsed" id="fsLegend">
@@ -159,7 +164,7 @@
             <div id="legendInner" style="display:none">
               <label class="f">Intro line<textarea id="f_legintro"></textarea></label>
               <div id="legendList" style="margin-top:9px"></div>
-              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="legend" style="flex:2">＋ Add legendary action</button><select class="libsel" data-lib="legend"></select></div>
+              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="legend" style="flex:2">＋ Add legendary action</button><button class="libsel-btn" type="button" title="From library" data-lib="legend"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="legend" style="display:none;position:absolute"></select></div>
             </div>
           </fieldset>
 
@@ -168,7 +173,7 @@
             <div id="villainInner" style="display:none">
               <label class="f">Intro line<textarea id="f_vilintro"></textarea></label>
               <div id="villainList" style="margin-top:9px"></div>
-              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="villain" style="flex:2">＋ Add villain action</button><select class="libsel" data-lib="villain"></select></div>
+              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="villain" style="flex:2">＋ Add villain action</button><button class="libsel-btn" type="button" title="From library" data-lib="villain"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="villain" style="display:none;position:absolute"></select></div>
             </div>
           </fieldset>
 
@@ -177,7 +182,7 @@
             <div id="lairInner" style="display:none">
               <label class="f">Intro line<textarea id="f_lairintro"></textarea></label>
               <div id="lairList" style="margin-top:9px"></div>
-              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="lair" style="flex:2">＋ Add lair action</button><select class="libsel" data-lib="lair"></select></div>
+              <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="lair" style="flex:2">＋ Add lair action</button><button class="libsel-btn" type="button" title="From library" data-lib="lair"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="lair" style="display:none;position:absolute"></select></div>
             </div>
           </fieldset>
 
@@ -202,7 +207,8 @@
           </div>
         </div>
 
-        <div class="preview-col">
+        <div class="preview-col" id="previewCol">
+          <button class="preview-toggle" id="previewToggle" title="Collapse preview">◀</button>
           <div class="derived" id="derived"></div>
           <div class="cr-targets" id="crTargets"></div>
           <div class="sb-wrap"><div class="sb" id="statblock"></div></div>
@@ -255,6 +261,18 @@
 
 <datalist id="condDatalist"></datalist>
 <datalist id="spellDatalist"></datalist>
+<div class="preview-float" id="previewFloat">
+  <span class="pf-name" id="pfName">New Creature</span>
+  <button class="btn primary sm" id="pfSave" style="width:auto;flex:none">⚒ Save</button>
+  <div class="menu-wrap" style="flex:none">
+    <button class="kebab" data-menu="pf-copy" title="Copy options">⋯</button>
+    <div class="menu up" id="menu-pf-copy">
+      <button id="pfClaude">Copy for Claude</button>
+      <button id="pfNotion">Copy for Notion</button>
+    </div>
+  </div>
+  <button class="pf-expand" id="pfExpand" title="Expand preview">▶</button>
+</div>
 <div class="toast" id="toast"></div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 <script>document.write('<script src="app.js?cb='+Date.now()+'"><\/script>');</script>
