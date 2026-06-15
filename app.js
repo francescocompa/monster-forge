@@ -9,25 +9,30 @@ const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statb
 // the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
 // in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
 const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta";
+// Quota-aware writes: a failed setItem (device storage full) flips _storageFailed so the
+// upload flow can surface a single consolidated alert instead of silently dropping data.
+let _storageFailed=false;
+function _store(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){_storageFailed=true;return false;}}
 function loadPresets(){try{state.presets=(JSON.parse(localStorage.getItem(PRESET_KEY))||[]).map(normalizeMonster);}catch(e){state.presets=[];}}
-function savePresets(){try{localStorage.setItem(PRESET_KEY,JSON.stringify(state.presets));}catch(e){toast("Couldn't store presets — device storage may be full.");}}
+function savePresets(){_store(PRESET_KEY,state.presets);}
 function loadSpells(){try{state.spells=JSON.parse(localStorage.getItem(SPELL_KEY))||[];}catch(e){state.spells=[];}}
-function saveSpells(){try{localStorage.setItem(SPELL_KEY,JSON.stringify(state.spells));}catch(e){toast("Couldn't store spells — device storage may be full.");}}
+function saveSpells(){_store(SPELL_KEY,state.spells);}
 function loadConditions(){try{state.conditions=JSON.parse(localStorage.getItem(COND_KEY))||[];}catch(e){state.conditions=[];}}
-function saveConditions(){try{localStorage.setItem(COND_KEY,JSON.stringify(state.conditions));}catch(e){toast("Couldn't store conditions — device storage may be full.");}}
+function saveConditions(){_store(COND_KEY,state.conditions);}
 function loadBooks(){try{state.books=JSON.parse(localStorage.getItem(BOOK_KEY))||{};}catch(e){state.books={};}}
-function saveBooks(){try{localStorage.setItem(BOOK_KEY,JSON.stringify(state.books));}catch(e){/* reference only - non-fatal */}}
+function saveBooks(){_store(BOOK_KEY,state.books);}
 function loadDisabled(){try{state.disabledLibs=JSON.parse(localStorage.getItem(DISLIB_KEY))||[];}catch(e){state.disabledLibs=[];}}
-function saveDisabled(){try{localStorage.setItem(DISLIB_KEY,JSON.stringify(state.disabledLibs));}catch(e){/* non-fatal */}}
+function saveDisabled(){_store(DISLIB_KEY,state.disabledLibs);}
 function loadLegGroups(){try{state.legendaryGroups=JSON.parse(localStorage.getItem(LEGGRP_KEY))||{};}catch(e){state.legendaryGroups={};}}
-function saveLegGroups(){try{localStorage.setItem(LEGGRP_KEY,JSON.stringify(state.legendaryGroups));}catch(e){/* non-fatal */}}
+function saveLegGroups(){_store(LEGGRP_KEY,state.legendaryGroups);}
 function loadRefMeta(){try{state.refMeta=JSON.parse(localStorage.getItem(REFMETA_KEY))||{};}catch(e){state.refMeta={};}}
-function saveRefMeta(){try{localStorage.setItem(REFMETA_KEY,JSON.stringify(state.refMeta));}catch(e){/* non-fatal */}}
+function saveRefMeta(){_store(REFMETA_KEY,state.refMeta);}
 function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();loadPresets();loadSpells();loadConditions();reannotateBooks();reapplyLegGroups();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
-function reannotateBooks(){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
-  state.presets.forEach(ann);state.spells.forEach(ann);state.conditions.forEach(ann);}
+function reannotateBooks(persist){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
+  state.presets.forEach(ann);state.spells.forEach(ann);state.conditions.forEach(ann);
+  if(persist){savePresets();saveSpells();saveConditions();}}
 // Re-apply lair/regional from the loaded legendarygroups onto any preset that references one
 // (so uploading the groups file after a bestiary, or in a later session, still fills them in).
 function reapplyLegGroups(){const map=state.legendaryGroups||{};let any=false;
@@ -491,9 +496,9 @@ function prettySource(s){return (s||"").replace(/\.md$/i,"").replace(/_(Spells|C
 // (PHB, XGE…) via <optgroup>. Items are {name,_source} (or bare strings).
 function groupedRefOptions(items,placeholder){
   const groups={};
-  (items||[]).forEach(it=>{const name=it.name||it;const src=(it&&(it._book||it._source))||"Other";(groups[src]=groups[src]||[]).push(name);});
+  (items||[]).forEach(it=>{const name=it.name||it;const src=(it&&(it._srcCode||it._source))||"Other";(groups[src]=groups[src]||[]).push(name);});
   const srcs=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
-  return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(prettySource(s))}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
+  return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(s)}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
 }
 // Spell picker options: grouped by spell level (Cantrip, Level 1…), each option labelled
 // "Name (SOURCE)" so the source is visible. Value stays the bare spell name.
@@ -506,7 +511,7 @@ function groupedSpellOptions(items,placeholder){
     const seen=new Set();
     const opts=byLvl[lv].slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(sp=>{
       const key=(sp.name||"")+"|"+(sp._source||"");if(seen.has(key))return "";seen.add(key);
-      const src=(sp._book||sp._source)?` (${prettySource(sp._book||sp._source)})`:"";
+      const code=sp._srcCode||sp._source;const src=code?` (${code})`:"";
       return `<option value="${esc(sp.name)}">${esc(sp.name)}${esc(src)}</option>`;
     }).join("");
     return `<optgroup label="${esc(lvlLabel(lv))}">${opts}</optgroup>`;
@@ -640,10 +645,12 @@ function refContent(kind,name){
     const meta=s.level===0?(s.school+" cantrip"):s.level?("Level "+s.level+" "+s.school):s.school;
     const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
       .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
-    const ssrc=prettySource(s._source||s.source||"");
-    return `<div class="refcard-h">${esc(s.name)}${ssrc?` <span class="refcard-src">${esc(ssrc)}</span>`:""}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
+    return `<div class="refcard-h">${esc(s.name)}${srcBadge(s)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   const c=findCondition(name);if(!c)return "";
-  return `<div class="refcard-h">${esc(c.name)}${c.source?` <span class="refcard-src">${esc(c.source)}</span>`:""}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
+  return `<div class="refcard-h">${esc(c.name)}${srcBadge(c)}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
+// Source-id badge (e.g. XPHB) with the full book title as a hover tooltip when known.
+function srcBadge(x){const id=x._srcCode||x.source||"";if(!id)return "";const full=x._book||"";
+  return ` <span class="refcard-src"${full?` title="${esc(full)}"`:""}>${esc(id)}</span>`;}
 let _refTimer=null;
 function ensureRefpop(){let p=$("#refpop");if(!p){p=document.createElement("div");p.id="refpop";p.className="refpop";document.body.appendChild(p);
   p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);}return p;}
@@ -1088,8 +1095,11 @@ function prUpdateSelUI(){
   const modal=$("#modal");if(!modal)return;
   modal.querySelectorAll(".preset-row").forEach(row=>{const on=presetSel.has(libKey(row.dataset.kind,row.dataset.name));row.classList.toggle("picked",on);const cb=row.querySelector(".lib-sel");if(cb)cb.checked=on;});
   modal.querySelectorAll(".lib-grp").forEach(grp=>{const rows=[...grp.querySelectorAll(".preset-row")];const sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;const cb=grp.querySelector(".grp-sel");if(cb){cb.checked=rows.length>0&&sel===rows.length;cb.indeterminate=sel>0&&sel<rows.length;}});
-  const act=$("#prActions"),n=presetSel.size;if(act){act.classList.toggle("show",n>0);const s=act.querySelector(".sel-n");if(s)s.textContent=n+" selected";}
+  const act=$("#prActions"),n=presetSel.size;if(act){act.classList.toggle("show",n>0);const s=act.querySelector(".sel-n");if(s)s.textContent=n+" selected";
+    const tog=act.querySelector("#prToggle");if(tog){const keys=[...presetSel],on=keys.filter(k=>{const p=splitLibKey(k);return isLibEnabled(p[0],p[1]);}).length;
+      tog.checked=keys.length>0&&on===keys.length;tog.indeterminate=on>0&&on<keys.length;}}
 }
+function splitLibKey(k){const i=k.indexOf(LIBSEP);return[k.slice(0,i),k.slice(i+LIBSEP.length)];}
 function presetModal(){
   const libs=presetLibraries();
   const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
@@ -1118,7 +1128,7 @@ function presetModal(){
   else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
   let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
-  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><button class="btn ghost xs" data-act="enable">Enable</button><button class="btn ghost xs" data-act="disable">Disable</button><button class="btn ghost xs danger" data-act="remove">Remove</button></div>`;
+  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">🗑</button></div>`;
   h+=`<div class="lib-scroll">`;
   if(!libs.length)h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   else if(!recs.length)h+=`<div class="empty-state" style="padding:26px">No libraries match these filters.</div>`;
@@ -1142,13 +1152,16 @@ function presetModal(){
   $("#prClose").addEventListener("click",closeModal);
   $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
   $("#prHelp").addEventListener("click",e=>{e.stopPropagation();showPopover($("#prHelp"),`<div class="help-pop">${PRESET_HINT}</div>`);});
-  $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmModal(`Remove this reference sheet?`,()=>removeReference(k));}));
+  $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmStack(`Remove this reference sheet?`,()=>removeReference(k));}));
   $("#modal").querySelectorAll(".lib-sel").forEach(cb=>cb.addEventListener("change",()=>{const row=cb.closest(".preset-row"),key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);prUpdateSelUI();}));
   $("#modal").querySelectorAll(".grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
-  const split=k=>{const i=k.indexOf(LIBSEP);return[k.slice(0,i),k.slice(i+LIBSEP.length)];};
-  $("#prActions").querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{const act=b.dataset.act,keys=[...presetSel];
-    if(act==="remove"){const n=keys.length;confirmModal(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>{keys.forEach(k=>{const p=split(k);removeLib(p[0],p[1]);});refreshLibPools();presetModal();});return;}
-    keys.forEach(k=>{const p=split(k);setLibEnabled(p[0],p[1],act==="enable");});refreshLibPools();presetModal();}));
+  // Toggle reflects the selection's combined state: on=all enabled, off=all disabled,
+  // mid (indeterminate)=mixed. A click enables all unless they're already all enabled.
+  $("#prToggle").addEventListener("change",()=>{const keys=[...presetSel];if(!keys.length)return;
+    const allOn=keys.every(k=>{const p=splitLibKey(k);return isLibEnabled(p[0],p[1]);});const target=!allOn;
+    keys.forEach(k=>{const p=splitLibKey(k);setLibEnabled(p[0],p[1],target);});refreshLibPools();presetModal();});
+  $("#prRemove").addEventListener("click",()=>{const keys=[...presetSel],n=keys.length;if(!n)return;
+    confirmStack(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>{keys.forEach(k=>{const p=splitLibKey(k);removeLib(p[0],p[1]);});refreshLibPools();presetModal();});});
   $("#modal").querySelectorAll(".grp-sel").forEach(c=>{const grp=c.closest(".lib-grp"),rows=[...grp.querySelectorAll(".preset-row")],sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;c.indeterminate=sel>0&&sel<rows.length;});
   prUpdateSelUI();
 }
@@ -1538,7 +1551,10 @@ $("#mdIn").addEventListener("change",e=>{
       loaded.forEach(L=>{const k=L.json&&detectJsonKind(L.json);
         if(k==="book"){Object.assign(state.books,parseBooksJSON(L.json));bookAdded=true;state.refMeta.books={file:L.name,count:Object.keys(parseBooksJSON(L.json)).length};}
         if(k==="legendaryGroup"){Object.assign(state.legendaryGroups,parseLegendaryGroupsJSON(L.json));legAdded=true;state.refMeta.legGroups={file:L.name,count:((L.json.legendaryGroup||[]).length)};}});
-      if(bookAdded){saveBooks();reannotateBooks();}
+      _storageFailed=false;
+      // A newly-uploaded books.json must re-annotate EVERY already-loaded library (not just
+      // ones uploaded afterwards), then persist so the labels survive a reload.
+      if(bookAdded){saveBooks();reannotateBooks(true);}
       if(legAdded){saveLegGroups();}
       if(bookAdded||legAdded)saveRefMeta();
       // 2. base indexes (raw monsters + legendary groups) across this batch + the session
@@ -1557,7 +1573,9 @@ $("#mdIn").addEventListener("change",e=>{
         }catch(err){summary.push(`${L.name}: failed to parse`);}
       });
       if(legAdded)reapplyLegGroups(); // backfill lair/regional onto already-loaded bestiaries
-      toast(`Loaded — ${summary.join("; ")}`);
+      // Concise feedback: for a multi-file batch show only the count of sources loaded.
+      toast(summary.length>1?`Loaded ${summary.length} sources.`:`Loaded — ${summary[0]||"nothing"}`);
+      if(_storageFailed)alertStack("Device storage full","Some libraries couldn't be saved and won't persist after a reload. Remove libraries you don't need to free space, then re-upload.");
       if($("#modalBg").classList.contains("show"))presetModal();
     });
   e.target.value="";
@@ -1596,6 +1614,16 @@ function confirmModal(msg,onYes){
   openModalRaw(`<h3>Confirm</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn ghost sm" id="cNo" style="width:auto">Cancel</button><button class="btn primary sm" id="cYes" style="width:auto">Yes</button></div>`);
   $("#cNo").addEventListener("click",closeModal);$("#cYes").addEventListener("click",()=>{closeModal();onYes();});
 }
+// Stacked dialogs: rendered in their own overlay ABOVE the current modal (which stays open),
+// so e.g. a remove-confirmation appears on top of the preset-library manager.
+function stackDialog(html){const bg=document.createElement("div");bg.className="modal-bg stack show";
+  bg.innerHTML=`<div class="modal" style="max-width:430px">${html}</div>`;document.body.appendChild(bg);
+  bg.addEventListener("click",e=>{if(e.target===bg)bg.remove();});return bg;}
+function confirmStack(msg,onYes){const bg=stackDialog(`<h3>Confirm</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn ghost sm" data-no style="width:auto">Cancel</button><button class="btn primary sm" data-yes style="width:auto">Yes</button></div>`);
+  bg.querySelector("[data-no]").addEventListener("click",()=>bg.remove());
+  bg.querySelector("[data-yes]").addEventListener("click",()=>{bg.remove();onYes();});}
+function alertStack(title,msg){const bg=stackDialog(`<h3>${esc(title)}</h3><p style="margin:-4px 0 14px">${esc(msg)}</p><div class="mrow"><button class="btn primary sm" data-ok style="width:auto">OK</button></div>`);
+  bg.querySelector("[data-ok]").addEventListener("click",()=>bg.remove());}
 
 // ── 5etools paste importer ────────────────────────────────────────────────────
 
