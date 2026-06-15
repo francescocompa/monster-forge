@@ -16,13 +16,25 @@ function parseSenses(str){const s={darkvision:0,blindsight:0,tremorsense:0,trues
 // European-number tolerant; actions/traits imported as text entries.
 const SEC_HEADERS={traits:"traits",actions:"actions","bonus actions":"bonus",reactions:"reactions","legendary actions":"legend","lair actions":"lair","regional effects":"regional","villain actions":"villain"};
 function classifyDmg(str){const types={},note=[];String(str).split(/[,;]/).map(t=>t.trim()).filter(Boolean).forEach(tok=>{const hit=DMG_TYPES.find(d=>d.toLowerCase()===tok.toLowerCase());if(hit)types[hit]=1;else note.push(tok);});return{types,note};}
+// Expand the abbreviated 5etools attack notation (e.g. "m,r 9", "mw 6") that
+// survives token-stripping into readable wording matching the app's own attacks.
+// m=melee, r=ranged (mw/ms/rw/rs = weapon/spell variants); a comma pair = "or".
+// Only fires when an entry body STARTS with a recognized code, so ordinary text
+// ("moves 9 squares…") is left alone. Italicises the following "Hit:" to match.
+function normAtkWording(t){
+  if(!t)return t;let matched=false;
+  let s=String(t).replace(/^\s*(mw,rw|ms,rs|m,r|r,m|mw|rw|ms|rs|m|r)\s+([+-]?\d+)(?=[,.\s])/i,(_,code,bon)=>{
+    matched=true;const c=code.toLowerCase(),mel=/m/.test(c),ran=/r/.test(c);
+    return "*"+(mel&&ran?"Melee or Ranged Attack Roll":mel?"Melee Attack Roll":"Ranged Attack Roll")+":* "+sgn(+bon);});
+  if(matched)s=s.replace(/\bHit:/,"*Hit:*");
+  return s;}
 // split a section's blocks into named entries; frequency/continuation lines fold into the previous entry
 function parseEntries(blocks){const out=[];(blocks||[]).forEach(b=>{b=b.trim();if(!b)return;
   const isCont=/^(at will|cantrip|constant|\d\s*\/\s*day|\d(?:st|nd|rd|th)[- ]level|level \d)/i.test(b);
   const mm=b.match(/^(.{1,60}?)\.\s+([\s\S]+)$/);
-  if(mm&&!isCont)out.push({name:mm[1].trim(),text:mm[2].trim()});
+  if(mm&&!isCont)out.push({name:mm[1].trim(),text:normAtkWording(mm[2].trim())});
   else if(out.length)out[out.length-1].text+="\n"+b;
-  else out.push({name:"",text:b});});
+  else out.push({name:"",text:normAtkWording(b)});});
   return out;}
 function splitIntro(blocks){if(!blocks||!blocks.length)return{intro:"",items:[]};
   const introRe=/legendary action uses|immediately after another creature|on initiative count|can take \d+ legendary|^the .* takes a lair action|villain action/i;
