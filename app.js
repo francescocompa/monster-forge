@@ -634,8 +634,8 @@ function bindEntries(){
     inp.addEventListener("change",()=>{if(inp.value)add(inp.value);});});
   // spell group "from library" native dropdowns (grouped by source) overlaid on the book icon
   $$("#formCol select[data-spellsel]").forEach(sel=>{
-    sel.innerHTML=groupedRefOptions(state.spells||[],"Add spell…");
-    sel.addEventListener("mousedown",()=>{sel.innerHTML=groupedRefOptions(state.spells||[],"Add spell…");});
+    sel.innerHTML=groupedSpellOptions(state.spells||[],"Add spell…");
+    sel.addEventListener("mousedown",()=>{sel.innerHTML=groupedSpellOptions(state.spells||[],"Add spell…");});
     sel.addEventListener("change",()=>{const[i,gi]=sel.dataset.spellsel.split(":").map(Number);const v=sel.value;sel.value="";if(!v)return;
       const g=M.actions[i]&&M.actions[i].groups&&M.actions[i].groups[gi];if(!g)return;
       const cur=g.spells?g.spells.split(",").map(s=>s.trim()).filter(Boolean):[];
@@ -667,14 +667,32 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
   if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
 const BOOK_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg>';
-// Native <select> options for a preset reference list (spells / conditions), grouped by source
+// Short, human label for a preset source filename (e.g. "PHB24_Spells.md" → "PHB24").
+function prettySource(s){return (s||"").replace(/\.md$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;}
+// Native <select> options for a preset reference list (conditions), grouped by source
 // (PHB, XGE…) via <optgroup>. Items are {name,_source} (or bare strings).
 function groupedRefOptions(items,placeholder){
   const groups={};
   (items||[]).forEach(it=>{const name=it.name||it;const src=it._source||"Other";(groups[src]=groups[src]||[]).push(name);});
   const srcs=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
-  const pretty=s=>s.replace(/\.md$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;
-  return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(pretty(s))}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
+  return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(prettySource(s))}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
+}
+// Spell picker options: grouped by spell level (Cantrip, Level 1…), each option labelled
+// "Name (SOURCE)" so the source is visible. Value stays the bare spell name.
+function groupedSpellOptions(items,placeholder){
+  const byLvl={};
+  (items||[]).forEach(sp=>{const lv=(sp.level==null?99:sp.level);(byLvl[lv]=byLvl[lv]||[]).push(sp);});
+  const lvls=Object.keys(byLvl).map(Number).sort((a,b)=>a-b);
+  const lvlLabel=lv=>lv===0?"Cantrip":lv===99?"Other":"Level "+lv;
+  return `<option value="">${esc(placeholder)}</option>`+lvls.map(lv=>{
+    const seen=new Set();
+    const opts=byLvl[lv].slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(sp=>{
+      const key=(sp.name||"")+"|"+(sp._source||"");if(seen.has(key))return "";seen.add(key);
+      const src=sp._source?` (${prettySource(sp._source)})`:"";
+      return `<option value="${esc(sp.name)}">${esc(sp.name)}${esc(src)}</option>`;
+    }).join("");
+    return `<optgroup label="${esc(lvlLabel(lv))}">${opts}</optgroup>`;
+  }).join("");
 }
 function buildLibSelects(){
   const opt=(v,t)=>`<option value="${esc(v)}">${esc(t)}</option>`;
