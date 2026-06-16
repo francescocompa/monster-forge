@@ -177,6 +177,19 @@ function renderSpellcasting(sc){
   return out.join("\n");
 }
 
+// Build the Forge spell-group list ({freq,spells}) from a 5etools spellcasting block. Daily keys:
+// "3"=3/Day, "3e"=3/Day Each, "1r"=1/Rest; leveled spells become "Nth-level (N slots)".
+function scFreqGroups(sc){
+  const names=arr=>(arr||[]).map(x=>richStrip(x));
+  const groups=[];
+  if(sc.will&&sc.will.length)groups.push({freq:"At Will",spells:names(sc.will).join(", ")});
+  const blk=(obj,unit)=>{if(!obj)return;Object.keys(obj).sort().forEach(k=>{const each=/e$/.test(k),n=k.replace(/[er]$/,"");groups.push({freq:n+"/"+unit+(each?" Each":""),spells:names(obj[k]).join(", ")});});};
+  blk(sc.daily,"Day");blk(sc.rest,"Rest");blk(sc.weekly,"Week");
+  if(sc.recharge)Object.keys(sc.recharge).forEach(k=>groups.push({freq:"Recharge "+k,spells:names(sc.recharge[k]).join(", ")}));
+  if(sc.spells)Object.keys(sc.spells).sort((a,b)=>+a-+b).forEach(lv=>{const g=sc.spells[lv];const lab=lv==="0"?"Cantrips":(lv+(lv==="1"?"st":lv==="2"?"nd":lv==="3"?"rd":"th")+"-level"+(g.slots?` (${g.slots} slot${g.slots>1?"s":""})`:""));groups.push({freq:lab,spells:names(g.spells).join(", ")});});
+  return groups;
+}
+function scSpellEntry(sc){const hdr=entriesToText(sc.headerEntries||[]);const dcM=hdr.match(/DC\s*(\d+)/i);return {mode:"spell",name:richStrip(sc.name||"Spellcasting"),ability:sc.ability||"int",dc:dcM?Number(dcM[1]):"",atk:"",groups:scFreqGroups(sc)};}
 // Map one resolved 5etools monster object onto a Forge monster.
 function mapMonsterJSON(mon,legGroups){
   const m=blankMonster();m._auto={ac:false,hp:false};
@@ -231,12 +244,19 @@ function mapMonsterJSON(mon,legGroups){
   // entry sections
   const toEntries=arr=>[].concat(arr||[]).map(e=>T(richStrip(e.name||""),entriesToText(e.entries||e.entry||[])));
   if(mon.trait)m.traits=m.traits.concat(toEntries(mon.trait));
-  if(mon.spellcasting)[].concat(mon.spellcasting).forEach(sc=>m.traits.push(T(richStrip(sc.name||"Spellcasting"),renderSpellcasting(sc))));
   if(mon.action)m.actions=toEntries(mon.action);
   if(mon.bonus)m.bonus=toEntries(mon.bonus);
   if(mon.reaction)m.reactions=[].concat(mon.reaction).map(e=>{const body=entriesToText(e.entries||e.entry||[]);
     const tm=body.match(/Trigger:\s*([\s\S]*?)\s*Response:\s*([\s\S]+)/i);
     return tm?{mode:"react",name:richStrip(e.name||""),trigger:tm[1].trim(),response:tm[2].trim()}:{mode:"react",name:richStrip(e.name||""),trigger:"",response:body};});
+  // Spellcasting blocks (after action/bonus/reaction so they're not overwritten). 2024 puts these in
+  // Actions; route each block by its displayAs (action / bonus / reaction) and structure it into a
+  // spell-mode entry (reactions keep a text body since that section renders trigger/response).
+  if(mon.spellcasting)[].concat(mon.spellcasting).forEach(sc=>{
+    const disp=(sc.displayAs||sc.type||"").toLowerCase();
+    if(disp.indexOf("reaction")>=0)(m.reactions=m.reactions||[]).push({mode:"react",name:richStrip(sc.name||"Spellcasting"),trigger:"",response:renderSpellcasting(sc)});
+    else{const e=scSpellEntry(sc);if(disp.indexOf("bonus")>=0)(m.bonus=m.bonus||[]).push(e);else (m.actions=m.actions||[]).push(e);}
+  });
   if(mon.legendary){const intro=entriesToText(mon.legendaryHeader||[]);m.legend={on:true,intro,items:toEntries(mon.legendary)};}
   if(mon.mythic){const intro=entriesToText(mon.mythicHeader||[]);if(!m.legend.on)m.legend={on:true,intro,items:[]};m.legend.items=m.legend.items.concat(toEntries(mon.mythic));}
   // Lair actions & regional effects live in a separate legendarygroups file, referenced

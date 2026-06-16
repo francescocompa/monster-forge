@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 56 — Roll/colour fixes + spellcasting import
+- **Roll-log:** header buttons collapsed into a **kebab menu** (Dice notation ·
+  Sort order [newest top/bottom] · Custom roll · Clear log). Right-click a log entry
+  to **Reroll** or **Remove** it. CHK tag recoloured purple.
+- **Recharge** in an action name is now rollable (1d6); dice that aren't clearly
+  damage/attack/save/check carry **no tag** (damage requires a following "… damage").
+- **Ability-score block:** colour highlight now sits behind only the fixed-width
+  codename (neutral text, scores uncoloured), with spacing between highlights and
+  Mod/Save numbers centred. **Skills** inherit their ability's colour.
+- **Spells** get their own purple colour; spellcasting blocks are excluded from the
+  colouriser (so "Wall of Fire" no longer tags "fire" as a damage type).
+- **Spellcasting import fix:** 5etools `spellcasting` blocks now route by `displayAs`
+  — Spellcasting → **Actions**, "Misty Step (3/Day)" → **Bonus Actions**, "Protective
+  Magic" → **Reactions** (was: everything dumped into traits) — and are structured
+  into spell-mode entries with parsed groups. (Re-import affected creatures to apply.)
+- **Spell chips** may carry a "(comment)" beside the name; reference lookup ignores
+  anything in brackets.
+
 ## Batch 55 — Roll & colour overhaul
 - **Colours:** all damage types now share one fixed colour (no per-element palette);
   conditions recoloured violet (distinct from the accent); ability-score block gets

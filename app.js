@@ -1011,7 +1011,9 @@ function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replac
 function fmtBlock(t){return esc(String(t||"")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>").replace(/\n{2,}/g,"<br><br>").replace(/\n([-•])\s*/g,"<br><span class=\"blk-item\">").replace(/\n/g,"<br>");}
 // ── Spell / condition references (Batch 14) ──────────────────────────────────
 // Look up uploaded reference data by name (case-insensitive).
-function findSpell(name){const n=String(name||"").trim().toLowerCase();return enSpells().find(s=>(s.name||"").toLowerCase()===n);}
+// A spell chip may carry a "(comment)" next to the name (e.g. "Fly (level 5 version)"); ignore the
+// bracketed part when resolving the reference.
+function findSpell(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enSpells().find(s=>(s.name||"").toLowerCase()===n);}
 function findCondition(name){const n=String(name||"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
 function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
