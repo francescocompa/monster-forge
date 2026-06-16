@@ -50,6 +50,8 @@ const GEAR_WEAPONS=["Club","Dagger","Greatclub","Handaxe","Javelin","Light Hamme
 const GEAR_ARMOR=["Padded Armor","Studded Leather Armor","Leather Armor","Hide Armor","Chain Shirt","Scale Mail","Breastplate","Half Plate Armor","Ring Mail","Chain Mail","Splint Armor","Plate Armor","Shield"];
 // Official 2024 tool proficiencies (B39).
 const TOOLS=["Alchemist's Supplies","Brewer's Supplies","Calligrapher's Supplies","Carpenter's Tools","Cartographer's Tools","Cobbler's Tools","Cook's Utensils","Glassblower's Tools","Jeweler's Tools","Leatherworker's Tools","Mason's Tools","Painter's Supplies","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools","Disguise Kit","Forgery Kit","Gaming Set","Herbalism Kit","Musical Instrument","Navigator's Tools","Poisoner's Kit","Thieves' Tools"];
+// Ability used for each tool's checks (XPHB 2024 ch.6) — drives the rollable tool modifier.
+const TOOL_ABIL={"Alchemist's Supplies":"int","Brewer's Supplies":"int","Calligrapher's Supplies":"dex","Carpenter's Tools":"str","Cartographer's Tools":"wis","Cobbler's Tools":"dex","Cook's Utensils":"wis","Glassblower's Tools":"int","Jeweler's Tools":"int","Leatherworker's Tools":"dex","Mason's Tools":"str","Painter's Supplies":"wis","Potter's Tools":"int","Smith's Tools":"str","Tinker's Tools":"dex","Weaver's Tools":"dex","Woodcarver's Tools":"dex","Disguise Kit":"cha","Forgery Kit":"dex","Gaming Set":"wis","Herbalism Kit":"int","Musical Instrument":"cha","Navigator's Tools":"wis","Poisoner's Kit":"int","Thieves' Tools":"dex"};
 // Recharge / per-day frequency tags appended to an action/BA/reaction title (B39).
 const FREQ_TAGS=["(Recharge 5–6)","(Recharge 6)","(1/Day)","(2/Day)","(3/Day)"];
 

@@ -352,8 +352,10 @@ select::-ms-expand{display:none}
 .sb .topbar{height:4px;margin:-16px -18px 13px;border-radius:8px 8px 0 0;background:linear-gradient(90deg,var(--accent),#8f3527)}
 /* B53/B55 statblock colour-coding (preview only). Each category one fixed, non-overlapping hue. */
 .sb .cc-dmg{color:#e06a6a;font-weight:600}        /* all damage types share one colour */
-.sb .cc-roll{color:#e7c070;font-weight:600}       /* dice / to-hit / attack bonus */
-.sb .cc-dc{color:#e7c070;font-weight:600}
+/* Colour split (B58): yellow = static bonuses/targets you don't roll; blue = dice you roll. */
+.sb .cc-roll{color:#e7c070;font-weight:600}       /* to-hit / attack bonus (a modifier, not a roll) */
+.sb .cc-dc{color:#e7c070;font-weight:600}         /* save/check DC — a target number */
+.sb .cc-dice{color:#6bb6e6;font-weight:600}       /* dice you actually roll (NdX, recharge) */
 .sb .cc-save{color:#6bb6e6}
 .sb .cc-cond{color:#b48ce6;font-weight:600}        /* conditions — violet, distinct from accent */
 .sb .cc-range{color:#4db6ac}
@@ -373,20 +375,29 @@ select::-ms-expand{display:none}
 .sb .cc-ab-cha{background:rgba(232,120,180,.22)}
 .sb .cc-spell,.sb .cc-spell .reflink{color:#cf7fce;font-weight:600}
 /* B54 click-to-roll affordance (only when the feature is on) */
-.mf-clickroll .sb [data-roll]{cursor:pointer;border-bottom:1px dashed rgba(231,192,112,.55);transition:filter .1s}
+.mf-clickroll .sb [data-roll]{cursor:none;border-bottom:1px dashed rgba(231,192,112,.55);transition:filter .1s}
 .mf-clickroll .sb [data-roll]:hover{filter:brightness(1.2)}
+/* Animated d20 cursor over rollable elements (B58) — CSS can't animate a real cursor, so a
+   pointer-following spinner stands in. Replaces the native cursor (set to none above). */
+#diceCursor{position:fixed;z-index:9999;pointer-events:none;width:22px;height:22px;margin:-11px 0 0 -11px;color:var(--amber-soft);opacity:0;transition:opacity .1s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+#diceCursor.show{opacity:1;animation:diceSpin 1.1s linear infinite}
+#diceCursor svg{width:22px;height:22px;display:block}
+@keyframes diceSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#diceCursor.show{animation:none}}
 .mf-clickroll .sb .roll-atkname[data-roll]{border-bottom:1px dashed var(--accent-soft)}
 .mf-clickroll .sb .ab td.roll-num[data-roll]{border-bottom:none;text-decoration:underline dashed rgba(231,192,112,.5);text-underline-offset:2px}
 /* Roll-options popover */
 .roll-pop{display:flex;gap:6px;align-items:center;padding:8px}
 .roll-pop .roll-edit-in{flex:1;min-width:96px;font-size:12.5px;padding:6px 8px}
-.roll-advtog{flex:none;width:30px;height:30px;display:grid;place-items:center;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s}
-.roll-advtog:hover{border-color:var(--accent)}
-.roll-advtog.adv{color:var(--ok);border-color:var(--ok)}
-.roll-advtog.dis{color:var(--bad);border-color:var(--bad)}
+/* adv/dis cycle icon (B58): no chrome, larger, state shown by icon colour only. */
+.roll-advtog{flex:none;display:grid;place-items:center;background:none;border:none;padding:2px;color:var(--dim);cursor:pointer;transition:color .12s}
+.roll-advtog svg{width:16px;height:16px;display:block}
+.roll-advtog:hover{color:var(--txt)}
+.roll-advtog.adv{color:var(--ok)}
+.roll-advtog.dis{color:var(--bad)}
 .roll-help{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:11px;cursor:pointer}
 .roll-help:hover{color:var(--txt);border-color:var(--accent)}
-.dice-help{padding:10px 12px;font-size:12px;max-width:230px;line-height:1.5}
+.dice-help{padding:10px 12px;font-size:12.5px;max-width:240px;line-height:1.55;font-family:system-ui,-apple-system,"Segoe UI","Inter",sans-serif}
 .dice-help b{display:block;margin-bottom:6px}
 .dice-help .dh-ex{color:var(--dim);margin-bottom:8px}
 .dice-help .dh-tip{color:var(--dim);margin-bottom:8px}
@@ -446,6 +457,7 @@ select::-ms-expand{display:none}
 .sb table.ab td.mh{color:var(--accent-soft);font-weight:700;font-size:10.5px}
 .sb table.ab .sc{color:var(--txt);font-weight:600}
 .sb table.ab .num{color:var(--txt)}
+.sb table.ab .num.save-prof{font-weight:700} /* proficient save → bold (B58) */
 .sb h3{color:var(--accent-soft);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:13px 0 5px;border-bottom:1px solid var(--line);padding-bottom:3px}
 .sb .blk{margin:5px 0;color:var(--txt)}
 .sb .blk .nm{font-style:italic;font-weight:600;color:#fff}
@@ -754,6 +766,8 @@ select::-ms-expand{display:none}
 .popover .popitem{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px;cursor:pointer}
 .popover .popitem:hover{background:var(--panel3)}
 .popover .popitem.on{color:var(--accent-soft)}
+.popover .popitem.danger{color:var(--bad)}
+.popover .popitem.danger:hover{background:rgba(210,96,74,.16)}
 .popover .popinput{width:190px;font-size:12.5px;padding:7px 9px}
 .popover .popitem{position:relative}
 .popover .popcheck{display:flex;align-items:center;gap:7px}
@@ -837,6 +851,9 @@ select::-ms-expand{display:none}
 /* Spell / condition reference links + hover card */
 .reflink{color:var(--info);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:help}
 .reflink:hover{color:#7bbde8;text-decoration-style:solid}
+/* Condition-immunity links: keep the dotted-underline popover affordance but no blue tint (B58). */
+.sb .reflink.reflink-plain{color:inherit}
+.sb .reflink.reflink-plain:hover{color:inherit}
 .refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;box-shadow:0 14px 36px rgba(0,0,0,.6);font-size:12.5px;line-height:1.5;display:none}
 .refpop.show{display:block}
 .refcard-h{font-weight:700;color:var(--accent-soft);font-size:14px;margin-bottom:1px}

@@ -4,6 +4,30 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 58 — Tools, colour audit & roll-popover polish
+- **Tool checks are rollable with the right ability** — added the XPHB 2024 tool→ability
+  map (`TOOL_ABIL`); each tool now rolls `1d20 + its ability mod + PB` and shows the modifier.
+- **Source filter shows real book titles** — the From-chassis and Bestiary filters now label
+  sources with the full name from `books.json` (e.g. "Monster Manual (2025)") instead of the
+  filename, and the Bestiary gained a **Source** filter.
+- **Yellow/blue colour split:** yellow now means a static number you *don't* roll (to-hit /
+  attack bonus, save/check DC); **blue means dice you actually roll** (NdX, recharge). Saving-throw
+  phrases stay blue.
+- **Animated d20 cursor** follows the pointer over anything rollable (a real CSS cursor can't be
+  animated). Respects reduced-motion.
+- **Roll popover:** the adv/disadv icon lost its box — it's now a larger (16px) icon that only
+  changes colour (grey → green → red); the **(?) moved after the Roll button** and shows the dice
+  notation on **hover** (in a separate tooltip that no longer tears down the roll field). The
+  dice-notation popover uses a cleaner sans font.
+- **Custom rolls:** carry no source, so the roll-log shows no statblock name; the field starts
+  empty with a `1d20` placeholder and rolls 1d20 if left blank.
+- **Saving-throw bonuses are bold when the creature is proficient** in that save.
+- **Condition immunities:** the condition link keeps its dotted underline + popover but loses the
+  blue tint. For both condition immunities and spell lists, a trailing `(comment)` is no longer
+  coloured/underlined — only the bare name links.
+- **Clear log** in the roll-log menu is now red, matching other destructive actions.
+- **Settings gear icon** shrunk to 15×15.
+
 ## Batch 57 — Roll & colour round
 - **Condition immunities** now ignore a trailing `(comment)` when matching a known
   condition — `charmed (with mind blank)` resolves to the *charmed* reference (same
