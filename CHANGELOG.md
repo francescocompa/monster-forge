@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 70 — Dev tooling (no-build safety net)
+- Added a dev-only tooling layer — the shipped site stays no-build. `npm run verify` runs `node --check`,
+  ESLint, and a jsdom smoke test. See `DEVELOPMENT.md`.
+- **ESLint** (`eslint.config.js`): self-maintaining cross-file globals (parses each shared script's
+  top-level declarations) so `no-undef` catches real typos without false positives. Baseline: 0 errors.
+- **Smoke test** (`test/`): boots the real `index.html` + all three scripts in jsdom and asserts init
+  throws nothing — the net for the "top-level binding to a removed node white-screens the page" failure.
+  Plus pure-function maths checks (mod/sgn/clamp/pbForCR/rollFormula/exprAvg/bracketize).
+- **Pre-commit hook** (`.githooks/pre-commit`, enable with `git config core.hooksPath .githooks`) runs
+  the full verify before a commit can land.
+
 ## Batch 69 — Rule-finder consistency, popover toggle, ⌘S
 - **Rule finder now scans the whole statblock consistently.** Header stats (Initiative, Speed) and the
   value lines (skills, senses, condition immunities, languages) are highlighted whether or not the

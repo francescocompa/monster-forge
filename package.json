@@ -1,0 +1,19 @@
+{
+  "name": "monster-forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "D&D 2024 homebrew monster & encounter builder — no-build static site.",
+  "type": "module",
+  "scripts": {
+    "check": "node --check data.js && node --check parsers.js && node --check app.js",
+    "lint": "eslint data.js parsers.js app.js",
+    "test": "node --test test/*.test.js",
+    "verify": "npm run check && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0",
+    "fake-indexeddb": "^6.0.0",
+    "globals": "^15.11.0",
+    "jsdom": "^25.0.1"
+  }
+}

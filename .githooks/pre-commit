@@ -1,0 +1,29 @@
+#!/bin/sh
+# Monster Forge pre-commit gate. Enable once with:
+#   git config core.hooksPath .githooks
+#
+# Runs the fast, no-build safety net before a commit can land:
+#   1. node --check on all three shared scripts (catches smart-quote / syntax breakage)
+#   2. eslint            (no-undef typos, dup keys, irregular whitespace — blocks on errors only)
+#   3. node --test       (init smoke test + pure-function maths)
+#
+# Skips gracefully if dependencies aren't installed yet (fresh clone before `npm install`).
+
+set -e
+
+if [ ! -d node_modules ]; then
+  echo "pre-commit: node_modules missing — run 'npm install' to enable lint/test gating. Running syntax check only."
+  node --check data.js && node --check parsers.js && node --check app.js
+  exit 0
+fi
+
+echo "pre-commit: node --check…"
+npm run --silent check
+
+echo "pre-commit: eslint…"
+npm run --silent lint
+
+echo "pre-commit: tests…"
+npm run --silent test
+
+echo "pre-commit: all checks passed."
