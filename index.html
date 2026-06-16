@@ -113,6 +113,8 @@
             <div class="fs-sub">Skills</div>
             <div id="skillRows"></div>
             <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
+            <div id="toolRows"></div>
+            <button class="addbtn" id="addTool" style="width:100%;margin-top:6px">＋ Add tool proficiency</button>
             <div class="fs-sub" style="margin-top:16px">Damage modifier</div>
             <div id="dmgRows"></div>
             <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
@@ -126,7 +128,12 @@
               </label>
             </div>
             <div class="grid g2" style="margin-top:10px">
-              <label class="f">Gear<input type="text" id="f_gear" placeholder="Longsword, Shield"></label>
+              <label class="f">Gear
+                <div style="display:flex;gap:5px;align-items:flex-start">
+                  <div class="chipfield" id="f_gear_field" style="flex:1"><span class="chips" id="gearChips"></span><input type="text" id="f_gear_input" class="chipinput" placeholder="add gear…" autocomplete="off"></div>
+                  <button type="button" class="addbtn" id="suggestGear" style="flex:none;width:auto;padding:0 10px;white-space:nowrap" title="Suggest gear from attacks & AC note">Suggest</button>
+                </div>
+              </label>
               <label class="f">Languages<input type="text" id="f_lang" placeholder="Common"></label>
             </div>
             <div class="fs-sub">Senses</div>

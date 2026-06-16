@@ -42,6 +42,13 @@ const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once p
 // MCDM (Flee Mortals!) minion ruleset — applied as traits when a stat block is flagged a minion.
 const MINION_TRAIT_TEXT="If [c] takes damage from an attack or as the result of a failed saving throw, its hit points are reduced to 0. If [c] takes damage from an effect that allows a saving throw, it takes no damage on a success and is reduced to 0 hit points on a failure.";
 const MINION_GROUP_TEXT="Minions of the same kind can occupy the same space and act as a group. When several minions in a group make the same attack, resolve it once and total the fixed damage of every minion that hit.";
+// Gear self-suggestion (B38): manufactured weapons matched against attack names, armor against the AC note.
+const GEAR_WEAPONS=["Club","Dagger","Greatclub","Handaxe","Javelin","Light Hammer","Mace","Quarterstaff","Sickle","Spear","Dart","Light Crossbow","Shortbow","Sling","Battleaxe","Flail","Glaive","Greataxe","Greatsword","Halberd","Lance","Longsword","Maul","Morningstar","Pike","Rapier","Scimitar","Shortsword","Trident","War Pick","Warhammer","Whip","Blowgun","Hand Crossbow","Heavy Crossbow","Longbow","Net","Musket","Pistol","Scythe","Crossbow"];
+const GEAR_ARMOR=["Padded Armor","Studded Leather Armor","Leather Armor","Hide Armor","Chain Shirt","Scale Mail","Breastplate","Half Plate Armor","Ring Mail","Chain Mail","Splint Armor","Plate Armor","Shield"];
+// Official 2024 tool proficiencies (B39).
+const TOOLS=["Alchemist's Supplies","Brewer's Supplies","Calligrapher's Supplies","Carpenter's Tools","Cartographer's Tools","Cobbler's Tools","Cook's Utensils","Glassblower's Tools","Jeweler's Tools","Leatherworker's Tools","Mason's Tools","Painter's Supplies","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools","Disguise Kit","Forgery Kit","Gaming Set","Herbalism Kit","Musical Instrument","Navigator's Tools","Poisoner's Kit","Thieves' Tools"];
+// Recharge / per-day frequency tags appended to an action/BA/reaction title (B39).
+const FREQ_TAGS=["(Recharge 5–6)","(Recharge 6)","(1/Day)","(2/Day)","(3/Day)"];
 
 const mod=s=>Math.floor((Number(s||10)-10)/2);
 const sgn=n=>(n>=0?"+":"")+n;

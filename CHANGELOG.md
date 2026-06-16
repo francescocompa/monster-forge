@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 34 — Gear, spellcasting/action & focus fixes (B38–B40 + add-ons)
+- **Gear "Suggest" button:** the Gear field is now a chipfield (like Condition
+  Immunities). A **Suggest** button harvests manufactured weapons from attack
+  names and armor/shield from the AC note, adding any new ones as removable chips
+  (never overwrites; natural weapons like Bite are ignored).
+- **Spellcasting lines** now always list spells **alphabetically**.
+- **Recharge / X-per-day → title:** a new ↻ control on action / bonus-action /
+  reaction rows appends `(Recharge 5–6)`, `(1/Day)`, etc. to the **name** (not the
+  body), replacing any existing freq tag. Removed the old body-text Recharge/1-Day
+  snippets.
+- **Tool proficiencies:** an **Add tool proficiency** button under Add skill picks
+  from the official 2024 tool list and shows a **Tools** line on the stat block.
+- **Focus fix:** typing in an attack/spell field (dice, range, rider, etc.) no
+  longer re-renders the whole list — it patches just that row's live hint, so the
+  field keeps focus and the page no longer jumps.
+- **Forge starts at the top** whenever a creature is loaded.
+- **Bestiary:** new **Encounter** and **Adventure** filter/group options (group by
+  adventure includes every monster used in any of its encounters).
+- Multi-select batch bar stays on one line (no wrap) when there's room.
+
 ## Batch 33 — Bestiary batch ops + MCDM minions (B36–B37)
 - **Multi-select bestiary cards:** Cmd/Ctrl-click toggles a card and Shift-click
   extends a range; a floating bar shows the count with **Set status** (bulk) and

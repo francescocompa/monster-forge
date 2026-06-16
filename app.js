@@ -175,7 +175,7 @@ function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[
 
 function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"creature",proper:false,plural:false},size:"Medium",type:"",subtype:"",align:"",
   ac:null,acnote:"",hp:null,hpf:"",spd:{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",initProf:"none",
-  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],dmg:{},dmgnote:"",cimm:"",gear:"",
+  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],tools:[],dmg:{},dmgnote:"",cimm:"",gear:"",
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
@@ -213,6 +213,7 @@ function normalizeMonster(m){
   if(!Array.isArray(m.tags))m.tags=[];
   m.archived=!!m.archived;
   m.minion=!!m.minion;
+  if(!Array.isArray(m.tools))m.tools=[];
   return m;
 }
 function normalizeAdv(a){
@@ -261,6 +262,26 @@ function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
   ci.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add(ci.value);}else if(e.key==="Backspace"&&!ci.value){const a=cimmList();if(a.length){a.pop();M.cimm=a.join(", ");renderCimm();renderPreview();}}});
   ci.addEventListener("change",()=>{if(ci.value.trim())add(ci.value);}); // datalist pick / commit on blur
   $("#f_cimm_field").addEventListener("click",e=>{if(e.target.id==="f_cimm_field")ci.focus();});}
+// Gear chipfield (B38) — mirrors the condition-immunity chip pattern.
+function gearList(){return (M.gear||"").split(",").map(s=>s.trim()).filter(Boolean);}
+function renderGear(){const box=$("#gearChips");if(!box)return;const list=gearList();
+  box.innerHTML=list.map((g,i)=>`<span class="chip">${esc(g)}<button class="chipx" data-rmgear="${i}" title="Remove">×</button></span>`).join("");
+  box.querySelectorAll("[data-rmgear]").forEach(b=>b.addEventListener("click",()=>{const a=gearList();a.splice(+b.dataset.rmgear,1);M.gear=a.join(", ");renderGear();renderPreview();}));}
+function bindGear(){const gi=$("#f_gear_input");if(!gi)return;
+  const add=v=>{v=(v||"").split(",").map(x=>x.trim()).filter(Boolean);const a=gearList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.gear=a.join(", ");gi.value="";renderGear();renderPreview();};
+  gi.addEventListener("input",()=>{if(/,/.test(gi.value)){const p=gi.value.split(",");p.slice(0,-1).forEach(x=>add(x));gi.value=p[p.length-1];}});
+  gi.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add(gi.value);}else if(e.key==="Backspace"&&!gi.value){const a=gearList();if(a.length){a.pop();M.gear=a.join(", ");renderGear();renderPreview();}}});
+  gi.addEventListener("change",()=>{if(gi.value.trim())add(gi.value);});
+  $("#f_gear_field").addEventListener("click",e=>{if(e.target.id==="f_gear_field")gi.focus();});
+  $("#suggestGear").addEventListener("click",suggestGear);}
+// Harvest gear from manufactured-weapon attack names + the AC note, adding any new items as chips.
+function suggestGear(){
+  const have=gearList(),add=[];const seen=t=>have.concat(add).some(x=>x.toLowerCase()===t.toLowerCase());
+  M.actions.forEach(e=>{if(e.mode!=="attack"&&!/weapon|sword|axe|bow|spear|hammer|mace|dagger|crossbow/i.test(e.name||""))return;
+    const w=GEAR_WEAPONS.find(g=>new RegExp("\\b"+g.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&")+"\\b","i").test(e.name||""));if(w&&!seen(w))add.push(w);});
+  GEAR_ARMOR.forEach(g=>{if(new RegExp("\\b"+g.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&")+"\\b","i").test(M.acnote||"")&&!seen(g))add.push(g);});
+  if(add.length){M.gear=have.concat(add).join(", ");renderGear();renderPreview();toast(`Added ${add.length} item${add.length>1?"s":""}: ${add.join(", ")}.`);}
+  else toast("No new gear found in attacks or AC note.");}
 function buildCondDatalist(){const dl=$("#condDatalist");if(!dl)return;dl.innerHTML=[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
 function buildSpellDatalist(){const dl=$("#spellDatalist");if(!dl)return;dl.innerHTML=[...new Set(enSpells().map(s=>s.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
 function bindStatic(){
@@ -270,8 +291,8 @@ function bindStatic(){
     // a valid dice formula auto-derives HP, but only when HP is empty or just the CR autofill (not a manual edit)
     if(/\d+\s*d\s*\d+/i.test(M.hpf)&&(M.hp==null||M._auto.hp)){M.hp=exprAvg(M.hpf);M._auto.hp=false;$("#f_hp").value=M.hp;$("#wb_hp").classList.remove("suggested");}
     renderPreview();});
-  bindField("#f_dmgnote","dmgnote");bindField("#f_gear","gear");bindField("#f_lang","lang");
-  bindCimm();
+  bindField("#f_dmgnote","dmgnote");bindField("#f_lang","lang");
+  bindCimm();bindGear();
   $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value||"creature";renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
   const itp=$("#f_initprof");itp.addEventListener("click",()=>{const nv=nextTri(itp.dataset.state);M.initProf=nv;paintTri(itp,nv);renderPreview();});
@@ -350,7 +371,16 @@ function renderSkills(){const box=$("#skillRows");
   box.querySelectorAll(".skProf").forEach(el=>{paintTri(el,M.skills[+el.dataset.si][1]||"prof");el.addEventListener("click",()=>{const i=+el.dataset.si;const nv=nextTri(M.skills[i][1]||"prof");M.skills[i][1]=nv;paintTri(el,nv);renderPreview();});});
   box.querySelectorAll("[data-rmskill]").forEach(el=>el.addEventListener("click",e=>{M.skills.splice(+e.target.dataset.rmskill,1);renderSkills();renderPreview();}));
 }
+// Tool proficiencies (B39) — official 2024 tool list; a simple proficient/none list (no ability math).
+function renderTools(){const box=$("#toolRows");if(!box)return;
+  box.innerHTML=(M.tools||[]).map((t,i)=>`<div class="rowline">
+    <select data-ti="${i}" class="tlName">${TOOLS.map(k=>`<option ${k===t?"selected":""}>${esc(k)}</option>`).join("")}</select>
+    <button class="iconbtn" data-rmtool="${i}">✕</button></div>`).join("");
+  box.querySelectorAll(".tlName").forEach(el=>el.addEventListener("change",e=>{M.tools[+e.target.dataset.ti]=e.target.value;renderPreview();}));
+  box.querySelectorAll("[data-rmtool]").forEach(el=>el.addEventListener("click",e=>{M.tools.splice(+e.target.dataset.rmtool,1);renderTools();renderPreview();}));
+}
 $("#addSkill").addEventListener("click",()=>{M.skills.push(["Perception","prof"]);renderSkills();renderPreview();});
+$("#addTool").addEventListener("click",()=>{(M.tools=M.tools||[]).push("Thieves' Tools");renderTools();renderPreview();});
 
 function arrFor(k){return k==="traits"?M.traits:k==="actions"?M.actions:k==="bonus"?M.bonus:k==="reactions"?M.reactions:k==="villain"?M.villain.items:k==="legend"?M.legend.items:k==="lair"?M.lair.items:[];}
 function attackText(e){
@@ -377,12 +407,18 @@ function applyMinion(on){
   }
   renderEntries();renderPreview();
 }
-const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Recharge","(Recharge 5–6) "],["1/Day","(1/Day) "],["Multiattack","[C] make[s] two attacks."]];
+const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Multiattack","[C] make[s] two attacks."]];
 // Traits/bonus/reactions are always alpha-sorted; actions keep statblock/manual order
 // (Multiattack first) and get move arrows, like legend/villain/lair.
 const ALWAYS_SORTED=new Set(["traits","bonus","reactions"]);
 function rowCtrls(kind,i){const arrows=ALWAYS_SORTED.has(kind)?"":`<button class="iconbtn up" data-mv="${kind}:${i}:-1" title="Move up">▲</button><button class="iconbtn down" data-mv="${kind}:${i}:1" title="Move down">▼</button>`;
-  return arrows+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
+  const freq=["actions","bonus","reactions"].includes(kind)?`<button class="iconbtn freqbtn" data-freq="${kind}:${i}" title="Recharge / X per day">↻</button>`:"";
+  return arrows+freq+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
+// Append a Recharge / X-per-day tag to an entry's TITLE (not its body); replaces any existing freq tag.
+function applyFreqTag(kind,i,tag){const e=arrFor(kind)[i];const n=(e.name||"").replace(/\s*\((?:Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i,"").trim();e.name=tag?((n?n+" ":"")+tag):n;renderEntries();renderPreview();}
+function openFreqMenu(anchor,target){const[k,i]=target.split(":");const e=arrFor(k)[+i];const m=(e.name||"").match(/\((Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i);const cur=m?"("+m[1]+")":"";
+  const p=showPopover(anchor,FREQ_TAGS.map(o=>`<button class="popitem${o.toLowerCase()===cur.toLowerCase()?" on":""}" data-freqv="${esc(o)}">${esc(o)}</button>`).join("")+`<div class="popsep"></div><button class="popitem" data-freqv="">None</button>`);
+  p.querySelectorAll("[data-freqv]").forEach(b=>b.addEventListener("click",()=>{closePopover();applyFreqTag(k,+i,b.dataset.freqv);}));}
 function dlFor(kind){return kind==="traits"?"dl-traits":kind==="bonus"?"dl-bonus":kind==="actions"?"dl-textact":"";}
 function entryHTML(arr,kind){return arr.map((e,i)=>{
   if(kind==="reactions"){return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name" list="dl-react" data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
@@ -453,11 +489,18 @@ function bindEntries(){
     const ev=el.type==="checkbox"||el.tagName==="SELECT"?"change":"input";
     el.addEventListener(ev,()=>{const k=el.dataset.k,i=+el.dataset.i,f=el.dataset.f;
       let v=el.type==="checkbox"?el.checked:el.value;if(f==="round")v=+v;arrFor(k)[i][f]=v;
-      if(["kind","ability","atk","reach","range","dice","dtype","targets","addMod","extra"].includes(f))renderEntries();
+      if(["kind","ability","atk","reach","range","dice","dtype","targets","addMod","extra"].includes(f)){
+        // Typing in a text/number field (ev==="input") must NOT re-render the whole list — that
+        // destroys the focused input and jumps the scroll. Patch only this entry's live hint.
+        if(ev==="input"){const ent=el.closest(".entry"),hint=ent&&ent.querySelector(".hint"),obj=arrFor(k)[i];
+          if(hint&&obj)hint.textContent="→ "+(obj.mode==="attack"?attackText(obj):applyRefs(spellLines(obj).main));}
+        else renderEntries();
+      }
       renderPreview();});
   });
   $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
   $$("#formCol [data-mv]").forEach(el=>el.addEventListener("click",()=>{const[k,i,d]=el.dataset.mv.split(":");moveEntry(k,+i,+d);}));
+  $$("#formCol [data-freq]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openFreqMenu(el,el.dataset.freq);}));
   $$('#formCol [data-f="name"]').forEach(el=>el.addEventListener("change",()=>autofillEntry(el.dataset.k,+el.dataset.i)));
   $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
   // freq select for spell groups (text input for spells replaced by chip field bound separately)
@@ -602,7 +645,7 @@ function loadMonster(m){
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
   $("#f_snword").value=(M.shortName.word==="creature"?"":M.shortName.word)||"";$("#f_snproper").checked=!!M.shortName.proper;$("#f_snplural").checked=!!M.shortName.plural;
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
-  $("#f_dmgnote").value=M.dmgnote||"";$("#f_gear").value=M.gear||"";$("#f_lang").value=M.lang||"";
+  $("#f_dmgnote").value=M.dmgnote||"";$("#f_lang").value=M.lang||"";
   ABILS.forEach(a=>$("#ab_"+a).value=(M[a]===10?"":M[a]));
   $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
   $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
@@ -612,7 +655,8 @@ function loadMonster(m){
   $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
   if(M._auto.ac||M._auto.hp)applyCRAuto();
-  refreshAbil();renderDmg();renderSkills();renderCimm();renderEntries();renderPreview();
+  refreshAbil();renderDmg();renderSkills();renderTools();renderCimm();renderGear();renderEntries();renderPreview();
+  requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top
 }
 
 function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
@@ -645,7 +689,7 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   const atk=e.atk!==""&&e.atk!=null?Number(e.atk):pb+ab;
   const abName={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"}[e.ability||"cha"];
   const main=`[C] casts one of the following spells, requiring no Material components and using ${abName} as the spellcasting ability (spell save DC ${dc}, ${sgn(atk)} to hit with spell attacks):`;
-  const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells}));
+  const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells.split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b)).join(", ")}));
   return{main,groups};}
 function subName(t){return applyRefs(t);}
 function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>");}
@@ -713,6 +757,7 @@ function renderPreview(){
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
+  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${esc(m.tools.slice().sort((a,b)=>a.localeCompare(b)).join(", "))}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
   const conds=(m.cimm||"").split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b));
@@ -879,11 +924,17 @@ function capHint(total,shown){return `<div class="hint" style="margin-top:10px">
 
 // ---- Bestiary control descriptor + records ----
 function libFirstTag(r){return ((r.m.tags||[]).slice().sort((x,y)=>x.localeCompare(y))[0])||"￿";}
+// Which encounters / adventures each saved monster appears in (rebuilt each renderLibrary).
+let libUsage={};
+function rebuildLibUsage(){libUsage={};(state.adv||[]).forEach(a=>(a.encounters||[]).forEach(e=>(e.combatants||[]).forEach(c=>{if(c.type==="monster"&&c.monsterId){const u=libUsage[c.monsterId]=libUsage[c.monsterId]||{enc:new Set(),adv:new Set()};u.enc.add(e.name||"Untitled encounter");u.adv.add(a.name||"Untitled adventure");}})));}
+function usageVals(key){const s=new Set();Object.values(libUsage).forEach(u=>u[key].forEach(x=>s.add(x)));return [...s].sort((a,b)=>a.localeCompare(b));}
 const LIB_DESC={search:true,group:true,
   params:[
     {key:"status",label:"Status",get:r=>r.status,values:()=>STATUS_ORDER.slice()},
     {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(state.lib.map(m=>m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0))},
     {key:"tag",label:"Tag",multi:true,get:r=>r.m.tags||[],values:()=>[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b))},
+    {key:"encounter",label:"Encounter",multi:true,get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].enc]:[],values:()=>usageVals("enc")},
+    {key:"adventure",label:"Adventure",multi:true,get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].adv]:[],values:()=>usageVals("adv")},
   ],
   sortKeys:[
     {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
@@ -925,7 +976,7 @@ function libRecords(){
 function libEmptyMsg(){return state.lib.length?"No creatures match these controls.":`No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.`;}
 function buildTagDatalist(){const dl=$("#libTagList");if(dl)dl.innerHTML=[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${esc(t)}">`).join("");}
 function renderLibrary(){
-  buildTagDatalist();buildMonsterDatalists();
+  buildTagDatalist();buildMonsterDatalists();rebuildLibUsage();
   renderCtrlChips($("#libChips"),libCtrl,LIB_DESC,renderLibrary);
   const body=$("#libBody");let recs=ctrlApply(libRecords(),libCtrl,LIB_DESC);
   if(libCtrl.group!=="source")recs=collapseVariants(recs,r=>r.preset);
