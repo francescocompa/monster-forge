@@ -99,7 +99,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 
 .forge{display:grid;grid-template-columns:1fr 452px;height:100%;overflow:hidden}
 .form-col{overflow-y:auto;padding:20px 24px 90px}
-.preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:13px}
+.preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px 18px 84px;display:flex;flex-direction:column;gap:13px}
 .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
 .col-head h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
 .ch-left{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
@@ -118,13 +118,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* Standard accent floating main-action button — bottom-right on every page.
    Single-action variant (.fab) for Forge Save and Adventures + Encounter;
    split variant (.fab-split) for the Bestiary New (keeps its caret menu). */
-.fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;padding:11px 18px;border-radius:8px;background:var(--accent)!important;color:#fff!important;border:none!important;box-shadow:0 6px 18px rgba(0,0,0,.5);display:inline-flex;align-items:center;gap:7px}
-.fab .fab-ico{width:14px;height:14px;fill:currentColor;display:block;flex:none}
+.fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;height:32px;padding:0 16px;border-radius:8px;background:var(--accent)!important;color:#fff!important;border:none!important;box-shadow:0 6px 18px rgba(0,0,0,.5);display:inline-flex;align-items:center;gap:7px;font-size:12px}
+.fab .fab-ico{width:13px;height:13px;fill:currentColor;display:block;flex:none}
 .fab:hover{background:var(--accent-hover)!important}
-.fab-split.menu-wrap{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:stretch;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
-.fab-split .btn{position:static;width:auto!important;padding:11px 14px 11px 18px;border-radius:8px 0 0 8px;background:var(--accent)!important;color:#fff!important;border:none!important}
+.fab-split.menu-wrap{position:fixed;right:20px;bottom:20px;z-index:40;height:32px;display:inline-flex;align-items:stretch;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.fab-split .btn{position:static;width:auto!important;height:32px;padding:0 13px 0 16px;border-radius:8px 0 0 8px;background:var(--accent)!important;color:#fff!important;border:none!important}
 .fab-split .btn:hover{background:var(--accent-hover)!important}
-.fab-split .split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 8px 8px 0;width:34px;padding-right:6px}
+.fab-split .split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 8px 8px 0;width:32px;padding:0}
 .fab-split .split-caret:hover{background:var(--accent-hover);color:#fff}
 .fab-split .menu{top:auto;bottom:calc(100% + 6px);right:0}
 .forge.preview-hidden .forge-save-fab{display:none}
@@ -350,25 +350,29 @@ select::-ms-expand{display:none}
 .derived:empty{display:none}
 .sb{background:linear-gradient(180deg,var(--sb),var(--sb2));color:var(--txt);border:1px solid var(--sb-edge);border-radius:8px;padding:16px 18px 18px;position:relative;box-shadow:0 8px 28px rgba(0,0,0,.45);font-size:13px;line-height:1.45}
 .sb .topbar{height:4px;margin:-16px -18px 13px;border-radius:8px 8px 0 0;background:linear-gradient(90deg,var(--accent),#8f3527)}
-/* B53 statblock colour-coding (preview only) */
-.sb .cc-dmg{font-weight:600}
-.sb .cc-fire{color:#ef7a52}.sb .cc-cold{color:#6bb6e6}.sb .cc-lightning{color:#e7c24a}.sb .cc-acid{color:#a9c34e}
-.sb .cc-poison{color:#6fb86a}.sb .cc-necrotic{color:#a08ad6}.sb .cc-radiant{color:#f0d878}.sb .cc-psychic{color:#df7aa6}
-.sb .cc-thunder{color:#8a96dc}.sb .cc-force{color:#bd8ade}.sb .cc-bludgeoning,.sb .cc-piercing,.sb .cc-slashing{color:var(--dim)}
-.sb .cc-roll{color:var(--amber-soft);font-weight:600}
-.sb .cc-dc{color:var(--amber-soft);font-weight:600}
+/* B53/B55 statblock colour-coding (preview only). Each category one fixed, non-overlapping hue. */
+.sb .cc-dmg{color:#e06a6a;font-weight:600}        /* all damage types share one colour */
+.sb .cc-roll{color:#e7c070;font-weight:600}       /* dice / to-hit / attack bonus */
+.sb .cc-dc{color:#e7c070;font-weight:600}
 .sb .cc-save{color:#6bb6e6}
-.sb .cc-cond{color:var(--accent-soft);font-weight:600}
+.sb .cc-cond{color:#b48ce6;font-weight:600}        /* conditions — violet, distinct from accent */
 .sb .cc-range{color:#4db6ac}
-.sb .ab td.num.cc-mod-pos{color:#6fb86a}.sb .ab td.num.cc-mod-neg{color:#d2604a}.sb .ab td.num.cc-mod-zero{color:var(--faint)}
+/* Per-ability subtle rounded highlight behind the ability label (B55). */
+.sb .ab td.lbl.cc-ab{border-radius:5px;padding:2px 5px}
+.sb .ab td.lbl.cc-ab-str{background:rgba(210,96,74,.16)}.sb .ab td.lbl.cc-ab-str .sc{color:#e58a78}
+.sb .ab td.lbl.cc-ab-dex{background:rgba(95,168,115,.16)}.sb .ab td.lbl.cc-ab-dex .sc{color:#7fc090}
+.sb .ab td.lbl.cc-ab-con{background:rgba(217,164,65,.16)}.sb .ab td.lbl.cc-ab-con .sc{color:#e7c070}
+.sb .ab td.lbl.cc-ab-int{background:rgba(91,155,213,.16)}.sb .ab td.lbl.cc-ab-int .sc{color:#7fb6e6}
+.sb .ab td.lbl.cc-ab-wis{background:rgba(126,140,214,.16)}.sb .ab td.lbl.cc-ab-wis .sc{color:#97a3e0}
+.sb .ab td.lbl.cc-ab-cha{background:rgba(192,111,192,.16)}.sb .ab td.lbl.cc-ab-cha .sc{color:#d28cd2}
 /* B54 click-to-roll affordance (only when the feature is on) */
 .mf-clickroll .sb .cc-roll{cursor:pointer;border-bottom:1px dashed rgba(231,192,112,.5);transition:filter .1s}
 .mf-clickroll .sb .cc-roll:hover{filter:brightness(1.2)}
 .roll-edit{display:flex;gap:6px;align-items:center;padding:8px 8px 4px;border-top:1px solid var(--line);margin-top:4px}
 .roll-edit .roll-edit-in{flex:1;min-width:90px;font-size:12.5px;padding:6px 8px}
 /* Roll-log panel */
-.roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:248px;max-width:calc(100% - 36px);background:var(--panel2);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow-pop);overflow:hidden;font-size:12.5px}
-.roll-log .rl-head{display:flex;align-items:center;gap:6px;padding:7px 9px;background:var(--panel);border-bottom:1px solid var(--line)}
+.roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #434956;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden;font-size:12.5px}
+.roll-log .rl-head{display:flex;align-items:center;gap:6px;padding:7px 9px;background:#1a1c21;border-bottom:1px solid #434956}
 .roll-log .rl-grow{flex:1}
 .roll-log .rl-title{font-weight:600;color:var(--txt)}
 .roll-log .rl-n{font-size:10px;color:var(--faint);background:var(--in);border:1px solid var(--line);border-radius:10px;padding:0 6px;line-height:15px}

@@ -1043,7 +1043,8 @@ function renderPreview(){
   h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}${m.minion?` <span class="minion-tag">Minion</span>`:""}</div><hr class="rule">`;
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
-  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0);return `<td class="h lbl">${a.toUpperCase()} <span class="sc">${m[a]}</span></td><td class="num">${sgn(md)}</td><td class="num">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  const rfm=v=>"1d20"+(v>=0?"+":"")+v;
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0),A=a.toUpperCase();return `<td class="h lbl" data-ab="${a}">${A} <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${A}">${sgn(md)}</td><td class="num roll-num" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${A}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
   if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${esc(m.tools.slice().sort((a,b)=>a.localeCompare(b)).join(", "))}</p>`;
@@ -1095,7 +1096,7 @@ function colorizeNode(node,cats){
 function colorizeStatblock(){
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
   const root=$("#statblock");if(!root)return;
-  if(s.abilityBlock)root.querySelectorAll(".ab td.num").forEach(td=>{const v=parseInt(td.textContent.replace("−","-"),10);if(isNaN(v))return;td.classList.add(v>0?"cc-mod-pos":v<0?"cc-mod-neg":"cc-mod-zero");});
+  if(s.abilityBlock)root.querySelectorAll(".ab td.lbl[data-ab]").forEach(td=>td.classList.add("cc-ab","cc-ab-"+td.dataset.ab));
   const cats=[];
   if(s.damage)cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
   if(s.dice){
