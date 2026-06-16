@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 64 — Spell scaling, smarter damage detection, drag-resize columns
+- **"At higher levels" fix:** spell scaling like Cone of Cold now reads "increases by **1d8** per level"
+  (the per-level increment), not the base 8d8. *(Re-parse your spell library to update existing data:
+  Preset libraries → ⋯ → Re-parse libraries.)*
+- **Smarter damage-type colouring:** a word like *fire* or *force* is only flagged as damage when it's
+  actually in a damage context (followed by "damage", possibly via "fire, cold, or lightning damage").
+  No more false hits on Prestidigitation's "Fire Play" or Shield's "magical force".
+- **Stickier popovers:** spell/condition popovers wait longer before closing, so you can move onto them
+  to roll their dice without them vanishing.
+- **No self-references:** a popover no longer links a term to itself (e.g. the Invisible condition card
+  no longer has an "Invisible" link).
+- **Drag to resize the sidebar & adventures column:** instead of a button, drag the divider (like the
+  forge preview splitter); it snaps to the icon / colour-card view once labels stop fitting, and a
+  double-click restores the default width. Fixes the empty gutter when hiding an icon-collapsed sidebar
+  via the burger.
+- **Roll log:** a grouped roll whose entries all share one ability now shows a single colour bar
+  spanning the whole group; the window keeps its dragged position when collapsed (with a new "Reset
+  position" menu item once moved); crits drop the background gradient for a **yellow number with a few
+  twinkling stars**.
+- **Forge:** opening a creature to edit now expands all sections.
+- Export / Import JSON removed from the sidebar (they live in Settings).
+
 ## Batch 63 — Roll-log alignment, popover stacking, collapsible sidebar & adventures
 - **Roll-log alignment:** the ability-colour bar and the TYPE tag (ATK/DMG/CHK/SAVE) now sit at the
   exact same position whether a roll is shown on its own or inside a group, and the dice breakdown

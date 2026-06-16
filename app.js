@@ -989,6 +989,7 @@ function loadMonster(m){
   if(M._auto.ac||M._auto.hp)applyCRAuto();
   if(M._fromChassis&&!M._chassisSig)M._chassisSig=contentSig(M); // capture the pristine chassis baseline (B43)
   refreshAbil();renderDmg();renderSkills();renderTools();renderCimm();renderGear();renderEntries();renderPreview();
+  expandAllFsBlocks(); // every fresh edit opens with all sections expanded (B64)
   requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top
 }
 
@@ -1093,11 +1094,17 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   const p=refpopAt(level);p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
   // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
   if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body)walkColorize(body,buildColorCats(false));}
+  // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible") — unwrap
+  // any self-ref link to a plain coloured span (B64).
+  const self=(name||"").toLowerCase();
+  p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self){const sp=document.createElement("span");sp.className=r.className.replace(/\breflink\b/,"").trim();sp.textContent=r.textContent;r.replaceWith(sp);}});
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";}
 function hideRefpopNow(level){document.querySelectorAll(".refpop").forEach(p=>{if((+p.dataset.level||0)>=level)p.classList.remove("show");});}
-function hideRefpopFrom(level){clearTimeout(_refTimer);_refTimer=setTimeout(()=>hideRefpopNow(level),140);}
+// Generous grace period so the cursor can travel from the link into the popover (to roll its dice)
+// without it vanishing (B64).
+function hideRefpopFrom(level){clearTimeout(_refTimer);_refTimer=setTimeout(()=>hideRefpopNow(level),360);}
 function hideRefpop(){hideRefpopFrom(0);}
 document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
 document.addEventListener("mouseout",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
@@ -1229,7 +1236,12 @@ function _skMod(abFull,skillName){const a=_ab3(abFull),pb=pbForCR(M.cr);
 // spell/condition popovers (B62).
 function buildColorCats(forCreature){
   const cats=[];
-  cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
+  // A damage-type word is only flagged as damage in a damage CONTEXT: it must be followed (allowing a
+  // chain of other type words + connectors like "or"/"and"/",") by the word "damage" (B64). This
+  // avoids false hits like Prestidigitation's "Fire Play" or Shield's "magical force".
+  const TY=DMG_TYPES.join("|");
+  const dmgRe=new RegExp("\\b("+TY+")\\b(?=(?:[\\s,;/]+(?:or|and|nonmagical|magical|"+TY+"))*[\\s,;/]+damage\\b)","gi");
+  cats.push({re:dmgRe,cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
   // Colour split (B58): yellow = static bonuses/targets you DON'T roll; blue (cc-dice) = dice you roll.
   cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
   cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\)?\s+(?:([a-zA-Z]+)\s+)?damage)/gi,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:"damage",dmgtype:m=>m[1]||null});
@@ -1375,10 +1387,10 @@ function renderRollLog(){
   if(!rollLog.length){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
-  // A custom drag position only applies while expanded; collapsing or clearing restores the default
-  // bottom-left spot (B63).
-  if(rollLogOpen&&_rlPos){el.style.left=_rlPos.left+"px";el.style.top=_rlPos.top+"px";el.style.right="auto";el.style.bottom="auto";}
-  else{_rlPos=null;el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
+  // A custom drag position persists across collapse (B64); it's only cleared via the menu's
+  // "Reset position" (shown once moved) or by resetRollLogPos().
+  if(_rlPos){el.style.left=_rlPos.left+"px";el.style.top=_rlPos.top+"px";el.style.right="auto";el.style.bottom="auto";}
+  else{el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
   // Shared bits. The TYPE tag (carries the dmg type for the hover popover) is a row-level child on
   // the right, and the ability-colour bar sits in a reserved right gutter (data-abil on the row), so
@@ -1397,9 +1409,14 @@ function renderRollLog(){
   // Grouped sub-roll: the SAME geometry as a single row minus the source/label — total · breakdown ·
   // TYPE tag — so the bars and tags align with the single rows above/below.
   const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlParts(r)}</span>${rlTag(r)}</div>`;
-  // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll.
-  const groupHTML=g=>g.items.length===1?single(g.items[0])
-    :`<div class="rl-group"><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
+  // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll. When
+  // every roll in the group shares one ability, draw a SINGLE colour bar spanning the whole group
+  // instead of one per sub-row (B64).
+  const groupHTML=g=>{
+    if(g.items.length===1)return single(g.items[0]);
+    const ab0=g.items[0].abil,allSame=ab0&&g.items.every(it=>it.abil===ab0);
+    return `<div class="rl-group${allSame?" rl-group-abil":""}"${allSame?abAttr(ab0):""}><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
+  };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
@@ -1419,7 +1436,7 @@ function renderRollLog(){
   });
 }
 // Drag the roll-log window by its header to reposition it within the page (B63). Buttons/tags in the
-// header keep their own clicks. The position is transient — collapsing or clearing restores default.
+// header keep their own clicks. The position persists until reset via the menu (B64).
 function bindRollLogDrag(el,head){
   if(!head)return;head.classList.add("rl-drag-h");
   head.addEventListener("pointerdown",e=>{
@@ -1436,13 +1453,16 @@ function bindRollLogDrag(el,head){
     e.preventDefault();
   });
 }
+function resetRollLogPos(){_rlPos=null;renderRollLog();}
 function openRollLogMenu(anchor){
   const sortLabel=rollLogSort==="desc"?"Newest at bottom":"Newest at top";
-  const p=showPopover(anchor,`<button class="popitem" data-rlm="notation">Dice notation</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll</button><div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
+  const resetItem=_rlPos?`<button class="popitem" data-rlm="resetpos">Reset position</button>`:"";
+  const p=showPopover(anchor,`<button class="popitem" data-rlm="notation">Dice notation</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll</button>${resetItem}<div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
   p.querySelectorAll("[data-rlm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const a=b.dataset.rlm;
     if(a==="notation"){closePopover();showPopover(anchor,diceHelpHTML());}
     else if(a==="sort"){rollLogSort=rollLogSort==="desc"?"asc":"desc";closePopover();renderRollLog();}
     else if(a==="custom"){closePopover();openCustomRoll(anchor);}
+    else if(a==="resetpos"){closePopover();resetRollLogPos();}
     else{rollLog=[];closePopover();renderRollLog();}
   }));
 }
@@ -1687,6 +1707,11 @@ function initFsCollapse(){
     title.addEventListener("click",e=>{if(e.target.closest("input,select,textarea,a,label"))return;
       fsCollapsed.has(key)?fsCollapsed.delete(key):fsCollapsed.add(key);saveFsCollapsed();apply();});
   });
+}
+// Expand every forge section (B64) — run on each fresh edit so a loaded creature opens fully open.
+function expandAllFsBlocks(){
+  fsCollapsed.clear();saveFsCollapsed();
+  $$("#formCol fieldset.fieldset:not(.optfs)").forEach(fs=>{fs.classList.remove("fs-collapsed");const b=fs.querySelector(".fs-collapse");if(b)b.classList.remove("closed");});
 }
 // Presets (built-in chassis + uploaded statblocks) are opt-in: they appear only when the
 // Status filter includes "Preset" or the list is grouped by status (which gets a Preset group).
@@ -2188,7 +2213,6 @@ function openAdvCardMenu(anchor,a){
 }
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
 $("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
-$("#advCollapse").addEventListener("click",e=>{e.stopPropagation();const on=!advMini();try{localStorage.setItem("mf_advmini",on?"1":"0");}catch(_){}e.currentTarget.title=on?"Expand list":"Collapse list to colour cards";renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -2753,8 +2777,7 @@ function doExportJSON(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
 }
-$("#exportAll").addEventListener("click",doExportJSON);
-$("#importAll").addEventListener("click",()=>$("#fileIn").click());
+// Export/Import JSON now live in Settings only (B64); the #fileIn change handler is shared.
 $("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
 // Click-to-roll: delegated on the statblock preview. Left-click = quick roll (attack NAME rolls
 // attack + damage); right-click = options popover.
@@ -2928,12 +2951,31 @@ document.addEventListener("click",e=>{const app=$("#app");if(app.classList.conta
   burger.addEventListener("mouseenter",show);burger.addEventListener("mouseleave",hide);
   rail.addEventListener("mouseenter",()=>clearTimeout(t));rail.addEventListener("mouseleave",hide);
 })();
-// Icon-only sidebar collapse (B63): a persistent narrow rail, toggled by the handle, restored on load.
-(function(){const app=$("#app"),btn=$("#railCollapse");if(!btn)return;
-  const sync=on=>btn.title=on?"Expand sidebar":"Collapse sidebar to icons";
-  try{if(localStorage.getItem("mf_railmini")==="1"){app.classList.add("rail-mini");sync(true);}}catch(e){}
-  btn.addEventListener("click",e=>{e.stopPropagation();const on=app.classList.toggle("rail-mini");sync(on);try{localStorage.setItem("mf_railmini",on?"1":"0");}catch(_){}});
-})();
+// Draggable column resizer (B64): the rail and the adventures list collapse via a divider handle —
+// like the forge resizer — that snaps to the icon/colour-card view past a breakpoint, with the width
+// driven by a CSS var. Double-click the handle resets to default. State persists.
+function initColResizer(o){
+  const handle=$(o.handle),cont=document.querySelector(o.container);if(!handle||!cont)return;
+  let expandedW=o.defaultW,mini=false;
+  try{const sw=localStorage.getItem(o.lsW);if(sw)expandedW=clamp(parseInt(sw,10)||o.defaultW,o.minW,o.maxW);mini=localStorage.getItem(o.lsMini)==="1";}catch(e){}
+  const setVar=w=>cont.style.setProperty(o.cssVar,w+"px");
+  const applyMini=m=>cont.classList.toggle(o.miniClass,m);
+  setVar(mini?o.collapsedW:expandedW);applyMini(mini);if(o.onChange)o.onChange();
+  let drag=false;
+  handle.addEventListener("pointerdown",e=>{drag=true;handle.classList.add("drag");handle.setPointerCapture(e.pointerId);e.preventDefault();});
+  handle.addEventListener("pointermove",e=>{if(!drag)return;let w=Math.round(e.clientX-cont.getBoundingClientRect().left);
+    if(w<o.snapW){mini=true;setVar(o.collapsedW);applyMini(true);}
+    else{mini=false;w=Math.min(o.maxW,w);expandedW=w;setVar(w);applyMini(false);}});
+  const end=e=>{if(!drag)return;drag=false;handle.classList.remove("drag");try{handle.releasePointerCapture(e.pointerId);}catch(_){}
+    try{localStorage.setItem(o.lsMini,mini?"1":"0");localStorage.setItem(o.lsW,String(expandedW));}catch(_){}if(o.onChange)o.onChange();};
+  handle.addEventListener("pointerup",end);handle.addEventListener("pointercancel",end);
+  handle.addEventListener("dblclick",()=>{mini=false;expandedW=o.defaultW;setVar(o.defaultW);applyMini(false);
+    try{localStorage.removeItem(o.lsMini);localStorage.removeItem(o.lsW);}catch(_){}if(o.onChange)o.onChange();});
+}
+initColResizer({handle:"#railResizer",container:".app",cssVar:"--railw",lsW:"mf_railw",lsMini:"mf_railmini",
+  defaultW:206,minW:150,maxW:320,snapW:150,collapsedW:58,miniClass:"rail-mini"});
+initColResizer({handle:"#advResizer",container:".adv-layout",cssVar:"--advw",lsW:"mf_advw",lsMini:"mf_advmini",
+  defaultW:236,minW:160,maxW:380,snapW:150,collapsedW:66,miniClass:"adv-mini",onChange:()=>{if(_curView==="adventures")renderAdvList();}});
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};

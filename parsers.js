@@ -117,7 +117,10 @@ function richStrip(s){
   s=s.replace(/\{@h\}/gi,"*Hit:* ");
   s=s.replace(/\{@dc\s+([^}|]+)(?:\|[^}]*)?\}/gi,(_,n)=>"DC "+n.trim());
   s=s.replace(/\{@recharge(\s+\d+)?\}/gi,(m,n)=>n?`(Recharge ${n.trim()}–6)`:"(Recharge 5–6)");
-  s=s.replace(/\{@(?:damage|dice|scaledamage|scaledice|autodice)\s+([^}|]+)(?:\|[^}]*)?\}/gi,(_,d)=>d.trim());
+  // Scaling tokens: {@scaledamage base|levels|perLevel} (and @scaledice) render the PER-LEVEL
+  // increment (3rd field), not the base — "increases by 1d8 per level", not 8d8.
+  s=s.replace(/\{@(?:scaledamage|scaledice)\s+([^}]+)\}/gi,(_,body)=>{const p=body.split("|");return (p[2]||p[0]||"").trim();});
+  s=s.replace(/\{@(?:damage|dice|autodice)\s+([^}|]+)(?:\|[^}]*)?\}/gi,(_,d)=>d.trim());
   // 2024 action/reaction markup (must precede the generic collapses below). Trigger/Response
   // are emitted plain so reaction parsing can split them; saves use the house italic wording.
   s=s.replace(/\{@actTrigger\}/gi,"Trigger: ");
