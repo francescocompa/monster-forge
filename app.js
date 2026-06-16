@@ -1066,8 +1066,17 @@ function srcBadge(x){const id=x._srcCode||x.source||"";if(!id)return "";const fu
   return ` <span class="refcard-src"${full?` title="${esc(full)}"`:""}>${esc(id)}</span>`;}
 let _refTimer=null;
 function ensureRefpop(){let p=$("#refpop");if(!p){p=document.createElement("div");p.id="refpop";p.className="refpop";document.body.appendChild(p);
-  p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);}return p;}
-function showRefpop(anchor,kind,name){const html=refContent(kind,name);if(!html)return;const p=ensureRefpop();p.innerHTML=html;p.classList.add("show");
+  p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);
+  // Roll dice from inside a spell/condition popover (e.g. Lightning Bolt's 8d6) — B62.
+  p.addEventListener("click",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
+    const meta={label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype};
+    if(e.metaKey||e.ctrlKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type});return;}
+    doRoll(t.dataset.roll,{adv:rollMode},meta);});
+  p.addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype});});
+  }return p;}
+function showRefpop(anchor,kind,name){const html=refContent(kind,name);if(!html)return;const p=ensureRefpop();p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
+  // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
+  if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body)walkColorize(body,buildColorCats(false));}
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";}
@@ -1133,9 +1142,10 @@ function renderPreview(){
     // because their spell names are already linked via linkSpells.
     if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
     const body=e.mode==="attack"?attackText(e):e.text;
-    // Carry the attack's ability onto the name so a click can tint the roll by ability (B61).
+    // Carry the attack's ability + damage type onto the name so a click can tint/annotate the roll.
     const ab=e.mode==="attack"&&e.ability?` data-abil="${esc(e.ability)}"`:"";
-    return `<p class="blk"${spAttr(e)}><span class="nm"${ab}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+    const dt=e.mode==="attack"&&e.dtype?` data-dmgtype="${esc(e.dtype)}"`:"";
+    return `<p class="blk"${spAttr(e)}><span class="nm"${ab}${dt}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
   };
   const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
   if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
@@ -1179,14 +1189,14 @@ const CC_CONDITIONS=["blinded","charmed","deafened","exhaustion","frightened","g
 function normRoll(s){return s.replace(/\s+/g,"").replace(/−/g,"-");}
 function colorizeNode(node,cats){
   const text=node.nodeValue;if(!text.trim())return;const hits=[];
-  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,rlabel:cat.rlabel?cat.rlabel(m):null,abil:cat.abil?cat.abil(m):null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
+  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,rlabel:cat.rlabel?cat.rlabel(m):null,abil:cat.abil?cat.abil(m):null,dmgtype:cat.dmgtype?cat.dmgtype(m):null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
   if(!hits.length)return;
   hits.sort((a,b)=>a.s-b.s||b.e-a.e);
   const out=[];let pos=0;
   hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
   if(pos<text.length)out.push({t:text.slice(pos)});
   const frag=document.createDocumentFragment();
-  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;if(o.abil)sp.dataset.abil=o.abil;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
+  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;if(o.abil)sp.dataset.abil=o.abil;if(o.dmgtype)sp.dataset.dmgtype=o.dmgtype;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
   node.parentNode.replaceChild(frag,node);
 }
 // Full ability name → 3-letter key. Skill modifier for the current creature M (ability mod + PB if
@@ -1196,47 +1206,44 @@ function _skMod(abFull,skillName){const a=_ab3(abFull),pb=pbForCR(M.cr);
   const key=(skillName||"").trim().toLowerCase();
   const sk=(M.skills||[]).find(s=>s[0].replace(/_/g," ").toLowerCase()===key);
   const md=mod(M[a])+(sk?skProfBonus(sk[1],pb):0);return (md>=0?"+":"")+md;}
+// Build the colour/roll categories. `forCreature` adds the ability-context cats (skill checks,
+// spellcasting ability) that depend on the current monster M — omitted for generic content like
+// spell/condition popovers (B62).
+function buildColorCats(forCreature){
+  const cats=[];
+  cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
+  // Colour split (B58): yellow = static bonuses/targets you DON'T roll; blue (cc-dice) = dice you roll.
+  cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
+  cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\)?\s+(?:([a-zA-Z]+)\s+)?damage)/gi,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:"damage",dmgtype:m=>m[1]||null});
+  cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:null});
+  cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
+  cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
+  cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:m=>"cc-save cc-ab cc-ab-"+_ab3(m[1])});
+  if(forCreature){
+    cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+\(([A-Za-z][A-Za-z ]+?)\)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
+      roll:m=>"1d20"+_skMod(m[1],m[2]),rtype:"check",rlabel:m=>m[2].trim(),abil:m=>_ab3(m[1])});
+    cats.push({re:/(?<=using\s)(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?=\sas the spellcasting ability)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
+      roll:m=>{const a=_ab3(m[1]),md=mod(M[a]);return "1d20"+(md>=0?"+":"")+md;},rtype:"check",rlabel:m=>m[1],abil:m=>_ab3(m[1])});
+  }
+  cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});
+  cats.push({re:/\b\d+(?:\/\d+)?\s*(?:ft\.?|feet)\b/gi,cls:()=>"cc-range"});
+  cats.push({re:/\b\d+-foot(?:[ \-](?:cone|cube|line|sphere|radius|emanation|cylinder))?\b/gi,cls:()=>"cc-range"});
+  return cats;
+}
+const CC_SKIP=".nm,.reflink,a,.cc-roll,.cc-dice,.cc-dmg,.cc-cond,.cc-range,.cc-dc,.cc-save";
+function walkColorize(container,cats){
+  const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest(CC_SKIP)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(node=>colorizeNode(node,cats));
+}
 function colorizeStatblock(){
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
   const root=$("#statblock");if(!root)return;
   // B60: colour-coding is now a single on/off — when on, every category is active.
   root.querySelectorAll(".ab td.lbl[data-ab] .abc").forEach(c=>c.classList.add("cc-ab","cc-ab-"+c.parentElement.dataset.ab));
   root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
-  const cats=[];
-  cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
-  {
-    // Colour split (B58): yellow = static bonuses/targets you DON'T roll (attack bonus, DC);
-    // blue (cc-dice) = dice you actually roll.
-    // 2024 attack jargon "Melee/Ranged Attack Roll: +N" → rollable d20+N (the +N is a bonus → yellow).
-    cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
-    // dice that resolve to damage (followed by "… damage") are tagged DMG; bare dice get no tag.
-    cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\)?\s+(?:[a-zA-Z]+\s+)?damage)/gi,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:"damage"});
-    cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:null});
-    cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
-    cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
-    // Saving-throw phrase → white text on the ability's colour (B60).
-    cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:m=>"cc-save cc-ab cc-ab-"+_ab3(m[1])});
-    // Skill check "Ability (Skill)" → rollable with this creature's modifier (+ prof) + ability bg.
-    cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+\(([A-Za-z][A-Za-z ]+?)\)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
-      roll:m=>"1d20"+_skMod(m[1],m[2]),rtype:"check",rlabel:m=>m[2].trim(),abil:m=>_ab3(m[1])});
-    // Spellcasting ability "using Intelligence as the spellcasting ability" → rollable ability check + bg.
-    cats.push({re:/(?<=using\s)(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?=\sas the spellcasting ability)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
-      roll:m=>{const a=_ab3(m[1]),md=mod(M[a]);return "1d20"+(md>=0?"+":"")+md;},rtype:"check",rlabel:m=>m[1],abil:m=>_ab3(m[1])});
-  }
-  // Recognised conditions become reflinks (underline + hover/click popover) when the matching
-  // condition is in an uploaded library — same affordance as the condition-immunities line.
-  cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});
-  {
-    cats.push({re:/\b\d+(?:\/\d+)?\s*(?:ft\.?|feet)\b/gi,cls:()=>"cc-range"});
-    cats.push({re:/\b\d+-foot(?:[ \-](?:cone|cube|line|sphere|radius|emanation|cylinder))?\b/gi,cls:()=>"cc-range"});
-  }
-  if(!cats.length)return;
-  const skip=".nm,.reflink,a,.cc-roll,.cc-dice,.cc-dmg,.cc-cond,.cc-range,.cc-dc,.cc-save";
-  root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(container=>{
-    const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest(skip)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
-    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-    nodes.forEach(node=>colorizeNode(node,cats));
-  });
+  const cats=buildColorCats(true);
+  root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(container=>walkColorize(container,cats));
   // attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
   // regex (which needs the +N contiguous) never matches and chassis-preset attacks weren't rollable.
   // Tag the +N that immediately follows an italic "…Attack Roll:" label.
@@ -1312,8 +1319,8 @@ function doRoll(formula,opts,meta){
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
   // Custom rolls carry no source (nothing to attribute them to), so the log shows no statblock name.
   const src=meta.custom?null:(meta.source||rollSource());
-  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,source:src,
-    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,source:src}});
+  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
+    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
   rollLogOpen=true;renderRollLog();toast(`${meta.label||"Roll"}: ${r.total}`);
@@ -1321,12 +1328,12 @@ function doRoll(formula,opts,meta){
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
-function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil});}
+function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil,dmgType:t.dataset.dmgtype});}
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
 function rollAttackSequence(nameEl){
-  const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil;
+  const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil});
-  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil});
+  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType});
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
@@ -1340,18 +1347,22 @@ function renderRollLog(){
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
-  // Shared bits. The adv indicator (B61) now sits in the breakdown line, not next to the type tag.
-  const rlTag=r=>r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:"";
-  const rlParts=r=>`<span class="rl-parts">${esc(r.parts)}${r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:""}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>`;
+  // Shared bits (B62). TYPE tag carries the dmg type for the hover popover; the breakdown is
+  // scrollable; the adv tag is pinned beside the TYPE tag; an ability-colour bar sits in a reserved
+  // right gutter (data-abil on the row), so TYPE tags line up whether the bar is present or not.
+  const rlTag=r=>r.type?`<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:"";
+  const rlAdv=r=>r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";
+  const rlCrit=r=>r.crit?'<span class="rl-crit">CRIT</span>':"";
+  const rlPnum=r=>`<span class="rl-pnum">${esc(r.parts)}</span>`;
   const rlSrc=src=>src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";
   const abAttr=ab=>ab?` data-abil="${esc(ab)}"`:"";
-  // Single entry: total + [source / name+tag / breakdown].
-  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${rlTag(r)}</span>${rlParts(r)}</span></div>`;
-  // Sub-roll inside a group: source + name are shown once on the group header, so omit them here.
-  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top">${rlTag(r)}</span>${rlParts(r)}</span></div>`;
+  // Single entry: total + [source / name+tag / scrollable breakdown + pinned adv].
+  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${rlTag(r)}</span><span class="rl-parts">${rlPnum(r)}${rlAdv(r)}${rlCrit(r)}</span></span></div>`;
+  // Grouped sub-roll: one centred line — total + scrollable breakdown + pinned adv + right-aligned TYPE.
+  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-subline">${rlPnum(r)}${rlAdv(r)}${rlCrit(r)}${rlTag(r)}</span></div>`;
   // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll.
   const groupHTML=g=>g.items.length===1?single(g.items[0])
-    :`<div class="rl-group"${abAttr(g.abil)}><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
+    :`<div class="rl-group"><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
@@ -1360,6 +1371,10 @@ function renderRollLog(){
   el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
   el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
+  // Hover a DMG tag → small popover naming the damage type (B62).
+  el.querySelectorAll(".rl-tag-damage[data-dmgtype]").forEach(t=>{
+    t.addEventListener("mouseenter",()=>showMiniTip(t,esc(t.dataset.dmgtype)+" damage"));
+    t.addEventListener("mouseleave",hideMiniTip);});
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
     b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
     bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
@@ -1406,6 +1421,12 @@ function showDiceHelp(anchor){hideDiceHelp();const p=document.createElement("div
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";_diceTip=p;}
 function hideDiceHelp(){if(_diceTip){_diceTip.remove();_diceTip=null;}}
+// Tiny hover tooltip (e.g. the damage type behind a DMG tag) — a separate floating element.
+let _miniTip=null;
+function showMiniTip(anchor,html){hideMiniTip();const p=document.createElement("div");p.className="mini-tip";p.innerHTML=html;document.body.appendChild(p);
+  const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-8);left=Math.max(8,left);
+  let top=r.top-p.offsetHeight-6;if(top<8)top=r.bottom+6;p.style.left=left+"px";p.style.top=top+"px";_miniTip=p;}
+function hideMiniTip(){if(_miniTip){_miniTip.remove();_miniTip=null;}}
 function openRollMenu(span){openRollPopover(span,{formula:span.dataset.roll,label:rollLabelFor(span),type:span.dataset.rolltype,abil:span.dataset.abil});}
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
 function notionSingle(m){
@@ -2688,14 +2709,14 @@ function updateDiceCursor(overRoll){
   else if(_diceCur)_diceCur.classList.remove("show");
 }
 document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
-document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
 function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
 document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
 window.addEventListener("blur",dropCmd);
 // Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
 // which keep their own modifier-click behaviour, e.g. bestiary multi-select).
 document.addEventListener("click",e=>{
-  if(!(e.metaKey||e.ctrlKey))return;
+  if(!(e.metaKey||e.ctrlKey)||!clickRollOn())return;
   if(e.target.closest("input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal"))return;
   e.preventDefault();
   openCustomRoll({getBoundingClientRect:()=>({left:e.clientX,right:e.clientX,top:e.clientY,bottom:e.clientY,width:0,height:0})});

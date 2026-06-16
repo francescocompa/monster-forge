@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 62 — Popover rolls, roll-log layout, ability bar
+- **Roll from inside reference popovers:** spell/condition hover popovers are now colour-coded and
+  their dice are clickable — e.g. roll Lightning Bolt's 8d6 straight from its popover.
+- **Roll-log rows:** the dice breakdown is horizontally **scrollable** when long; the adv/dis tag
+  stays **pinned** beside the type tag (doesn't scroll). The ability colour is now a **vertical bar**
+  in a reserved right gutter (replacing the bg tint that wasn't reading), so the type tags line up.
+- **Grouped sub-rolls** are a single centred line: total + breakdown + (adv) + right-aligned type tag.
+- **Hovering a DMG tag** shows a small popover with the damage type (when known).
+- Disabling **click-to-roll** now also disables Cmd/Ctrl-click custom rolls and the d20 cursor.
+- With **colour-coding off**, the ability codes (STR…) left-align and take the accent title colour.
+
 ## Batch 61 — Roll log polish, grouped rolls, ability tint, dice shorthand
 - **Grouped rolls:** consecutive log entries that share a source + name (e.g. an attack's to-hit +
   damage) collapse into one block — the source/name shown once, each sub-roll listed under it.
