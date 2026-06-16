@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 54 — Click-to-roll dice
+- The colour-coded **dice / to-hit** tokens in the statblock preview are now
+  **clickable** (gated by Settings). **Left-click** rolls instantly; **right-click**
+  opens options: **advantage / disadvantage** (2d20 keep hi/lo on d20 rolls),
+  **critical hit** (double damage dice), and an **editable formula**.
+- Results show as a **toast** and accumulate in a collapsible **roll-log panel**
+  (bottom-left of the main area) with each roll's total + dice breakdown and a clear
+  button.
+
 ## Batch 53 — Statblock colour-coding
 - The Forge **statblock preview** now colour-codes prose (gated by Settings):
   **damage types** (elemental palette), **dice / +to-hit** (also tagged for

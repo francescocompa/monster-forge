@@ -91,7 +91,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .mini:hover{border-color:var(--accent);color:var(--txt)}
 .mini svg{width:13px;height:13px;fill:currentColor;flex:none}
 
-.main{overflow:hidden;display:flex;flex-direction:column}
+.main{overflow:hidden;display:flex;flex-direction:column;position:relative}
 .banner{background:rgba(217,169,65,.12);border:1px solid #6d5a26;color:var(--amber-soft);padding:9px 16px;font-size:12px;display:none;align-items:center;gap:12px}
 .banner.show{display:flex}
 .banner button{margin-left:auto;background:none;border:1px solid currentColor;color:inherit;border-radius:5px;padding:3px 10px;font-size:11px}
@@ -361,6 +361,29 @@ select::-ms-expand{display:none}
 .sb .cc-cond{color:var(--accent-soft);font-weight:600}
 .sb .cc-range{color:#4db6ac}
 .sb .ab td.num.cc-mod-pos{color:#6fb86a}.sb .ab td.num.cc-mod-neg{color:#d2604a}.sb .ab td.num.cc-mod-zero{color:var(--faint)}
+/* B54 click-to-roll affordance (only when the feature is on) */
+.mf-clickroll .sb .cc-roll{cursor:pointer;border-bottom:1px dashed rgba(231,192,112,.5);transition:filter .1s}
+.mf-clickroll .sb .cc-roll:hover{filter:brightness(1.2)}
+.roll-edit{display:flex;gap:6px;align-items:center;padding:8px 8px 4px;border-top:1px solid var(--line);margin-top:4px}
+.roll-edit .roll-edit-in{flex:1;min-width:90px;font-size:12.5px;padding:6px 8px}
+/* Roll-log panel */
+.roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:248px;max-width:calc(100% - 36px);background:var(--panel2);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow-pop);overflow:hidden;font-size:12.5px}
+.roll-log .rl-head{display:flex;align-items:center;gap:6px;padding:7px 9px;background:var(--panel);border-bottom:1px solid var(--line)}
+.roll-log .rl-grow{flex:1}
+.roll-log .rl-title{font-weight:600;color:var(--txt)}
+.roll-log .rl-n{font-size:10px;color:var(--faint);background:var(--in);border:1px solid var(--line);border-radius:10px;padding:0 6px;line-height:15px}
+.roll-log .rl-tog{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:4px}
+.roll-log .rl-tog:hover{color:var(--txt)}
+.roll-log .rl-clear{background:none;border:none;color:var(--bad);cursor:pointer;padding:3px 4px;border-radius:4px;display:grid;place-items:center}
+.roll-log .rl-clear:hover{background:rgba(214,79,69,.16)}
+.roll-log .rl-clear svg{display:block;width:12px;height:12px}
+.roll-log .rl-body{max-height:40vh;overflow:auto}
+.roll-log .rl-row{display:flex;align-items:center;gap:9px;padding:6px 9px;border-bottom:1px solid var(--line)}
+.roll-log .rl-row:last-child{border-bottom:none}
+.roll-log .rl-total{flex:none;min-width:30px;text-align:center;font-weight:700;font-size:15px;color:var(--accent-soft);font-variant-numeric:tabular-nums}
+.roll-log .rl-mid{display:flex;flex-direction:column;min-width:0}
+.roll-log .rl-lbl{color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roll-log .rl-parts{color:var(--faint);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb h2{font-weight:700;color:var(--accent-soft);font-size:21px;margin:0 0 1px;letter-spacing:-.01em;line-height:1.1}
 .sb .typeline{font-style:italic;color:var(--dim);font-size:12px;margin-bottom:9px}
 .sb .typeline .minion-tag{font-style:normal;font-weight:700;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}

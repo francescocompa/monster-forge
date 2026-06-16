@@ -1116,6 +1116,69 @@ function colorizeStatblock(){
     const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(node=>colorizeNode(node,cats));
   });
+  if(state.settings.clickRoll&&state.settings.clickRoll.on)root.querySelectorAll(".cc-roll[data-roll]").forEach(sp=>sp.title="Click to roll — right-click for options");
+}
+// ── B54 click-to-roll ───────────────────────────────────────────────────────
+function syncFeatureClasses(){document.body.classList.toggle("mf-clickroll",!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on));}
+function d(n){return 1+Math.floor(Math.random()*n);}
+// Roll a formula like "1d20+7", "2d6+4", "3d6". mode adv/dis affects a lone d20; crit doubles dice.
+function rollFormula(f,opts){
+  opts=opts||{};const mode=opts.mode||"normal",crit=!!opts.crit;
+  const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"");
+  const terms=norm.match(/[+-]?(?:\d*d\d+|\d+)/gi)||[];
+  let total=0;const parts=[];
+  terms.forEach(t=>{
+    const neg=t[0]==="-";const body=t.replace(/^[+-]/,"");
+    if(/d/i.test(body)){
+      let[n,m]=body.toLowerCase().split("d");n=Number(n||1);m=Number(m);if(!m)return;
+      const count=crit?n*2:n;
+      if((mode==="adv"||mode==="dis")&&m===20&&count===1){
+        const a=d(20),b=d(20),keep=mode==="adv"?Math.max(a,b):Math.min(a,b);
+        total+=neg?-keep:keep;parts.push(`d20(${a},${b})→${keep}`);
+      }else{
+        const rolls=[];for(let i=0;i<count;i++)rolls.push(d(m));
+        const sum=rolls.reduce((x,y)=>x+y,0);total+=neg?-sum:sum;
+        parts.push(`${count}d${m}:[${rolls.join(",")}]`);
+      }
+    }else{const v=Number(body);if(!isNaN(v)){total+=neg?-v:v;parts.push((neg?"−":"+")+v);}}
+  });
+  return {total,parts:parts.join(" ")};
+}
+function rollLabelFor(span){const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");const base=nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";const t=span.dataset.rolltype;return base+(t==="attack"?" to hit":t==="damage"?" damage":"");}
+let rollLog=[],rollLogOpen=true;
+function doRoll(formula,opts,label){
+  const r=rollFormula(formula,opts);
+  rollLog.unshift({label,total:r.total,parts:r.parts});if(rollLog.length>60)rollLog.length=60;
+  rollLogOpen=true;renderRollLog();toast(`${label}: ${r.total}`);
+}
+function renderRollLog(){
+  let el=document.getElementById("rollLog");
+  if(!rollLog.length){if(el)el.remove();return;}
+  if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
+  el.classList.toggle("open",rollLogOpen);
+  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div><button class="rl-clear" id="rlClear" title="Clear rolls">${TRASH_SVG}</button></div>`
+    +(rollLogOpen?`<div class="rl-body">${rollLog.map(r=>`<div class="rl-row"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-lbl">${esc(r.label)}</span><span class="rl-parts">${esc(r.parts)}</span></span></div>`).join("")}</div>`:"");
+  el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
+  el.querySelector("#rlClear").addEventListener("click",()=>{rollLog=[];renderRollLog();});
+}
+function openRollMenu(span){
+  const f=span.dataset.roll,rtype=span.dataset.rolltype,cr=state.settings.clickRoll;
+  const isD20=/(?:^|[^0-9])1?d20\b/i.test(f);
+  let html=`<button class="popitem" data-rm="normal">🎲 Roll ${esc(f)}</button>`;
+  if(cr.adv&&isD20)html+=`<button class="popitem" data-rm="adv">Advantage</button><button class="popitem" data-rm="dis">Disadvantage</button>`;
+  if(cr.crit&&rtype==="damage")html+=`<button class="popitem" data-rm="crit">Critical hit (×2 dice)</button>`;
+  if(cr.editFormula)html+=`<div class="roll-edit"><input type="text" class="roll-edit-in" value="${esc(f)}" autocomplete="off"><button class="btn primary sm" data-rm="edit" style="width:auto">Roll</button></div>`;
+  const p=showPopover(span,html);
+  const inp=p.querySelector(".roll-edit-in");
+  p.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const mode=b.dataset.rm;const lbl=rollLabelFor(span);
+    if(mode==="edit"){const v=(inp&&inp.value.trim())||f;closePopover();doRoll(v,{},lbl);return;}
+    closePopover();
+    if(mode==="adv")doRoll(f,{mode:"adv"},lbl+" (adv)");
+    else if(mode==="dis")doRoll(f,{mode:"dis"},lbl+" (dis)");
+    else if(mode==="crit")doRoll(f,{crit:true},lbl+" (crit)");
+    else doRoll(f,{},lbl);
+  }));
+  if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const v=inp.value.trim()||f;closePopover();doRoll(v,{},rollLabelFor(span));}});
 }
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
 function notionSingle(m){
@@ -2329,6 +2392,9 @@ function doExportJSON(){
 $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
 $("#settingsBtn").addEventListener("click",()=>switchView("settings"));
+// Click-to-roll: delegated on the statblock preview. Left-click = quick roll; right-click = options.
+$("#statblock").addEventListener("click",e=>{const t=e.target.closest(".cc-roll[data-roll]");if(!t||!state.settings.clickRoll.on)return;doRoll(t.dataset.roll,{},rollLabelFor(t));});
+$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest(".cc-roll[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
 // Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
 function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
 async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
@@ -2385,7 +2451,7 @@ function renderSettings(){
     if(el.type==="checkbox")v=el.checked;
     else if(el.type==="number")v=clamp(Number(el.value||1),Number(el.min||1),Number(el.max||99));
     else v=el.value;
-    settingPath(el.dataset.set,v);saveSettings();renderPreview();
+    settingPath(el.dataset.set,v);saveSettings();syncFeatureClasses();renderPreview();
     if(el.dataset.set==="colorCode.on"||el.dataset.set==="clickRoll.on")renderSettings();
   }));
   $("#setExport").addEventListener("click",doExportJSON);
@@ -2521,7 +2587,7 @@ function wrapStepper(input,step,min){
 }
 
 (async function init(){
-  loadSettings();
+  loadSettings();syncFeatureClasses();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
   bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();
