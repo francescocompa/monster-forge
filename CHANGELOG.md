@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 52 — Settings page
+- New **Settings** view, opened by a **gear icon in the appbar** (present on every
+  view). Persists to `localStorage` (`mf_settings`), merged over defaults at load.
+- **Feature toggles** — master + per-category switches for the upcoming Statblock
+  colour-coding and Click-to-roll dice (so they'll be opt-in).
+- **Adventure defaults** — default party size / level / faction, now used when
+  creating a new adventure and when adding combatants.
+- **Data & sync** — Export / Import JSON, a live cloud-sync status line, a manual
+  **Re-sync now**, and **Clear local cache** (cloud data untouched).
+
 ## Batch 51 — Scenes overhaul
 - _Follow-up fixes:_ filter tools trimmed to **search + sort** (Name / Difficulty;
   dropped the filter menu and the Spent-XP sort); **＋ Scene** moved to sit directly

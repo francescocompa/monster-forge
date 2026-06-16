@@ -1,5 +1,16 @@
 "use strict";
-let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{}};
+let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+// ── User settings (Batch 52) ─ persisted on-device only (mf_settings). Feature toggles gate the
+// statblock colour-coding (B53) and click-to-roll dice (B54); defaults seed new adventures/combatants.
+const SETTINGS_KEY="mf_settings";
+const SETTINGS_DEFAULT={
+  colorCode:{on:true,damage:true,dice:true,conditions:true,ranges:true,abilityBlock:true},
+  clickRoll:{on:true,adv:true,crit:true,editFormula:true},
+  defaults:{partySize:4,partyLevel:1,faction:"Enemy"}
+};
+function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
+function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}
+function saveSettings(){_store(SETTINGS_KEY,state.settings);}
 let M=null, pendingForge=null;
 const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statblock, kept but off by default
 
@@ -1107,9 +1118,9 @@ function claudeMonster(m){
   return "<<CLAUDE-FORGE / push this monster to my Notion Statblocks DB in MM25 two-column format; set AC/HP/XP properties; flag if a same-name page exists>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
 }
 
-const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures"};
+const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures",settings:"Settings"};
 function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
-function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();}
+function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 // ====== Notion-style control bars: search · filter · sort · group (Batch 15) ======
@@ -1710,7 +1721,7 @@ function renderAdvList(){
   const lay=$(".adv-layout");if(lay)lay.classList.toggle("detail-open",!!curAdv());
   renderAdvDetail();
 }
-$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"New Adventure",size:4,level:1,uneven:false,levels:[1,1,1,1],notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -1718,7 +1729,7 @@ function baseBudget(p){const lv=partyLevels(p);return [0,1,2].map(di=>lv.reduce(
 function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
 function addMonsterCombatant(enc,monsterId){
   const cid=uid();
-  enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:"Enemy"});
+  enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:state.settings.defaults.faction});
   const m=state.lib.find(x=>x.id===monsterId);
   if(m&&m.lair&&m.lair.on&&(m.lair.items||[]).some(it=>it.name||it.text)){
     const lines=[];
@@ -2070,7 +2081,7 @@ function bindEncEvents(a){
   q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
   q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
-  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addquick;findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
+  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addquick;findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}));
   q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addev;findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
   q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
@@ -2275,6 +2286,71 @@ function doExportJSON(){
 }
 $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
+$("#settingsBtn").addEventListener("click",()=>switchView("settings"));
+// Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
+function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
+async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
+function clearLocalCache(){const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("mf_cache:")===0)keys.push(k);}keys.forEach(k=>localStorage.removeItem(k));toast("Local cache cleared — reload to re-fetch from the cloud.");}
+function renderSettings(){
+  const body=$("#settingsBody");if(!body)return;const s=state.settings;
+  const SW=(path,label,sub)=>`<label class="set-row${sub?" sub":""}"><span class="set-lbl">${label}</span><span class="switch"><input type="checkbox" data-set="${path}" ${settingPath(path)?"checked":""}><span class="sl"></span></span></label>`;
+  body.innerHTML=`<h2 class="set-title">Settings</h2>
+    <div class="set-card">
+      <div class="set-head">Statblock colour-coding</div>
+      ${SW("colorCode.on","Enable colour-coding")}
+      <div class="set-subs${s.colorCode.on?"":" off"}">
+        ${SW("colorCode.damage","Damage types",true)}
+        ${SW("colorCode.dice","Dice, to-hit &amp; DCs",true)}
+        ${SW("colorCode.conditions","Conditions",true)}
+        ${SW("colorCode.ranges","Ranges &amp; areas",true)}
+        ${SW("colorCode.abilityBlock","Ability-score block",true)}
+      </div>
+      <div class="set-note">Colours the Forge statblock preview only.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Click-to-roll dice</div>
+      ${SW("clickRoll.on","Enable click-to-roll")}
+      <div class="set-subs${s.clickRoll.on?"":" off"}">
+        ${SW("clickRoll.adv","Advantage / disadvantage",true)}
+        ${SW("clickRoll.crit","Critical hit (double dice)",true)}
+        ${SW("clickRoll.editFormula","Editable roll formula",true)}
+      </div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Adventure defaults</div>
+      <div class="set-grid">
+        <label class="f">Default party size<input type="number" min="1" max="12" data-set="defaults.partySize" value="${s.defaults.partySize}"></label>
+        <label class="f">Default party level<input type="number" min="1" max="20" data-set="defaults.partyLevel" value="${s.defaults.partyLevel}"></label>
+        <label class="f">Default faction<select data-set="defaults.faction">${FACTIONS.map(f=>`<option ${f===s.defaults.faction?"selected":""}>${esc(f)}</option>`).join("")}</select></label>
+      </div>
+      <div class="set-note">Seeds new adventures and combatants.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Data &amp; sync</div>
+      <div class="set-sync" id="setSync"></div>
+      <div class="set-btns">
+        <button class="btn ghost sm" id="setExport" style="width:auto">⭳ Export JSON</button>
+        <button class="btn ghost sm" id="setImport" style="width:auto">⭱ Import JSON</button>
+        <button class="btn ghost sm" id="setResync" style="width:auto">↻ Re-sync now</button>
+        <button class="btn ghost sm danger" id="setClearCache" style="width:auto">Clear local cache</button>
+      </div>
+      <div class="set-note">JSONBin is the cloud store; a local mirror keeps you working offline. Cloud data is never deleted by “Clear local cache”.</div>
+    </div>`;
+  const dirty=isDirty();
+  $("#setSync").innerHTML=`<span class="sync-dot ${cloudReady?(dirty?"warn":"ok"):"bad"}"></span>${cloudReady?(dirty?"Connected · unsynced local edits":"Connected · all changes synced"):"Offline · saved on this device"}`;
+  body.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
+    let v;
+    if(el.type==="checkbox")v=el.checked;
+    else if(el.type==="number")v=clamp(Number(el.value||1),Number(el.min||1),Number(el.max||99));
+    else v=el.value;
+    settingPath(el.dataset.set,v);saveSettings();renderPreview();
+    if(el.dataset.set==="colorCode.on"||el.dataset.set==="clickRoll.on")renderSettings();
+  }));
+  $("#setExport").addEventListener("click",doExportJSON);
+  $("#setImport").addEventListener("click",()=>$("#fileIn").click());
+  $("#setResync").addEventListener("click",resyncCloud);
+  $("#setClearCache").addEventListener("click",()=>confirmModal("Clear the on-device cache? Your cloud data is untouched and re-fetched on the next load.",clearLocalCache));
+}
 $("#libPaste").addEventListener("click",openImportModal);
 $("#presetManage").addEventListener("click",()=>{presetSel.clear();presetModal();});
 // Accumulates raw bestiary monsters across every upload this session so cross-file
@@ -2403,6 +2479,7 @@ function wrapStepper(input,step,min){
 }
 
 (async function init(){
+  loadSettings();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
   bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();
