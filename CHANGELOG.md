@@ -4,6 +4,31 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 55 — Roll & colour overhaul
+- **Colours:** all damage types now share one fixed colour (no per-element palette);
+  conditions recoloured violet (distinct from the accent); ability-score block gets
+  per-ability colour highlights behind each label.
+- **Recognised conditions in prose** are underlined and get the hover/click info
+  popover (same as the condition-immunities line) when the condition is in an
+  uploaded library.
+- **Rolling:** saving throws & ability checks (the stat block's mod/save cells) are
+  now rollable; attack jargon ("Melee/Ranged Attack Roll: +N") is rollable as
+  d20+N; clicking an **attack's name** rolls the attack **and** its damage, and a
+  natural 20 auto-crits (gold-glow row) and doubles the damage dice.
+- **Custom rolls** use [clockworkmod dice notation](https://dice.clockworkmod.com/)
+  (NdY, +/-, kh/kl/dh/dl, d%) with a (?) help link in the popup and the roll-log.
+- **Roll popup** redesigned: a single advantage/disadvantage cycle dice-icon
+  (green → red → off), an editable formula, (?) help, and Roll — no preset buttons.
+- **Roll-log:** name-only label + a right-aligned type tag (ATK/DMG/CHK/SAVE);
+  advantage/disadvantage shown as a green/red dice icon; **CRIT** rows are gold; each
+  roll shows its **source** statblock (click to open it in the Forge, hover to preview).
+  Higher-contrast panel so it no longer blends into the background.
+- **Legacy spellcasting:** a Spellcasting trait on an imported/legacy statblock is
+  detected and converted to the 2024 **Spellcasting action** (ability/DC/spell groups
+  parsed; falls back to a plain action if the list can't be parsed).
+- All FABs standardised to 32px; the stat-block preview scrolls clear of the Save
+  button.
+
 ## Batch 54 — Click-to-roll dice
 - The colour-coded **dice / to-hit** tokens in the statblock preview are now
   **clickable** (gated by Settings). **Left-click** rolls instantly; **right-click**

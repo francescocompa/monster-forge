@@ -199,6 +199,31 @@ function migrateDefenses(m){
   m.dmg=dmg;m.dmgnote=(m.dmgnote?m.dmgnote+"; ":"")+note.join("; ");
   delete m.res;delete m.dimm;delete m.vuln;
 }
+const _ABFULL={strength:"str",dexterity:"dex",constitution:"con",intelligence:"int",wisdom:"wis",charisma:"cha"};
+function _freqLabel(s){const t=s.replace(/\s+/g," ").trim();if(/^at will$/i.test(t))return "At Will";const m=t.match(/^(\d)\s*\/\s*day(\s+each)?$/i);if(m)return m[1]+"/Day"+(m[2]?" Each":"");if(/^cantrip/i.test(t))return "Cantrips";return t.replace(/\b\w/g,c=>c.toUpperCase());}
+const _SPELL_FREQ="(?:At Will|Cantrips?(?:\\s*\\([^)]*\\))?|\\d\\s*\\/\\s*Day(?:\\s+Each)?|\\d(?:st|nd|rd|th)[ -]?Level(?:\\s*\\([^)]*\\))?)";
+function parseSpellGroups(text){
+  const re=new RegExp("("+_SPELL_FREQ+")\\s*:\\s*([\\s\\S]*?)(?=(?:"+_SPELL_FREQ+")\\s*:|$)","gi");
+  const groups=[];let m;
+  while((m=re.exec(text))){const spells=m[2].replace(/[.;]\s*$/,"").replace(/\s+/g," ").trim().replace(/\s*,\s*/g,", ");if(spells)groups.push({freq:_freqLabel(m[1]),spells});}
+  return groups;
+}
+// Legacy statblocks place Spellcasting in traits; 2024 puts it under Actions. Detect a spellcasting
+// trait, structure it into the app's spell-mode action (ability/DC/groups), and move it; if the spell
+// list can't be parsed, move the trait to Actions as plain text so nothing is lost. Idempotent.
+function convertLegacySpellcasting(m){
+  if(!Array.isArray(m.traits)||!m.traits.length)return;
+  const keep=[];
+  m.traits.forEach(t=>{
+    if(t&&/spellcasting/i.test(t.name||"")&&t.text){
+      const text=t.text,abM=text.match(/(strength|dexterity|constitution|intelligence|wisdom|charisma)/i),dcM=text.match(/DC\s*(\d+)/i),groups=parseSpellGroups(text);
+      m.actions=m.actions||[];
+      if(groups.length)m.actions.push({mode:"spell",name:t.name,ability:abM?_ABFULL[abM[1].toLowerCase()]:"cha",dc:dcM?Number(dcM[1]):"",atk:"",groups});
+      else m.actions.push({mode:"text",name:t.name,text:t.text});
+    }else keep.push(t);
+  });
+  m.traits=keep;
+}
 function normalizeMonster(m){
   if(!m.spd){m.spd=parseSpeed(m.speed);delete m.speed;}
   if(typeof m.senses==="string"||m.senses==null)m.senses=parseSenses(m.senses);
@@ -219,6 +244,7 @@ function normalizeMonster(m){
   m.legend.items=(m.legend.items||[]).map(e=>e.mode?e:T(e.name,e.text));
   m.lair.items=(m.lair.items||[]).map(e=>e.mode?e:T(e.name,e.text));
   m.villain.items=(m.villain.items||[]).map(e=>Object.assign({mode:"villain",round:e.round||1},e));
+  convertLegacySpellcasting(m);
   m._auto=m._auto||{ac:false,hp:false};
   m.sort=m.sort||{};
   // Bestiary organisation (Batch 13): workflow status, free-text tag, archive flag
@@ -1083,14 +1109,14 @@ const CC_CONDITIONS=["blinded","charmed","deafened","exhaustion","frightened","g
 function normRoll(s){return s.replace(/\s+/g,"").replace(/−/g,"-");}
 function colorizeNode(node,cats){
   const text=node.nodeValue;if(!text.trim())return;const hits=[];
-  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
+  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
   if(!hits.length)return;
   hits.sort((a,b)=>a.s-b.s||b.e-a.e);
   const out=[];let pos=0;
   hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
   if(pos<text.length)out.push({t:text.slice(pos)});
   const frag=document.createDocumentFragment();
-  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;sp.dataset.rolltype=o.rtype;}frag.appendChild(sp);}});
+  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;sp.dataset.rolltype=o.rtype;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
   node.parentNode.replaceChild(frag,node);
 }
 function colorizeStatblock(){
@@ -1107,7 +1133,9 @@ function colorizeStatblock(){
     cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
     cats.push({re:/\b(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/g,cls:()=>"cc-save"});
   }
-  if(s.conditions)cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond"});
+  // Recognised conditions become reflinks (underline + hover/click popover) when the matching
+  // condition is in an uploaded library — same affordance as the condition-immunities line.
+  if(s.conditions)cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});
   if(s.ranges){
     cats.push({re:/\b\d+(?:\/\d+)?\s*(?:ft\.?|feet)\b/gi,cls:()=>"cc-range"});
     cats.push({re:/\b\d+-foot(?:[ \-](?:cone|cube|line|sphere|radius|emanation|cylinder))?\b/gi,cls:()=>"cc-range"});
