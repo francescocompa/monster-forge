@@ -817,8 +817,10 @@ function bindHelpHover(btn,text){if(!btn)return;const open=e=>{e.stopPropagation
   btn.addEventListener("mouseenter",open);btn.addEventListener("click",open);btn.addEventListener("mouseleave",()=>closePopover());}
 // Bind a card's preview icon to show the statblock on hover (and click).
 function bindPreviewHover(btn,getMon){if(!btn)return;
-  btn.addEventListener("mouseenter",()=>{const m=getMon();if(m)showStatPreview(btn,m);});
-  btn.addEventListener("click",ev=>{ev.stopPropagation();const m=getMon();if(m)showStatPreview(btn,m);});
+  // Close any open preview when this anchor has nothing to show, so a previous card never lingers
+  // and appears to belong to the row being hovered (B63 fix for the roll-log source link).
+  btn.addEventListener("mouseenter",()=>{const m=getMon();if(m)showStatPreview(btn,m);else closePopover();});
+  btn.addEventListener("click",ev=>{ev.stopPropagation();const m=getMon();if(m)showStatPreview(btn,m);else closePopover();});
   btn.addEventListener("mouseleave",()=>closePopover());}
 // Shared card for the add-combatant + chassis pickers: same tags row + position, with a top-right
 // preview icon (matching where the bestiary card's menu sits). `srcTag` adds the source badge tag.
@@ -1065,25 +1067,41 @@ function refContent(kind,name){
 function srcBadge(x){const id=x._srcCode||x.source||"";if(!id)return "";const full=x._book||"";
   return ` <span class="refcard-src"${full?` title="${esc(full)}"`:""}>${esc(id)}</span>`;}
 let _refTimer=null;
-function ensureRefpop(){let p=$("#refpop");if(!p){p=document.createElement("div");p.id="refpop";p.className="refpop";document.body.appendChild(p);
-  p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));p.addEventListener("mouseleave",hideRefpop);
+// Reference popovers are STACKED (B63): a ref link inside a popover (e.g. a condition named in a
+// spell's text) opens a second popover one level deeper instead of overwriting the first. Each
+// popover carries data-level; hiding a level drops it and every deeper one. A single shared timer
+// means moving from a parent popover into its child cancels the parent's pending hide.
+function bindRefpopRolls(p){
+  p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));
+  p.addEventListener("mouseleave",()=>hideRefpopFrom(+p.dataset.level||0));
   // Roll dice from inside a spell/condition popover (e.g. Lightning Bolt's 8d6) — B62.
-  p.addEventListener("click",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
+  p.addEventListener("click",e=>{if(e.target.closest(".reflink"))return; // a nested ref opens its own popover
+    const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
     const meta={label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype};
     if(e.metaKey||e.ctrlKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type});return;}
     doRoll(t.dataset.roll,{adv:rollMode},meta);});
-  p.addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype});});
-  }return p;}
-function showRefpop(anchor,kind,name){const html=refContent(kind,name);if(!html)return;const p=ensureRefpop();p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
+  p.addEventListener("contextmenu",e=>{if(e.target.closest(".reflink"))return;const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype});});
+}
+function refpopAt(level){let p=document.querySelector('.refpop[data-level="'+level+'"]');
+  if(!p){p=document.createElement("div");p.className="refpop";p.dataset.level=level;p.style.zIndex=70+level;document.body.appendChild(p);bindRefpopRolls(p);}
+  return p;}
+// The level a ref link opens: 0 at the top, or one deeper than the popover it lives in.
+function refLevelOf(node){const pop=node&&node.closest&&node.closest(".refpop");return pop?((+pop.dataset.level||0)+1):0;}
+function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
+  const html=refContent(kind,name);if(!html)return;
+  hideRefpopNow(level); // drop this level + any deeper before re-showing
+  const p=refpopAt(level);p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
   // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
   if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body)walkColorize(body,buildColorCats(false));}
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";}
-function hideRefpop(){clearTimeout(_refTimer);_refTimer=setTimeout(()=>{const p=$("#refpop");if(p)p.classList.remove("show");},140);}
+function hideRefpopNow(level){document.querySelectorAll(".refpop").forEach(p=>{if((+p.dataset.level||0)>=level)p.classList.remove("show");});}
+function hideRefpopFrom(level){clearTimeout(_refTimer);_refTimer=setTimeout(()=>hideRefpopNow(level),140);}
+function hideRefpop(){hideRefpopFrom(0);}
 document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
-document.addEventListener("mouseout",e=>{if(e.target.closest&&e.target.closest(".reflink"))hideRefpop();});
-document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest("#refpop")))hideRefpop();},true);
+document.addEventListener("mouseout",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
+document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest(".refpop")))hideRefpopNow(0);},true);
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
@@ -1258,9 +1276,19 @@ function colorizeStatblock(){
     nx.nodeValue=nx.nodeValue.slice(mm[0].length);
   });
   // Make an attack entry's NAME roll the attack (+ its damage) in one click.
+  // For prose attacks (no entry-mode ability) infer the ability from the to-hit bonus so the
+  // roll-log still shows the ability-colour bar — incl. on the damage roll (B63). The Archmage's
+  // Arcane Burst (+9 = INT 20 mod +5 + PB +4) resolves to INT this way.
+  const pbCR=pbForCR(M.cr),spAbil=(M.actions.find(e=>e.mode==="spell")||{}).ability;
+  const inferAbil=bonus=>{const ms=ABILS.filter(a=>mod(M[a])+pbCR===bonus);if(!ms.length)return null;return (spAbil&&ms.includes(spAbil))?spAbil:ms[0];};
   root.querySelectorAll(".blk,.va").forEach(blk=>{
     const atk=blk.querySelector('[data-rolltype="attack"]'),dmg=blk.querySelector('[data-rolltype="damage"]'),nm=blk.querySelector(".nm");
-    if(atk&&nm){nm.classList.add("roll-atkname");nm.dataset.roll=atk.dataset.roll;nm.dataset.rolltype="attack";if(dmg)nm.dataset.dmg=dmg.dataset.roll;}
+    if(atk&&nm){
+      nm.classList.add("roll-atkname");nm.dataset.roll=atk.dataset.roll;nm.dataset.rolltype="attack";
+      if(dmg){nm.dataset.dmg=dmg.dataset.roll;if(dmg.dataset.dmgtype&&!nm.dataset.dmgtype)nm.dataset.dmgtype=dmg.dataset.dmgtype;}
+      if(!nm.dataset.abil){const mm=(atk.dataset.roll||"").match(/[+\-]\d+/);const ab=mm?inferAbil(parseInt(mm[0],10)):null;if(ab)nm.dataset.abil=ab;}
+      if(nm.dataset.abil&&dmg&&!dmg.dataset.abil)dmg.dataset.abil=nm.dataset.abil;
+    }
   });
   // Recharge tag in an entry NAME (e.g. "Fire Breath (Recharge 5–6)") → rollable d6 (no type tag).
   root.querySelectorAll(".nm").forEach(nm=>{
@@ -1310,6 +1338,7 @@ function rollFormula(f,opts){
 function rollLabelFor(span){if(span.dataset.rolllabel)return span.dataset.rolllabel;const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";}
 function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
+let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
 function doRoll(formula,opts,meta){
   opts=opts||{};meta=meta||{};
@@ -1346,20 +1375,28 @@ function renderRollLog(){
   if(!rollLog.length){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
+  // A custom drag position only applies while expanded; collapsing or clearing restores the default
+  // bottom-left spot (B63).
+  if(rollLogOpen&&_rlPos){el.style.left=_rlPos.left+"px";el.style.top=_rlPos.top+"px";el.style.right="auto";el.style.bottom="auto";}
+  else{_rlPos=null;el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
-  // Shared bits (B62). TYPE tag carries the dmg type for the hover popover; the breakdown is
-  // scrollable; the adv tag is pinned beside the TYPE tag; an ability-colour bar sits in a reserved
-  // right gutter (data-abil on the row), so TYPE tags line up whether the bar is present or not.
+  // Shared bits. The TYPE tag (carries the dmg type for the hover popover) is a row-level child on
+  // the right, and the ability-colour bar sits in a reserved right gutter (data-abil on the row), so
+  // tags + bars line up identically for single and grouped rows (B63). The breakdown line scrolls
+  // horizontally with no visible scrollbar; the adv/dis tag is inline at the START of it (scrolls
+  // with the dice rather than staying pinned).
   const rlTag=r=>r.type?`<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:"";
   const rlAdv=r=>r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";
   const rlCrit=r=>r.crit?'<span class="rl-crit">CRIT</span>':"";
   const rlPnum=r=>`<span class="rl-pnum">${esc(r.parts)}</span>`;
+  const rlParts=r=>`<span class="rl-parts">${rlAdv(r)}${rlCrit(r)}${rlPnum(r)}</span>`;
   const rlSrc=src=>src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";
   const abAttr=ab=>ab?` data-abil="${esc(ab)}"`:"";
-  // Single entry: total + [source / name+tag / scrollable breakdown + pinned adv].
-  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${rlTag(r)}</span><span class="rl-parts">${rlPnum(r)}${rlAdv(r)}${rlCrit(r)}</span></span></div>`;
-  // Grouped sub-roll: one centred line — total + scrollable breakdown + pinned adv + right-aligned TYPE.
-  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-subline">${rlPnum(r)}${rlAdv(r)}${rlCrit(r)}${rlTag(r)}</span></div>`;
+  // Single entry: total · [source / label / breakdown] · TYPE tag.
+  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlParts(r)}</span>${rlTag(r)}</div>`;
+  // Grouped sub-roll: the SAME geometry as a single row minus the source/label — total · breakdown ·
+  // TYPE tag — so the bars and tags align with the single rows above/below.
+  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlParts(r)}</span>${rlTag(r)}</div>`;
   // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll.
   const groupHTML=g=>g.items.length===1?single(g.items[0])
     :`<div class="rl-group"><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
@@ -1367,6 +1404,7 @@ function renderRollLog(){
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +(rollLogOpen?`<div class="rl-body">${groups.map(groupHTML).join("")}</div>`:"");
+  bindRollLogDrag(el,el.querySelector(".rl-head"));
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
   el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
@@ -1378,6 +1416,24 @@ function renderRollLog(){
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
     b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
     bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
+  });
+}
+// Drag the roll-log window by its header to reposition it within the page (B63). Buttons/tags in the
+// header keep their own clicks. The position is transient — collapsing or clearing restores default.
+function bindRollLogDrag(el,head){
+  if(!head)return;head.classList.add("rl-drag-h");
+  head.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button,[data-rollmode]"))return; // let header controls work
+    const parent=el.offsetParent||document.body,pr=parent.getBoundingClientRect();
+    const startX=e.clientX,startY=e.clientY,ox=el.offsetLeft,oy=el.offsetTop;
+    el.style.bottom="auto";el.style.right="auto";el.classList.add("dragging");
+    const move=ev=>{let nx=ox+(ev.clientX-startX),ny=oy+(ev.clientY-startY);
+      nx=Math.max(0,Math.min(parent.clientWidth-el.offsetWidth,nx));
+      ny=Math.max(0,Math.min(parent.clientHeight-el.offsetHeight,ny));
+      el.style.left=nx+"px";el.style.top=ny+"px";_rlPos={left:nx,top:ny};};
+    const up=()=>{el.classList.remove("dragging");document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);};
+    document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);
+    e.preventDefault();
   });
 }
 function openRollLogMenu(anchor){
@@ -2103,19 +2159,36 @@ function renderAdvList(){
     state.selAdv=(sa&&state.adv.some(a=>a.id===sa&&!a.archived))?sa:(active[0]?active[0].id:null);}
   if(state.selAdv){try{localStorage.setItem("mf_seladv",state.selAdv);}catch(e){}}
   const selStyle=a=>a.id===state.selAdv&&a.color?` style="border-color:${a.color}"`:"";
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"${selStyle(a)}><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
-  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${selStyle(a)}><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}" style="opacity:.5"><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
-  box.querySelectorAll(".ai-info").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor]"))return;state.selAdv=el.closest("[data-adv]").dataset.adv;renderAdvList();}));
+  // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
+  // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;state.selAdv=el.dataset.adv;renderAdvList();}));
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();const a=state.adv.find(x=>x.id===el.dataset.adv);if(a)openAdvCardMenu(el,a);}));
   box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=src.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${src.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
   const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.removeProperty("width");}
-  const lay=$(".adv-layout");if(lay)lay.classList.toggle("detail-open",!!curAdv());
+  const lay=$(".adv-layout");if(lay){lay.classList.toggle("detail-open",!!curAdv());lay.classList.toggle("adv-mini",advMini());}
   renderAdvDetail();
 }
+// Collapsed adventures column: compact menu reachable by right-click on a colour card (B63).
+function openAdvCardMenu(anchor,a){
+  const p=showPopover(anchor,`<button class="popitem" data-acm="open">Open</button><button class="popitem" data-acm="color">Colour</button><button class="popitem" data-acm="dup">Duplicate</button><button class="popitem" data-acm="arch">${a.archived?"Unarchive":"Archive"}</button><div class="popsep"></div><button class="popitem danger" data-acm="del">Delete</button>`);
+  p.querySelectorAll("[data-acm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const act=b.dataset.acm;
+    if(act==="color"){closePopover();openAdvColorMenu(anchor,a.id);return;}
+    closePopover();
+    if(act==="open"){state.selAdv=a.id;renderAdvList();}
+    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}
+    else if(act==="arch"){a.archived=!a.archived;saveAdv();renderAdvList();}
+    else if(act==="del"){confirmModal(`Delete "${a.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);if(state.selAdv===a.id)state.selAdv=null;saveAdv();renderAdvList();});}
+  }));
+}
+function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
 $("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#advCollapse").addEventListener("click",e=>{e.stopPropagation();const on=!advMini();try{localStorage.setItem("mf_advmini",on?"1":"0");}catch(_){}e.currentTarget.title=on?"Expand list":"Collapse list to colour cards";renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -2854,6 +2927,12 @@ document.addEventListener("click",e=>{const app=$("#app");if(app.classList.conta
   const hide=()=>{clearTimeout(t);t=setTimeout(()=>app.classList.remove("sidebar-open"),350);};
   burger.addEventListener("mouseenter",show);burger.addEventListener("mouseleave",hide);
   rail.addEventListener("mouseenter",()=>clearTimeout(t));rail.addEventListener("mouseleave",hide);
+})();
+// Icon-only sidebar collapse (B63): a persistent narrow rail, toggled by the handle, restored on load.
+(function(){const app=$("#app"),btn=$("#railCollapse");if(!btn)return;
+  const sync=on=>btn.title=on?"Expand sidebar":"Collapse sidebar to icons";
+  try{if(localStorage.getItem("mf_railmini")==="1"){app.classList.add("rail-mini");sync(true);}}catch(e){}
+  btn.addEventListener("click",e=>{e.stopPropagation();const on=app.classList.toggle("rail-mini");sync(on);try{localStorage.setItem("mf_railmini",on?"1":"0");}catch(_){}});
 })();
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();

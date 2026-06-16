@@ -4,6 +4,32 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 63 — Roll-log alignment, popover stacking, collapsible sidebar & adventures
+- **Roll-log alignment:** the ability-colour bar and the TYPE tag (ATK/DMG/CHK/SAVE) now sit at the
+  exact same position whether a roll is shown on its own or inside a group, and the dice breakdown
+  uses the same faint colour and size in both cases.
+- **Adv/dis tag** now sits inline at the **start** of the dice breakdown and scrolls with it (no
+  longer pinned at the end).
+- **No scrollbar** over the roll log (it covered the rolls) — still scrolls, including by touch on
+  mobile; the dice breakdown also scrolls without a visible bar.
+- **Drag the roll-log window** by its header to place it anywhere on the page; collapsing or clearing
+  it restores the default bottom-left spot.
+- **Ability bar on damage rolls:** a damage roll now shows the same ability bar as the attack it came
+  from. For prose attacks (e.g. the Archmage's *Arcane Burst*, +9) the ability is inferred from the
+  to-hit bonus — so it correctly reads as INT.
+- **DMG-tag hover** in the log shows the damage type again.
+- **Popover from a popover:** a condition named inside a spell's popover now opens its own stacked
+  popover instead of replacing the spell card.
+- **Unified detection & colours in popovers:** spell/condition popovers use the same colour-coding and
+  rollable detection as the statblock — conditions are the same violet, dice are rollable.
+- **Roll-log statblock link fix:** hovering a source no longer shows a leftover card from another row.
+- **Underlines match their text:** rollable features and reference links underline in their own text
+  colour (white attack names, blue dice, violet conditions) instead of a fixed accent.
+- **Collapsible sidebar:** a handle collapses the left rail to an icon-only strip (remembered across
+  loads).
+- **Collapsible adventures column:** a handle collapses the adventures list into square colour cards
+  (right-click a card for Open / Colour / Duplicate / Archive / Delete).
+
 ## Batch 62 — Popover rolls, roll-log layout, ability bar
 - **Roll from inside reference popovers:** spell/condition hover popovers are now colour-coded and
   their dice are clickable — e.g. roll Lightning Bolt's 8d6 straight from its popover.
