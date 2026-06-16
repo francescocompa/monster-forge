@@ -1043,7 +1043,22 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   return{main,groups};}
 function subName(t){return applyRefs(t);}
 function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>");}
-function fmtBlock(t){return esc(String(t||"")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>").replace(/\n{2,}/g,"<br><br>").replace(/\n([-•])\s*/g,"<br><span class=\"blk-item\">").replace(/\n/g,"<br>");}
+// B67: render "a | b | c" line runs (from 5etools tables, e.g. Teleport) as real <table>s; the first
+// row is the header. Everything else keeps the lightweight bold/italic/bullet/line-break handling.
+function fmtBlock(t){
+  const lines=String(t||"").split("\n");const out=[];let i=0;
+  const isRow=s=>s.indexOf(" | ")>=0;
+  while(i<lines.length){
+    if(isRow(lines[i])){
+      const rows=[];while(i<lines.length&&isRow(lines[i])){rows.push(lines[i].split("|").map(c=>c.trim()));i++;}
+      out.push(`<table class="rc-table">`+rows.map((r,ri)=>"<tr>"+r.map(c=>{const tag=ri===0?"th":"td";return `<${tag}>${fmtInline(c)}</${tag}>`;}).join("")+"</tr>").join("")+`</table>`);
+    }else{
+      const buf=[];while(i<lines.length&&!isRow(lines[i])){buf.push(lines[i]);i++;}
+      out.push(esc(buf.join("\n")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>").replace(/\n{2,}/g,"<br><br>").replace(/\n([-•])\s*/g,"<br><span class=\"blk-item\">").replace(/\n/g,"<br>"));
+    }
+  }
+  return out.join("");
+}
 // ── Spell / condition references (Batch 14) ──────────────────────────────────
 // Look up uploaded reference data by name (case-insensitive).
 // A spell chip may carry a "(comment)" next to the name (e.g. "Fly (level 5 version)"); ignore the
@@ -1070,7 +1085,7 @@ function refContent(kind,name){
       .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
     return `<div class="refcard-h">${esc(s.name)}${srcBadge(s)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   if(kind==="rule"){const r=findRule(name);if(!r)return "";
-    return `<div class="refcard-h">${esc(r.name)}${srcBadge(r)}</div><div class="refcard-meta">Rule</div>${r.text?`<div class="refcard-body">${fmtBlock(r.text)}</div>`:""}`;}
+    return `<div class="refcard-h">${esc(r.name)}${srcBadge(r)}</div><div class="refcard-meta">${esc(r.category||"Rule")}</div>${r.text?`<div class="refcard-body">${fmtBlock(r.text)}</div>`:""}`;}
   const c=findCondition(name);if(!c)return "";
   return `<div class="refcard-h">${esc(c.name)}${srcBadge(c)}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
 // Source-id badge (e.g. XPHB) with the full book title as a hover tooltip when known.
@@ -1162,7 +1177,7 @@ function renderPreview(){
   if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
   const initVal=initOf(m);
   const def=defenseStrings(m);
-  let h=`<div class="topbar"></div><h2>${esc(m.name||"Unnamed Creature")}</h2>`;
+  let h=`<div class="topbar"></div><h2>${m.name.trim()?esc(m.name):`<span class="sb-name-ph">Unnamed Creature</span>`}</h2>`;
   h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}${m.minion?` <span class="minion-tag">Minion</span>`:""}</div><hr class="rule">`;
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
@@ -1171,7 +1186,7 @@ function renderPreview(){
   h+=`</table><hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}" data-abil="${SKILLS[s[0]]}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
-  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>{const ab=TOOL_ABIL[t]||"int",mv=mod(m[ab])+pb;return `<span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(t)}" data-abil="${ab}">${esc(t)}</span> ${sgn(mv)}`;}).join(", ")}</p>`;
+  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>{const ab=TOOL_ABIL[t]||"int",mv=mod(m[ab])+pb;return `<span class="cc-skill" data-ab="${ab}">${esc(t)}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(t)}" data-abil="${ab}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
   const conds=(m.cimm||"").split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b));
@@ -1351,14 +1366,26 @@ function colorizeStatblock(){
 // non-reference popovers are suppressed while active.
 let ruleFinder=false;
 function rfEscapeName(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+// Smarter matching (B67): tolerate the natural-text variations a rule name takes in prose —
+//  • plurals ("Attack Rolls" → Attack Roll, "Conditions" → Condition)
+//  • case: MULTI-word names match case-insensitively (distinctive phrases, low false-positive risk);
+//    SINGLE-word names stay case-sensitive (so "Damage"/"Save"/"prone to" lowercase don't false-fire,
+//    but a capitalized keyword like "Prone"/"Advantage" still matches).
+// The ref strips a trailing plural before looking the term up, and stores the canonical name so the
+// popover resolves.
+function rfResolve(finder,kind){return m=>{const w=m[0];const r=finder(w)||finder(w.replace(/s$/i,""))||finder(w.replace(/es$/i,""));return r?{kind,name:r.name}:null;};}
 function buildRuleCats(){
   const cats=[];
-  const rules=enRules().map(r=>r.name).filter(n=>n&&/^[A-Za-z]/.test(n)&&!/[[\]]/.test(n));
-  const conds=enConditions().map(c=>c.name).filter(Boolean);
-  if(rules.length){const r=rules.slice().sort((a,b)=>b.length-a.length);
-    cats.push({re:new RegExp("\\b("+r.map(rfEscapeName).join("|")+")\\b","g"),cls:()=>"rf-hit",ref:m=>findRule(m[0])?{kind:"rule",name:m[0]}:null});}
-  if(conds.length){const c=conds.slice().sort((a,b)=>b.length-a.length);
-    cats.push({re:new RegExp("\\b("+c.map(rfEscapeName).join("|")+")\\b","g"),cls:()=>"rf-hit",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});}
+  const add=(names,kind,finder)=>{
+    names=names.filter(n=>n&&/^[A-Za-z]/.test(n)&&!/[[\]]/.test(n));if(!names.length)return;
+    const multi=names.filter(n=>/\s/.test(n)).sort((a,b)=>b.length-a.length);
+    const single=names.filter(n=>!/\s/.test(n)).sort((a,b)=>b.length-a.length);
+    const ref=rfResolve(finder,kind);
+    if(multi.length)cats.push({re:new RegExp("\\b("+multi.map(rfEscapeName).join("|")+")s?\\b","gi"),cls:()=>"rf-hit",ref});
+    if(single.length)cats.push({re:new RegExp("\\b("+single.map(rfEscapeName).join("|")+")(?:es|s)?\\b","g"),cls:()=>"rf-hit",ref});
+  };
+  add(enRules().map(r=>r.name),"rule",findRule);
+  add(enConditions().map(c=>c.name),"condition",findCondition);
   return cats;
 }
 function ruleFindRoot(root){
@@ -1366,7 +1393,9 @@ function ruleFindRoot(root){
   // Spells: only the ones the app already linked (no raw name-matching → no false positives).
   root.querySelectorAll(".cc-spell .reflink,.reflink[data-ref='spell']").forEach(s=>s.classList.add("rf-hit"));
   const cats=buildRuleCats();if(!cats.length)return;
-  root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(c=>walkColorize(c,cats));
+  // Statblock prose lives in .blk/.va/.sb-note-b; a popover body has none, so walk the body itself.
+  const conts=root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b");
+  (conts.length?[...conts]:[root]).forEach(c=>walkColorize(c,cats));
 }
 function toggleRuleFinder(){
   ruleFinder=!ruleFinder;
@@ -1428,6 +1457,8 @@ function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.i
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
+// Abbreviated damage-type labels shown on the roll-log damage tag instead of "DMG" (B67).
+const DMG_ABBR={acid:"Acid",bludgeoning:"Bludg.",cold:"Cold",fire:"Fire",force:"Force",lightning:"Light.",necrotic:"Necr.",piercing:"Pierc.",poison:"Pois.",psychic:"Psych.",radiant:"Rad.",slashing:"Slash.",thunder:"Thun."};
 // A natural-language phrase for a roll's notification, by type (B65/B66):
 //  attack → "Arcane Burst: 23 to hit" · save → "Strength Saving Throw: 16"
 //  check  → "Strength Check: 12" (plain) / "Wisdom (Persuasion) Check: 14" (skill/tool)
@@ -1493,7 +1524,7 @@ function renderRollLog(scrollNew){
   // tags + bars line up identically for single and grouped rows (B63). The breakdown line scrolls
   // horizontally with no visible scrollbar; the adv/dis tag is inline at the START of it (scrolls
   // with the dice rather than staying pinned).
-  const rlTag=r=>r.type?`<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:"";
+  const rlTag=r=>{if(!r.type)return "";const dmgAbbr=r.type==="damage"&&r.dmgType?(DMG_ABBR[r.dmgType.toLowerCase()]||r.dmgType):null;const label=dmgAbbr||ROLL_TAG[r.type]||r.type.toUpperCase();return `<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${esc(label)}</span>`;};
   const rlAdv=r=>r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";
   const rlCrit=r=>r.crit?'<span class="rl-crit">CRIT</span>':"";
   const rlPnum=r=>`<span class="rl-pnum">${esc(r.parts)}</span>`;
@@ -1598,7 +1629,11 @@ function openRollPopover(anchor,o){
   if(sc){const upin=p.querySelector(".up-in");
     const applyLvl=()=>{const L=clamp(parseInt(upin.value,10)||phLvl,sc.lvl,9);if(inp)inp.value=scaledFormula(sc,L);};
     if(upin)upin.addEventListener("input",applyLvl);}
-  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:sc||isDmg?null:rollMode,crit:critOn},{label:o.label,type:o.type,custom:o.custom,abil:o.abil,dmgType:o.dmgType});};
+  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;
+    // Tag the cast level onto a spell roll's label, e.g. "Lightning Bolt • LV5" (B67).
+    let label=o.label;
+    if(sc){const upin=p.querySelector(".up-in");const L=clamp(parseInt(upin&&upin.value,10)||phLvl,sc.lvl,9);label=`${o.label} • LV${L}`;}
+    closePopover();doRoll(v,{adv:sc||isDmg?null:rollMode,crit:critOn},{label,type:o.type,custom:o.custom,abil:o.abil,dmgType:o.dmgType});};
   p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
   if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
   const help=p.querySelector("[data-rollhelp]");
@@ -3087,7 +3122,7 @@ function ingestLibraries(loaded){
       else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
       else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
       else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
-      else if(kind==="rule"){const p=parseVariantRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
+      else if(kind==="rule"){const p=parseRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
       else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
     }catch(err){summary.push(`${L.name}: failed to parse`);}
   });

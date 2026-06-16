@@ -155,6 +155,7 @@ function entriesToText(entries){
         break;
       case "table":
         if(e.caption)out.push("**"+richStrip(e.caption)+"**");
+        if(e.colLabels&&e.colLabels.length)out.push(e.colLabels.map(c=>richStrip(c)).join(" | "));
         (e.rows||[]).forEach(row=>out.push((row||[]).map(c=>typeof c==="string"?richStrip(c):entriesToText(c)).join(" | ")));
         break;
       case "quote":out.push(entriesToText(e.entries||[]));break;
@@ -427,13 +428,15 @@ function parseConditionsJSON(json,fileName,booksMap){
   out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
   return Object.values(byName);
 }
-// Rules glossary (variantrule) → ref record, for the rule-finder (B66). De-duped by name, XPHB first.
-function parseVariantRulesJSON(json,fileName,booksMap){
-  const out=[];
-  ((json&&json.variantrule)||[]).forEach(v=>{if(!v||!v.name)return;
-    const rec={id:"vr_"+slug(fileName)+"_"+slug(v.name),name:v.name,category:v.ruleType||"",source:v.source||"",
+// Rules glossary → ref records for the rule-finder (B66/B67). Pulls from several 5etools files that
+// each define named, "definable" terms: variantrule (glossary), action, sense, skill. De-duped by
+// name, XPHB first. (conditionsdiseases.json stays its own "condition" kind but also feeds the finder.)
+function parseRulesJSON(json,fileName,booksMap){
+  const out=[];const cat={variantrule:"Rule",action:"Action",sense:"Sense",skill:"Skill"};
+  Object.keys(cat).forEach(key=>[].concat((json&&json[key])||[]).forEach(v=>{if(!v||!v.name)return;
+    const rec={id:"rl_"+slug(fileName)+"_"+slug(v.name),name:v.name,category:cat[key],source:v.source||"",
       text:entriesToText(v.entries||[]),_source:fileName,_kind:"rule"};
-    annotateBook(rec,v.source,booksMap);out.push(rec);});
+    annotateBook(rec,v.source,booksMap);out.push(rec);}));
   const byName={},rank=s=>/^x/i.test(s||"")?2:1;
   out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
   return Object.values(byName);
@@ -446,6 +449,6 @@ function detectJsonKind(json){
   if(json.monster)return "statblock";
   if(json.spell)return "spell";
   if(json.condition||json.disease||json.status)return "condition";
-  if(json.variantrule)return "rule";
+  if(json.variantrule||json.action||json.sense||json.skill)return "rule";
   return null;
 }

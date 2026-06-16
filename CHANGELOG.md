@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 67 — Rule-finder depth, popover tables, damage abbreviations
+- **Rule finder** now reads from more reference files — upload any of 5etools' `variantrule`, `action`,
+  `sense`, or `skill` JSONs as a "Rules" library (conditions still work as before and also feed the
+  finder). Matching is smarter: it catches plurals ("Attack Rolls", "saving throws") and lower-case
+  phrasing for multi-word terms, while single words stay case-sensitive so "prone to" / "damage" don't
+  false-fire. The rule-explanation popover is no longer dimmed and highlights terms inside itself.
+- **Tables render in popovers** (e.g. Teleport's familiarity table) instead of pipe-separated text.
+- **Damage tag** in the roll log shows the damage type abbreviated (Fire, Bludg., Light., Necr.,
+  Pierc., Pois., Psych., Rad., Slash., Thun., …) in place of "DMG".
+- **Upcast rolls** tag the cast level after the spell name in the log + notification, e.g.
+  "Lightning Bolt • LV5".
+- **Tools** are formatted like skills now — ability-coloured name pill + underlined modifier.
+- The statblock's **Unnamed Creature** placeholder is muted instead of accent-coloured until you name it.
+
 ## Batch 66 — Rule finder, three roller chips, roll-notif checks & polish
 - **Rule finder:** a new **?** button in the header (hover for what it does, click to start). It dims the
   statblock and highlights every rules-glossary term, condition, and already-linked spell in amber —
