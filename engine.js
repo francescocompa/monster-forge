@@ -330,6 +330,8 @@ function walkColorize(container,cats){
   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
   nodes.forEach(node=>colorizeNode(node,cats));
 }
+// Colour-code + make rollable the statblock preview (gated by settings). Pill colours + the prose walk
+// run here; three follow-up DOM passes (attack labels / attack names / recharge tags) are split out (B75).
 function colorizeStatblock(){
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
   const root=$("#statblock");if(!root)return;
@@ -338,9 +340,18 @@ function colorizeStatblock(){
   root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
   const cats=buildColorCats(true);
   root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(container=>walkColorize(container,cats));
-  // attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
-  // regex (which needs the +N contiguous) never matches and chassis-preset attacks weren't rollable.
-  // Tag the +N that immediately follows an italic "…Attack Roll:" label.
+  colorizeAttackLabels(root);
+  colorizeAttackNames(root);
+  colorizeRechargeTags(root);
+  if(state.settings.clickRoll&&state.settings.clickRoll.on){
+    root.querySelectorAll(".cc-roll[data-roll],.cc-dice[data-roll],.roll-num[data-roll]").forEach(sp=>sp.title="Click to roll · right-click for options");
+    root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
+  }
+}
+// attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
+// regex (which needs the +N contiguous) never matches and chassis-preset attacks weren't rollable.
+// Tag the +N that immediately follows an italic "…Attack Roll:" label.
+function colorizeAttackLabels(root){
   root.querySelectorAll(".blk i,.va i").forEach(it=>{
     if(!/Attack Roll:\s*$/i.test(it.textContent))return;
     const nx=it.nextSibling;if(!nx||nx.nodeType!==3)return;
@@ -351,10 +362,12 @@ function colorizeStatblock(){
     parent.insertBefore(sp,nx);
     nx.nodeValue=nx.nodeValue.slice(mm[0].length);
   });
-  // Make an attack entry's NAME roll the attack (+ its damage) in one click.
-  // For prose attacks (no entry-mode ability) infer the ability from the to-hit bonus so the
-  // roll-log still shows the ability-colour bar — incl. on the damage roll (B63). The Archmage's
-  // Arcane Burst (+9 = INT 20 mod +5 + PB +4) resolves to INT this way.
+}
+// Make an attack entry's NAME roll the attack (+ its damage) in one click.
+// For prose attacks (no entry-mode ability) infer the ability from the to-hit bonus so the
+// roll-log still shows the ability-colour bar — incl. on the damage roll (B63). The Archmage's
+// Arcane Burst (+9 = INT 20 mod +5 + PB +4) resolves to INT this way.
+function colorizeAttackNames(root){
   const pbCR=pbForCR(M.cr),spAbil=(M.actions.find(e=>e.mode==="spell")||{}).ability;
   const inferAbil=bonus=>{const ms=ABILS.filter(a=>mod(M[a])+pbCR===bonus);if(!ms.length)return null;return (spAbil&&ms.includes(spAbil))?spAbil:ms[0];};
   root.querySelectorAll(".blk,.va").forEach(blk=>{
@@ -366,7 +379,9 @@ function colorizeStatblock(){
       if(nm.dataset.abil&&dmg&&!dmg.dataset.abil)dmg.dataset.abil=nm.dataset.abil;
     }
   });
-  // Recharge tag in an entry NAME (e.g. "Fire Breath (Recharge 5–6)") → rollable d6 (no type tag).
+}
+// Recharge tag in an entry NAME (e.g. "Fire Breath (Recharge 5–6)") → rollable d6 (no type tag).
+function colorizeRechargeTags(root){
   root.querySelectorAll(".nm").forEach(nm=>{
     if(nm.classList.contains("roll-atkname"))return;
     const t=nm.textContent,mm=t.match(/\(Recharge\s+[^)]*\)/i);if(!mm)return;
@@ -376,10 +391,6 @@ function colorizeStatblock(){
     const num=mm[0].match(/\d+/);if(num)sp.dataset.rollmin=num[0]; // recharge succeeds when the d6 ≥ this
     nm.appendChild(sp);if(after)nm.appendChild(document.createTextNode(after));
   });
-  if(state.settings.clickRoll&&state.settings.clickRoll.on){
-    root.querySelectorAll(".cc-roll[data-roll],.cc-dice[data-roll],.roll-num[data-roll]").forEach(sp=>sp.title="Click to roll · right-click for options");
-    root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
-  }
 }
 // ── Rule finder (B66) ────────────────────────────────────────────────────────
 // A study mode: instead of colour-coding, every rules-glossary term + condition (matched by name,

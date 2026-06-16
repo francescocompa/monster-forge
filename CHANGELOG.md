@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 75 — Refactor phase 2e: decompose colorizeStatblock
+- `colorizeStatblock` → coordinator + `colorizeAttackLabels` / `colorizeAttackNames` /
+  `colorizeRechargeTags`. Verified byte-identical colorized statblock for an archmage and a recharge
+  dragon; click-to-roll on attack names confirmed. **Completes the render-builder decompositions.**
+
+## Batch 74 — Refactor phase 2c: decompose entryHTML
+- `entryHTML` → dispatcher over `entryReactionHTML` / `entryVillainHTML` / `entrySpellHTML` /
+  `entryAttackHTML` / `entryTextHTML`. Verified byte-identical for every entry kind.
+
+## Batch 73 — Refactor phase 2b: decompose renderRollLog
+- `renderRollLog` → pure `rollLogHTML()` + `bindRollLog()` + coordinator. Verified byte-identical
+  roll-log HTML against a fixed entry set (single/grouped/damage/adv/crit).
+
 ## Batch 72 — Refactor phase 2a: decompose renderPreview
 - The 8 KB `renderPreview` is now a thin coordinator over named pure builders — `sbHeaderHTML`,
   `sbAbilityTableHTML`, `sbMetaHTML`, `sbEntryBlockHTML`, `sbEntriesHTML`.
