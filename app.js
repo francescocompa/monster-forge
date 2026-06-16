@@ -6,7 +6,9 @@ const SETTINGS_KEY="mf_settings";
 const SETTINGS_DEFAULT={
   colorCode:{on:true,damage:true,dice:true,conditions:true,ranges:true,abilityBlock:true},
   clickRoll:{on:true,adv:true,crit:true,editFormula:true},
-  defaults:{partySize:4,partyLevel:1,faction:"Enemy"}
+  defaults:{partySize:4,partyLevel:1,faction:"Enemy"},
+  homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
+  notes:{adventure:true,scene:true,encounter:true} // include a notes field on newly-created items (B65)
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
 function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}
@@ -194,7 +196,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const clone=o=>JSON.parse(JSON.stringify(o));
-function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),1900);}
+function toast(t,ms){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),ms||1900);}
 function showBanner(t,withCancel){const b=$("#banner");b.innerHTML=esc(t)+(withCancel?'<button id="bannerCancel">Cancel</button>':"");b.classList.add("show");if(withCancel)$("#bannerCancel").onclick=withCancel;}
 function hideBanner(){$("#banner").classList.remove("show");}
 function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[m.cr]??0);}
@@ -274,9 +276,10 @@ function normalizeMonster(m){
 }
 function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
-  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",archived:!!s.archived}));
+  a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
+  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived}));
   a.encounters=(a.encounters||[]).map(e=>{
-    e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
+    e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
     e.combatants=(e.combatants||[]).map(c=>{
       if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:"Enemy"};
@@ -1076,12 +1079,21 @@ function bindRefpopRolls(p){
   p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));
   p.addEventListener("mouseleave",()=>hideRefpopFrom(+p.dataset.level||0));
   // Roll dice from inside a spell/condition popover (e.g. Lightning Bolt's 8d6) — B62.
+  const scaleOf=t=>t.dataset.scalebase?{base:t.dataset.scalebase,per:t.dataset.scaleper,lvl:+t.dataset.scalelvl}:null;
   p.addEventListener("click",e=>{if(e.target.closest(".reflink"))return; // a nested ref opens its own popover
     const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
     const meta={label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype};
-    if(e.metaKey||e.ctrlKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type});return;}
+    if(e.metaKey||e.ctrlKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type,dmgType:meta.dmgType,scale:scaleOf(t)});return;}
     doRoll(t.dataset.roll,{adv:rollMode},meta);});
-  p.addEventListener("contextmenu",e=>{if(e.target.closest(".reflink"))return;const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype});});
+  p.addEventListener("contextmenu",e=>{if(e.target.closest(".reflink"))return;const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype,scale:scaleOf(t)});});
+}
+// Combine a spell's base damage with its per-level increment for casting at slot level L (B65).
+function parseDie(s){const m=String(s||"").match(/^(\d*)d(\d+)([+-]\d+)?$/i);return m?{n:Number(m[1]||1),sides:Number(m[2]),mod:Number(m[3]||0)}:null;}
+function scaledFormula(scale,L){
+  const extra=Math.max(0,(L|0)-scale.lvl);if(!extra)return scale.base;
+  const b=parseDie(scale.base),p=parseDie(scale.per);
+  if(b&&p&&b.sides===p.sides){const n=b.n+p.n*extra;return n+"d"+b.sides+(b.mod?(b.mod>0?"+":"")+b.mod:"");}
+  return [scale.base,...Array(extra).fill(scale.per)].join("+");
 }
 function refpopAt(level){let p=document.querySelector('.refpop[data-level="'+level+'"]');
   if(!p){p=document.createElement("div");p.className="refpop";p.dataset.level=level;p.style.zIndex=70+level;document.body.appendChild(p);bindRefpopRolls(p);}
@@ -1093,7 +1105,11 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   hideRefpopNow(level); // drop this level + any deeper before re-showing
   const p=refpopAt(level);p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
   // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
-  if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body)walkColorize(body,buildColorCats(false));}
+  if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body){walkColorize(body,buildColorCats(false));
+    // Tag the spell's base damage dice with its upcast scaling so the roll popover can rescale it (B65).
+    if(kind==="spell"){const sp=findSpell(name);if(sp&&sp._scale){const base=normRoll(sp._scale.base);
+      body.querySelectorAll(".cc-dice[data-roll]").forEach(d=>{if(normRoll(d.dataset.roll)===base){d.dataset.scalebase=sp._scale.base;d.dataset.scaleper=sp._scale.per;d.dataset.scalelvl=sp._scale.lvl;}});}}
+  }}
   // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible") — unwrap
   // any self-ref link to a plain coloured span (B64).
   const self=(name||"").toLowerCase();
@@ -1346,15 +1362,43 @@ function rollFormula(f,opts){
   }
   return {total,parts:parts.join(" "),nat20};
 }
+// Pre-crit maximum of a formula: every die's top face × count, plus flat modifiers. Used by the
+// grit homebrew rule (B65) as a damage floor.
+function formulaCeil(f){
+  const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"");
+  const re=/([+-]?)(\d*)d(%|\d+)((?:kh|kl|dh|dl)\d*)?|([+-]?\d+)/gi;
+  let total=0,m;
+  while((m=re.exec(norm))){
+    if(m[5]!==undefined){const v=Number(m[5]);if(!isNaN(v))total+=v;continue;}
+    const neg=m[1]==="-";let n=Number(m[2]||1),sides=m[3]==="%"?100:Number(m[3]);if(!sides||!n)continue;
+    if(m[4]){const kn=Number(m[4].slice(2)||1);if(/^(kh|kl)/i.test(m[4]))n=Math.min(n,kn);else n=Math.max(0,n-kn);}
+    total+=(neg?-1:1)*n*sides;
+  }
+  return total;
+}
+function gritOn(){return !!(state.settings&&state.settings.homebrew&&state.settings.homebrew.gritMin);}
 // Label = feature/ability name only (the roll type is shown as a separate tag).
 function rollLabelFor(span){if(span.dataset.rolllabel)return span.dataset.rolllabel;const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";}
 function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
+// A natural-language phrase for a roll's notification, by type (B65):
+//  attack → "Arcane Burst: 23 to hit" · save → "Strength Saving Throw: 16" · check → "Arcana: 14"
+//  damage → "25 fire damage" (with label prefix when shown alone).
+function naturalRollText(label,type,total,dmgType){
+  const L=label||"Roll";
+  if(type==="attack")return `${L}: ${total} to hit`;
+  if(type==="save")return `${L} Saving Throw: ${total}`;
+  if(type==="check")return `${L}: ${total}`;
+  if(type==="damage")return `${L}: ${total}${dmgType?" "+dmgType.toLowerCase():""} damage`;
+  return `${L}: ${total}`;
+}
 function doRoll(formula,opts,meta){
   opts=opts||{};meta=meta||{};
   const r=rollFormula(formula,opts);
+  // Grit (B65): a damage roll deals at least its pre-crit maximum.
+  if(meta.type==="damage"&&gritOn()){const floor=formulaCeil(formula);if(r.total<floor){r.parts=(r.parts?r.parts+" ":"")+`→ ${floor} (grit)`;r.total=floor;}}
   const crit=!!opts.crit||(meta.type==="attack"&&r.nat20); // attack nat-20 glows as a crit
   // Win/lose colouring only when a pass/fail threshold is known (e.g. a recharge roll).
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
@@ -1364,17 +1408,23 @@ function doRoll(formula,opts,meta){
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
-  rollLogOpen=true;renderRollLog();toast(`${meta.label||"Roll"}: ${r.total}`);
+  rollLogOpen=true;renderRollLog(true);
+  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType),3200);
   return r;
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
 function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil,dmgType:t.dataset.dmgtype});}
-// Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
+// Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20). One combined
+// notification (B65): "Arcane Burst: 23 to hit, 25 force damage".
 function rollAttackSequence(nameEl){
   const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
-  const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil});
-  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType});
+  const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
+  let msg=`${label}: ${atk.total} to hit`;
+  if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
+    msg+=`, ${dmg.total}${dmgType?" "+dmgType.toLowerCase():""} damage`;}
+  if(atk.nat20)msg+=" — crit!";
+  toast(msg,3600);
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
@@ -1382,7 +1432,7 @@ function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div 
 let rollMode=null; // null | "adv" | "dis"
 function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
 function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
-function renderRollLog(){
+function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");
   if(!rollLog.length){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
@@ -1434,6 +1484,8 @@ function renderRollLog(){
     b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
     bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
   });
+  // Scroll to the newest roll when one was just recorded — top for newest-first, bottom otherwise (B65).
+  if(scrollNew&&rollLogOpen){const body=el.querySelector(".rl-body");if(body)body.scrollTop=rollLogSort==="desc"?0:body.scrollHeight;}
 }
 // Drag the roll-log window by its header to reposition it within the page (B63). Buttons/tags in the
 // header keep their own clicks. The position persists until reset via the menu (B64).
@@ -1474,14 +1526,25 @@ function openRollEntryMenu(anchor,id){
 // 1d20 if left blank; no source is attached (so the roll-log shows no statblock name).
 function openCustomRoll(anchor){openRollPopover(anchor,{value:"",formula:"1d20",placeholder:"1d20",label:"Custom roll",type:null,custom:true});}
 // Roll-options popover: the shared roll-mode tag + editable clockworkmod formula + Roll + (?) help.
+// For a scalable spell (o.scale), the adv/dis tag is replaced by an upcast level field + dropdown
+// that rescales the dice (B65).
 function openRollPopover(anchor,o){
-  const initVal=o.value!=null?o.value:(o.formula||"");
-  const html=`<div class="roll-pop">${rollModeTagHTML()}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
+  const sc=o.scale;
+  const initVal=sc?scaledFormula(sc,sc.lvl):(o.value!=null?o.value:(o.formula||""));
+  let lead;
+  if(sc){const opts=[];for(let L=sc.lvl;L<=9;L++)opts.push(`<option value="${L}">${L}</option>`);
+    lead=`<div class="upcast" title="Cast at spell level"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" value="${sc.lvl}"><select class="up-sel">${opts.join("")}</select></div>`;}
+  else lead=rollModeTagHTML();
+  const html=`<div class="roll-pop">${lead}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
   const p=showPopover(anchor,html);
   const inp=p.querySelector(".roll-edit-in");if(inp){inp.focus();inp.select();}
   const at=p.querySelector("[data-rollmode]");
   if(at)at.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();at.className="roll-mode"+(rollMode?" "+rollMode:"");at.textContent=rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL";if(document.getElementById("rollLog"))renderRollLog();});
-  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom,abil:o.abil});};
+  if(sc){const upin=p.querySelector(".up-in"),upsel=p.querySelector(".up-sel");
+    const applyLvl=L=>{L=clamp(parseInt(L,10)||sc.lvl,sc.lvl,9);if(upin)upin.value=L;if(upsel)upsel.value=L;if(inp)inp.value=scaledFormula(sc,L);};
+    if(upin)upin.addEventListener("input",()=>applyLvl(upin.value));
+    if(upsel)upsel.addEventListener("change",()=>applyLvl(upsel.value));}
+  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom,abil:o.abil,dmgType:o.dmgType});};
   p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
   if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
   const help=p.querySelector("[data-rollhelp]");
@@ -1818,7 +1881,7 @@ function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>
 function originBadgeHTML(m){const o=originOf(m);
   return o.kind==="chassis"
     ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}) — saved without edits">${esc(o.src||"Built-in")}</span>`
-    :`<span class="tag origin brew" title="Homebrew — created or edited here">⚒ Homebrew</span>`;}
+    :`<span class="tag origin brew" title="Homebrew — created or edited here">Homebrew</span>`;}
 function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}" draggable="true">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
@@ -1903,6 +1966,14 @@ $("#forgeChassis").addEventListener("click",()=>openChassis(true));
 $("#forgePaste").addEventListener("click",openImportModal);
 $("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any unsaved edits to this creature will be lost.",()=>{loadMonster(blankMonster());toast("Cleared.");}));
 
+// Save the current forge creature into the Bestiary (upsert by id). Returns false if unnamed.
+function saveCurrentToBestiary(){
+  if(!validName())return false;
+  const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
+  const i=state.lib.findIndex(x=>x.id===rec.id);
+  if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
+  saveLib();return true;
+}
 $("#saveMonster").addEventListener("click",async()=>{
   if(!validName())return;
   const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
@@ -2150,13 +2221,13 @@ function presetModal(){
   prUpdateSelUI();
 }
 function chassisConflictModal(ch){
-  openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}” — what should happen to your current edits?</p>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn ghost sm" id="ccKeep" style="width:auto;justify-content:flex-start">Import chassis, keep my edits <span class="sub">— chassis fills only empty fields</span></button>
-      <button class="btn ghost sm" id="ccOverride" style="width:auto;justify-content:flex-start">Import chassis, override my edits <span class="sub">— discard current edits</span></button>
-      <button class="btn ghost sm" id="ccBack" style="width:auto;justify-content:flex-start">Go back <span class="sub">— keep editing, don't import</span></button>
+  openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}”: what should happen to your current edits?</p>
+    <div class="cc-choices">
+      <button class="btn ghost sm cc-choice" id="ccSaveNew">Save &amp; New<span class="sub">Save current edits to the Bestiary, then start the chassis</span></button>
+      <button class="btn ghost sm cc-choice" id="ccOverride">Replace<span class="sub">Discard current edits and load the chassis</span></button>
+      <button class="btn ghost sm cc-choice" id="ccBack">Back<span class="sub">Keep editing — don't import</span></button>
     </div>`);
-  $("#ccKeep").addEventListener("click",()=>{closeModal();applyChassis(ch,true,true);});
+  $("#ccSaveNew").addEventListener("click",()=>{if(!saveCurrentToBestiary())return;closeModal();toast("Saved to Bestiary.");applyChassis(ch,false,false);});
   $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});
   $("#ccBack").addEventListener("click",closeModal);
 }
@@ -2170,6 +2241,17 @@ function advDot(advId,color){return `<button class="adv-dot${color?"":" none"}" 
 // Non-interactive colour dot for showing an adventure's identity colour where clicking shouldn't open
 // the colour picker (e.g. a bestiary group header grouped by adventure). Reuses the .adv-dot visual.
 function advDotStatic(color){return `<span class="adv-dot static${color?"":" none"}"${color?` style="background:${color};border-color:${color}"`:""}></span>`;}
+// Up to 3 word-initials for the collapsed colour-square cards (B65).
+function advInitials(name){const w=(name||"").trim().split(/\s+/).filter(Boolean);if(!w.length)return "?";return w.slice(0,3).map(x=>x[0]).join("").toUpperCase();}
+// Pick white or dark text for a coloured square based on the colour's luminance (B65).
+function contrastOn(hex){if(!hex)return "var(--txt)";let h=hex.replace("#","");if(h.length===3)h=h.split("").map(c=>c+c).join("");
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)/255>0.62?"#1a1c21":"#fff";}
+// Combined inline style for an adventure card: selected border + the --ai-color/--ai-fg vars the
+// collapsed colour-square view reads.
+function aiStyle(a){const p=[];if(a.id===state.selAdv&&a.color)p.push(`border-color:${a.color}`);
+  if(a.color){p.push(`--ai-color:${a.color}`);p.push(`--ai-fg:${contrastOn(a.color)}`);}else{p.push("--ai-color:var(--panel3)");p.push("--ai-fg:var(--txt)");}
+  return ` style="${p.join(";")}"`;}
 function openAdvColorMenu(anchor,advId){
   const a=state.adv.find(x=>x.id===advId);if(!a)return;
   const sw=c=>`<button class="adv-sw${a.color===c?" on":""}" data-sw="${c}" style="background:${c}" title="${c}"></button>`;
@@ -2183,9 +2265,9 @@ function renderAdvList(){
   if(!curAdv()){let sa="";try{sa=localStorage.getItem("mf_seladv")||"";}catch(e){}
     state.selAdv=(sa&&state.adv.some(a=>a.id===sa&&!a.archived))?sa:(active[0]?active[0].id:null);}
   if(state.selAdv){try{localStorage.setItem("mf_seladv",state.selAdv);}catch(e){}}
-  const selStyle=a=>a.id===state.selAdv&&a.color?` style="border-color:${a.color}"`:"";
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${selStyle(a)}><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
-  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}" style="opacity:.5"><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
+  const aiIni=a=>`<span class="ai-ini">${esc(advInitials(a.name))}</span>`;
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
   // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
@@ -2212,7 +2294,7 @@ function openAdvCardMenu(anchor,a){
   }));
 }
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
-$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -2257,6 +2339,7 @@ function renderAdvDetail(){
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
+      <button id="advToggleNotes">${a.notesOn?"Remove notes":"Add notes"}</button>
       <div class="sep"></div>
       <button id="advDuplicate">Duplicate adventure</button>
       <button id="advArchive">${a.archived?"Unarchive":"Archive"} adventure</button>
@@ -2275,7 +2358,7 @@ function renderAdvDetail(){
         </div>
       </div>
     </div>
-    <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
+    ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
     <div class="ctrl-chips" id="encChips"></div>
     <div id="encList"></div>
@@ -2298,10 +2381,11 @@ function renderAdvDetail(){
   $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
   $("#advToggleUneven").addEventListener("click",()=>{a.uneven=!a.uneven;syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
   wrapStepper($("#pSize"),1,1);wrapStepper($("#pLevel"),1,1);
   $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
-  $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
+  {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}
   $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
   $("#encAddScene").addEventListener("click",()=>addScene(a));
   $("#encImport").addEventListener("click",()=>openImportEnc(a));
@@ -2310,8 +2394,10 @@ function renderAdvDetail(){
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
   renderPCgrid(a);renderEncList(a);
 }
-function blankEncounter(sceneId){return {id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:sceneId||null,combatants:[]};}
-function addScene(a){a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",archived:false});saveAdv();renderAdvDetail();}
+// Whether a notes field is added to a newly-created item, per Settings (B65).
+function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
+function blankEncounter(sceneId){return {id:uid(),name:"New Encounter",archived:false,notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function addScene(a){a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
 function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
@@ -2379,6 +2465,7 @@ function sceneHTML(a,s,encs){
       <div class="menu-wrap">
         <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
         <div class="menu" id="menu-scene-${s.id}">
+          <button data-scenenotes-tog="${s.id}">${s.notesOn?"Remove notes":"Add notes"}</button>
           <button data-scenearch="${s.id}">${s.archived?"Unarchive scene":"Archive scene"}</button>
           <div class="sep"></div>
           <button class="danger" data-scenedel="${s.id}">Delete scene</button>
@@ -2387,7 +2474,7 @@ function sceneHTML(a,s,encs){
     </div>`;
   if(s.collapsed)return `<div class="scene${s.archived?" arch":""} collapsed" data-scene="${s.id}" draggable="true">${head}</div>`;
   const body=`<div class="scene-body">
-      <label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>
+      ${s.notesOn?`<label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>`:""}
       <div class="scene-droparea" data-scenedrop="${s.id}">
         ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
         ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
@@ -2463,6 +2550,7 @@ function encHTML(a,e){
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
         <div class="menu" id="menu-enc-${e.id}">
           <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
+          <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
           <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
           <div class="sep"></div>
@@ -2493,7 +2581,7 @@ function encHTML(a,e){
       <div class="read">${encReadHTML(a,e,bud,spent)}</div>
     </div>
     <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
-    <label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
+    ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
@@ -2555,6 +2643,7 @@ function bindEncEvents(a){
   q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
   q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
   q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
+  q("[data-encnotes-tog]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encnotesTog);if(e){e.notesOn=!e.notesOn;if(!e.notesOn)e.notes="";saveAdv();renderAdvDetail();}}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
   q("#addScene").forEach(el=>el.addEventListener("click",()=>addScene(a)));
@@ -2562,6 +2651,7 @@ function bindEncEvents(a){
   q("[data-scenenotes]").forEach(el=>el.addEventListener("input",()=>{const s=sceneOf(a,el.dataset.scenenotes);if(s){s.notes=el.value;saveAdv();}}));
   q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
   q("[data-scenearch]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenearch);if(s){s.archived=!s.archived;saveAdv();renderAdvDetail();}}));
+  q("[data-scenenotes-tog]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenenotesTog);if(s){s.notesOn=!s.notesOn;if(!s.notesOn)s.notes="";saveAdv();renderAdvDetail();}}));
   q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const e=blankEncounter(el.dataset.sceneadd);a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
   q("[data-scenedel]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.scenedel,s=sceneOf(a,sid);if(!s)return;const n=a.encounters.filter(e=>e.sceneId===sid).length;
     const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderAdvDetail();};
@@ -2811,12 +2901,28 @@ document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropC
 window.addEventListener("blur",dropCmd);
 // Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
 // which keep their own modifier-click behaviour, e.g. bestiary multi-select).
+const ROLL_INERT="input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal,.refpop,.roll-log";
+function openCustomRollAt(x,y){openCustomRoll({getBoundingClientRect:()=>({left:x,right:x,top:y,bottom:y,width:0,height:0})});}
 document.addEventListener("click",e=>{
   if(!(e.metaKey||e.ctrlKey)||!clickRollOn())return;
-  if(e.target.closest("input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal"))return;
+  if(e.target.closest(ROLL_INERT))return;
   e.preventDefault();
-  openCustomRoll({getBoundingClientRect:()=>({left:e.clientX,right:e.clientX,top:e.clientY,bottom:e.clientY,width:0,height:0})});
+  openCustomRollAt(e.clientX,e.clientY);
 });
+// Mobile: a long-press on any non-interactive spot opens the custom roll (the touch equivalent of
+// Cmd/Ctrl-click) (B65).
+(function(){let timer=null,sx=0,sy=0,fired=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+  document.addEventListener("touchstart",e=>{
+    if(!clickRollOn()||e.touches.length!==1)return;
+    const t=e.touches[0];if(e.target.closest(ROLL_INERT))return;
+    sx=t.clientX;sy=t.clientY;fired=false;
+    clear();timer=setTimeout(()=>{fired=true;timer=null;openCustomRollAt(sx,sy);if(navigator.vibrate)navigator.vibrate(15);},500);
+  },{passive:true});
+  document.addEventListener("touchmove",e=>{if(!timer)return;const t=e.touches[0];if(Math.abs(t.clientX-sx)>10||Math.abs(t.clientY-sy)>10)clear();},{passive:true});
+  document.addEventListener("touchend",e=>{clear();if(fired){fired=false;e.preventDefault();}},{passive:false});
+  document.addEventListener("touchcancel",clear,{passive:true});
+})();
 // Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
 function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
 async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
@@ -2843,6 +2949,18 @@ function renderSettings(){
         <label class="f">Default faction<select data-set="defaults.faction">${FACTIONS.map(f=>`<option ${f===s.defaults.faction?"selected":""}>${esc(f)}</option>`).join("")}</select></label>
       </div>
       <div class="set-note">Seeds new adventures and combatants.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Homebrew rules</div>
+      ${SW("homebrew.gritMin","Grit — minimum damage")}
+      <div class="set-note">Damage rolls deal at least their maximum possible non-crit value (the sum of every die's top face plus modifiers). Crits still roll and keep the higher result.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Notes fields</div>
+      ${SW("notes.adventure","Notes on new adventures")}
+      ${SW("notes.scene","Notes on new scenes")}
+      ${SW("notes.encounter","Notes on new encounters")}
+      <div class="set-note">Whether a notes field is added when you create a new item. You can always add or remove one later from its ⋯ menu.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Data &amp; sync</div>
@@ -2911,16 +3029,32 @@ async function stashRawLibs(loaded){
   raw=raw.filter(L=>!names.has(L.name)).concat(valid);
   await idbSet("rawlibs",raw);
 }
+// Lightweight loading overlay shown above any modal (B65) — used while re-parsing libraries.
+function showLoadingOverlay(title,sub){
+  let o=document.getElementById("loadingOverlay");
+  if(!o){o=document.createElement("div");o.id="loadingOverlay";o.className="loading-overlay";document.body.appendChild(o);}
+  o.innerHTML=`<div class="loading-card"><div class="loading-spin">${D20_ICON}</div><div class="loading-title">${esc(title)}</div>${sub?`<div class="loading-sub">${esc(sub)}</div>`:""}</div>`;
+  o.classList.add("show");
+}
+function hideLoadingOverlay(){const o=document.getElementById("loadingOverlay");if(o)o.classList.remove("show");}
 // Replay every stored raw file through the current parser (picks up parser improvements).
 async function reparseLibraries(){
   const raw=await idbGet("rawlibs");
   if(!raw||!raw.length){alertStack("Nothing to re-parse","Re-parsing replays the original .json files through the latest parser, but none are stored yet. Upload your libraries once with this version and they'll be re-parseable from then on — no re-upload needed afterwards.");return;}
   // Non-destructive: ingestLibraries replaces each source by name, so libraries without stored raw
   // (e.g. uploaded before this version) are left untouched rather than wiped.
+  showLoadingOverlay("Re-parsing libraries","Replaying your stored .json files through the latest parser…");
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); // let the spinner paint before the (blocking) parse
   sessionBestiaryIndex=new Map();
   const summary=ingestLibraries(raw);
+  hideLoadingOverlay();
   toast(`Re-parsed ${summary.length} file(s).`);
   if($("#modalBg").classList.contains("show"))presetModal();
+  // Diagnostic (B65): flag libraries present in state but with no stored original — those can't be
+  // re-parsed and need a one-time re-upload to pick up parser fixes (e.g. the upcasting fix).
+  const rawNames=new Set(raw.map(L=>L.name));
+  const missing=[...new Set([...state.spells,...state.conditions,...state.presets].map(x=>x._source).filter(Boolean))].filter(n=>!rawNames.has(n));
+  if(missing.length)alertStack("Some libraries weren't re-parsed",`These were uploaded before originals were stored, so re-parsing can't reach them: ${missing.join(", ")}. Re-upload each once (Preset libraries → Upload .json files) and they'll pick up the latest parser — including the spell upcasting fix.`);
 }
 // 5etools JSON uploader (Batch 28). One change handler ingests bestiary / spell /
 // condition / books files; the kind is detected from the JSON's top-level keys.

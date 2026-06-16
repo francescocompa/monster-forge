@@ -180,9 +180,9 @@ input:not([type]):hover,input:not([type]):focus{border-color:var(--accent);outli
 input:hover,select:hover,textarea:hover{border-color:#3c424c}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{resize:vertical;min-height:60px;line-height:1.45}
-/* Let the resize grip follow color-scheme:dark — the old custom gradient rendered light-grey
-   diagonal lines that read as a light-mode widget against the dark theme. */
-textarea::-webkit-resizer{background:none}
+/* Dark-theme resize grip (B65): the UA default rendered as white/light diagonal lines that read as a
+   light-mode widget. Draw our own subtle hatch in a muted theme colour instead. */
+textarea::-webkit-resizer{background-color:transparent;background-image:repeating-linear-gradient(-45deg,var(--dim) 0 1px,transparent 1px 3px);background-position:bottom right;background-repeat:no-repeat;background-size:9px 9px}
 /* Unified dropdown chevron across native <select>s AND datalist comboboxes (input[list]) so they
    match (same glyph + right margin). appearance:none restyles only the closed control — the option
    list / datalist popup is still browser-drawn and stays dark via :root color-scheme. .libsel (the
@@ -431,6 +431,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Roll-options popover */
 .roll-pop{display:flex;gap:6px;align-items:center;padding:8px}
 .roll-pop .roll-edit-in{flex:1;min-width:96px;font-size:12.5px;padding:6px 8px}
+/* Spell upcast control (B65): a level field + dropdown replacing the adv tag for scalable spells. */
+.upcast{flex:none;display:flex;align-items:center;gap:3px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:2px 4px}
+.upcast .up-lbl{font-size:9.5px;font-weight:700;letter-spacing:.04em;color:var(--faint)}
+.upcast .up-in{width:30px;padding:3px 2px;text-align:center;font-size:12px;border:none;background:transparent}
+.upcast .up-in::-webkit-inner-spin-button{opacity:.5}
+.upcast .up-sel{padding:3px 2px;font-size:11px;border:none;background:transparent;cursor:pointer}
 /* adv/dis cycle icon (B58): no chrome, larger, state shown by icon colour only. */
 /* Shared roll-mode tag (neutral / advantage / disadvantage) — roll popover + roll-log header (B60). */
 .roll-mode{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:2px 7px;min-width:42px;text-align:center;background:var(--in);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
@@ -588,18 +594,19 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-resizer{position:absolute;top:0;bottom:0;left:var(--advw,236px);width:10px;margin-left:-5px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center}
 .adv-resizer::before{content:"";width:3px;height:46px;border-radius:3px;background:var(--line);opacity:0;transition:opacity .12s,background .12s}
 .adv-resizer:hover::before,.adv-resizer.drag::before{opacity:1;background:var(--accent)}
-/* Collapsed colour-card view (dot only; right-click for actions). Scoped to .adv-layout.adv-mini to
-   outrank the default .adv-list .ai rules; the column width itself comes from --advw. */
-.adv-layout.adv-mini .adv-list{padding:14px 8px}
-.adv-layout.adv-mini #newAdv{width:100%;font-size:0;justify-content:center;padding:8px 0}
-.adv-layout.adv-mini #newAdv .ico{font-size:17px}
-.adv-layout.adv-mini .adv-list .ai{justify-content:center;padding:7px 4px;gap:0}
-.adv-layout.adv-mini .adv-list .ai .ai-info{flex:none;padding:0;display:flex;justify-content:center}
-.adv-layout.adv-mini .adv-list .ai .nm{font-size:0;gap:0;justify-content:center;margin:0}
-.adv-layout.adv-mini .adv-list .ai .dt{display:none}
-.adv-layout.adv-mini .adv-list .ai .menu-wrap{display:none}
-.adv-layout.adv-mini .adv-list .ai .adv-dot{width:24px;height:24px;margin:0;pointer-events:none}
-.adv-layout.adv-mini .adv-list .ai.sel{box-shadow:0 0 0 2px var(--accent)}
+.adv-list .ai .ai-ini{display:none}
+.adv-list .ai.arch{opacity:.5}
+/* Collapsed colour-square view (B65): each adventure is a 40×40 rounded button filled with its
+   colour, showing up to 3 name initials in a contrast-checked text colour. Scoped to
+   .adv-layout.adv-mini to outrank the default .adv-list .ai rules. */
+.adv-layout.adv-mini .adv-list{padding:14px 8px;display:flex;flex-direction:column;align-items:center}
+.adv-layout.adv-mini #newAdv{width:40px;height:40px;padding:0;margin:0 0 12px;border-radius:10px;font-size:0;display:flex;align-items:center;justify-content:center;flex:none}
+.adv-layout.adv-mini #newAdv .ico{font-size:18px}
+.adv-layout.adv-mini .adv-list .ai{width:40px;height:40px;padding:0;margin:0 0 8px;border-radius:10px;background:var(--ai-color);display:flex;align-items:center;justify-content:center;border:1px solid transparent;cursor:pointer}
+.adv-layout.adv-mini .adv-list .ai:hover{background:var(--ai-color)}
+.adv-layout.adv-mini .adv-list .ai .ai-info,.adv-layout.adv-mini .adv-list .ai .adv-dot,.adv-layout.adv-mini .adv-list .ai .menu-wrap{display:none}
+.adv-layout.adv-mini .adv-list .ai .ai-ini{display:flex;align-items:center;justify-content:center;color:var(--ai-fg);font-weight:700;font-size:13px;letter-spacing:.02em}
+.adv-layout.adv-mini .adv-list .ai.sel{box-shadow:0 0 0 2px var(--accent),0 0 0 4px var(--panel)}
 .adv-layout.adv-mini #advItems .hint{font-size:0;padding:4px 0}
 .adv-list .ai{padding:7px 8px 7px 11px;border-radius:7px;margin-bottom:4px;cursor:default;border:1px solid transparent;display:flex;align-items:center;gap:4px}
 .adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--panel2);border-color:var(--accent)}
@@ -756,6 +763,19 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .modal h3{margin:0 0 12px;font-size:17px}
 .modal textarea{min-height:210px;font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre}
 .modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+/* Unsaved-edits chassis choices: three buttons side by side, each with a sub-label (B65). */
+.cc-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cc-choice{flex-direction:column;align-items:flex-start;height:auto;padding:10px 11px;gap:4px;text-align:left;font-weight:600}
+.cc-choice .sub{font-size:11px;color:var(--faint);font-weight:400;white-space:normal;line-height:1.35;display:block}
+@media (max-width:560px){.cc-choices{grid-template-columns:1fr}}
+/* Loading overlay (B65) — sits above any modal while a blocking task (re-parse) runs. */
+.loading-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+.loading-overlay.show{display:flex}
+.loading-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:22px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.6);max-width:300px;text-align:center}
+.loading-spin{width:34px;height:34px;color:var(--amber-soft);animation:diceSpin .95s ease-in-out infinite}
+.loading-spin svg{width:100%;height:100%;display:block}
+.loading-title{font-weight:600;color:var(--txt);font-size:14px}
+.loading-sub{font-size:12px;color:var(--faint);line-height:1.4}
 /* Add-combatant picker: card list scrolls inside, action footer stays put at the bottom. */
 .picker-scroll{max-height:48vh;overflow:auto;margin:0 -4px;padding:0 4px}
 .modal .mrow.picker-foot{position:sticky;bottom:-20px;margin:0 -20px -20px;padding:12px 20px;background:var(--panel);border-top:1px solid var(--line);align-items:center}

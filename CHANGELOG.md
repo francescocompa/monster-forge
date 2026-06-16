@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 65 — Spell upcast roller, grit rule, notes toggles & polish
+- **Spell upcast roller:** right- or Cmd/Ctrl-click a spell's damage dice in its popover to open a
+  roller with a **spell-level field + dropdown** (in place of the adv/dis chip) that rescales the dice
+  to the chosen slot level — e.g. Cone of Cold 8d8 → 11d8 at level 8. *(Re-parse your spell library to
+  capture the scaling: Preset libraries → ⋯ → Re-parse.)*
+- **Grit (minimum damage) rule:** a new Settings → Homebrew toggle so damage rolls deal at least their
+  maximum possible non-crit value (every die's top face + modifiers); crits still roll and keep the
+  higher result.
+- **Natural roll notifications:** the roll toast now reads naturally and lingers longer — e.g.
+  "Arcane Burst: 23 to hit, 25 force damage", "Strength Saving Throw: 16".
+- **Re-parse:** shows a loading overlay while it works, and now warns when a library can't be
+  re-parsed because its original upload predates raw-file storage (re-upload it once to fix).
+- **Notes fields:** Settings toggles for whether new adventures / scenes / encounters get a notes
+  field, plus an Add/Remove notes item in each ⋯ menu.
+- **Collapsed adventures column:** each adventure is a 40×40 rounded colour square showing up to three
+  name initials in a contrast-checked text colour; the add button is a centred "+".
+- **Unsaved-edits chassis dialog:** three side-by-side choices — **Save & New** (save current edits to
+  the Bestiary, then start the chassis), **Replace**, **Back** — and ":" instead of an em dash.
+- **Mobile:** long-press an empty spot to open the custom roller (the touch equivalent of Cmd-click).
+- New rolls auto-scroll the log to the newest entry; the textarea resize grip is themed for dark mode;
+  the ⚒ icon is gone from the Homebrew tag; Export/Import JSON live only in Settings.
+
 ## Batch 64 — Spell scaling, smarter damage detection, drag-resize columns
 - **"At higher levels" fix:** spell scaling like Cone of Cold now reads "increases by **1d8** per level"
   (the per-level increment), not the base 8d8. *(Re-parse your spell library to update existing data:

@@ -388,9 +388,15 @@ function parseSpellsJSON(json,fileName,booksMap){
     const dur=fmtSpellDuration(sp.duration);
     let body=entriesToText(sp.entries||[]);
     const higher=entriesToText(sp.entriesHigherLevel||[]);if(higher)body+="\n\n"+higher;
+    // Capture upcast scaling from the raw {@scaledamage base|range|perLevel} token (before richStrip
+    // collapses it) so the roller can rescale the dice to a chosen slot level (B65).
+    let scale=null;
+    const sm=JSON.stringify([sp.entriesHigherLevel||null,sp.entries||null]).match(/\{@scale(?:damage|dice)\s+([^}|]+)\|[^}|]*\|([^}]+)\}/i);
+    if(sm&&sp.level)scale={base:sm[1].trim().replace(/\s+/g,""),per:sm[2].trim().replace(/\s+/g,""),lvl:sp.level};
     const rec={id:"sp_"+slug(fileName)+"_"+slug(sp.name),name:sp.name,level:(sp.level==null?null:sp.level),
       school:SPELL_SCHOOL[sp.school]||sp.school||"",castingTime:time,range,components:comp,duration:dur,
       text:body,source:fileName,_source:fileName,_kind:"spell"};
+    if(scale)rec._scale=scale;
     annotateBook(rec,sp.source,booksMap);out.push(rec);});
   return out;
 }
