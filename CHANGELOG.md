@@ -4,6 +4,27 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 43 — Fixes round (forge + encounter polish)
+- **Add-section button moved to the bottom** of the added sections (after Custom Notes).
+- **XP-target marker** default position is now the true **left end** of the bar.
+- Library-preset grouping option renamed **Group → Category**.
+- **Imported-feature chip** loses its ✕; its kebab opens a popover with a scrollable
+  mini statblock preview + **Load … as chassis →**. Editing the name auto-clears the chip.
+- **Fly “can hover”** and **Blindsight “blind beyond radius”** moved into gear-icon
+  popovers next to their fields (matching the short-name gear).
+- Removed the helper text from the **Abilities & saves** title.
+- Fixed the **collapse** of inline-styled last lines (Skills/defenses/senses) — the
+  collapse rule is now `!important`; the Other-senses row is a normal full-width field.
+- **Textarea resize grips** follow `color-scheme:dark` instead of a light-grey gradient.
+- The **creature Name field** uses our styled suggestion dropdown (names from the
+  library / chassis / presets); native autofill suppressed on free-text fields.
+- **Statblock preview everywhere:** a “Preview” item in bestiary card menus, and a
+  magnifying-glass-chart icon on chassis + add-combatant cards.
+- The **last-edited encounter** gets a focus highlight.
+- Add-combatant → **From chassis** has a back arrow to the bestiary picker; both
+  pickers hide their description behind a **?** by the title; chassis cards now use the
+  same tags row (CR · XP · source) and position as the bestiary cards.
+
 ## Batch 42 — Encounter & combatant UX (FP3)
 - **XP-target marker is OFF until dragged:** it parks at the **low-end** of the
   budget, renders dimmed/hollow, and the "target / ±delta" read-out is hidden until

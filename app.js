@@ -305,6 +305,8 @@ function bindStatic(){
   $("#f_snplural").addEventListener("change",()=>{M.shortName.plural=$("#f_snplural").checked;renderEntries();renderPreview();});
   // Name options (proper name / plural) live behind the gear inside the Short name field.
   $("#snGear").addEventListener("click",e=>{e.stopPropagation();openSnMenu(e.currentTarget);});
+  $("#flyGear").addEventListener("click",e=>{e.stopPropagation();openCheckGear(e.currentTarget,"#sp_hover","Fly speed can hover");});
+  $("#bsGear").addEventListener("click",e=>{e.stopPropagation();openCheckGear(e.currentTarget,"#se_blindBeyond","Blind beyond this radius");});
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).addEventListener("input",()=>{M.senses[k]=Number($("#se_"+k).value||0);renderPreview();}));
   $("#se_blindBeyond").addEventListener("change",()=>{M.senses.blindBeyond=$("#se_blindBeyond").checked;renderPreview();});
   $("#se_other").addEventListener("input",()=>{M.senses.other=$("#se_other").value;renderPreview();});
@@ -473,8 +475,18 @@ const freqKind=k=>k==="actions"||k==="bonus"||k==="reactions";
 // Entry name field. For Recharge/X-per-day kinds the freq "+" sits INSIDE the field (divider-
 // separated, like the gear field). Type-ahead suggestions (attachCombo) bind to [data-f=name].
 // Chip shown inside an imported feature's name field: source creature · book code (e.g. "Vampire · XMM").
+// Its kebab opens a preview + "load chassis" menu; the chip auto-clears when the name is edited.
 function srcChip(kind,i,e){if(!e._src)return"";const lbl=[e._src.n,e._src.c].filter(Boolean).join(" · ");
-  return `<span class="ename-src" title="Imported from ${esc(lbl)}"><span class="src-t">${esc(lbl)}</span><span class="src-x" data-srcrm="${kind}:${i}" title="Forget source">✕</span></span>`;}
+  return `<span class="ename-src" title="Imported from ${esc(lbl)}"><span class="src-t">${esc(lbl)}</span><button type="button" class="src-k" data-srcmenu="${kind}:${i}" title="Source options">⋯</button></span>`;}
+// Locate the bestiary/chassis/preset record an imported feature came from (by name + book code).
+function chipSourceMon(e){if(!e._src)return null;const n=(e._src.n||"").toLowerCase(),c=e._src.c||"";
+  return [...state.lib,...CHASSIS,...enPresets()].find(m=>m&&(m.name||"").toLowerCase()===n&&(!c||srcCodeOf(m)===c))||null;}
+function openChipMenu(anchor,kind,i){const e=arrFor(kind)[+i];if(!e||!e._src)return;const src=chipSourceMon(e);
+  const prev=src?chassisPreviewHTML(src):`<div class="chprev-pop"><div class="refcard-meta">Source “${esc(e._src.n)}” isn't in your libraries.</div></div>`;
+  const foot=src?`<div class="chip-pop-foot"><button class="btn ghost sm" data-chipload style="width:100%">Load ${esc(src.name)} as chassis →</button></div>`:"";
+  const p=showPopover(anchor,`<div class="chip-pop">${prev}${foot}</div>`);
+  const b=p.querySelector("[data-chipload]");if(b)b.addEventListener("click",()=>{closePopover();const go=()=>applyChassis(src,false,false);
+    if(forgeUnsaved())confirmModal("Load this chassis? The current Forge has unsaved changes that will be lost.",go);else go();});}
 function nameField(kind,i,e,ph){
   const attrs=`data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name||"")}" autocomplete="off" placeholder="${ph}"`;
   const chip=srcChip(kind,i,e);
@@ -492,6 +504,10 @@ function openSnMenu(anchor){
   const p=showPopover(anchor,item("proper","Proper name",' <span style="color:var(--faint)">(no “the”)</span>')+item("plural","Plural"));
   p.querySelectorAll("[data-sn]").forEach(b=>b.addEventListener("click",()=>{const c=cb(b.dataset.sn);c.checked=!c.checked;c.dispatchEvent(new Event("change",{bubbles:true}));closePopover();}));
 }
+// Generic gear popover toggling a single hidden checkbox (Fly→hover, Blindsight→blind-beyond).
+function openCheckGear(anchor,cbSel,label){const cb=$(cbSel);
+  const p=showPopover(anchor,`<button class="popitem popcheck${cb.checked?" on":""}" data-ck><span class="ck">${cb.checked?"✓":""}</span>${label}</button>`);
+  p.querySelector("[data-ck]").addEventListener("click",()=>{cb.checked=!cb.checked;cb.dispatchEvent(new Event("change",{bubbles:true}));closePopover();});}
 function openFreqMenu(anchor,target){const[k,i]=target.split(":");const e=arrFor(k)[+i];const m=(e.name||"").match(/\((Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i);const cur=m?"("+m[1]+")":"";
   const p=showPopover(anchor,FREQ_TAGS.map(o=>`<button class="popitem${o.toLowerCase()===cur.toLowerCase()?" on":""}" data-freqv="${esc(o)}">${esc(o)}</button>`).join("")+`<div class="popsep"></div><button class="popitem" data-freqv="">None</button>`);
   p.querySelectorAll("[data-freqv]").forEach(b=>b.addEventListener("click",()=>{closePopover();applyFreqTag(k,+i,b.dataset.freqv);}));}
@@ -575,11 +591,14 @@ function bindEntries(){
       renderPreview();});
   });
   $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
-  $$("#formCol [data-srcrm]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[k,i]=el.dataset.srcrm.split(":");const o=arrFor(k)[+i];if(o)delete o._src;renderEntries();}));
+  $$("#formCol [data-srcmenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[k,i]=el.dataset.srcmenu.split(":");openChipMenu(el,k,+i);}));
   $$("#formCol [data-freq]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openFreqMenu(el,el.dataset.freq);}));
   // Name fields: autofill the body on commit (change), plus a type-ahead suggestion dropdown
   // whose pick imports the body too (dispatches change → autofillEntry).
   $$('#formCol [data-f="name"]').forEach(el=>{const k=el.dataset.k;
+    // Editing the name forgets the imported-source chip (drop the data + the chip node, no re-render
+    // so focus/caret are kept). A picked suggestion re-stamps it via autofillEntry's full re-render.
+    el.addEventListener("input",()=>{const o=arrFor(k)[+el.dataset.i];if(o&&o._src){delete o._src;const c=el.parentElement.querySelector(".ename-src");if(c)c.remove();}});
     el.addEventListener("change",()=>autofillEntry(k,+el.dataset.i));
     attachCombo(el,()=>nameSuggest(k),{onPick:v=>{el.value=v;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}});});
   $$("#formCol [data-snip]").forEach(el=>el.addEventListener("click",()=>{const si=+el.dataset.snip,s=SNIPS[si][1];const[k,i]=el.dataset.target.split(":");const o=arrFor(k)[+i];o.text=(o.text?o.text+" ":"")+expandSnip(s);if(SNIPS[si][0]==="Multiattack"&&!o.name)o.name="Multiattack";renderEntries();renderPreview();}));
@@ -728,6 +747,19 @@ function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?
   if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 function buildDatalist(id,names){let dl=document.getElementById(id);if(!dl){dl=document.createElement("datalist");dl.id=id;document.body.appendChild(dl);}dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");}
 const BOOK_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg>';
+// FontAwesome classic/solid magnifying-glass-chart — "preview statblock" affordance on cards.
+const SEARCH_CHART_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM128 168l0 72c0 13.3 10.7 24 24 24s24-10.7 24-24l0-72c0-13.3-10.7-24-24-24s-24 10.7-24 24zm80-72l0 144c0 13.3 10.7 24 24 24s24-10.7 24-24l0-144c0-13.3-10.7-24-24-24s-24 10.7-24 24zm80 96l0 48c0 13.3 10.7 24 24 24s24-10.7 24-24l0-48c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>';
+const BACK_SVG='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Shared "preview a creature's statblock" popover, anchored to a card icon / menu item.
+function showStatPreview(anchor,m){if(m)showPopover(anchor,`<div class="chip-pop">${chassisPreviewHTML(m)}</div>`);}
+// Shared card for the add-combatant + chassis pickers: same tags row + position, with a top-right
+// preview icon (matching where the bestiary card's menu sits). `srcTag` adds the source badge tag.
+function pickerCardHTML(o,pickLabel,srcTag){return `<div class="card pick-card" style="cursor:default">
+  <button class="card-prev" data-cardprev="${esc(o.m.id)}" title="Preview statblock" aria-label="Preview statblock">${SEARCH_CHART_SVG}</button>
+  <h4>${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div>
+  <div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span>${srcTag?srcBadgeHTML(o):""}</div>
+  <div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">${pickLabel}</button></div>
+</div>`;}
 // Short, human label for a preset source filename (e.g. "PHB24_Spells.md" → "PHB24").
 function prettySource(s){return (s||"").replace(/\.(md|json)$/i,"").replace(/_(Spells|Conditions|Statblocks)$/i,"").replace(/_/g," ").trim()||s;}
 // Native <select> options for a preset reference list (conditions), grouped by source
@@ -839,6 +871,7 @@ function attachCombo(input,valuesFn,opts){
   }
 }
 function setupIdentityCombos(){
+  attachCombo($("#f_name"),()=>monsterFieldValues("name"));
   attachCombo($("#f_type"),()=>monsterFieldValues("type",TYPE_CANON));
   attachCombo($("#f_subtype"),()=>monsterFieldValues("subtype"));
   attachCombo($("#f_align"),()=>monsterFieldValues("align",ALIGN_CANON));
@@ -1234,6 +1267,7 @@ function wireLibCards(body){
     if(e.shiftKey){e.preventDefault();selectLibRange(id,body);return;}
     if(libSel.size)clearLibSel();
     loadMonster(find(id));switchView("forge");}));
+  body.querySelectorAll("[data-preview]").forEach(b=>b.addEventListener("click",()=>showStatPreview(b,find(b.dataset.preview))));
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(find(b.dataset.edit));switchView("forge");}));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
@@ -1315,6 +1349,7 @@ function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" arch
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
     <div class="menu" id="menu-lib-${m.id}">
+      <button data-preview="${m.id}">Preview</button>
       <button data-edit="${m.id}">Edit</button>
       <button data-dup="${m.id}">Duplicate</button>
       <button data-arch="${m.id}">${arch?"Restore":"Archive"}</button>
@@ -1401,7 +1436,7 @@ $("#saveMonster").addEventListener("click",async()=>{
   if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
   await saveLib();
   if(pendingForge){const a=state.adv.find(x=>x.id===pendingForge.advId);const e=a&&a.encounters.find(x=>x.id===pendingForge.encId);
-    if(e){addMonsterCombatant(e,rec.id);await saveAdv();}
+    if(e){a._focusEnc=e.id;addMonsterCombatant(e,rec.id);await saveAdv();}
     const pf=pendingForge;pendingForge=null;hideBanner();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
   toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
 });
@@ -1479,10 +1514,10 @@ function applyChassis(ch,keepId,merge){
 }
 // Add-from-chassis: build the bestiary entry from a chassis, save it, and drop it into the encounter
 // without a trip through the Forge.
-function openChassisForEncounter(a,e){
+function openChassisForEncounter(a,e,fromPicker){
   if(!e)return;
-  openChassis(false,{onPick:ch=>{const rec=normalizeMonster(chassisToMonster(ch));rec._savedAt=Date.now();
-    state.lib.unshift(rec);saveLib();addMonsterCombatant(e,rec.id);saveAdv();renderEncList(a);
+  openChassis(false,{onBack:fromPicker?(()=>openBestiaryPicker(a,e)):null,onPick:ch=>{const rec=normalizeMonster(chassisToMonster(ch));rec._savedAt=Date.now();
+    a._focusEnc=e.id;state.lib.unshift(rec);saveLib();addMonsterCombatant(e,rec.id);saveAdv();renderEncList(a);
     closeModal();toast(`Added “${rec.name}” — saved to Bestiary.`);}});
 }
 function findChassis(id){return CHASSIS.find(x=>x.id===id)||enPresets().find(x=>x.id===id);}
@@ -1500,20 +1535,22 @@ function openChassis(fromForge,opts){
       {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
     ]};
   const forEnc=!!opts.onPick;
-  openModalRaw(`<h3>${forEnc?"Add from a chassis":"Start from a chassis"}</h3>
-    <p class="hint" style="margin:-4px 0 10px">${forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":""}Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>
+  const helpText=(forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":"")+"Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.";
+  openModalRaw(`<h3 class="modal-h-row">${opts.onBack?`<button class="modal-back" id="chBack" title="Back" aria-label="Back">${BACK_SVG}</button>`:""}<span>${forEnc?"Add from a chassis":"Start from a chassis"}</span><button class="cr-help" id="chHelp" aria-label="About this picker">?</button></h3>
     <div class="ctrl-icons" id="chCtrlIcons"></div>
     <div class="ctrl-chips" id="chChips"></div>
     <div id="chBody"></div>`);
+  if(opts.onBack)$("#chBack").addEventListener("click",()=>{closeModal();opts.onBack();});
+  $("#chHelp").addEventListener("click",e=>{e.stopPropagation();tailPopover(e.currentTarget,`<div class="cr-pop">${helpText}</div>`);});
   const pickLabel=forEnc?"Add to encounter":"Use as base";
-  const cardOf=o=>`<div class="card" style="cursor:default">${srcBadgeHTML(o)}<h4 style="padding-right:0">${esc(o.m.name)} <button class="chprev" data-chprev="${esc(o.m.id)}" title="Preview statblock" aria-label="Preview statblock">👁</button></h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">${pickLabel}</button></div></div>`;
+  const cardOf=o=>pickerCardHTML(o,pickLabel,true);
   function draw(){
     renderCtrlChips($("#chChips"),ctrl,desc,draw);
     const body=$("#chBody");let recs=ctrlApply(chPool(),ctrl,desc);
     if(ctrl.group!=="source")recs=collapseVariants(recs);
     renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries…”) to add more bases."}`,cap:200});
     bindSrcDrops(body,recs,draw);
-    body.querySelectorAll("[data-chprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const ch=findChassis(b.dataset.chprev);if(ch)showPopover(b,chassisPreviewHTML(ch));}));
+    body.querySelectorAll("[data-cardprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const ch=findChassis(b.dataset.cardprev);if(ch)showStatPreview(b,ch);}));
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
       if(opts.onPick){opts.onPick(ch);return;}
       closeModal();
@@ -1558,12 +1595,12 @@ function presetModal(){
   const desc={search:true,group:true,
     params:[
       {key:"type",label:"Type",fmt:v=>KIND_LABEL[v]||v,get:r=>r.lib.kind,values:()=>[...new Set(libs.map(L=>L.kind))]},
-      {key:"group",label:"Group",fmt:v=>groupLabel(v),get:r=>r.lib.group||"",values:()=>[...new Set(libs.map(L=>L.group).filter(Boolean))].sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)))},
+      {key:"group",label:"Category",fmt:v=>groupLabel(v),get:r=>r.lib.group||"",values:()=>[...new Set(libs.map(L=>L.group).filter(Boolean))].sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)))},
     ],
     sortKeys:[
       {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
       {key:"type",label:"Type",cmp:(a,b)=>(KIND_LABEL[a.lib.kind]||"").localeCompare(KIND_LABEL[b.lib.kind]||"")},
-      {key:"group",label:"Group",cmp:(a,b)=>groupLabel(a.lib.group).localeCompare(groupLabel(b.lib.group))},
+      {key:"group",label:"Category",cmp:(a,b)=>groupLabel(a.lib.group).localeCompare(groupLabel(b.lib.group))},
     ]};
   let recs=libs.map(L=>({m:{name:(L.book||L.name),type:KIND_LABEL[L.kind]},lib:L}));
   recs=ctrlApply(recs,presetCtrl,desc);
@@ -1723,8 +1760,14 @@ function renderAdvDetail(){
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
 function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
+// The encounter most recently edited (focused) gets a highlight. Editing = focusing any field inside
+// it (delegated) or adding a combatant; we update classes in place so no re-render is needed.
+function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector("#advDetail .enc.focused"))return;a._focusEnc=encId;
+  $$("#advDetail .enc.focused").forEach(x=>x.classList.remove("focused"));
+  const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
 function renderEncList(a){
   const box=$("#encList");if(!box)return;
+  if(!box._focusBound){box._focusBound=true;box.addEventListener("focusin",e=>{const enc=e.target.closest(".enc[data-enc]");if(enc)setEncFocus(a,enc.dataset.enc);});}
   const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
   box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
   const addBtn=$("#addEnc");if(addBtn)addBtn.className="btn primary sm fab";
@@ -1758,7 +1801,7 @@ function updateEncMeta(a,e){
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
   const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
-  const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(bud[2]?encTargetVal(e,bud)/bud[2]*100:0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
+  const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(encTargetActive(e)?(bud[2]?encTargetVal(e,bud)/bud[2]*100:0):0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
   const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
@@ -1766,7 +1809,7 @@ function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
-  const tgt=encTargetVal(e,bud),tgtPct=bud[2]?tgt/bud[2]*100:0;
+  const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
@@ -1792,8 +1835,9 @@ function encHTML(a,e){
         </div>
       </div>
     </div>`;
-  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed" data-enc="${e.id}" draggable="true">${head}</div>`;
-  return `<div class="enc ${e.archived?"arch":""}" data-enc="${e.id}" draggable="true">
+  const foc=e.id===a._focusEnc?" focused":"";
+  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed${foc}" data-enc="${e.id}" draggable="true">${head}</div>`;
+  return `<div class="enc ${e.archived?"arch":""}${foc}" data-enc="${e.id}" draggable="true">
     ${head}
     <div class="budget">
       <div class="bartrack">
@@ -1875,8 +1919,8 @@ function bindEncEvents(a){
   q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
   q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
-  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
-  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
+  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addquick;findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
+  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addev;findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
   q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
@@ -1971,8 +2015,7 @@ function openBestiaryPicker(a,e){
       {key:"name",label:"Name",cmp:(x,y)=>x.m.name.localeCompare(y.m.name)},
       {key:"cr",label:"CR",cmp:(x,y)=>(CR_NUM[x.m.cr]??0)-(CR_NUM[y.m.cr]??0)},
     ]};
-  openModalRaw(`<h3>Add combatant — pick from Bestiary</h3>
-    <p class="hint" style="margin:-4px 0 10px">Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.</p>
+  openModalRaw(`<h3 class="modal-h-row"><span>Add combatant — pick from Bestiary</span><button class="cr-help" id="bpHelp" aria-label="About this picker">?</button></h3>
     <div class="ctrl-icons" id="bpCtrlIcons"></div>
     <div class="ctrl-chips" id="bpChips"></div>
     <div id="bpBody" class="picker-scroll"></div>
@@ -1981,17 +2024,19 @@ function openBestiaryPicker(a,e){
       <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
       <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
     </div>`);
-  const cardOf=o=>`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">＋ Add</button></div></div>`;
+  $("#bpHelp").addEventListener("click",ev=>{ev.stopPropagation();tailPopover(ev.currentTarget,`<div class="cr-pop">Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.</div>`);});
+  const cardOf=o=>pickerCardHTML(o,"＋ Add",false);
   function draw(){
     renderCtrlChips($("#bpChips"),ctrl,desc,draw);
     renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
-    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
+    $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();showStatPreview(b,state.lib.find(m=>m.id===b.dataset.cardprev));}));
+    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
   }
   bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
   draw();
   $("#bpClose").addEventListener("click",closeModal);
   $("#bpForge").addEventListener("click",()=>{closeModal();forgeForEncounter(a,e);});
-  $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e);});
+  $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e,true);});
 }
 // "Forge new →" from anywhere: park a pendingForge target, load a blank monster, jump to the Forge.
 function forgeForEncounter(a,e){pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}

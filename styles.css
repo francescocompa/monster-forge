@@ -122,7 +122,9 @@ input:not([type]):hover,input:not([type]):focus{border-color:var(--accent);outli
 input:hover,select:hover,textarea:hover{border-color:#3c424c}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{resize:vertical;min-height:60px;line-height:1.45}
-textarea::-webkit-resizer{background:linear-gradient(135deg,transparent 0 45%,var(--faint) 45% 55%,transparent 55% 70%,var(--faint) 70% 80%,transparent 80%);border-radius:0 0 5px 0}
+/* Let the resize grip follow color-scheme:dark — the old custom gradient rendered light-grey
+   diagonal lines that read as a light-mode widget against the dark theme. */
+textarea::-webkit-resizer{background:none}
 /* Unified dropdown chevron across native <select>s AND datalist comboboxes (input[list]) so they
    match (same glyph + right margin). appearance:none restyles only the closed control — the option
    list / datalist popup is still browser-drawn and stays dark via :root color-scheme. .libsel (the
@@ -276,8 +278,25 @@ select::-ms-expand{display:none}
 .field-action .ename-src{align-self:center;margin-right:6px}
 .ename-wrap .ename-src{position:absolute;top:50%;right:8px;transform:translateY(-50%);max-width:46%}
 .ename-src .src-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ename-src .src-x{cursor:pointer;color:var(--faint);font-size:11px;line-height:1;padding:0 1px}
-.ename-src .src-x:hover{color:var(--accent)}
+.ename-src .src-k{cursor:pointer;background:none;border:none;color:var(--faint);font-size:12px;line-height:1;padding:0 2px}
+.ename-src .src-k:hover{color:var(--accent)}
+/* Source-chip menu + card preview popovers: a compact statblock that scrolls in a small window. */
+.popover .chip-pop{width:280px}
+.popover .chip-pop .chprev-pop{max-height:200px;overflow:auto;font-size:11.5px;line-height:1.45}
+.popover .chip-pop .chip-pop-foot{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+/* Preview icon shared by chassis + add-combatant picker cards (top-right, like the bestiary menu). */
+.card.pick-card{position:relative}
+.card .card-prev{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--faint);cursor:pointer;width:22px;height:22px;display:grid;place-items:center;padding:0;border-radius:4px;opacity:.6;transition:opacity .12s,color .12s,background .12s}
+.card .card-prev:hover{opacity:1;color:var(--accent);background:var(--panel2)}
+.card .card-prev svg{width:14px;height:14px;fill:currentColor;display:block}
+.card.pick-card h4{padding-right:26px}
+/* Picker modal header: optional back arrow + a "?" help that hides the description. */
+.modal-h-row{display:flex;align-items:center;gap:8px}
+.modal-h-row>span{flex:1}
+.modal-back{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;width:26px;height:26px;display:grid;place-items:center;padding:0;border-radius:5px;flex:none;transition:border-color .12s,color .12s}
+.modal-back:hover{border-color:var(--accent);color:var(--txt)}
+/* Last-edited encounter highlight. */
+.enc.focused{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 14px rgba(226,101,77,.18)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
@@ -285,7 +304,7 @@ select::-ms-expand{display:none}
 .fs-collapse:hover{color:var(--txt);background:var(--panel2)}
 .fs-collapse svg{display:block;transition:transform .15s}
 .fs-collapse.closed svg{transform:rotate(-90deg)}
-.fieldset.fs-collapsed>*:not(.fs-title){display:none}
+.fieldset.fs-collapsed>*:not(.fs-title){display:none!important}
 .fieldset.fs-collapsed .fs-title{margin-bottom:0}
 .rowline .tritog{flex:1}
 .toggle{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600}
