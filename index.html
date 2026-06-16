@@ -68,11 +68,9 @@
               <label class="f">Type<span class="combo"><input type="text" id="f_type" class="combo-input" placeholder="Undead" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
               <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
             </div>
-            <div class="grid g2" style="margin-top:10px">
+            <div class="grid g-id2" style="margin-top:10px">
               <label class="f">Subtype / tag<span class="combo"><input type="text" id="f_subtype" class="combo-input" placeholder="Spirit" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
               <label class="f">Alignment<span class="combo"><input type="text" id="f_align" class="combo-input" placeholder="Lawful Evil" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
-            </div>
-            <div class="grid" style="grid-template-columns:1fr;margin-top:14px">
               <label class="f"><span class="cr-lbl">Short name <button type="button" class="cr-help" id="snHelp" aria-label="Short name help">?</button></span>
                 <div class="field-action">
                   <input type="text" id="f_snword" class="fa-input" placeholder="creature" autocomplete="off">
@@ -175,45 +173,53 @@
             <div class="addrow"><button class="addbtn" data-add="reactions" style="flex:2">＋ Add reaction</button><span class="libsel-wrap" title="From library"><button class="libsel-btn" type="button" tabindex="-1" data-lib="reactions"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="reactions"></select></span></div>
           </fieldset>
 
-          <fieldset class="fieldset optfs collapsed" id="fsLegend">
-            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_legend"> Legendary Actions</label></div>
-            <div id="legendInner" style="display:none">
+          <div class="addrow" id="addSectionRow"><button class="addbtn" type="button" id="addSection" style="flex:1">＋ Add section</button></div>
+
+          <fieldset class="fieldset optfs" id="fsLegend">
+            <div class="fs-title">Legendary Actions<button type="button" class="fs-rm" data-secrm="legend" title="Remove section">✕</button></div>
+            <div id="legendInner">
               <label class="f">Intro line<textarea id="f_legintro"></textarea></label>
               <div id="legendList" style="margin-top:9px"></div>
               <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="legend" style="flex:2">＋ Add legendary action</button><span class="libsel-wrap" title="From library"><button class="libsel-btn" type="button" tabindex="-1" data-lib="legend"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="legend"></select></span></div>
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs collapsed" id="fsVillain">
-            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_villain"> Villain Actions <span style="color:var(--faint)">· MCDM</span></label></div>
-            <div id="villainInner" style="display:none">
+          <fieldset class="fieldset optfs" id="fsVillain">
+            <div class="fs-title">Villain Actions <span style="color:var(--faint)">· MCDM</span><button type="button" class="fs-rm" data-secrm="villain" title="Remove section">✕</button></div>
+            <div id="villainInner">
               <label class="f">Intro line<textarea id="f_vilintro"></textarea></label>
               <div id="villainList" style="margin-top:9px"></div>
               <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="villain" style="flex:2">＋ Add villain action</button><span class="libsel-wrap" title="From library"><button class="libsel-btn" type="button" tabindex="-1" data-lib="villain"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="villain"></select></span></div>
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs collapsed" id="fsLair">
-            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_lair"> Lair Actions <span style="color:var(--faint)">· 2014 style</span></label></div>
-            <div id="lairInner" style="display:none">
+          <fieldset class="fieldset optfs" id="fsLair">
+            <div class="fs-title">Lair Actions <span style="color:var(--faint)">· 2014 style</span><button type="button" class="fs-rm" data-secrm="lair" title="Remove section">✕</button></div>
+            <div id="lairInner">
               <label class="f">Intro line<textarea id="f_lairintro"></textarea></label>
               <div id="lairList" style="margin-top:9px"></div>
               <div class="addrow" style="margin-top:6px"><button class="addbtn" data-add="lair" style="flex:2">＋ Add lair action</button><span class="libsel-wrap" title="From library"><button class="libsel-btn" type="button" tabindex="-1" data-lib="lair"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 576L512 576C529.7 576 544 561.7 544 544C544 526.3 529.7 512 512 512L512 445.3C530.6 438.7 544 420.9 544 400L544 112C544 85.5 522.5 64 496 64L448 64L448 233.4C448 245.9 437.9 256 425.4 256C419.4 256 413.6 253.6 409.4 249.4L368 208L326.6 249.4C322.4 253.6 316.6 256 310.6 256C298.1 256 288 245.9 288 233.4L288 64L192 64C139 64 96 107 96 160L96 480C96 533 139 576 192 576zM160 480C160 462.3 174.3 448 192 448L448 448L448 512L192 512C174.3 512 160 497.7 160 480z"/></svg></button><select class="libsel" data-lib="lair"></select></span></div>
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs collapsed" id="fsRegional">
-            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_regional"> Regional Effects</label></div>
-            <div id="regionalInner" style="display:none">
+          <fieldset class="fieldset optfs" id="fsRegional">
+            <div class="fs-title">Regional Effects<button type="button" class="fs-rm" data-secrm="regional" title="Remove section">✕</button></div>
+            <div id="regionalInner">
               <label class="f">Effects<textarea id="f_regional" placeholder="The region containing the lair is warped, creating the following effects: …"></textarea></label>
             </div>
           </fieldset>
 
-          <fieldset class="fieldset optfs collapsed" id="fsMinion">
-            <div class="fs-title"><label class="toggle"><input type="checkbox" id="t_minion"> Minion <span style="color:var(--faint)">· MCDM</span></label></div>
-            <div id="minionInner" style="display:none">
-              <p class="hint" style="margin:2px 0 0">Adds the MCDM <b>Minion</b> and <b>Minion Group</b> traits, shows a Minion tag on the stat block, and renders attack damage as fixed values (no dice). Turning this off restores rolled damage and removes the traits.</p>
+          <fieldset class="fieldset optfs" id="fsMinion">
+            <div class="fs-title">Minion <span style="color:var(--faint)">· MCDM</span><button type="button" class="fs-rm" data-secrm="minion" title="Remove section">✕</button></div>
+            <div id="minionInner">
+              <p class="hint" style="margin:2px 0 0">Adds the MCDM <b>Minion</b> and <b>Minion Group</b> traits, shows a Minion tag on the stat block, and renders attack damage as fixed values (no dice). Removing this restores rolled damage and removes the traits.</p>
             </div>
+          </fieldset>
+
+          <fieldset class="fieldset optfs" id="fsNotes">
+            <div class="fs-title">Custom Notes <span class="count" id="cntNotes"></span><button type="button" class="fs-rm" data-secrm="note" title="Remove all notes">✕</button></div>
+            <div id="notesList"></div>
+            <div class="addrow"><button class="addbtn" type="button" data-addnote style="flex:1">＋ Add note</button></div>
           </fieldset>
 
           <hr class="section-div">

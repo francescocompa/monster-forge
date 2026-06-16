@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 41 — Add-section refactor (FP6) + forge fold-in fixes
+- **One "＋ Add section" control** replaces the five always-present enable
+  checkboxes (Legendary / Villain / Lair / Regional / Minion). Picking one reveals
+  its fieldset; each section has a remove **✕** in its title. Turning a section off
+  keeps its data (re-adding restores it); Minion still adds/removes its traits.
+- **Custom notes:** a new repeatable section. Each note has an optional title +
+  body (bracket tokens supported) and renders in the stat block as a **visually
+  isolated note block below everything** (dashed, amber-tinted). Notes flow through
+  the Notion / Claude exports, chassis merge, dirty-check, and `normalizeMonster`
+  migration (`m.notes`).
+- **Smarter `[c]` detection on import (`bracketize`):** now also tokenises the
+  source creature's **first name** (e.g. *K'thriss* from "K'thriss Drow'b"), a
+  **partial / last-word** reference (e.g. "the ruffian" from "Tarkanan Ruffian"),
+  and **plural** forms (→ `[c][s]`). Bare proper-name references are emitted as
+  `[c]` and promoted to `[C]` at sentence starts.
+- **Source chip:** an imported feature now shows a right-aligned chip in its name
+  field — source statblock · book code (e.g. *Wraith · XMM*) — with a ✕ to forget
+  it. Stripped from exports and the origin signature (`stripSrc`).
+- **Initiative Proficiency** button has a fixed width (sized to the widest label).
+- **Identity layout:** Subtype / Alignment / Short name share one responsive row
+  (`g-id2`), wrapping when narrow.
+
 ## Batch 40 — Forge entry overhaul, combo everywhere, FP2 + CSS tokens
 - **Combo dropdowns project-wide:** every feature-**name** field (traits / actions /
   bonus / reactions / legendary / villain / lair) now uses the combo suggestion

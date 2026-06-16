@@ -178,7 +178,7 @@ function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"c
   str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],tools:[],dmg:{},dmgnote:"",cimm:"",gear:"",
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
-  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},
+  legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},notes:[],
   status:"Draft",tags:[],archived:false,minion:false,
   _auto:{ac:true,hp:true}};}
 function migrateDefenses(m){
@@ -201,6 +201,9 @@ function normalizeMonster(m){
   m.lair=m.lair||{on:false,intro:"",items:[]};m.lair.intro=m.lair.intro||"";
   if(!m.regional)m.regional={on:!!(m.lair&&m.lair.regional),text:(m.lair&&m.lair.regional)||""};
   if(m.lair&&m.lair.regional!==undefined)delete m.lair.regional;
+  // FP6 — free-form note blocks rendered isolated below the stat block.
+  if(!Array.isArray(m.notes))m.notes=[];
+  m.notes=m.notes.map(n=>typeof n==="string"?{title:"",text:n}:{title:n.title||"",text:n.text||""});
   ["traits","actions","bonus","reactions"].forEach(k=>{m[k]=(m[k]||[]).map(e=>e.mode?e:Object.assign({mode:e.trigger!==undefined?"react":"text"},e));});
   m.legend.items=(m.legend.items||[]).map(e=>e.mode?e:T(e.name,e.text));
   m.lair.items=(m.lair.items||[]).map(e=>e.mode?e:T(e.name,e.text));
@@ -318,11 +321,9 @@ function bindStatic(){
   $("#f_vilintro").addEventListener("input",()=>{M.villain.intro=$("#f_vilintro").value;renderPreview();});
   $("#f_lairintro").addEventListener("input",()=>{M.lair.intro=$("#f_lairintro").value;renderPreview();});
   $("#f_regional").addEventListener("input",()=>{M.regional.text=$("#f_regional").value;renderPreview();});
-  $("#t_legend").addEventListener("change",e=>{M.legend.on=e.target.checked;if(e.target.checked&&!M.legend.intro){M.legend.intro=LEGEND_INTRO;$("#f_legintro").value=LEGEND_INTRO;}$("#legendInner").style.display=e.target.checked?"":"none";$("#fsLegend").classList.toggle("collapsed",!e.target.checked);renderPreview();});
-  $("#t_villain").addEventListener("change",e=>{M.villain.on=e.target.checked;if(e.target.checked&&!M.villain.intro){M.villain.intro=VILLAIN_INTRO;$("#f_vilintro").value=VILLAIN_INTRO;}$("#villainInner").style.display=e.target.checked?"":"none";$("#fsVillain").classList.toggle("collapsed",!e.target.checked);renderPreview();});
-  $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
-  $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
-  $("#t_minion").addEventListener("change",e=>{$("#minionInner").style.display=e.target.checked?"":"none";$("#fsMinion").classList.toggle("collapsed",!e.target.checked);applyMinion(e.target.checked);});
+  $("#addSection").addEventListener("click",()=>openSectionMenu($("#addSection")));
+  $("#formCol").addEventListener("click",e=>{const rm=e.target.closest("[data-secrm]");if(rm){removeSection(rm.dataset.secrm);return;}const an=e.target.closest("[data-addnote]");if(an){addNote();}});
+  $("#notesList").addEventListener("input",e=>{const t=e.target.closest("[data-note]");if(!t)return;const i=+t.dataset.note,f=t.dataset.nf;if(M.notes[i]){M.notes[i][f]=t.value;renderPreview();}});
   document.getElementById("pfExpand").addEventListener("click",()=>setPreviewCollapsed(false));
   document.getElementById("pfSave").addEventListener("click",()=>document.getElementById("saveMonster").click());
   document.getElementById("pfClaude").addEventListener("click",()=>document.getElementById("pushClaude").click());
@@ -421,6 +422,49 @@ function applyMinion(on){
   }
   renderEntries();renderPreview();
 }
+// FP6 — optional stat-block sections are added on demand from one "＋ Add section" menu
+// (replacing the old always-present enable checkboxes). Each entry: key, menu label, optional tag,
+// an `is(M)` predicate for "already added", and `add/remove` actions. Custom notes are repeatable.
+const SECTIONS=[
+  {k:"legend",label:"Legendary Actions",is:m=>m.legend.on},
+  {k:"villain",label:"Villain Actions",tag:"MCDM",is:m=>m.villain.on},
+  {k:"lair",label:"Lair Actions",tag:"2014 style",is:m=>m.lair.on},
+  {k:"regional",label:"Regional Effects",is:m=>m.regional.on},
+  {k:"minion",label:"Minion",tag:"MCDM",is:m=>!!m.minion},
+  {k:"note",label:"Custom note",repeat:true,is:()=>false},
+];
+const SEC_FS={legend:"fsLegend",villain:"fsVillain",lair:"fsLair",regional:"fsRegional",minion:"fsMinion",note:"fsNotes"};
+function sectionShown(k){return k==="minion"?!!M.minion:k==="note"?M.notes.length>0:M[k]&&M[k].on;}
+function updateSectionVis(){Object.keys(SEC_FS).forEach(k=>$("#"+SEC_FS[k]).classList.toggle("shown",sectionShown(k)));$("#addSectionRow").style.display=SECTIONS.every(s=>!s.repeat&&s.is(M))?"none":"";}
+function openSectionMenu(anchor){
+  const items=SECTIONS.filter(s=>s.repeat||!s.is(M));
+  if(!items.length)return;
+  const html=items.map(s=>`<button class="popitem" data-sec="${s.k}">${esc(s.label)}${s.tag?` <span style="color:var(--faint)">· ${esc(s.tag)}</span>`:""}</button>`).join("");
+  const p=showPopover(anchor,html);
+  p.querySelectorAll("[data-sec]").forEach(b=>b.addEventListener("click",()=>{closePopover();addSection(b.dataset.sec);}));
+}
+function addSection(k){
+  if(k==="minion"){applyMinion(true);}
+  else if(k==="regional"){M.regional.on=true;}
+  else if(k==="note"){M.notes.push({title:"",text:""});renderNotes();}
+  else if(M[k]){M[k].on=true;const intro=k==="legend"?LEGEND_INTRO:k==="villain"?VILLAIN_INTRO:LAIR_INTRO;
+    if(!M[k].intro){M[k].intro=intro;const f=$(k==="legend"?"#f_legintro":k==="villain"?"#f_vilintro":"#f_lairintro");if(f)f.value=intro;}}
+  updateSectionVis();renderPreview();
+  const fs=$("#"+SEC_FS[k]);if(fs)fs.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function removeSection(k){
+  if(k==="minion"){applyMinion(false);}
+  else if(k==="note"){M.notes=[];renderNotes();}
+  else if(M[k])M[k].on=false;
+  updateSectionVis();renderPreview();
+}
+function addNote(){M.notes.push({title:"",text:""});renderNotes();updateSectionVis();renderPreview();}
+function renderNotes(){
+  const wrap=$("#notesList");if(!wrap)return;
+  wrap.innerHTML=M.notes.map((n,i)=>`<div class="entry" data-noteblk="${i}"><div class="ehead"><input type="text" class="ename" data-note="${i}" data-nf="title" value="${esc(n.title||"")}" placeholder="Note title (optional)" autocomplete="off"><button class="iconbtn" data-noterm="${i}">✕</button></div><textarea data-note="${i}" data-nf="text" placeholder="Note text — supports bracket tokens">${esc(n.text||"")}</textarea></div>`).join("");
+  wrap.querySelectorAll("[data-noterm]").forEach(b=>b.addEventListener("click",()=>{M.notes.splice(+b.dataset.noterm,1);renderNotes();updateSectionVis();renderPreview();}));
+  const c=$("#cntNotes");if(c)c.textContent=M.notes.length?`(${M.notes.length})`:"";
+}
 const SNIPS=[["Save block","*Constitution Saving Throw:* [CON SAVE], each creature in a 15-foot Cone. *Failure:* [2d6] damage. *Success:* Half damage."],["Multiattack","[C] make[s] two attacks."]];
 // Traits/bonus/reactions are always alpha-sorted; actions keep statblock/manual order
 // (Multiattack first) and get move arrows, like legend/villain/lair.
@@ -428,10 +472,14 @@ const ALWAYS_SORTED=new Set(["traits","bonus","reactions"]);
 const freqKind=k=>k==="actions"||k==="bonus"||k==="reactions";
 // Entry name field. For Recharge/X-per-day kinds the freq "+" sits INSIDE the field (divider-
 // separated, like the gear field). Type-ahead suggestions (attachCombo) bind to [data-f=name].
+// Chip shown inside an imported feature's name field: source creature · book code (e.g. "Vampire · XMM").
+function srcChip(kind,i,e){if(!e._src)return"";const lbl=[e._src.n,e._src.c].filter(Boolean).join(" · ");
+  return `<span class="ename-src" title="Imported from ${esc(lbl)}"><span class="src-t">${esc(lbl)}</span><span class="src-x" data-srcrm="${kind}:${i}" title="Forget source">✕</span></span>`;}
 function nameField(kind,i,e,ph){
   const attrs=`data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name||"")}" autocomplete="off" placeholder="${ph}"`;
-  if(!freqKind(kind))return `<input type="text" class="ename" ${attrs}>`;
-  return `<div class="field-action ename-fa"><input type="text" class="ename fa-input" ${attrs}><button type="button" class="fa-btn freqbtn" data-freq="${kind}:${i}" title="Add Recharge / X-per-day to the name">＋</button></div>`;
+  const chip=srcChip(kind,i,e);
+  if(!freqKind(kind))return chip?`<span class="ename-wrap"><input type="text" class="ename" ${attrs}>${chip}</span>`:`<input type="text" class="ename" ${attrs}>`;
+  return `<div class="field-action ename-fa"><input type="text" class="ename fa-input" ${attrs}>${chip}<button type="button" class="fa-btn freqbtn" data-freq="${kind}:${i}" title="Add Recharge / X-per-day to the name">＋</button></div>`;
 }
 function rowCtrls(kind,i){return `<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
 // Free drag-reorder (like encounter blocks) on the manually-ordered sections only.
@@ -527,6 +575,7 @@ function bindEntries(){
       renderPreview();});
   });
   $$("#formCol [data-rm]").forEach(el=>el.addEventListener("click",()=>{const[k,i]=el.dataset.rm.split(":");arrFor(k).splice(+i,1);renderEntries();renderPreview();}));
+  $$("#formCol [data-srcrm]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[k,i]=el.dataset.srcrm.split(":");const o=arrFor(k)[+i];if(o)delete o._src;renderEntries();}));
   $$("#formCol [data-freq]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openFreqMenu(el,el.dataset.freq);}));
   // Name fields: autofill the body on commit (change), plus a type-ahead suggestion dropdown
   // whose pick imports the body too (dispatches change → autofillEntry).
@@ -603,8 +652,22 @@ function actionTextFor(name){if(TEXT_ACTIONS[name])return expandSnip(TEXT_ACTION
 function bracketize(text,srcName){
   if(!text)return text;let t=String(text);
   const AB={strength:"STR",dexterity:"DEX",constitution:"CON",intelligence:"INT",wisdom:"WIS",charisma:"CHA"};
-  if(srcName){const n=srcName.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-    t=t.replace(new RegExp("\\bThe "+n+"\\b","g"),"[C]").replace(new RegExp("\\bthe "+n+"\\b","gi"),"[c]");}
+  if(srcName&&srcName.trim()){
+    const rx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    const full=srcName.trim(),words=full.split(/\s+/),last=words[words.length-1];
+    // Common-noun references take an article ("the Tarkanan Ruffian" / "the ruffian"); a trailing
+    // plural "s" maps to [s]. Try the full name first, then its last word (e.g. "Ruffian"→"the ruffian").
+    const articled=words.length>1?[full,last]:[full];
+    articled.forEach(w=>{const n=rx(w);
+      t=t.replace(new RegExp("\\bThe "+n+"(s?)\\b","g"),(_,pl)=>"[C]"+(pl?"[s]":""))
+         .replace(new RegExp("\\bthe "+n+"(s?)\\b","gi"),(_,pl)=>"[c]"+(pl?"[s]":""));});
+    // Bare proper-name references (no article): the full name and, for multi-word names, the given
+    // name (e.g. "K'thriss" from "K'thriss Drow'b"). Case-sensitive to avoid common-word collisions;
+    // emitted as [c] so the sentence-start pass below promotes leading ones to [C].
+    const proper=[full];
+    if(words.length>1&&/^[A-Z][\w'’-]+$/.test(words[0]))proper.push(words[0]);
+    proper.forEach(w=>{const n=rx(w);t=t.replace(new RegExp("\\b"+n+"(s?)\\b","g"),(_,pl)=>"[c]"+(pl?"[s]":""));});
+  }
   // dice average "N (XdY ± Z)" → "[XdY±Z]"
   t=t.replace(/\b\d+\s*\(\s*(\d+\s*d\s*\d+(?:\s*[+\-]\s*\d+)?)\s*\)/gi,(_,d)=>"["+d.replace(/\s+/g,"")+"]");
   // "<Ability> Saving Throw: DC N" → keep wording, swap the DC for the token
@@ -620,7 +683,10 @@ function bracketize(text,srcName){
   return t;
 }
 function bracketizeEntry(h){const ent=clone(h.e),s=h.src;
-  ["text","trigger","response","extra"].forEach(f=>{if(ent[f]!=null)ent[f]=bracketize(ent[f],s);});return ent;}
+  ["text","trigger","response","extra"].forEach(f=>{if(ent[f]!=null)ent[f]=bracketize(ent[f],s);});
+  // FP6 — remember where an imported feature came from, for the source chip in its name field.
+  if(s)ent._src={n:s,c:h.code||""};else delete ent._src;
+  return ent;}
 // type-to-autofill: typing/picking a known snippet name in an entry's Name field fills its body in
 function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;const key=e.name.trim().toLowerCase();
   const modeOK=h=>!(e.mode==="attack"&&h.e.mode!=="attack")&&!(e.mode==="react"&&h.e.trigger===undefined);
@@ -638,7 +704,8 @@ function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;con
 // B42/FP2 — aggregate same-kind features (by name) across loaded monsters; the map value keeps the
 // source creature name so bracketize() can convert self-references on import.
 function aggKindArr(m,kind){return kind==="traits"?m.traits:kind==="actions"?m.actions:kind==="bonus"?m.bonus:kind==="reactions"?m.reactions:kind==="legend"?(m.legend&&m.legend.items):kind==="villain"?(m.villain&&m.villain.items):kind==="lair"?(m.lair&&m.lair.items):null;}
-function aggMapFrom(mons,kind){const map=new Map();mons.forEach(m=>{(aggKindArr(m,kind)||[]).forEach(e=>{const nm=(e&&e.name||"").trim();if(!nm)return;const k=nm.toLowerCase();if(!map.has(k))map.set(k,{e,src:m.name||""});});});return map;}
+function srcCodeOf(m){return (m&&(m._srcCode||prettySource(m._source)))||"";}
+function aggMapFrom(mons,kind){const map=new Map();mons.forEach(m=>{(aggKindArr(m,kind)||[]).forEach(e=>{const nm=(e&&e.name||"").trim();if(!nm)return;const k=nm.toLowerCase();if(!map.has(k))map.set(k,{e,src:m.name||"",code:srcCodeOf(m)});});});return map;}
 function aggregatedFor(kind){return aggMapFrom([...state.lib,...CHASSIS,...enPresets()],kind);}
 function aggregatedUserFor(kind){return aggMapFrom([...state.lib,...enPresets()],kind);}
 let aggCache={};
@@ -809,13 +876,9 @@ function loadMonster(m){
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).value=M.senses[k]||"");$("#se_blindBeyond").checked=!!M.senses.blindBeyond;$("#se_other").value=M.senses.other||"";
   $("#f_dmgnote").value=M.dmgnote||"";$("#f_lang").value=M.lang||"";
   ABILS.forEach(a=>$("#ab_"+a).value=(M[a]===10?"":M[a]));
-  $("#t_legend").checked=M.legend.on;$("#legendInner").style.display=M.legend.on?"":"none";$("#f_legintro").value=M.legend.intro||"";
-  $("#t_villain").checked=M.villain.on;$("#villainInner").style.display=M.villain.on?"":"none";$("#f_vilintro").value=M.villain.intro||"";
-  $("#t_lair").checked=M.lair.on;$("#lairInner").style.display=M.lair.on?"":"none";$("#f_lairintro").value=M.lair.intro||"";
-  $("#t_regional").checked=M.regional.on;$("#regionalInner").style.display=M.regional.on?"":"none";$("#f_regional").value=M.regional.text||"";
-  $("#t_minion").checked=!!M.minion;$("#minionInner").style.display=M.minion?"":"none";$("#fsMinion").classList.toggle("collapsed",!M.minion);
-  $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
-  $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
+  $("#f_legintro").value=M.legend.intro||"";$("#f_vilintro").value=M.villain.intro||"";
+  $("#f_lairintro").value=M.lair.intro||"";$("#f_regional").value=M.regional.text||"";
+  renderNotes();updateSectionVis();
   if(M._auto.ac||M._auto.hp)applyCRAuto();
   if(M._fromChassis&&!M._chassisSig)M._chassisSig=contentSig(M); // capture the pristine chassis baseline (B43)
   refreshAbil();renderDmg();renderSkills();renderTools();renderCimm();renderGear();renderEntries();renderPreview();
@@ -956,6 +1019,7 @@ function renderPreview(){
   if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.villain.intro))}</i></p>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(e.text))}</div>`).join("");
   if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
   if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
+  (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
   $("#statblock").innerHTML=h;
 }
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
@@ -987,10 +1051,14 @@ function notionSingle(m){
   if(m.villain.on&&m.villain.items.some(e=>e.name)){L.push("","### Villain Actions",`*${applyRefs(m.villain.intro)}*`);[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name).forEach(e=>L.push(`**Action ${e.round}: ${e.name}.** ${applyRefs(e.text)}`));}
   if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){L.push("","### Lair Actions");if(m.lair.intro)L.push(`*${applyRefs(m.lair.intro)}*`);m.lair.items.filter(e=>e.name||e.text).forEach(e=>L.push(line(e)));}
   if(m.regional.on&&m.regional.text){L.push("","### Regional Effects",applyRefs(m.regional.text));}
+  (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>{L.push("","---");if(n.title)L.push(`**${n.title}**`);L.push(applyRefs(n.text));});
   return L.join("\n");
 }
+// Drop per-entry import metadata (the source chip's `_src`) from a monster copy, so it never
+// reaches exports or the origin signature.
+function stripSrc(m){[m.traits,m.actions,m.bonus,m.reactions,m.legend&&m.legend.items,m.villain&&m.villain.items,m.lair&&m.lair.items].forEach(a=>(a||[]).forEach(e=>{if(e)delete e._src;}));return m;}
 function claudeMonster(m){
-  const out=clone(m);delete out._auto;
+  const out=stripSrc(clone(m));delete out._auto;
   out.derived={pb:pbForCR(m.cr),xp:xpOf(m),speed:speedStr(m),senses:sensesStr(m),defenses:defenseStrings(m),passive_perception:passivePerc(m)};
   out.rendered_actions=m.actions.map(e=>e.mode==="spell"?{name:e.name||"Spellcasting",text:[applyRefs(spellLines(e).main),...spellLines(e).groups.map(g=>g.label+": "+applyRefs(g.spells))].join("\n")}:e.mode==="attack"?{name:e.name,text:attackText(e)}:{name:e.name,text:applyRefs(e.text)});
   const payload={forge:"monster",v:2,props:{Name:m.name,AC:m.ac,HP:m.hp,XP:xpOf(m),CR:m.cr,PB:pbForCR(m.cr)},monster:out,notion_single_column:notionSingle(m)};
@@ -1357,6 +1425,7 @@ function monsterDirty(){const m=M;
   if(m.saves.length||m.skills.length||Object.keys(m.dmg).length)return true;
   if(m.traits.length||m.actions.length||m.bonus.length||m.reactions.length)return true;
   if(m.legend.on||m.villain.on||m.lair.on||m.regional.on)return true;
+  if((m.notes||[]).some(n=>n.title||n.text))return true;
   const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)return true;
   const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)return true;
   if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)return true;
@@ -1367,7 +1436,7 @@ function monsterDirty(){const m=M;
 // signature; the first edit flips it to home-brew. Bestiary meta (status/tags/archive) is
 // excluded from the signature so re-statusing doesn't change the origin.
 const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_fromSrc","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup"];
-function contentSig(m){const c=clone(m);SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
+function contentSig(m){const c=stripSrc(clone(m));SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
 function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis,src:m._fromSrc||""}:{kind:"brew"};}
 function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
   if(m.name.trim())out.name=m.name;
@@ -1380,6 +1449,7 @@ function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;
   ["traits","actions","bonus","reactions"].forEach(k=>{if(m[k].length)out[k]=clone(m[k]);});
   if(m.legend.on)out.legend=clone(m.legend);if(m.villain.on)out.villain=clone(m.villain);
   if(m.lair.on)out.lair=clone(m.lair);if(m.regional.on)out.regional=clone(m.regional);
+  if((m.notes||[]).some(n=>n.title||n.text))out.notes=clone(m.notes);
   const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)out.spd=clone(sp);
   const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)out.senses=clone(se);
   if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)out.shortName=clone(m.shortName);
