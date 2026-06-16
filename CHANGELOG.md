@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 60 — Roll mode, in-prose checks, re-parse & resizable forge
+- **Roll mode tag:** the adv/disadvantage dice-icon is now a small clickable **NORMAL / ADV / DIS**
+  tag (cycles on click) shown in both the custom-roll popover and the **roll-log header**. The chosen
+  mode applies to click-rolls and custom rolls.
+- **Roll log layout:** the source statblock ref now sits **above** the roll name, and the total is
+  vertically centered in the row.
+- **In-prose checks are now coloured & rollable:** a skill check like *Intelligence (Investigation)*
+  rolls with this creature's modifier (ability mod + proficiency if it has that skill) on an
+  ability-coloured pill; the **spellcasting ability** ("using Intelligence…") is likewise rollable.
+- **Saving-throw phrases** are now white text on the **ability's colour** (e.g. *Dexterity Saving
+  Throw* on a blue pill).
+- **Re-parse libraries:** uploaded .json is now kept (in IndexedDB), so the upload button has a
+  **▾ dropdown** with *Re-parse libraries* (replays files through the latest parser — no re-upload)
+  and *Clear all disabled*. Re-parse is non-destructive: libraries without stored raw are untouched.
+- **Resizable Forge:** a hover-revealed handle between the editor and preview lets you drag the
+  split; **double-click resets** it. The width persists.
+- **Roll labels** use the full ability name (Intelligence, not INT).
+- **Settings simplified:** colour-coding and click-to-roll are now single on/off toggles (the
+  sub-options are gone); the click-to-roll card notes the ⌘/Ctrl-click custom-roll shortcut.
+- The Forge title shows just the creature name (no "Editing ·"); the settings gear **toggles** the
+  Settings page closed; the d20 cursor animation is **snappier** with less rest (none when enlarged).
+
 ## Batch 59 — IndexedDB storage, spellcasting & chassis polish
 - **Reference libraries now live in IndexedDB** (presets/spells/conditions), with a one-time
   migration out of localStorage. Fixes the silent data loss on GitHub Pages where the ~5MB

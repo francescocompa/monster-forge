@@ -215,6 +215,7 @@ function migrateDefenses(m){
   delete m.res;delete m.dimm;delete m.vuln;
 }
 const _ABFULL={strength:"str",dexterity:"dex",constitution:"con",intelligence:"int",wisdom:"wis",charisma:"cha"};
+const ABIL_NAME={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 function _freqLabel(s){const t=s.replace(/\s+/g," ").trim();if(/^at will$/i.test(t))return "At Will";const m=t.match(/^(\d)\s*\/\s*day(\s+each)?$/i);if(m)return m[1]+"/Day"+(m[2]?" Each":"");if(/^cantrip/i.test(t))return "Cantrips";return t.replace(/\b\w/g,c=>c.toUpperCase());}
 const _SPELL_FREQ="(?:At Will|Cantrips?(?:\\s*\\([^)]*\\))?|\\d\\s*\\/\\s*Day(?:\\s+Each)?|\\d(?:st|nd|rd|th)[ -]?Level(?:\\s*\\([^)]*\\))?)";
 function parseSpellGroups(text){
@@ -1095,7 +1096,7 @@ function renderPreview(){
     +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
     +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
   crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
-  $("#forgeTitle").textContent=m.name?("Editing · "+m.name):"New Creature";
+  $("#forgeTitle").textContent=m.name||"New Creature";
   refreshForgeStatus();
   if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
   const initVal=initOf(m);
@@ -1105,7 +1106,7 @@ function renderPreview(){
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   const rfm=v=>"1d20"+(v>=0?"+":"")+v;
-  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase();return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${A}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${A}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase(),FN=ABIL_NAME[a];return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${FN}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${FN}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
@@ -1176,26 +1177,32 @@ const CC_CONDITIONS=["blinded","charmed","deafened","exhaustion","frightened","g
 function normRoll(s){return s.replace(/\s+/g,"").replace(/−/g,"-");}
 function colorizeNode(node,cats){
   const text=node.nodeValue;if(!text.trim())return;const hits=[];
-  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
+  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,rlabel:cat.rlabel?cat.rlabel(m):null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
   if(!hits.length)return;
   hits.sort((a,b)=>a.s-b.s||b.e-a.e);
   const out=[];let pos=0;
   hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
   if(pos<text.length)out.push({t:text.slice(pos)});
   const frag=document.createDocumentFragment();
-  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
+  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
   node.parentNode.replaceChild(frag,node);
 }
+// Full ability name → 3-letter key. Skill modifier for the current creature M (ability mod + PB if
+// proficient in that skill), used to make in-prose "Ability (Skill)" checks rollable (B60).
+function _ab3(full){return _ABFULL[full.toLowerCase()]||"int";}
+function _skMod(abFull,skillName){const a=_ab3(abFull),pb=pbForCR(M.cr);
+  const key=(skillName||"").trim().toLowerCase();
+  const sk=(M.skills||[]).find(s=>s[0].replace(/_/g," ").toLowerCase()===key);
+  const md=mod(M[a])+(sk?skProfBonus(sk[1],pb):0);return (md>=0?"+":"")+md;}
 function colorizeStatblock(){
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
   const root=$("#statblock");if(!root)return;
-  if(s.abilityBlock){
-    root.querySelectorAll(".ab td.lbl[data-ab] .abc").forEach(c=>c.classList.add("cc-ab","cc-ab-"+c.parentElement.dataset.ab));
-    root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
-  }
+  // B60: colour-coding is now a single on/off — when on, every category is active.
+  root.querySelectorAll(".ab td.lbl[data-ab] .abc").forEach(c=>c.classList.add("cc-ab","cc-ab-"+c.parentElement.dataset.ab));
+  root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
   const cats=[];
-  if(s.damage)cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
-  if(s.dice){
+  cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
+  {
     // Colour split (B58): yellow = static bonuses/targets you DON'T roll (attack bonus, DC);
     // blue (cc-dice) = dice you actually roll.
     // 2024 attack jargon "Melee/Ranged Attack Roll: +N" → rollable d20+N (the +N is a bonus → yellow).
@@ -1205,12 +1212,19 @@ function colorizeStatblock(){
     cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:null});
     cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
     cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
-    cats.push({re:/\b(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:()=>"cc-save"});
+    // Saving-throw phrase → white text on the ability's colour (B60).
+    cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:m=>"cc-save cc-ab cc-ab-"+_ab3(m[1])});
+    // Skill check "Ability (Skill)" → rollable with this creature's modifier (+ prof) + ability bg.
+    cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+\(([A-Za-z][A-Za-z ]+?)\)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
+      roll:m=>"1d20"+_skMod(m[1],m[2]),rtype:"check",rlabel:m=>m[2].trim()});
+    // Spellcasting ability "using Intelligence as the spellcasting ability" → rollable ability check + bg.
+    cats.push({re:/(?<=using\s)(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?=\sas the spellcasting ability)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
+      roll:m=>{const a=_ab3(m[1]),md=mod(M[a]);return "1d20"+(md>=0?"+":"")+md;},rtype:"check",rlabel:m=>m[1]});
   }
   // Recognised conditions become reflinks (underline + hover/click popover) when the matching
   // condition is in an uploaded library — same affordance as the condition-immunities line.
-  if(s.conditions)cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});
-  if(s.ranges){
+  cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});
+  {
     cats.push({re:/\b\d+(?:\/\d+)?\s*(?:ft\.?|feet)\b/gi,cls:()=>"cc-range"});
     cats.push({re:/\b\d+-foot(?:[ \-](?:cone|cube|line|sphere|radius|emanation|cylinder))?\b/gi,cls:()=>"cc-range"});
   }
@@ -1302,25 +1316,31 @@ function doRoll(formula,opts,meta){
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
-function quickRoll(t){doRoll(t.dataset.roll,{},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null});}
+function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null});}
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
 function rollAttackSequence(nameEl){
   const label=nameEl.textContent.replace(/\.\s*$/,"").trim();
-  const atk=doRoll(nameEl.dataset.roll,{},{label,type:"attack"});
+  const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack"});
   if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage"});
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
-function advIconHTML(adv){return `<span class="rl-adv ${adv}" title="${adv==="adv"?"Advantage":"Disadvantage"}">${DICE_ICON}</span>`;}
+// Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
+// rolls. Set via the cycling tag shown in the roll-log header and the custom-roll popover.
+let rollMode=null; // null | "adv" | "dis"
+function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: normal → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL"}</button>`;}
+function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
 function renderRollLog(){
   let el=document.getElementById("rollLog");
   if(!rollLog.length){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
-  const row=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}</span><span class="rl-parts">${r.adv?advIconHTML(r.adv):""}${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}</span></div>`;
-  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div><button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+  // Row: total (vertically centred) + a stack of [source ref] / [name + tag] / [parts] (B60).
+  const row=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}${r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:""}</span><span class="rl-parts">${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span></span></div>`;
+  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +(rollLogOpen?`<div class="rl-body">${ordered.map(row).join("")}</div>`:"");
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
+  el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
   el.querySelectorAll(".rl-row[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
@@ -1345,17 +1365,15 @@ function openRollEntryMenu(anchor,id){
 // Custom roll: no base formula (cmd-click). Field is empty with a "1d20" placeholder and rolls
 // 1d20 if left blank; no source is attached (so the roll-log shows no statblock name).
 function openCustomRoll(anchor){openRollPopover(anchor,{value:"",formula:"1d20",placeholder:"1d20",label:"Custom roll",type:null,custom:true});}
-// Roll-options popover: adv/dis cycle dice-icon + editable clockworkmod formula + Roll + (?) help.
+// Roll-options popover: the shared roll-mode tag + editable clockworkmod formula + Roll + (?) help.
 function openRollPopover(anchor,o){
-  const cr=state.settings.clickRoll;let advState=null;
-  const advBtn=cr.adv?`<button class="roll-advtog" data-advtog title="Cycle: normal → advantage → disadvantage" aria-label="Advantage / disadvantage">${DICE_ICON}</button>`:"";
   const initVal=o.value!=null?o.value:(o.formula||"");
-  const html=`<div class="roll-pop">${advBtn}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
+  const html=`<div class="roll-pop">${rollModeTagHTML()}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
   const p=showPopover(anchor,html);
   const inp=p.querySelector(".roll-edit-in");if(inp){inp.focus();inp.select();}
-  const at=p.querySelector("[data-advtog]");
-  if(at)at.addEventListener("click",e=>{e.stopPropagation();advState=advState===null?"adv":advState==="adv"?"dis":null;at.classList.toggle("adv",advState==="adv");at.classList.toggle("dis",advState==="dis");});
-  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:advState},{label:o.label,type:o.type,custom:o.custom});};
+  const at=p.querySelector("[data-rollmode]");
+  if(at)at.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();at.className="roll-mode"+(rollMode?" "+rollMode:"");at.textContent=rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL";if(document.getElementById("rollLog"))renderRollLog();});
+  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom});};
   p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
   if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
   const help=p.querySelector("[data-rollhelp]");
@@ -1417,7 +1435,19 @@ function claudeMonster(m){
 
 const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures",settings:"Settings"};
 function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
-function switchView(v){$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
+// Draggable split between the form and preview columns; width persists, dbl-click resets (B60).
+function initForgeResizer(){
+  const fg=document.querySelector(".forge"),rz=$("#forgeResizer");if(!fg||!rz)return;
+  try{const sv=localStorage.getItem("mf_pvw");if(sv)fg.style.setProperty("--pvw",sv);}catch(e){}
+  let drag=false;
+  rz.addEventListener("pointerdown",e=>{drag=true;rz.classList.add("drag");rz.setPointerCapture(e.pointerId);e.preventDefault();});
+  rz.addEventListener("pointermove",e=>{if(!drag)return;const r=fg.getBoundingClientRect();let w=Math.round(r.right-e.clientX);w=Math.max(300,Math.min(r.width-340,w));fg.style.setProperty("--pvw",w+"px");});
+  const end=e=>{if(!drag)return;drag=false;rz.classList.remove("drag");try{rz.releasePointerCapture(e.pointerId);}catch(_){}try{localStorage.setItem("mf_pvw",fg.style.getPropertyValue("--pvw"));}catch(_){}};
+  rz.addEventListener("pointerup",end);rz.addEventListener("pointercancel",end);
+  rz.addEventListener("dblclick",()=>{fg.style.removeProperty("--pvw");try{localStorage.removeItem("mf_pvw");}catch(_){}});
+}
+let _curView="forge",_prevView="forge"; // track views so the gear can toggle settings closed
+function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 // ====== Notion-style control bars: search · filter · sort · group (Batch 15) ======
@@ -1968,12 +1998,18 @@ function presetModal(){
   if(state.refMeta.books&&Object.keys(state.books).length)refs.push({k:"books",label:"Book reference",file:state.refMeta.books.file,count:Object.keys(state.books).length,unit:"sources"});
   if(state.refMeta.legGroups&&Object.keys(state.legendaryGroups).length)refs.push({k:"leg",label:"Legendary groups",file:state.refMeta.legGroups.file,count:Object.keys(state.legendaryGroups).length,unit:"groups"});
   if(refs.length)h+=`<div class="lib-refs">`+refs.map(r=>`<div class="lib-ref"><span class="ref-meta">${esc(r.label)} · ${r.count.toLocaleString()} ${r.unit}<span class="hint"> · ${esc(r.file)}</span></span><button class="ref-x" data-refx="${esc(r.k)}" title="Remove reference">✕</button></div>`).join("")+`</div>`;
-  h+=`<div class="lib-foot"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .json files</button></div>`;
+  h+=`<div class="lib-foot"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><div class="split-btn"><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .json files</button><button class="btn primary sm split-caret" id="prMore" style="width:auto" title="More options" aria-label="More options">▾</button></div></div>`;
   openModalRaw(`<div class="preset-mgr">${h}</div>`);
   bindCtrlIcons($("#prCtrlIcons"),presetCtrl,desc,presetModal);
   renderCtrlChips($("#prChips"),presetCtrl,desc,presetModal);
   $("#prClose").addEventListener("click",closeModal);
   $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
+  $("#prMore").addEventListener("click",e=>{e.stopPropagation();
+    const p=showPopover(e.currentTarget,`<button class="popitem" data-prm="reparse">↻ Re-parse libraries</button><button class="popitem" data-prm="enableall">Clear all disabled</button>`);
+    p.querySelectorAll("[data-prm]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const a=b.dataset.prm;closePopover();
+      if(a==="reparse")reparseLibraries();
+      else{state.disabledLibs=[];saveDisabled();refreshLibPools();presetModal();toast("All libraries enabled.");}
+    }));});
   {const ph=$("#prHelp"),openPh=e=>{e.stopPropagation();showPopover(ph,`<div class="help-pop">${PRESET_HINT}</div>`);};
     ph.addEventListener("mouseenter",openPh);ph.addEventListener("click",openPh);ph.addEventListener("mouseleave",()=>closePopover());}
   $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmStack(`Remove this reference sheet?`,()=>removeReference(k));}));
@@ -2604,7 +2640,7 @@ function doExportJSON(){
 }
 $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
-$("#settingsBtn").addEventListener("click",()=>switchView("settings"));
+$("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
 // Click-to-roll: delegated on the statblock preview. Left-click = quick roll (attack NAME rolls
 // attack + damage); right-click = options popover.
 $("#statblock").addEventListener("click",e=>{
@@ -2644,23 +2680,12 @@ function renderSettings(){
     <div class="set-card">
       <div class="set-head">Statblock colour-coding</div>
       ${SW("colorCode.on","Enable colour-coding")}
-      <div class="set-subs${s.colorCode.on?"":" off"}">
-        ${SW("colorCode.damage","Damage types",true)}
-        ${SW("colorCode.dice","Dice, to-hit &amp; DCs",true)}
-        ${SW("colorCode.conditions","Conditions",true)}
-        ${SW("colorCode.ranges","Ranges &amp; areas",true)}
-        ${SW("colorCode.abilityBlock","Ability-score block",true)}
-      </div>
       <div class="set-note">Colours the Forge statblock preview only.</div>
     </div>
     <div class="set-card">
-      <div class="set-head">Click-to-roll dice</div>
+      <div class="set-head">Click-to-roll dice<span class="set-kbd">⌘/Ctrl-click anywhere = custom roll</span></div>
       ${SW("clickRoll.on","Enable click-to-roll")}
-      <div class="set-subs${s.clickRoll.on?"":" off"}">
-        ${SW("clickRoll.adv","Advantage / disadvantage",true)}
-        ${SW("clickRoll.crit","Critical hit (double dice)",true)}
-        ${SW("clickRoll.editFormula","Editable roll formula",true)}
-      </div>
+      <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Adventure defaults</div>
@@ -2702,40 +2727,61 @@ $("#presetManage").addEventListener("click",()=>{presetSel.clear();presetModal()
 // Accumulates raw bestiary monsters across every upload this session so cross-file
 // _copy bases resolve even when the base book was uploaded in a separate action.
 let sessionBestiaryIndex=new Map();
+// Ingest a batch of {name,json} blobs: reference sheets first, then bestiary/spell/condition.
+// Mutates state + persists each kind; returns a per-file summary. Shared by upload + re-parse (B60).
+function ingestLibraries(loaded){
+  let bookAdded=false,legAdded=false;
+  loaded.forEach(L=>{const k=L.json&&detectJsonKind(L.json);
+    if(k==="book"){Object.assign(state.books,parseBooksJSON(L.json));bookAdded=true;state.refMeta.books={file:L.name,count:Object.keys(parseBooksJSON(L.json)).length};}
+    if(k==="legendaryGroup"){Object.assign(state.legendaryGroups,parseLegendaryGroupsJSON(L.json));legAdded=true;state.refMeta.legGroups={file:L.name,count:((L.json.legendaryGroup||[]).length)};}});
+  _storageFailed=false;
+  if(bookAdded){saveBooks();reannotateBooks(true);}
+  if(legAdded){saveLegGroups();}
+  if(bookAdded||legAdded)saveRefMeta();
+  loaded.forEach(L=>{if(L.json&&L.json.monster)L.json.monster.forEach(m=>{if(m&&m.name)sessionBestiaryIndex.set(((m.name||"")+"|"+(m.source||"")).toLowerCase(),m);});});
+  const legIdx=new Map();Object.keys(state.legendaryGroups).forEach(k=>legIdx.set(k,state.legendaryGroups[k]));
+  const summary=[];
+  loaded.forEach(L=>{
+    const kind=L.json?detectJsonKind(L.json):null;
+    if(!kind){summary.push(`${L.name}: not recognised 5etools JSON`);return;}
+    try{
+      if(kind==="book"){summary.push(`${L.name}: ${Object.keys(parseBooksJSON(L.json)).length} book refs`);}
+      else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
+      else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
+      else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
+      else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
+    }catch(err){summary.push(`${L.name}: failed to parse`);}
+  });
+  if(legAdded)reapplyLegGroups();
+  return summary;
+}
+// Stash the raw uploaded JSON so libraries can be re-parsed later without re-uploading.
+async function stashRawLibs(loaded){
+  const valid=loaded.filter(L=>L.json);if(!valid.length)return;
+  let raw=await idbGet("rawlibs");raw=Array.isArray(raw)?raw:[];
+  const names=new Set(valid.map(L=>L.name));
+  raw=raw.filter(L=>!names.has(L.name)).concat(valid);
+  await idbSet("rawlibs",raw);
+}
+// Replay every stored raw file through the current parser (picks up parser improvements).
+async function reparseLibraries(){
+  const raw=await idbGet("rawlibs");
+  if(!raw||!raw.length){alertStack("Nothing to re-parse","Re-parsing replays the original .json files through the latest parser, but none are stored yet. Upload your libraries once with this version and they'll be re-parseable from then on — no re-upload needed afterwards.");return;}
+  // Non-destructive: ingestLibraries replaces each source by name, so libraries without stored raw
+  // (e.g. uploaded before this version) are left untouched rather than wiped.
+  sessionBestiaryIndex=new Map();
+  const summary=ingestLibraries(raw);
+  toast(`Re-parsed ${summary.length} file(s).`);
+  if($("#modalBg").classList.contains("show"))presetModal();
+}
 // 5etools JSON uploader (Batch 28). One change handler ingests bestiary / spell /
 // condition / books files; the kind is detected from the JSON's top-level keys.
 $("#mdIn").addEventListener("change",e=>{
   const files=[...e.target.files];if(!files.length)return;
   Promise.all(files.map(f=>f.text().then(txt=>{let json=null;try{json=JSON.parse(txt);}catch(_){}return{name:f.name,json};})))
-    .then(loaded=>{
-      // 1. reference sheets first so bestiary/spell/condition loads can use them
-      let bookAdded=false,legAdded=false;
-      loaded.forEach(L=>{const k=L.json&&detectJsonKind(L.json);
-        if(k==="book"){Object.assign(state.books,parseBooksJSON(L.json));bookAdded=true;state.refMeta.books={file:L.name,count:Object.keys(parseBooksJSON(L.json)).length};}
-        if(k==="legendaryGroup"){Object.assign(state.legendaryGroups,parseLegendaryGroupsJSON(L.json));legAdded=true;state.refMeta.legGroups={file:L.name,count:((L.json.legendaryGroup||[]).length)};}});
-      _storageFailed=false;
-      // A newly-uploaded books.json must re-annotate EVERY already-loaded library (not just
-      // ones uploaded afterwards), then persist so the labels survive a reload.
-      if(bookAdded){saveBooks();reannotateBooks(true);}
-      if(legAdded){saveLegGroups();}
-      if(bookAdded||legAdded)saveRefMeta();
-      // 2. base indexes (raw monsters + legendary groups) across this batch + the session
-      loaded.forEach(L=>{if(L.json&&L.json.monster)L.json.monster.forEach(m=>{if(m&&m.name)sessionBestiaryIndex.set(((m.name||"")+"|"+(m.source||"")).toLowerCase(),m);});});
-      const legIdx=new Map();Object.keys(state.legendaryGroups).forEach(k=>legIdx.set(k,state.legendaryGroups[k]));
-      const summary=[];
-      loaded.forEach(L=>{
-        const kind=L.json?detectJsonKind(L.json):null;
-        if(!kind){summary.push(`${L.name}: not recognised 5etools JSON`);return;}
-        try{
-          if(kind==="book"){summary.push(`${L.name}: ${Object.keys(parseBooksJSON(L.json)).length} book refs`);}
-          else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
-          else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
-          else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
-          else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
-        }catch(err){summary.push(`${L.name}: failed to parse`);}
-      });
-      if(legAdded)reapplyLegGroups(); // backfill lair/regional onto already-loaded bestiaries
-      // Concise feedback: for a multi-file batch show only the count of sources loaded.
+    .then(async loaded=>{
+      const summary=ingestLibraries(loaded);
+      await stashRawLibs(loaded);
       toast(summary.length>1?`Loaded ${summary.length} sources.`:`Loaded — ${summary[0]||"nothing"}`);
       if(_storageFailed)alertStack("Device storage full","Some libraries couldn't be saved and won't persist after a reload. Remove libraries you don't need to free space, then re-upload.");
       if($("#modalBg").classList.contains("show"))presetModal();
@@ -2828,7 +2874,7 @@ function wrapStepper(input,step,min){
   loadSettings();syncFeatureClasses();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
-  bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();
+  bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();initForgeResizer();
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
