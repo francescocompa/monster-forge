@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 39 — Identity combo dropdowns
+- **Type / Subtype / Alignment** are now proper combo fields. The **chevron opens the
+  native OS dropdown** (your screenshot-2 style) listing every value — the canonical
+  D&D set plus your own values, **de-duplicated by case** (no more `dragon`/`Dragon`
+  twins). **Typing** instead opens a **custom styled suggestion dropdown** that filters
+  as you type, and free-text is still allowed. This replaces the old `<input list>`
+  datalist whose popup was a different, often mis-aligned browser widget.
+
 ## Batch 38 — FP1 follow-up fixes
 - **Origin tags reworked:** the home-brew tag now reads **Homebrew** and is **red**;
   the chassis tag now shows the **source it came from** (e.g. `MM25`, or `Built-in`

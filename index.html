@@ -65,12 +65,12 @@
             <div class="grid g-name">
               <label class="f">Name<input type="text" id="f_name" placeholder="Creature name"></label>
               <label class="f">Size<select id="f_size"></select></label>
-              <label class="f">Type<input type="text" id="f_type" list="dl-type" placeholder="Undead"></label>
+              <label class="f">Type<span class="combo"><input type="text" id="f_type" class="combo-input" placeholder="Undead" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
               <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
             </div>
             <div class="grid g2" style="margin-top:10px">
-              <label class="f">Subtype / tag<input type="text" id="f_subtype" list="dl-subtype" placeholder="Spirit"></label>
-              <label class="f">Alignment<input type="text" id="f_align" list="dl-align" placeholder="Lawful Evil"></label>
+              <label class="f">Subtype / tag<span class="combo"><input type="text" id="f_subtype" class="combo-input" placeholder="Spirit" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
+              <label class="f">Alignment<span class="combo"><input type="text" id="f_align" class="combo-input" placeholder="Lawful Evil" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
             </div>
             <div class="grid" style="grid-template-columns:1.6fr auto auto;align-items:end;margin-top:14px">
               <label class="f"><span class="cr-lbl">Short name <button type="button" class="cr-help" id="snHelp" aria-label="Short name help">?</button></span><input type="text" id="f_snword" placeholder="creature"></label>

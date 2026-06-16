@@ -292,6 +292,7 @@ function bindStatic(){
     if(/\d+\s*d\s*\d+/i.test(M.hpf)&&(M.hp==null||M._auto.hp)){M.hp=exprAvg(M.hpf);M._auto.hp=false;$("#f_hp").value=M.hp;$("#wb_hp").classList.remove("suggested");}
     renderPreview();});
   bindField("#f_dmgnote","dmgnote");bindField("#f_lang","lang");
+  setupIdentityCombos();
   bindCimm();bindGear();
   $("#f_snword").addEventListener("input",()=>{M.shortName.word=$("#f_snword").value||"creature";renderEntries();renderPreview();});
   $("#f_snproper").addEventListener("change",()=>{M.shortName.proper=$("#f_snproper").checked;renderEntries();renderPreview();});
@@ -647,15 +648,53 @@ function buildFeatureDatalists(){
   buildDatalist("dl-bonus",featureSuggestNames("bonus",Object.keys(BONUS_SNIPS)));
   buildDatalist("dl-react",featureSuggestNames("reactions",Object.keys(REACT_SNIPS)));
 }
-// Type / Subtype / Alignment comboboxes: suggestions mined from the saved
-// bestiary, the built-in chassis and uploaded statblock presets. Free text is
-// always allowed (native <datalist>). Alignment also seeds a canonical set.
+// Type / Subtype / Alignment comboboxes (B37 "combo" widget): the chevron opens a native
+// <select> popup of every value (canonical + mined), while typing opens a custom styled
+// suggestion dropdown — free text always allowed. Values are mined from the saved bestiary,
+// built-in chassis and uploaded presets, plus a canonical seed.
 const ALIGN_CANON=["Lawful Good","Neutral Good","Chaotic Good","Lawful Neutral","Neutral","Chaotic Neutral","Lawful Evil","Neutral Evil","Chaotic Evil","Unaligned","Any Alignment"];
+const TYPE_CANON=["Aberration","Beast","Celestial","Construct","Dragon","Elemental","Fey","Fiend","Giant","Humanoid","Monstrosity","Ooze","Plant","Undead"];
 function monsterFieldValues(field,seed){
   const pool=[...state.lib,...CHASSIS,...state.presets];
-  const set=new Set(seed||[]);
-  pool.forEach(m=>{const v=(m&&m[field]||"").trim();if(v)set.add(v);});
-  return [...set].sort((a,b)=>a.localeCompare(b));
+  // Case-insensitive de-dupe; the seed (canonical) is added first so its casing wins over
+  // any inconsistently-cased imported value (e.g. canonical "Dragon" beats a mined "dragon").
+  const byLow=new Map();
+  (seed||[]).forEach(v=>{const k=v.toLowerCase();if(!byLow.has(k))byLow.set(k,v);});
+  pool.forEach(m=>{const v=(m&&m[field]||"").trim();if(v){const k=v.toLowerCase();if(!byLow.has(k))byLow.set(k,v);}});
+  return [...byLow.values()].sort((a,b)=>a.localeCompare(b));
+}
+// Shared custom suggestion dropdown for combo inputs (and, later, feature-name fields).
+let _csEl=null;
+function comboSuggestEl(){if(!_csEl){_csEl=document.createElement("div");_csEl.className="combo-suggest";document.body.appendChild(_csEl);}return _csEl;}
+function hideComboSuggest(){if(_csEl)_csEl.style.display="none";}
+function showComboSuggest(input,items){
+  const el=comboSuggestEl();
+  if(!items.length){hideComboSuggest();return;}
+  el.innerHTML=items.map(v=>`<button type="button" class="cs-item" data-v="${esc(v)}">${esc(v)}</button>`).join("");
+  el.querySelectorAll(".cs-item").forEach(b=>b.addEventListener("mousedown",e=>{e.preventDefault();input.value=b.dataset.v;input.dispatchEvent(new Event("input",{bubbles:true}));input.focus();hideComboSuggest();}));
+  const r=input.getBoundingClientRect();el.style.display="block";el.style.left=r.left+"px";el.style.width=r.width+"px";
+  let top=r.bottom+3;if(top+el.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-3-el.offsetHeight);
+  el.style.top=top+"px";
+}
+// Wire a combo input: type-ahead suggestion dropdown + (if a sibling .combo-native exists)
+// the chevron's native <select> populated with every value.
+function attachCombo(input,valuesFn){
+  if(!input||input._combo)return;input._combo=true;
+  input.addEventListener("input",()=>{const q=input.value.trim().toLowerCase();
+    const items=valuesFn().filter(v=>{const l=v.toLowerCase();return l!==q&&(!q||l.includes(q));}).slice(0,12);
+    showComboSuggest(input,items);});
+  input.addEventListener("blur",()=>setTimeout(hideComboSuggest,140));
+  input.addEventListener("keydown",e=>{if(e.key==="Escape"||e.key==="Enter")hideComboSuggest();});
+  const sel=input.parentElement&&input.parentElement.querySelector(".combo-native");
+  if(sel){
+    sel.addEventListener("mousedown",()=>{const cur=input.value;sel.innerHTML='<option value=""></option>'+valuesFn().map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");});
+    sel.addEventListener("change",()=>{if(sel.value){input.value=sel.value;input.dispatchEvent(new Event("input",{bubbles:true}));}});
+  }
+}
+function setupIdentityCombos(){
+  attachCombo($("#f_type"),()=>monsterFieldValues("type",TYPE_CANON));
+  attachCombo($("#f_subtype"),()=>monsterFieldValues("subtype"));
+  attachCombo($("#f_align"),()=>monsterFieldValues("align",ALIGN_CANON));
 }
 function buildMonsterDatalists(){
   buildDatalist("dl-type",monsterFieldValues("type"));
