@@ -116,6 +116,11 @@ fieldset.fieldset{border:1px solid var(--line);border-radius:9px;padding:14px 15
 .g-name{grid-template-columns:1.5fr .8fr 1fr .9fr}
 .g-core{grid-template-columns:1fr 1.1fr 1fr auto}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim)}
+/* Field-title row with a right-aligned options gear (Fly→hover, Blindsight→blind-beyond). */
+label.f .f-lbl{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:13px}
+.lbl-gear{background:none;border:none;color:var(--faint);cursor:pointer;padding:0;width:16px;height:16px;display:grid;place-items:center;flex:none;border-radius:3px;transition:color .12s}
+.lbl-gear:hover{color:var(--accent)}
+.lbl-gear svg{width:11px;height:11px;fill:currentColor;display:block}
 label.f .req{color:var(--accent-soft)}
 input:not([type]),input[type=text],input[type=number],select,textarea{background:var(--in);border:1px solid var(--line);border-radius:5px;padding:8px 9px;width:100%;transition:border-color .12s}
 input:not([type]):hover,input:not([type]):focus{border-color:var(--accent);outline:none}

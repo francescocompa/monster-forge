@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 44 — Fixes round 2
+- **Fly / Blindsight options gear** moved out of the field and up to the field
+  **title row** (right-aligned next to the label), like the short-name gear.
+- **Removed the XP tag** from chassis picker cards (CR + source only).
+- **Loading a chassis from a feature chip** now uses the same **“You have unsaved
+  edits”** keep/override/back dialog as loading a chassis from the Forge.
+- **`?` help buttons and card statblock-preview icons open on hover** (still
+  clickable) — matching the forge CR / short-name help.
+
 ## Batch 43 — Fixes round (forge + encounter polish)
 - **Add-section button moved to the bottom** of the added sections (after Custom Notes).
 - **XP-target marker** default position is now the true **left end** of the bar.

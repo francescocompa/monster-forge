@@ -485,8 +485,8 @@ function openChipMenu(anchor,kind,i){const e=arrFor(kind)[+i];if(!e||!e._src)ret
   const prev=src?chassisPreviewHTML(src):`<div class="chprev-pop"><div class="refcard-meta">Source “${esc(e._src.n)}” isn't in your libraries.</div></div>`;
   const foot=src?`<div class="chip-pop-foot"><button class="btn ghost sm" data-chipload style="width:100%">Load ${esc(src.name)} as chassis →</button></div>`:"";
   const p=showPopover(anchor,`<div class="chip-pop">${prev}${foot}</div>`);
-  const b=p.querySelector("[data-chipload]");if(b)b.addEventListener("click",()=>{closePopover();const go=()=>applyChassis(src,false,false);
-    if(forgeUnsaved())confirmModal("Load this chassis? The current Forge has unsaved changes that will be lost.",go);else go();});}
+  const b=p.querySelector("[data-chipload]");if(b)b.addEventListener("click",()=>{closePopover();
+    if(forgeUnsaved())chassisConflictModal(src);else applyChassis(src,false,false);});}
 function nameField(kind,i,e,ph){
   const attrs=`data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name||"")}" autocomplete="off" placeholder="${ph}"`;
   const chip=srcChip(kind,i,e);
@@ -752,12 +752,20 @@ const SEARCH_CHART_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512
 const BACK_SVG='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // Shared "preview a creature's statblock" popover, anchored to a card icon / menu item.
 function showStatPreview(anchor,m){if(m)showPopover(anchor,`<div class="chip-pop">${chassisPreviewHTML(m)}</div>`);}
+// A "?" affordance whose tail popover opens on hover (and click), like the forge CR / short-name help.
+function bindHelpHover(btn,text){if(!btn)return;const open=e=>{e.stopPropagation();tailPopover(btn,`<div class="cr-pop">${text}</div>`);};
+  btn.addEventListener("mouseenter",open);btn.addEventListener("click",open);btn.addEventListener("mouseleave",()=>closePopover());}
+// Bind a card's preview icon to show the statblock on hover (and click).
+function bindPreviewHover(btn,getMon){if(!btn)return;
+  btn.addEventListener("mouseenter",()=>{const m=getMon();if(m)showStatPreview(btn,m);});
+  btn.addEventListener("click",ev=>{ev.stopPropagation();const m=getMon();if(m)showStatPreview(btn,m);});
+  btn.addEventListener("mouseleave",()=>closePopover());}
 // Shared card for the add-combatant + chassis pickers: same tags row + position, with a top-right
 // preview icon (matching where the bestiary card's menu sits). `srcTag` adds the source badge tag.
-function pickerCardHTML(o,pickLabel,srcTag){return `<div class="card pick-card" style="cursor:default">
+function pickerCardHTML(o,pickLabel,srcTag,noXP){return `<div class="card pick-card" style="cursor:default">
   <button class="card-prev" data-cardprev="${esc(o.m.id)}" title="Preview statblock" aria-label="Preview statblock">${SEARCH_CHART_SVG}</button>
   <h4>${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div>
-  <div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span>${srcTag?srcBadgeHTML(o):""}</div>
+  <div class="tags"><span class="tag cr">CR ${o.m.cr}</span>${noXP?"":`<span class="tag">${xpOf(o.m).toLocaleString()} XP</span>`}${srcTag?srcBadgeHTML(o):""}</div>
   <div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">${pickLabel}</button></div>
 </div>`;}
 // Short, human label for a preset source filename (e.g. "PHB24_Spells.md" → "PHB24").
@@ -1541,16 +1549,16 @@ function openChassis(fromForge,opts){
     <div class="ctrl-chips" id="chChips"></div>
     <div id="chBody"></div>`);
   if(opts.onBack)$("#chBack").addEventListener("click",()=>{closeModal();opts.onBack();});
-  $("#chHelp").addEventListener("click",e=>{e.stopPropagation();tailPopover(e.currentTarget,`<div class="cr-pop">${helpText}</div>`);});
+  bindHelpHover($("#chHelp"),helpText);
   const pickLabel=forEnc?"Add to encounter":"Use as base";
-  const cardOf=o=>pickerCardHTML(o,pickLabel,true);
+  const cardOf=o=>pickerCardHTML(o,pickLabel,true,true);
   function draw(){
     renderCtrlChips($("#chChips"),ctrl,desc,draw);
     const body=$("#chBody");let recs=ctrlApply(chPool(),ctrl,desc);
     if(ctrl.group!=="source")recs=collapseVariants(recs);
     renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries…”) to add more bases."}`,cap:200});
     bindSrcDrops(body,recs,draw);
-    body.querySelectorAll("[data-cardprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const ch=findChassis(b.dataset.cardprev);if(ch)showStatPreview(b,ch);}));
+    body.querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>findChassis(b.dataset.cardprev)));
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
       if(opts.onPick){opts.onPick(ch);return;}
       closeModal();
@@ -2024,12 +2032,12 @@ function openBestiaryPicker(a,e){
       <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
       <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
     </div>`);
-  $("#bpHelp").addEventListener("click",ev=>{ev.stopPropagation();tailPopover(ev.currentTarget,`<div class="cr-pop">Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.</div>`);});
+  bindHelpHover($("#bpHelp"),`Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.`);
   const cardOf=o=>pickerCardHTML(o,"＋ Add",false);
   function draw(){
     renderCtrlChips($("#bpChips"),ctrl,desc,draw);
     renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
-    $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();showStatPreview(b,state.lib.find(m=>m.id===b.dataset.cardprev));}));
+    $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>state.lib.find(m=>m.id===b.dataset.cardprev)));
     $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
   }
   bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
