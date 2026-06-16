@@ -319,7 +319,6 @@ function bindStatic(){
   $("#t_lair").addEventListener("change",e=>{M.lair.on=e.target.checked;if(e.target.checked&&!M.lair.intro){M.lair.intro=LAIR_INTRO;$("#f_lairintro").value=LAIR_INTRO;}$("#lairInner").style.display=e.target.checked?"":"none";$("#fsLair").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_regional").addEventListener("change",e=>{M.regional.on=e.target.checked;$("#regionalInner").style.display=e.target.checked?"":"none";$("#fsRegional").classList.toggle("collapsed",!e.target.checked);renderPreview();});
   $("#t_minion").addEventListener("change",e=>{$("#minionInner").style.display=e.target.checked?"":"none";$("#fsMinion").classList.toggle("collapsed",!e.target.checked);applyMinion(e.target.checked);});
-  document.getElementById("previewToggle").addEventListener("click",()=>setPreviewCollapsed(true));
   document.getElementById("pfExpand").addEventListener("click",()=>setPreviewCollapsed(false));
   document.getElementById("pfSave").addEventListener("click",()=>document.getElementById("saveMonster").click());
   document.getElementById("pfClaude").addEventListener("click",()=>document.getElementById("pushClaude").click());
@@ -385,6 +384,7 @@ function openSkillToolMenu(anchor){
   const sk=Object.keys(SKILLS).filter(k=>!have.has(k)).map(k=>`<button class="popitem" data-addsk="${k}">${k.replace(/_/g," ")}</button>`).join("")||`<div class="pop-empty">All skills added</div>`;
   const tl=TOOLS.filter(t=>!haveT.has(t)).map(t=>`<button class="popitem" data-addtl="${esc(t)}">${esc(t)}</button>`).join("")||`<div class="pop-empty">All tools added</div>`;
   const p=showPopover(anchor,`<div class="popscroll"><div class="pop-grp-lbl">Skills</div>${sk}<div class="popsep"></div><div class="pop-grp-lbl">Tools</div>${tl}</div>`);
+  p.classList.add("menu-pop");
   p.querySelectorAll("[data-addsk]").forEach(b=>b.addEventListener("click",()=>{closePopover();M.skills.push([b.dataset.addsk,"prof"]);renderSkills();renderPreview();}));
   p.querySelectorAll("[data-addtl]").forEach(b=>b.addEventListener("click",()=>{closePopover();(M.tools=M.tools||[]).push(b.dataset.addtl);renderTools();renderPreview();}));
 }
@@ -1102,6 +1102,8 @@ function _popOutside(e){if(_pop&&!_pop.contains(e.target))closePopover();}
 function showPopover(anchor,html){closePopover();const p=document.createElement("div");p.className="popover";p.innerHTML=html;document.body.appendChild(p);
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-8);left=Math.max(8,left);
   let top=r.bottom+4;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-4);
+  // keep tall popovers fully on-screen even if neither below nor above fully fits
+  if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,window.innerHeight-8-p.offsetHeight);
   p.style.left=left+"px";p.style.top=top+"px";_pop=p;setTimeout(()=>document.addEventListener("click",_popOutside,true),0);return p;}
 function openStatusMenu(m,anchor){if(!m)return;const p=showPopover(anchor,STATUSES.map(s=>`<button class="popitem${s===m.status?" on":""}" data-s="${s}">${s}</button>`).join(""));
   p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();setStatus(m,b.dataset.s);}));}
@@ -1120,8 +1122,8 @@ function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>
 // loaded straight from a chassis and saved without edits (B43).
 function originBadgeHTML(m){const o=originOf(m);
   return o.kind==="chassis"
-    ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis — saved without edits">⊕ Chassis</span>`
-    :`<span class="tag origin brew" title="Home-brew — created or edited here">⚒ Home-brew</span>`;}
+    ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}) — saved without edits">${esc(o.src||"Built-in")}</span>`
+    :`<span class="tag origin brew" title="Homebrew — created or edited here">⚒ Homebrew</span>`;}
 function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}" draggable="true">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
@@ -1245,9 +1247,9 @@ function monsterDirty(){const m=M;
 // entry counts as "from chassis (unedited)" only while its current content still matches that
 // signature; the first edit flips it to home-brew. Bestiary meta (status/tags/archive) is
 // excluded from the signature so re-statusing doesn't change the origin.
-const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup"];
+const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_fromSrc","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup"];
 function contentSig(m){const c=clone(m);SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
-function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis}:{kind:"brew"};}
+function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis,src:m._fromSrc||""}:{kind:"brew"};}
 function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
   if(m.name.trim())out.name=m.name;
   ["type","subtype","align","acnote","hpf","gear","dmgnote","cimm"].forEach(k=>{if(m[k])out[k]=m[k];});
@@ -1266,7 +1268,7 @@ function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;
 function applyChassis(ch,keepId,merge){
   let base;
   if(merge)base=mergeChassis(ch);
-  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};base._fromChassis=ch.name;delete base._chassisSig;}
+  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};base._fromChassis=ch.name;base._fromSrc=ch._srcCode||(ch._source?prettySource(ch._source):"")||"";delete base._chassisSig;}
   delete base._preset;delete base._source;
   loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
 }

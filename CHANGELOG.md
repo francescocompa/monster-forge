@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 38 — FP1 follow-up fixes
+- **Origin tags reworked:** the home-brew tag now reads **Homebrew** and is **red**;
+  the chassis tag now shows the **source it came from** (e.g. `MM25`, or `Built-in`
+  for the generic chassis) instead of the generic "Chassis" label/icon.
+- **Add-skill dropdown:** the scrolling list no longer bleeds over the sticky group
+  header; the popover clips to its rounded corners and the header has a divider. Tall
+  dropdowns also stay fully on-screen instead of running off the bottom.
+- **Dropdowns actually unified now:** the native datalist arrow is properly hidden, so
+  Type / Alignment / Subtype / feature-name fields show a **single** chevron matching
+  the `<select>`s (previously a second native arrow appeared, especially on focus).
+- **Removed** the stray preview **collapse (◀)** toggle.
+
 ## Batch 37 — Forge quick-fixes + dropdown standardization (FP1)
 - **Removed the Multiattack action button** — it's already available as a chip inside a
   custom action.
