@@ -1,5 +1,5 @@
 "use strict";
-let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
 // ── User settings (Batch 52) ─ persisted on-device only (mf_settings). Feature toggles gate the
 // statblock colour-coding (B53) and click-to-roll dice (B54); defaults seed new adventures/combatants.
 const SETTINGS_KEY="mf_settings";
@@ -21,7 +21,7 @@ const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statb
 // and conditions/glossary terms. Stored in localStorage only (never JSONBin / never
 // the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
 // in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
-const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta";
+const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",RULE_KEY="mf_rules",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta";
 // Quota-aware writes: a failed setItem (device storage full) flips _storageFailed so the
 // upload flow can surface a single consolidated alert instead of silently dropping data.
 let _storageFailed=false;
@@ -47,6 +47,8 @@ async function loadSpells(){try{state.spells=await _loadIdbList("spells",SPELL_K
 function saveSpells(){idbSet("spells",state.spells);}
 async function loadConditions(){try{state.conditions=await _loadIdbList("conditions",COND_KEY);}catch(e){state.conditions=[];}}
 function saveConditions(){idbSet("conditions",state.conditions);}
+async function loadRules(){try{state.rules=await _loadIdbList("rules",RULE_KEY);}catch(e){state.rules=[];}}
+function saveRules(){idbSet("rules",state.rules);}
 function loadBooks(){try{state.books=JSON.parse(localStorage.getItem(BOOK_KEY))||{};}catch(e){state.books={};}}
 function saveBooks(){_store(BOOK_KEY,state.books);}
 function loadDisabled(){try{state.disabledLibs=JSON.parse(localStorage.getItem(DISLIB_KEY))||[];}catch(e){state.disabledLibs=[];}}
@@ -55,7 +57,7 @@ function loadLegGroups(){try{state.legendaryGroups=JSON.parse(localStorage.getIt
 function saveLegGroups(){_store(LEGGRP_KEY,state.legendaryGroups);}
 function loadRefMeta(){try{state.refMeta=JSON.parse(localStorage.getItem(REFMETA_KEY))||{};}catch(e){state.refMeta={};}}
 function saveRefMeta(){_store(REFMETA_KEY,state.refMeta);}
-async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions()]);reannotateBooks();reapplyLegGroups();}
+async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions(),loadRules()]);reannotateBooks();reapplyLegGroups();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
 function reannotateBooks(persist){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
@@ -77,16 +79,17 @@ function setLibEnabled(kind,source,on){const k=libKey(kind,source),i=state.disab
 function enPresets(){return state.presets.filter(m=>isLibEnabled("statblock",m._source||""));}
 function enSpells(){return state.spells.filter(s=>isLibEnabled("spell",s._source||""));}
 function enConditions(){return state.conditions.filter(c=>isLibEnabled("condition",c._source||""));}
+function enRules(){return state.rules.filter(r=>isLibEnabled("rule",r._source||""));}
 // statblock sources only (drives the From-chassis source picker)
 function presetSources(){const s=[];enPresets().forEach(m=>{const k=m._source||"Uploaded";const e=s.find(x=>x.name===k);if(e)e.count++;else s.push({name:k,count:1});});return s;}
 // every uploaded library across kinds, for the manage modal
 function presetLibraries(){const map={};
   const add=(arr,kind)=>arr.forEach(x=>{const n=x._source||"Uploaded",key=kind+LIBSEP+n,e=map[key]=map[key]||{name:n,kind,count:0,books:{},groups:{}};
     e.count++;if(x._book)e.books[x._book]=(e.books[x._book]||0)+1;if(x._group)e.groups[x._group]=(e.groups[x._group]||0)+1;});
-  add(state.presets,"statblock");add(state.spells,"spell");add(state.conditions,"condition");
+  add(state.presets,"statblock");add(state.spells,"spell");add(state.conditions,"condition");add(state.rules,"rule");
   const dom=o=>Object.keys(o).sort((a,b)=>o[b]-o[a])[0]||"";
   return Object.values(map).map(e=>({name:e.name,kind:e.kind,count:e.count,book:dom(e.books),group:dom(e.groups),enabled:isLibEnabled(e.kind,e.name)}));}
-const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions"};
+const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions",rule:"Rules"};
 
 // ── JSONBin cloud storage ─────────────────────────────────────────────────────
 // Personal-use master key (full CRUD). The previous value was a read-only ACCESS key,
@@ -1049,6 +1052,7 @@ function findSpell(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim(
 // A condition-immunity entry may carry a "(comment)" too (e.g. "charmed (with mind blank)"); ignore
 // the bracketed part when resolving the reference — same as findSpell.
 function findCondition(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
+function findRule(name){const n=String(name||"").trim().toLowerCase();return enRules().find(r=>(r.name||"").toLowerCase()===n);}
 function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
 // Split a "Name (comment)" token into [name, "(comment)"]; the bracket part is never part of the
@@ -1065,6 +1069,8 @@ function refContent(kind,name){
     const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
       .filter(Boolean).map(([k,v])=>`<b>${k}</b> ${esc(v)}`).join("<br>");
     return `<div class="refcard-h">${esc(s.name)}${srcBadge(s)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
+  if(kind==="rule"){const r=findRule(name);if(!r)return "";
+    return `<div class="refcard-h">${esc(r.name)}${srcBadge(r)}</div><div class="refcard-meta">Rule</div>${r.text?`<div class="refcard-body">${fmtBlock(r.text)}</div>`:""}`;}
   const c=findCondition(name);if(!c)return "";
   return `<div class="refcard-h">${esc(c.name)}${srcBadge(c)}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
 // Source-id badge (e.g. XPHB) with the full book title as a hover tooltip when known.
@@ -1079,7 +1085,7 @@ function bindRefpopRolls(p){
   p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));
   p.addEventListener("mouseleave",()=>hideRefpopFrom(+p.dataset.level||0));
   // Roll dice from inside a spell/condition popover (e.g. Lightning Bolt's 8d6) — B62.
-  const scaleOf=t=>t.dataset.scalebase?{base:t.dataset.scalebase,per:t.dataset.scaleper,lvl:+t.dataset.scalelvl}:null;
+  const scaleOf=t=>t.dataset.scalebase?{base:t.dataset.scalebase,per:t.dataset.scaleper,lvl:+t.dataset.scalelvl,cast:+t.dataset.scalecast||0}:null;
   p.addEventListener("click",e=>{if(e.target.closest(".reflink"))return; // a nested ref opens its own popover
     const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
     const meta={label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype};
@@ -1104,12 +1110,17 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   const html=refContent(kind,name);if(!html)return;
   hideRefpopNow(level); // drop this level + any deeper before re-showing
   const p=refpopAt(level);p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
+  const body=p.querySelector(".refcard-body");
+  if(body&&ruleFinder){ruleFindRoot(body);} // rule-finder: highlight rules/conditions inside the popover too (B66)
   // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
-  if(state.settings&&state.settings.colorCode&&state.settings.colorCode.on){const body=p.querySelector(".refcard-body");if(body){walkColorize(body,buildColorCats(false));
+  else if(body&&state.settings&&state.settings.colorCode&&state.settings.colorCode.on){walkColorize(body,buildColorCats(false));
     // Tag the spell's base damage dice with its upcast scaling so the roll popover can rescale it (B65).
+    // If the link sat next to "(level N version)" wording, carry N as the default cast level (B66).
     if(kind==="spell"){const sp=findSpell(name);if(sp&&sp._scale){const base=normRoll(sp._scale.base);
-      body.querySelectorAll(".cc-dice[data-roll]").forEach(d=>{if(normRoll(d.dataset.roll)===base){d.dataset.scalebase=sp._scale.base;d.dataset.scaleper=sp._scale.per;d.dataset.scalelvl=sp._scale.lvl;}});}}
-  }}
+      let cast=0;const sib=anchor&&anchor.nextSibling;const near=(sib&&sib.nodeType===3?sib.nodeValue:"")||"";
+      const cm=near.match(/\(level\s+(\d+)\s+version\)/i);if(cm)cast=+cm[1];
+      body.querySelectorAll(".cc-dice[data-roll]").forEach(d=>{if(normRoll(d.dataset.roll)===base){d.dataset.scalebase=sp._scale.base;d.dataset.scaleper=sp._scale.per;d.dataset.scalelvl=sp._scale.lvl;if(cast)d.dataset.scalecast=cast;}});}}
+  }
   // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible") — unwrap
   // any self-ref link to a plain coloured span (B64).
   const self=(name||"").toLowerCase();
@@ -1159,8 +1170,8 @@ function renderPreview(){
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase(),FN=ABIL_NAME[a];return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${FN}" data-abil="${a}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${FN}" data-abil="${a}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
-  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
-  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>{const ab=TOOL_ABIL[t]||"int",mv=mod(m[ab])+pb;return `<span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(t)}">${esc(t)}</span> ${sgn(mv)}`;}).join(", ")}</p>`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}" data-abil="${SKILLS[s[0]]}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
+  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>{const ab=TOOL_ABIL[t]||"int",mv=mod(m[ab])+pb;return `<span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(t)}" data-abil="${ab}">${esc(t)}</span> ${sgn(mv)}`;}).join(", ")}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
   const conds=(m.cimm||"").split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b));
@@ -1200,7 +1211,7 @@ function renderPreview(){
   (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
   $("#statblock").innerHTML=h;
   linkSpellFeatures($("#statblock"));
-  colorizeStatblock();
+  if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
 }
 // Re-link spell names mentioned in spellcasting-derived feature bodies (reactions, hidden bonus
 // actions, etc.). Scoped to each block's own [data-spells] list — so only genuine spells link, no
@@ -1333,8 +1344,42 @@ function colorizeStatblock(){
     root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
   }
 }
+// ── Rule finder (B66) ────────────────────────────────────────────────────────
+// A study mode: instead of colour-coding, every rules-glossary term + condition (matched by name,
+// case-sensitive to dodge common-word false positives) and every already-detected spell is highlighted
+// in amber; the rest of the text is dimmed. Hovering a highlight shows its reference popover. Rolls and
+// non-reference popovers are suppressed while active.
+let ruleFinder=false;
+function rfEscapeName(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function buildRuleCats(){
+  const cats=[];
+  const rules=enRules().map(r=>r.name).filter(n=>n&&/^[A-Za-z]/.test(n)&&!/[[\]]/.test(n));
+  const conds=enConditions().map(c=>c.name).filter(Boolean);
+  if(rules.length){const r=rules.slice().sort((a,b)=>b.length-a.length);
+    cats.push({re:new RegExp("\\b("+r.map(rfEscapeName).join("|")+")\\b","g"),cls:()=>"rf-hit",ref:m=>findRule(m[0])?{kind:"rule",name:m[0]}:null});}
+  if(conds.length){const c=conds.slice().sort((a,b)=>b.length-a.length);
+    cats.push({re:new RegExp("\\b("+c.map(rfEscapeName).join("|")+")\\b","g"),cls:()=>"rf-hit",ref:m=>findCondition(m[0])?{kind:"condition",name:m[0]}:null});}
+  return cats;
+}
+function ruleFindRoot(root){
+  if(!root)return;
+  // Spells: only the ones the app already linked (no raw name-matching → no false positives).
+  root.querySelectorAll(".cc-spell .reflink,.reflink[data-ref='spell']").forEach(s=>s.classList.add("rf-hit"));
+  const cats=buildRuleCats();if(!cats.length)return;
+  root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(c=>walkColorize(c,cats));
+}
+function toggleRuleFinder(){
+  ruleFinder=!ruleFinder;
+  document.body.classList.toggle("rule-finder",ruleFinder);
+  const btn=$("#ruleFinderBtn");if(btn){btn.classList.toggle("active",ruleFinder);btn.innerHTML=ruleFinder?RF_X_ICON:RF_Q_ICON;btn.title=ruleFinder?"Exit rule finder":"Rule finder";}
+  closePopover();hideRefpopNow(0);
+  if(ruleFinder&&!enRules().length)toast("No rules loaded — upload a rules file (variantrules.json) in Preset libraries to highlight rules. Conditions and spells still highlight.",4200);
+  renderPreview();
+}
+const RF_Q_ICON=`<svg viewBox="0 0 512 512" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM169.8 165.3c7.9-22.3 29.1-37.3 52.8-37.3l58.3 0c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24l0-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1l-58.3 0c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>`;
+const RF_X_ICON=`<svg viewBox="0 0 384 512" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>`;
 // ── B54/B55 click-to-roll ────────────────────────────────────────────────────
-function syncFeatureClasses(){document.body.classList.toggle("mf-clickroll",!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on));}
+function syncFeatureClasses(){document.body.classList.toggle("mf-clickroll",!ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on));}
 function d(n){return 1+Math.floor(Math.random()*n);}
 const DICE_HELP_URL="https://dice.clockworkmod.com/";
 const DICE_ICON=`<svg viewBox="0 0 640 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8l138.8 138.8c28.1 28.1 73.7 28.1 101.8 0l138.8-138.8c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zM96 200a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm104 176c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zm128-128c0 13.3-10.7 24-24 24s-24-10.7-24-24 10.7-24 24-24 24 10.7 24 24zm-24-80a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm288 32V480c0 35.3-28.7 64-64 64H192c-19.1 0-36.3-8.4-48-21.7 5.4 .9 10.5 1.7 16 1.7h288c53 0 96-43 96-96V224c0-5.5-.8-10.6-1.7-16 13.3 11.7 21.7 28.9 21.7 48z"/></svg>`;
@@ -1383,14 +1428,15 @@ function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.i
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
-// A natural-language phrase for a roll's notification, by type (B65):
-//  attack → "Arcane Burst: 23 to hit" · save → "Strength Saving Throw: 16" · check → "Arcana: 14"
+// A natural-language phrase for a roll's notification, by type (B65/B66):
+//  attack → "Arcane Burst: 23 to hit" · save → "Strength Saving Throw: 16"
+//  check  → "Strength Check: 12" (plain) / "Wisdom (Persuasion) Check: 14" (skill/tool)
 //  damage → "25 fire damage" (with label prefix when shown alone).
-function naturalRollText(label,type,total,dmgType){
+function naturalRollText(label,type,total,dmgType,abil){
   const L=label||"Roll";
   if(type==="attack")return `${L}: ${total} to hit`;
   if(type==="save")return `${L} Saving Throw: ${total}`;
-  if(type==="check")return `${L}: ${total}`;
+  if(type==="check"){const af=ABIL_NAME[abil];if(af)return (af===L?`${af} Check`:`${af} (${L}) Check`)+`: ${total}`;return `${L} Check: ${total}`;}
   if(type==="damage")return `${L}: ${total}${dmgType?" "+dmgType.toLowerCase():""} damage`;
   return `${L}: ${total}`;
 }
@@ -1409,7 +1455,7 @@ function doRoll(formula,opts,meta){
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
   rollLogOpen=true;renderRollLog(true);
-  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType),3200);
+  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200);
   return r;
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
@@ -1529,22 +1575,30 @@ function openCustomRoll(anchor){openRollPopover(anchor,{value:"",formula:"1d20",
 // For a scalable spell (o.scale), the adv/dis tag is replaced by an upcast level field + dropdown
 // that rescales the dice (B65).
 function openRollPopover(anchor,o){
-  const sc=o.scale;
-  const initVal=sc?scaledFormula(sc,sc.lvl):(o.value!=null?o.value:(o.formula||""));
+  const sc=o.scale;                       // spell-damage roller: level stepper
+  const isDmg=!sc&&o.type==="damage";     // damage roller: crit chip
+  const phLvl=sc?(sc.cast||sc.lvl):0;     // placeholder/default cast level
+  let critOn=false;
+  const initVal=sc?scaledFormula(sc,phLvl):(o.value!=null?o.value:(o.formula||""));
   let lead;
-  if(sc){const opts=[];for(let L=sc.lvl;L<=9;L++)opts.push(`<option value="${L}">${L}</option>`);
-    lead=`<div class="upcast" title="Cast at spell level"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" value="${sc.lvl}"><select class="up-sel">${opts.join("")}</select></div>`;}
+  if(sc)lead=`<div class="upcast" title="Cast at spell level — leave blank for level ${phLvl}"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" placeholder="${phLvl}"></div>`;
+  else if(isDmg)lead=`<button class="crit-chip" data-critchip title="Treat as a critical hit (double the dice)">CRIT</button>`;
   else lead=rollModeTagHTML();
   const html=`<div class="roll-pop">${lead}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
   const p=showPopover(anchor,html);
+  // When opened from inside a reference popover, sit above it and keep that popover alive while the
+  // roll popup is hovered (B66).
+  const rp=anchor.closest&&anchor.closest(".refpop");
+  if(rp){p.style.zIndex=(parseInt(rp.style.zIndex,10)||70)+5;clearTimeout(_refTimer);p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));}
   const inp=p.querySelector(".roll-edit-in");if(inp){inp.focus();inp.select();}
   const at=p.querySelector("[data-rollmode]");
   if(at)at.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();at.className="roll-mode"+(rollMode?" "+rollMode:"");at.textContent=rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL";if(document.getElementById("rollLog"))renderRollLog();});
-  if(sc){const upin=p.querySelector(".up-in"),upsel=p.querySelector(".up-sel");
-    const applyLvl=L=>{L=clamp(parseInt(L,10)||sc.lvl,sc.lvl,9);if(upin)upin.value=L;if(upsel)upsel.value=L;if(inp)inp.value=scaledFormula(sc,L);};
-    if(upin)upin.addEventListener("input",()=>applyLvl(upin.value));
-    if(upsel)upsel.addEventListener("change",()=>applyLvl(upsel.value));}
-  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom,abil:o.abil,dmgType:o.dmgType});};
+  const crit=p.querySelector("[data-critchip]");
+  if(crit)crit.addEventListener("click",e=>{e.stopPropagation();critOn=!critOn;crit.classList.toggle("on",critOn);});
+  if(sc){const upin=p.querySelector(".up-in");
+    const applyLvl=()=>{const L=clamp(parseInt(upin.value,10)||phLvl,sc.lvl,9);if(inp)inp.value=scaledFormula(sc,L);};
+    if(upin)upin.addEventListener("input",applyLvl);}
+  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:sc||isDmg?null:rollMode,crit:critOn},{label:o.label,type:o.type,custom:o.custom,abil:o.abil,dmgType:o.dmgType});};
   p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
   if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
   const help=p.querySelector("[data-rollhelp]");
@@ -1957,7 +2011,8 @@ function presetCardHTML(o){const m=o.m;return `<div class="card preset" data-pic
 </div>`;}
 bindCtrlIcons($("#libCtrlIcons"),libCtrl,LIB_DESC,renderLibrary);
 // True when the Forge holds content that differs from its saved Bestiary copy (or was never saved).
-function forgeUnsaved(){if(!monsterDirty())return false;const saved=state.lib.find(x=>x.id===M.id);return !saved||contentSig(M)!==contentSig(saved);}
+// An unedited chassis/preset load doesn't count — loading another over it loses no real work (B66).
+function forgeUnsaved(){if(!monsterDirty())return false;if(originOf(M).kind==="chassis")return false;const saved=state.lib.find(x=>x.id===M.id);return !saved||contentSig(M)!==contentSig(saved);}
 function startFreshMonster(){const go=()=>{loadMonster(blankMonster());switchView("forge");};
   if(forgeUnsaved())confirmModal("Start a new creature? The current Forge has unsaved changes that will be lost.",go);else go();}
 $("#libNew").addEventListener("click",startFreshMonster);
@@ -2122,6 +2177,7 @@ function refreshLibPools(){if(typeof buildSpellDatalist==="function")buildSpellD
 function removeLib(kind,name){
   if(kind==="spell"){state.spells=state.spells.filter(x=>x._source!==name);saveSpells();}
   else if(kind==="condition"){state.conditions=state.conditions.filter(x=>x._source!==name);saveConditions();}
+  else if(kind==="rule"){state.rules=state.rules.filter(x=>x._source!==name);saveRules();}
   else{state.presets=state.presets.filter(x=>x._source!==name);savePresets();}
   const i=state.disabledLibs.indexOf(libKey(kind,name));if(i>=0){state.disabledLibs.splice(i,1);saveDisabled();}
   presetSel.delete(libKey(kind,name));
@@ -2223,9 +2279,9 @@ function presetModal(){
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}”: what should happen to your current edits?</p>
     <div class="cc-choices">
-      <button class="btn ghost sm cc-choice" id="ccSaveNew">Save &amp; New<span class="sub">Save current edits to the Bestiary, then start the chassis</span></button>
-      <button class="btn ghost sm cc-choice" id="ccOverride">Replace<span class="sub">Discard current edits and load the chassis</span></button>
-      <button class="btn ghost sm cc-choice" id="ccBack">Back<span class="sub">Keep editing — don't import</span></button>
+      <button class="btn ghost sm cc-choice cc-go" id="ccSaveNew">Save &amp; New<span class="sub">Save current edits to the Bestiary, then start the chassis</span></button>
+      <button class="btn ghost sm cc-choice cc-go" id="ccOverride">Replace<span class="sub">Discard current edits and load the chassis</span></button>
+      <button class="btn ghost sm cc-choice cc-back" id="ccBack">Back<span class="sub">Keep editing — don't import</span></button>
     </div>`);
   $("#ccSaveNew").addEventListener("click",()=>{if(!saveCurrentToBestiary())return;closeModal();toast("Saved to Bestiary.");applyChassis(ch,false,false);});
   $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});
@@ -2265,18 +2321,19 @@ function renderAdvList(){
   if(!curAdv()){let sa="";try{sa=localStorage.getItem("mf_seladv")||"";}catch(e){}
     state.selAdv=(sa&&state.adv.some(a=>a.id===sa&&!a.archived))?sa:(active[0]?active[0].id:null);}
   if(state.selAdv){try{localStorage.setItem("mf_seladv",state.selAdv);}catch(e){}}
-  const aiIni=a=>`<span class="ai-ini">${esc(advInitials(a.name))}</span>`;
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
-  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(a.name)}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
+  // Em dash when the adventure is still untitled (the default name), else up to 3 initials (B66).
+  const aiIni=a=>`<span class="ai-ini">${a.name&&a.name.trim()?esc(advInitials(a.name)):"—"}</span>`;
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div></div>${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
   // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
   box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;state.selAdv=el.dataset.adv;renderAdvList();}));
   box.querySelectorAll(".ai").forEach(el=>el.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();const a=state.adv.find(x=>x.id===el.dataset.adv);if(a)openAdvCardMenu(el,a);}));
   box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
-  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=src.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=advDName(src)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
-  box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${src.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
+  box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${advDName(src)}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
   const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.removeProperty("width");}
   const lay=$(".adv-layout");if(lay){lay.classList.toggle("detail-open",!!curAdv());lay.classList.toggle("adv-mini",advMini());}
   renderAdvDetail();
@@ -2288,13 +2345,13 @@ function openAdvCardMenu(anchor,a){
     if(act==="color"){closePopover();openAdvColorMenu(anchor,a.id);return;}
     closePopover();
     if(act==="open"){state.selAdv=a.id;renderAdvList();}
-    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}
+    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}
     else if(act==="arch"){a.archived=!a.archived;saveAdv();renderAdvList();}
     else if(act==="del"){confirmModal(`Delete "${a.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);if(state.selAdv===a.id)state.selAdv=null;saveAdv();renderAdvList();});}
   }));
 }
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
-$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"New Adventure",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -2333,9 +2390,9 @@ function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2]
 function renderAdvDetail(){
   const a=curAdv(),d=$("#advDetail");
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
-  setCrumbs(["Adventures",a.name||"Untitled"]);
+  setCrumbs(["Adventures",advDName(a)]);
   const bud=baseBudget(partyOf(a,null));
-  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${advDot(a.id,a.color)}<h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2></div>
+  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${advDot(a.id,a.color)}<h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
@@ -2376,9 +2433,9 @@ function renderAdvDetail(){
     <div id="archWrap"></div>`;
   $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
-  const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
-  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${a.name}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
-  $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
+  const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
+  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${advDName(a)}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
   $("#advToggleUneven").addEventListener("click",()=>{a.uneven=!a.uneven;syncLevels(a);saveAdv();renderAdvDetail();});
   $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
@@ -2396,8 +2453,13 @@ function renderAdvDetail(){
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
-function blankEncounter(sceneId){return {id:uid(),name:"New Encounter",archived:false,notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
-function addScene(a){a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
+function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
+// Display name: an empty (untitled) item shows its default label everywhere except its own input,
+// which keeps the placeholder so there's nothing to clear (B66).
+function advDName(a){return (a&&a.name&&a.name.trim())||"New Adventure";}
+function sceneDName(s){return (s&&s.name&&s.name.trim())||"New Scene";}
+function encDName(e){return (e&&e.name&&e.name.trim())||"New Encounter";}
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
 function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
@@ -2460,7 +2522,7 @@ function sceneHTML(a,s,encs){
   const chev=`<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const head=`<div class="scene-h" data-scenedrop="${s.id}">
       <button class="scene-collapse${s.collapsed?" closed":""}" data-scenecollapse="${s.id}" title="${s.collapsed?"Expand":"Collapse"}" aria-label="${s.collapsed?"Expand":"Collapse"}">${chev}</button>
-      <input class="scene-name" value="${esc(s.name)}" data-scenename="${s.id}" placeholder="Scene name">
+      <input class="scene-name" value="${esc(s.name)}" data-scenename="${s.id}" placeholder="New Scene">
       <span class="scene-count">${encs.length} enc.</span>
       <div class="menu-wrap">
         <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
@@ -2544,7 +2606,7 @@ function encHTML(a,e){
   const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <input class="enm" value="${esc(e.name)}" data-encname="${e.id}">
+      <input class="enm" value="${esc(e.name)}" data-encname="${e.id}" placeholder="New Encounter">
       <span class="pill ${cls}">${label}</span>
       <div class="menu-wrap">
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
@@ -2869,17 +2931,23 @@ function doExportJSON(){
 }
 // Export/Import JSON now live in Settings only (B64); the #fileIn change handler is shared.
 $("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
+// Rule finder (B66): hover the (?) for an explainer, click to toggle the study mode.
+{const rb=$("#ruleFinderBtn");if(rb){
+  rb.addEventListener("mouseenter",()=>{if(!ruleFinder)tailPopover(rb,`<div class="cr-pop"><b>Rule finder</b><br>Highlights every rules-glossary term, condition, and detected spell on the statblock; hover one for its definition. Rolls are paused while it's on. Click to start; click again (✕) to exit.</div>`);});
+  rb.addEventListener("mouseleave",()=>{if(!ruleFinder)closePopover();});
+  rb.addEventListener("click",e=>{e.stopPropagation();closePopover();toggleRuleFinder();});
+}}
 // Click-to-roll: delegated on the statblock preview. Left-click = quick roll (attack NAME rolls
 // attack + damage); right-click = options popover.
 $("#statblock").addEventListener("click",e=>{
-  if(!state.settings.clickRoll.on)return;
+  if(!clickRollOn())return;
   const t=e.target.closest("[data-roll]");
   // Cmd/Ctrl-click a rollable → open the custom-roll popover pre-filled (same as right-click).
   if(t&&(e.metaKey||e.ctrlKey)){e.preventDefault();openRollMenu(t);return;}
   const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
   if(t)quickRoll(t);
 });
-$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
+$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();openRollMenu(t);});
 // Animated d20 that follows the pointer over anything rollable (a real CSS cursor can't be
 // animated). Only active while click-to-roll is on; the native cursor is hidden via .mf-clickroll.
 let _diceCur=null;
@@ -2887,7 +2955,7 @@ let _diceCur=null;
 const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48.7 125.8l53.2 31.9c7.8 4.7 17.8 2 22.2-5.9L201.6 12.1c3-5.4-.9-12.1-7.1-12.1c-1.6 0-3.2 .5-4.6 1.4L47.9 98.8c-9.6 6.6-9.2 20.9 .8 26.9zM16 171.7l0 123.5c0 8 10.4 11 14.7 4.4l60-92c5-7.6 2.6-17.8-5.2-22.5L40.2 158C29.6 151.6 16 159.3 16 171.7zM310.4 12.1l77.6 139.6c4.4 7.9 14.5 10.6 22.2 5.9l53.2-31.9c10-6 10.4-20.3 .8-26.9L322.1 1.4c-1.4-.9-3-1.4-4.6-1.4c-6.2 0-10.1 6.7-7.1 12.1zM496 171.7c0-12.4-13.6-20.1-24.2-13.7l-45.3 27.2c-7.8 4.7-10.1 14.9-5.2 22.5l60 92c4.3 6.7 14.7 3.6 14.7-4.4l0-123.5zm-49.3 246L286.1 436.6c-8.1 .9-14.1 7.8-14.1 15.9l0 52.8c0 3.7 3 6.8 6.8 6.8c.8 0 1.6-.1 2.4-.4l172.7-64c6.1-2.2 10.1-8 10.1-14.5c0-9.3-8.1-16.5-17.3-15.4zM233.2 512c3.7 0 6.8-3 6.8-6.8l0-52.6c0-8.1-6.1-14.9-14.1-15.9l-160.6-19c-9.2-1.1-17.3 6.1-17.3 15.4c0 6.5 4 12.3 10.1 14.5l172.7 64c.8 .3 1.6 .4 2.4 .4zM41.7 382.9l170.9 20.2c7.8 .9 13.4-7.5 9.5-14.3l-85.7-150c-5.9-10.4-20.7-10.8-27.3-.8L30.2 358.2c-6.5 9.9-.3 23.3 11.5 24.7zm439.6-24.8L402.9 238.1c-6.5-10-21.4-9.6-27.3 .8L290.2 388.5c-3.9 6.8 1.6 15.2 9.5 14.3l170.1-20c11.8-1.4 18-14.7 11.5-24.6zm-216.9 11l78.4-137.2c6.1-10.7-1.6-23.9-13.9-23.9l-145.7 0c-12.3 0-20 13.3-13.9 23.9l78.4 137.2c3.7 6.4 13 6.4 16.7 0zM174.4 176l163.2 0c12.2 0 19.9-13.1 14-23.8l-80-144c-2.8-5.1-8.2-8.2-14-8.2l-3.2 0c-5.8 0-11.2 3.2-14 8.2l-80 144c-5.9 10.7 1.8 23.8 14 23.8z"/></svg>`;
 function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
 let _ptrX=0,_ptrY=0,_cmdHeld=false;
-function clickRollOn(){return !!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
+function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
 // Show the spinning d20 over rollable elements, and anywhere while Cmd/Ctrl is held (since that arms
 // the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
 function updateDiceCursor(overRoll){
@@ -2956,7 +3024,7 @@ function renderSettings(){
       <div class="set-note">Damage rolls deal at least their maximum possible non-crit value (the sum of every die's top face plus modifiers). Crits still roll and keep the higher result.</div>
     </div>
     <div class="set-card">
-      <div class="set-head">Notes fields</div>
+      <div class="set-head set-head-row">Notes fields<span class="switch" title="Toggle all"><input type="checkbox" id="setNotesAll"><span class="sl"></span></span></div>
       ${SW("notes.adventure","Notes on new adventures")}
       ${SW("notes.scene","Notes on new scenes")}
       ${SW("notes.encounter","Notes on new encounters")}
@@ -2983,6 +3051,10 @@ function renderSettings(){
     settingPath(el.dataset.set,v);saveSettings();syncFeatureClasses();renderPreview();
     if(el.dataset.set==="colorCode.on"||el.dataset.set==="clickRoll.on")renderSettings();
   }));
+  // Notes master toggle (B66): reflects all/some/none and flips all three when clicked.
+  {const all=$("#setNotesAll"),n=state.settings.notes,vals=[n.adventure,n.scene,n.encounter],on=vals.filter(Boolean).length;
+    if(all){all.checked=on===3;all.indeterminate=on>0&&on<3;
+      all.addEventListener("change",()=>{const t=all.checked;n.adventure=n.scene=n.encounter=t;saveSettings();renderSettings();});}}
   $("#setExport").addEventListener("click",doExportJSON);
   $("#setImport").addEventListener("click",()=>$("#fileIn").click());
   $("#setResync").addEventListener("click",resyncCloud);
@@ -3015,6 +3087,7 @@ function ingestLibraries(loaded){
       else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
       else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
       else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
+      else if(kind==="rule"){const p=parseVariantRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
       else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
     }catch(err){summary.push(`${L.name}: failed to parse`);}
   });
@@ -3053,7 +3126,7 @@ async function reparseLibraries(){
   // Diagnostic (B65): flag libraries present in state but with no stored original — those can't be
   // re-parsed and need a one-time re-upload to pick up parser fixes (e.g. the upcasting fix).
   const rawNames=new Set(raw.map(L=>L.name));
-  const missing=[...new Set([...state.spells,...state.conditions,...state.presets].map(x=>x._source).filter(Boolean))].filter(n=>!rawNames.has(n));
+  const missing=[...new Set([...state.spells,...state.conditions,...state.rules,...state.presets].map(x=>x._source).filter(Boolean))].filter(n=>!rawNames.has(n));
   if(missing.length)alertStack("Some libraries weren't re-parsed",`These were uploaded before originals were stored, so re-parsing can't reach them: ${missing.join(", ")}. Re-upload each once (Preset libraries → Upload .json files) and they'll pick up the latest parser — including the spell upcasting fix.`);
 }
 // 5etools JSON uploader (Batch 28). One change handler ingests bestiary / spell /

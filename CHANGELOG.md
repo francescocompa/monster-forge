@@ -4,6 +4,27 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 66 — Rule finder, three roller chips, roll-notif checks & polish
+- **Rule finder:** a new **?** button in the header (hover for what it does, click to start). It dims the
+  statblock and highlights every rules-glossary term, condition, and already-linked spell in amber —
+  hover any highlight for its definition (popovers highlight too). Rolls and other popovers pause while
+  it's on; click the **✕** to exit. Upload a rules file (5etools `variantrules.json`) in Preset
+  libraries as a new "Rules" library; without one, conditions and spells still highlight and a toast
+  prompts you to add rules. Glossary/condition matching is case-sensitive and spells are limited to
+  detected references, so ordinary words ("light", "shield") don't falsely light up.
+- **Three roll-popover chips by context:** a d20 roll keeps the adv/dis chip; a **damage** roll shows a
+  **CRIT** chip (off by default) that doubles the dice when enabled; a **spell** damage roll shows a
+  level **stepper** (no dropdown) — blank means its base level, and if the spell was cast at a
+  "(level N version)" the field defaults to N.
+- **Check notifications** now name the ability: "Strength Check: 12", "Wisdom (Persuasion) Check: 14",
+  "Intelligence (Jeweler's Kit) Check: 7".
+- **Untitled items:** new adventures/scenes/encounters start blank with a placeholder (nothing to
+  clear); the collapsed adventure shows an em dash instead of initials until you name it.
+- **Settings:** a master toggle on the Notes-fields card flips all three at once.
+- Loading a chassis/preset with no edits no longer prompts "unsaved edits" when you load another; the
+  Save & New / Replace choices now read as primary vs. the quiet Back. The custom-roll popup now layers
+  above a reference popover when opened from inside one.
+
 ## Batch 65 — Spell upcast roller, grit rule, notes toggles & polish
 - **Spell upcast roller:** right- or Cmd/Ctrl-click a spell's damage dice in its popover to open a
   roller with a **spell-level field + dropdown** (in place of the adv/dis chip) that rescales the dice

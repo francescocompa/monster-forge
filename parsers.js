@@ -427,6 +427,17 @@ function parseConditionsJSON(json,fileName,booksMap){
   out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
   return Object.values(byName);
 }
+// Rules glossary (variantrule) → ref record, for the rule-finder (B66). De-duped by name, XPHB first.
+function parseVariantRulesJSON(json,fileName,booksMap){
+  const out=[];
+  ((json&&json.variantrule)||[]).forEach(v=>{if(!v||!v.name)return;
+    const rec={id:"vr_"+slug(fileName)+"_"+slug(v.name),name:v.name,category:v.ruleType||"",source:v.source||"",
+      text:entriesToText(v.entries||[]),_source:fileName,_kind:"rule"};
+    annotateBook(rec,v.source,booksMap);out.push(rec);});
+  const byName={},rank=s=>/^x/i.test(s||"")?2:1;
+  out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
+  return Object.values(byName);
+}
 // Identify an uploaded 5etools JSON by its top-level keys.
 function detectJsonKind(json){
   if(!json||typeof json!=="object")return null;
@@ -435,5 +446,6 @@ function detectJsonKind(json){
   if(json.monster)return "statblock";
   if(json.spell)return "spell";
   if(json.condition||json.disease||json.status)return "condition";
+  if(json.variantrule)return "rule";
   return null;
 }

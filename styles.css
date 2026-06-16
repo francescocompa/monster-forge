@@ -56,15 +56,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .crumbs .up{color:var(--dim);white-space:nowrap}
 .crumbs .sep{color:var(--faint)}
 .appbar .grow{flex:1}
-.appbar-gear{background:none;border:none;color:var(--dim);padding:4px;border-radius:6px;display:grid;place-items:center;flex:none;transition:color .12s,background .12s}
-.appbar-gear:hover{color:var(--txt);background:var(--panel2)}
+.appbar-gear,.appbar-help{background:none;border:none;color:var(--dim);padding:4px;border-radius:6px;display:grid;place-items:center;flex:none;transition:color .12s,background .12s;cursor:pointer}
+.appbar-gear:hover,.appbar-help:hover{color:var(--txt);background:var(--panel2)}
 .appbar-gear.active{color:var(--accent)}
-.appbar-gear svg{display:block}
+.appbar-help.active{color:var(--amber)}
+.appbar-gear svg,.appbar-help svg{display:block}
 /* Settings view */
 .settings-wrap{max-width:680px;margin:0 auto;padding:8px 4px 40px}
 .set-title{font-size:22px;font-weight:700;margin:6px 0 18px}
 .set-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
 .set-head{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);margin-bottom:10px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.set-head-row{align-items:center}
 .set-kbd{font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--faint)}
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;font-size:13.5px;color:var(--txt);cursor:pointer}
 .set-row.sub{padding:5px 0 5px 14px;font-size:13px;color:var(--dim);border-left:2px solid var(--line);margin-left:2px}
@@ -130,6 +132,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px 18px 84px;display:flex;flex-direction:column;gap:13px}
 .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
 .col-head h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+/* Untitled adventure: show the default label as a placeholder so there's nothing to clear (B66). */
+#advName:empty::before{content:attr(data-ph);color:var(--faint);font-weight:600}
 .ch-left{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
 .forge-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* CR-target guidance: a small ? next to the CR field opens a popover (was an always-on block). */
@@ -431,12 +435,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Roll-options popover */
 .roll-pop{display:flex;gap:6px;align-items:center;padding:8px}
 .roll-pop .roll-edit-in{flex:1;min-width:96px;font-size:12.5px;padding:6px 8px}
-/* Spell upcast control (B65): a level field + dropdown replacing the adv tag for scalable spells. */
+/* Spell upcast control (B65/B66): a level field with steppers, replacing the adv tag for scalable
+   spells; blank field = its placeholder (the base/cast level). */
 .upcast{flex:none;display:flex;align-items:center;gap:3px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:2px 4px}
 .upcast .up-lbl{font-size:9.5px;font-weight:700;letter-spacing:.04em;color:var(--faint)}
-.upcast .up-in{width:30px;padding:3px 2px;text-align:center;font-size:12px;border:none;background:transparent}
-.upcast .up-in::-webkit-inner-spin-button{opacity:.5}
-.upcast .up-sel{padding:3px 2px;font-size:11px;border:none;background:transparent;cursor:pointer}
+.upcast .up-in{width:34px;padding:3px 2px;text-align:center;font-size:12px;border:none;background:transparent}
+.upcast .up-in::-webkit-inner-spin-button{opacity:.6}
+/* Crit chip (B66): a damage-roll toggle (off by default) that doubles the dice when enabled. */
+.crit-chip{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:2px 7px;min-width:42px;text-align:center;background:var(--in);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
+.crit-chip.on{color:var(--amber);border-color:var(--amber);background:rgba(231,192,112,.16)}
 /* adv/dis cycle icon (B58): no chrome, larger, state shown by icon colour only. */
 /* Shared roll-mode tag (neutral / advantage / disadvantage) — roll popover + roll-log header (B60). */
 .roll-mode{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:2px 7px;min-width:42px;text-align:center;background:var(--in);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
@@ -767,6 +774,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cc-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .cc-choice{flex-direction:column;align-items:flex-start;height:auto;padding:10px 11px;gap:4px;text-align:left;font-weight:600}
 .cc-choice .sub{font-size:11px;color:var(--faint);font-weight:400;white-space:normal;line-height:1.35;display:block}
+/* The two committing actions read as primary; Back stays a quiet, dimmed escape (B66). */
+.cc-choice.cc-go{border-color:var(--accent);background:rgba(226,101,77,.10);color:var(--txt)}
+.cc-choice.cc-go:hover{border-color:var(--accent);background:rgba(226,101,77,.18)}
+.cc-choice.cc-back{opacity:.72}
+.cc-choice.cc-back:hover{opacity:1}
 @media (max-width:560px){.cc-choices{grid-template-columns:1fr}}
 /* Loading overlay (B65) — sits above any modal while a blocking task (re-parse) runs. */
 .loading-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
@@ -820,6 +832,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .kind-badge.k-statblock{color:var(--accent-soft);border-color:#6e3329}
 .kind-badge.k-spell{color:var(--info);border-color:#2f4d6e}
 .kind-badge.k-condition{color:var(--amber);border-color:#5c4d24}
+.kind-badge.k-rule{color:#9fb84a;border-color:#4d5a26}
 
 /* ── Preset libraries manager (Batch 28/29: filters, selection actions, refs) ── */
 .preset-mgr{display:flex;flex-direction:column;position:relative;max-height:74vh}
@@ -991,6 +1004,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sb .reflink.reflink-plain:hover{color:inherit}
 .refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;box-shadow:0 14px 36px rgba(0,0,0,.6);font-size:12.5px;line-height:1.5;display:none}
 .refpop.show{display:block}
+/* Rule finder (B66): dim the statblock + popover prose, make matched terms amber + underlined, and
+   show a crosshair. No overlay — scroll and navigation keep working. */
+body.rule-finder{cursor:crosshair}
+body.rule-finder button,body.rule-finder a,body.rule-finder input,body.rule-finder select,body.rule-finder textarea{cursor:auto}
+body.rule-finder .sb h2,body.rule-finder .sb h3,body.rule-finder .sb p,body.rule-finder .sb .blk,
+body.rule-finder .sb .va,body.rule-finder .sb .sb-note-b,body.rule-finder .sb .typeline,
+body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .refpop .refcard-body{color:var(--faint)}
+.rf-hit{color:var(--amber)!important;background:none!important;text-decoration:underline;text-decoration-color:var(--amber);text-underline-offset:2px;font-weight:600;cursor:help}
+.rf-hit:hover{color:#f0d489!important}
 .refcard-h{font-weight:700;color:var(--accent-soft);font-size:14px;margin-bottom:1px}
 .refcard-src{font-size:9px;font-weight:600;letter-spacing:.05em;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 5px;vertical-align:middle}
 .refcard-src[title]{cursor:help;border-style:dashed}
