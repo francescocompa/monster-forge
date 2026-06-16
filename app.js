@@ -1100,6 +1100,8 @@ function colorizeStatblock(){
   const cats=[];
   if(s.damage)cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
   if(s.dice){
+    // 2024 attack jargon "Melee/Ranged Attack Roll: +N" → rollable d20+N (whole phrase underlined).
+    cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
     cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-roll",roll:m=>normRoll(m[0]),rtype:"damage"});
     cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
     cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
@@ -1117,69 +1119,95 @@ function colorizeStatblock(){
     const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(node=>colorizeNode(node,cats));
   });
-  if(state.settings.clickRoll&&state.settings.clickRoll.on)root.querySelectorAll(".cc-roll[data-roll]").forEach(sp=>sp.title="Click to roll — right-click for options");
+  // Make an attack entry's NAME roll the attack (+ its damage) in one click.
+  root.querySelectorAll(".blk,.va").forEach(blk=>{
+    const atk=blk.querySelector('.cc-roll[data-rolltype="attack"]'),dmg=blk.querySelector('.cc-roll[data-rolltype="damage"]'),nm=blk.querySelector(".nm");
+    if(atk&&nm){nm.classList.add("roll-atkname");nm.dataset.roll=atk.dataset.roll;nm.dataset.rolltype="attack";if(dmg)nm.dataset.dmg=dmg.dataset.roll;}
+  });
+  if(state.settings.clickRoll&&state.settings.clickRoll.on){
+    root.querySelectorAll(".cc-roll[data-roll],.roll-num[data-roll]").forEach(sp=>sp.title="Click to roll · right-click for options");
+    root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
+  }
 }
-// ── B54 click-to-roll ───────────────────────────────────────────────────────
+// ── B54/B55 click-to-roll ────────────────────────────────────────────────────
 function syncFeatureClasses(){document.body.classList.toggle("mf-clickroll",!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on));}
 function d(n){return 1+Math.floor(Math.random()*n);}
-// Roll a formula like "1d20+7", "2d6+4", "3d6". mode adv/dis affects a lone d20; crit doubles dice.
+const DICE_HELP_URL="https://dice.clockworkmod.com/";
+const DICE_ICON=`<svg viewBox="0 0 640 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8l138.8 138.8c28.1 28.1 73.7 28.1 101.8 0l138.8-138.8c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zM96 200a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm104 176c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zm128-128c0 13.3-10.7 24-24 24s-24-10.7-24-24 10.7-24 24-24 24 10.7 24 24zm-24-80a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm288 32V480c0 35.3-28.7 64-64 64H192c-19.1 0-36.3-8.4-48-21.7 5.4 .9 10.5 1.7 16 1.7h288c53 0 96-43 96-96V224c0-5.5-.8-10.6-1.7-16 13.3 11.7 21.7 28.9 21.7 48z"/></svg>`;
+// Roll a dice-notation formula (clockworkmod-style): NdY, +/-N, kh/kl/dh/dl (keep/drop highest/lowest),
+// d% (percentile). opts.adv ("adv"/"dis") rerolls a lone d20; opts.crit doubles each die's count.
 function rollFormula(f,opts){
-  opts=opts||{};const mode=opts.mode||"normal",crit=!!opts.crit;
+  opts=opts||{};const adv=opts.adv,crit=!!opts.crit;
   const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"");
-  const terms=norm.match(/[+-]?(?:\d*d\d+|\d+)/gi)||[];
-  let total=0;const parts=[];
-  terms.forEach(t=>{
-    const neg=t[0]==="-";const body=t.replace(/^[+-]/,"");
-    if(/d/i.test(body)){
-      let[n,m]=body.toLowerCase().split("d");n=Number(n||1);m=Number(m);if(!m)return;
-      const count=crit?n*2:n;
-      if((mode==="adv"||mode==="dis")&&m===20&&count===1){
-        const a=d(20),b=d(20),keep=mode==="adv"?Math.max(a,b):Math.min(a,b);
-        total+=neg?-keep:keep;parts.push(`d20(${a},${b})→${keep}`);
-      }else{
-        const rolls=[];for(let i=0;i<count;i++)rolls.push(d(m));
-        const sum=rolls.reduce((x,y)=>x+y,0);total+=neg?-sum:sum;
-        parts.push(`${count}d${m}:[${rolls.join(",")}]`);
-      }
-    }else{const v=Number(body);if(!isNaN(v)){total+=neg?-v:v;parts.push((neg?"−":"+")+v);}}
-  });
-  return {total,parts:parts.join(" ")};
+  const re=/([+-]?)(\d*)d(%|\d+)((?:kh|kl|dh|dl)\d*)?|([+-]?\d+)/gi;
+  let total=0;const parts=[];let nat20=false,m;
+  while((m=re.exec(norm))){
+    if(m[5]!==undefined){const v=Number(m[5]);if(isNaN(v))continue;total+=v;parts.push((v<0?"−":"+")+Math.abs(v));continue;}
+    const neg=m[1]==="-";const n=Number(m[2]||1),sides=m[3]==="%"?100:Number(m[3]);if(!sides||!n)continue;
+    const kmod=m[4]||"";
+    if(adv&&sides===20&&n===1&&!kmod&&!crit){const a=d(20),b=d(20),keep=adv==="adv"?Math.max(a,b):Math.min(a,b);if(keep===20)nat20=true;total+=neg?-keep:keep;parts.push(`d20(${a},${b})→${keep}`);continue;}
+    const count=crit?n*2:n;const rolls=[];for(let i=0;i<count;i++)rolls.push(d(sides));
+    let kept=rolls;
+    if(kmod){const mt=kmod.slice(0,2).toLowerCase(),kn=Number(kmod.slice(2)||1),sorted=rolls.slice().sort((x,y)=>x-y);
+      kept=mt==="kh"?sorted.slice(-kn):mt==="kl"?sorted.slice(0,kn):mt==="dh"?sorted.slice(0,Math.max(0,count-kn)):sorted.slice(kn);}
+    const sum=kept.reduce((x,y)=>x+y,0);total+=neg?-sum:sum;
+    if(sides===20&&kept.indexOf(20)>=0)nat20=true;
+    parts.push(`${count}d${m[3]}${kmod}:[${rolls.join(",")}]`);
+  }
+  return {total,parts:parts.join(" "),nat20};
 }
-function rollLabelFor(span){const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");const base=nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";const t=span.dataset.rolltype;return base+(t==="attack"?" to hit":t==="damage"?" damage":"");}
+// Label = feature/ability name only (the roll type is shown as a separate tag).
+function rollLabelFor(span){if(span.dataset.rolllabel)return span.dataset.rolllabel;const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";}
+function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
 let rollLog=[],rollLogOpen=true;
-function doRoll(formula,opts,label){
+const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"};
+function doRoll(formula,opts,meta){
+  opts=opts||{};meta=meta||{};
   const r=rollFormula(formula,opts);
-  rollLog.unshift({label,total:r.total,parts:r.parts});if(rollLog.length>60)rollLog.length=60;
-  rollLogOpen=true;renderRollLog();toast(`${label}: ${r.total}`);
+  const crit=!!opts.crit||(meta.type==="attack"&&r.nat20); // attack nat-20 glows as a crit
+  rollLog.unshift({label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,source:meta.source||rollSource()});
+  if(rollLog.length>60)rollLog.length=60;
+  rollLogOpen=true;renderRollLog();toast(`${meta.label||"Roll"}: ${r.total}`);
+  return r;
 }
+function quickRoll(t){doRoll(t.dataset.roll,{},{label:rollLabelFor(t),type:t.dataset.rolltype});}
+// Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
+function rollAttackSequence(nameEl){
+  const label=nameEl.textContent.replace(/\.\s*$/,"").trim();
+  const atk=doRoll(nameEl.dataset.roll,{},{label,type:"attack"});
+  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage"});
+}
+function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
+function advIconHTML(adv){return `<span class="rl-adv ${adv}" title="${adv==="adv"?"Advantage":"Disadvantage"}">${DICE_ICON}</span>`;}
 function renderRollLog(){
   let el=document.getElementById("rollLog");
   if(!rollLog.length){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
-  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div><button class="rl-clear" id="rlClear" title="Clear rolls">${TRASH_SVG}</button></div>`
-    +(rollLogOpen?`<div class="rl-body">${rollLog.map(r=>`<div class="rl-row"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-lbl">${esc(r.label)}</span><span class="rl-parts">${esc(r.parts)}</span></span></div>`).join("")}</div>`:"");
+  const row=r=>`<div class="rl-row${r.crit?" crit":""}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}</span><span class="rl-parts">${r.adv?advIconHTML(r.adv):""}${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}</span></div>`;
+  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><button class="rl-help" id="rlHelp" title="Dice notation">?</button><div class="rl-grow"></div><button class="rl-clear" id="rlClear" title="Clear rolls">${TRASH_SVG}</button></div>`
+    +(rollLogOpen?`<div class="rl-body">${rollLog.map(row).join("")}</div>`:"");
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
   el.querySelector("#rlClear").addEventListener("click",()=>{rollLog=[];renderRollLog();});
+  el.querySelector("#rlHelp").addEventListener("click",e=>{e.stopPropagation();showPopover(e.currentTarget,diceHelpHTML());});
+  el.querySelectorAll("[data-rollsrc]").forEach(b=>{
+    b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
+    bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
+  });
 }
+// Roll-options popover (right-click): adv/dis cycle icon + editable clockworkmod formula + (?) + Roll.
 function openRollMenu(span){
-  const f=span.dataset.roll,rtype=span.dataset.rolltype,cr=state.settings.clickRoll;
-  const isD20=/(?:^|[^0-9])1?d20\b/i.test(f);
-  let html=`<button class="popitem" data-rm="normal">🎲 Roll ${esc(f)}</button>`;
-  if(cr.adv&&isD20)html+=`<button class="popitem" data-rm="adv">Advantage</button><button class="popitem" data-rm="dis">Disadvantage</button>`;
-  if(cr.crit&&rtype==="damage")html+=`<button class="popitem" data-rm="crit">Critical hit (×2 dice)</button>`;
-  if(cr.editFormula)html+=`<div class="roll-edit"><input type="text" class="roll-edit-in" value="${esc(f)}" autocomplete="off"><button class="btn primary sm" data-rm="edit" style="width:auto">Roll</button></div>`;
+  const f=span.dataset.roll,cr=state.settings.clickRoll;let advState=null;
+  const advBtn=cr.adv?`<button class="roll-advtog" data-advtog title="Cycle: normal → advantage → disadvantage">${DICE_ICON}</button>`:"";
+  const html=`<div class="roll-pop">${advBtn}<input type="text" class="roll-edit-in" value="${esc(f)}" autocomplete="off" spellcheck="false"><button class="roll-help" data-rollhelp title="Dice notation">?</button><button class="btn primary sm" data-rollgo style="width:auto">Roll</button></div>`;
   const p=showPopover(span,html);
-  const inp=p.querySelector(".roll-edit-in");
-  p.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const mode=b.dataset.rm;const lbl=rollLabelFor(span);
-    if(mode==="edit"){const v=(inp&&inp.value.trim())||f;closePopover();doRoll(v,{},lbl);return;}
-    closePopover();
-    if(mode==="adv")doRoll(f,{mode:"adv"},lbl+" (adv)");
-    else if(mode==="dis")doRoll(f,{mode:"dis"},lbl+" (dis)");
-    else if(mode==="crit")doRoll(f,{crit:true},lbl+" (crit)");
-    else doRoll(f,{},lbl);
-  }));
-  if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const v=inp.value.trim()||f;closePopover();doRoll(v,{},rollLabelFor(span));}});
+  const inp=p.querySelector(".roll-edit-in");if(inp){inp.focus();inp.select();}
+  const at=p.querySelector("[data-advtog]");
+  if(at)at.addEventListener("click",e=>{e.stopPropagation();advState=advState===null?"adv":advState==="adv"?"dis":null;at.classList.toggle("adv",advState==="adv");at.classList.toggle("dis",advState==="dis");});
+  const go=()=>{const v=(inp&&inp.value.trim())||f;closePopover();doRoll(v,{adv:advState},{label:rollLabelFor(span),type:span.dataset.rolltype});};
+  p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
+  if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
+  p.querySelector("[data-rollhelp]").addEventListener("click",e=>{e.stopPropagation();showPopover(e.currentTarget,diceHelpHTML());});
 }
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
 function notionSingle(m){
@@ -2393,9 +2421,14 @@ function doExportJSON(){
 $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
 $("#settingsBtn").addEventListener("click",()=>switchView("settings"));
-// Click-to-roll: delegated on the statblock preview. Left-click = quick roll; right-click = options.
-$("#statblock").addEventListener("click",e=>{const t=e.target.closest(".cc-roll[data-roll]");if(!t||!state.settings.clickRoll.on)return;doRoll(t.dataset.roll,{},rollLabelFor(t));});
-$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest(".cc-roll[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
+// Click-to-roll: delegated on the statblock preview. Left-click = quick roll (attack NAME rolls
+// attack + damage); right-click = options popover.
+$("#statblock").addEventListener("click",e=>{
+  if(!state.settings.clickRoll.on)return;
+  const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
+  const t=e.target.closest("[data-roll]");if(t)quickRoll(t);
+});
+$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
 // Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
 function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
 async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
