@@ -1015,7 +1015,7 @@ function findSpell(name){const n=String(name||"").trim().toLowerCase();return en
 function findCondition(name){const n=String(name||"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
 function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
-function linkSpells(str){return String(str||"").split(",").map(tok=>{const t=tok.trim();if(!t)return "";return findSpell(t)?refSpan("spell",t):esc(t);}).filter(Boolean).join(", ");}
+function linkSpells(str){return String(str||"").split(",").map(tok=>{const t=tok.trim();if(!t)return "";return `<span class="cc-spell">${findSpell(t)?refSpan("spell",t):esc(t)}</span>`;}).filter(Boolean).join(", ");}
 // Build the hover/click card body for a spell or condition.
 function refContent(kind,name){
   if(kind==="spell"){const s=findSpell(name);if(!s)return "";
@@ -1070,9 +1070,9 @@ function renderPreview(){
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   const rfm=v=>"1d20"+(v>=0?"+":"")+v;
-  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0),A=a.toUpperCase();return `<td class="h lbl" data-ab="${a}">${A} <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${A}">${sgn(md)}</td><td class="num roll-num" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${A}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0),A=a.toUpperCase();return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${A}">${sgn(md)}</td><td class="num roll-num" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${A}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
-  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`${s[0].replace(/_/g," ")} ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${s[0].replace(/_/g," ")}</span> ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
   if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${esc(m.tools.slice().sort((a,b)=>a.localeCompare(b)).join(", "))}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
@@ -1086,7 +1086,7 @@ function renderPreview(){
   h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
   h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
   const blk=e=>{
-    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
+    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk cc-skip"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
     const body=e.mode==="attack"?attackText(e):e.text;
     return `<p class="blk"><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
   };
@@ -1122,7 +1122,10 @@ function colorizeNode(node,cats){
 function colorizeStatblock(){
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
   const root=$("#statblock");if(!root)return;
-  if(s.abilityBlock)root.querySelectorAll(".ab td.lbl[data-ab]").forEach(td=>td.classList.add("cc-ab","cc-ab-"+td.dataset.ab));
+  if(s.abilityBlock){
+    root.querySelectorAll(".ab td.lbl[data-ab] .abc").forEach(c=>c.classList.add("cc-ab","cc-ab-"+c.parentElement.dataset.ab));
+    root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
+  }
   const cats=[];
   if(s.damage)cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
   if(s.dice){
@@ -1144,7 +1147,7 @@ function colorizeStatblock(){
   }
   if(!cats.length)return;
   const skip=".nm,.reflink,a,.cc-roll,.cc-dmg,.cc-cond,.cc-range,.cc-dc,.cc-save";
-  root.querySelectorAll(".blk,.va,.sb-note-b").forEach(container=>{
+  root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b").forEach(container=>{
     const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest(skip)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
     const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(node=>colorizeNode(node,cats));

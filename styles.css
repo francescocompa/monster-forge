@@ -358,13 +358,17 @@ select::-ms-expand{display:none}
 .sb .cc-cond{color:#b48ce6;font-weight:600}        /* conditions — violet, distinct from accent */
 .sb .cc-range{color:#4db6ac}
 /* Per-ability subtle rounded highlight behind the ability label (B55). */
-.sb .ab td.lbl.cc-ab{border-radius:5px;padding:2px 5px}
-.sb .ab td.lbl.cc-ab-str{background:rgba(210,96,74,.16)}.sb .ab td.lbl.cc-ab-str .sc{color:#e58a78}
-.sb .ab td.lbl.cc-ab-dex{background:rgba(95,168,115,.16)}.sb .ab td.lbl.cc-ab-dex .sc{color:#7fc090}
-.sb .ab td.lbl.cc-ab-con{background:rgba(217,164,65,.16)}.sb .ab td.lbl.cc-ab-con .sc{color:#e7c070}
-.sb .ab td.lbl.cc-ab-int{background:rgba(91,155,213,.16)}.sb .ab td.lbl.cc-ab-int .sc{color:#7fb6e6}
-.sb .ab td.lbl.cc-ab-wis{background:rgba(126,140,214,.16)}.sb .ab td.lbl.cc-ab-wis .sc{color:#97a3e0}
-.sb .ab td.lbl.cc-ab-cha{background:rgba(192,111,192,.16)}.sb .ab td.lbl.cc-ab-cha .sc{color:#d28cd2}
+/* Per-ability colour highlight — only behind the ability codename / skill name (B56). */
+.sb .cc-ab{border-radius:4px;padding:1px 5px;font-weight:600}
+.sb .ab td.lbl .abc{display:inline-block;color:var(--txt);font-weight:700}
+.sb .ab td.lbl .abc.cc-ab{min-width:30px;text-align:center;padding:1px 6px}
+.sb .cc-ab-str{background:rgba(210,96,74,.20)}
+.sb .cc-ab-dex{background:rgba(95,168,115,.20)}
+.sb .cc-ab-con{background:rgba(217,164,65,.20)}
+.sb .cc-ab-int{background:rgba(91,155,213,.20)}
+.sb .cc-ab-wis{background:rgba(126,140,214,.20)}
+.sb .cc-ab-cha{background:rgba(192,111,192,.20)}
+.sb .cc-spell,.sb .cc-spell .reflink{color:#cf7fce;font-weight:600}
 /* B54 click-to-roll affordance (only when the feature is on) */
 .mf-clickroll .sb [data-roll]{cursor:pointer;border-bottom:1px dashed rgba(231,192,112,.55);transition:filter .1s}
 .mf-clickroll .sb [data-roll]:hover{filter:brightness(1.2)}
@@ -427,9 +431,9 @@ select::-ms-expand{display:none}
 .sb .topstats p,.sb .meta p{margin:1.5px 0;color:var(--txt)}
 .sb .k{color:var(--accent-soft);font-weight:600}
 .sb table.ab{width:100%;border-collapse:collapse;margin:8px 0;table-layout:fixed}
-.sb table.ab td{padding:2px 4px;font-size:12px;text-align:left}
-.sb table.ab td.lbl{width:auto}
-.sb table.ab td.mh,.sb table.ab td.num{width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.sb table.ab td{padding:3px 4px;font-size:12px;text-align:left}
+.sb table.ab td.lbl{width:auto;padding-right:10px}
+.sb table.ab td.mh,.sb table.ab td.num{width:44px;text-align:center;font-variant-numeric:tabular-nums}
 .sb table.ab .h{color:var(--accent-soft);font-weight:700;font-size:10.5px;letter-spacing:.04em}
 .sb table.ab td.mh{color:var(--accent-soft);font-weight:700;font-size:10.5px}
 .sb table.ab .sc{color:var(--txt);font-weight:600}
