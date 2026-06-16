@@ -1121,6 +1121,7 @@ const ICO_FILTER=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" st
 const ICO_SORT=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 3v10M4.8 13 2.6 10.6M4.8 13l2.2-2.4M11.2 13V3M11.2 3 9 5.4M11.2 3l2.2 2.4"/></svg>`;
 const ICO_GROUP=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.4" y="2.4" width="4.4" height="4.4" rx="1"/><rect x="9.2" y="2.4" width="4.4" height="4.4" rx="1"/><rect x="2.4" y="9.2" width="4.4" height="4.4" rx="1"/><rect x="9.2" y="9.2" width="4.4" height="4.4" rx="1"/></svg>`;
 const CTRL_ICONS=[["search",ICO_SEARCH,"Search"],["filter",ICO_FILTER,"Filter"],["sort",ICO_SORT,"Sort"],["group",ICO_GROUP,"Group by"]];
+const TRASH_SVG=`<svg viewBox="0 0 448 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>`;
 function blankCtrl(){return {q:"",filters:{},sort:{key:"name",dir:1},group:null};}
 function ctrlIconButtonsHTML(){return CTRL_ICONS.map(([k,svg,t])=>`<button class="ctrl-ico" data-ico="${k}" title="${t}" aria-label="${t}">${svg}</button>`).join("");}
 function bindCtrlIcons(host,ctrl,desc,onChange){if(!host)return;host.innerHTML=ctrlIconButtonsHTML();host.addEventListener("click",e=>{const b=e.target.closest("[data-ico]");if(!b)return;e.stopPropagation();openCtrlMenu(b.dataset.ico,b,ctrl,desc,onChange);});}
@@ -1198,9 +1199,9 @@ function renderRecords(body,recs,ctrl,desc,opts){
   if(!ctrl.group){const shown=recs.slice(0,cap);body.innerHTML=`<div class="cards">${shown.map(opts.cardOf).join("")}</div>`+(recs.length>cap?capHint(recs.length,cap):"");return;}
   const p=desc.params.find(x=>x.key===ctrl.group),groups=new Map();
   const add=(k,lab,r)=>{if(!groups.has(k))groups.set(k,{label:lab,items:[]});groups.get(k).items.push(r);};
-  recs.forEach(r=>{if(p.multi){const vs=p.get(r)||[];if(!vs.length)add("∅","Untagged",r);else vs.forEach(v=>add(v,p.fmt?p.fmt(v):v,r));}else{const v=p.get(r);add(v??"∅",(v==null||v==="")?"—":(p.fmt?p.fmt(v):v),r);}});
+  recs.forEach(r=>{if(p.multi){const vs=p.get(r)||[];if(!vs.length)add("∅",p.emptyLabel||"Untagged",r);else vs.forEach(v=>add(v,p.fmt?p.fmt(v):v,r));}else{const v=p.get(r);add(v??"∅",(v==null||v==="")?"—":(p.fmt?p.fmt(v):v),r);}});
   const keys=[...groups.keys()].sort(groupSorter(ctrl.group));
-  let shown=0;body.innerHTML=keys.map(k=>{const g=groups.get(k),items=g.items.slice(0,Math.max(0,cap-shown));shown+=items.length;const col=opts.collapsible&&libCollapsed.has(k);return items.length?`<div class="grp${col?" collapsed":""}" data-grpkey="${esc(k)}"><div class="grp-head">${esc(g.label)}<span class="grp-n">${g.items.length}</span><button class="grp-collapse" title="${col?"Expand":"Collapse"}">▾</button></div><div class="cards">${items.map(opts.cardOf).join("")}</div></div>`:"";}).join("")+(shown<recs.length?capHint(recs.length,shown):"");
+  let shown=0;body.innerHTML=keys.map(k=>{const g=groups.get(k),items=g.items.slice(0,Math.max(0,cap-shown));shown+=items.length;const col=opts.collapsible&&libCollapsed.has(k);const lbl=p.groupLabelHTML?p.groupLabelHTML(k,g.label):esc(g.label);return items.length?`<div class="grp${col?" collapsed":""}" data-grpkey="${esc(k)}"><div class="grp-head">${lbl}<span class="grp-n">${g.items.length}</span><button class="grp-collapse" title="${col?"Expand":"Collapse"}">▾</button></div><div class="cards">${items.map(opts.cardOf).join("")}</div></div>`:"";}).join("")+(shown<recs.length?capHint(recs.length,shown):"");
   body.querySelectorAll(".grp-head").forEach(h=>{h.addEventListener("click",e=>{if(e.target.closest(".grp-collapse")||e.target.tagName==="BUTTON"){}const grp=h.closest(".grp");const k=grp.dataset.grpkey;libCollapsed.has(k)?libCollapsed.delete(k):libCollapsed.add(k);grp.classList.toggle("collapsed",libCollapsed.has(k));const btn=h.querySelector(".grp-collapse");if(btn)btn.title=libCollapsed.has(k)?"Expand":"Collapse";});});
 }
 function capHint(total,shown){return `<div class="hint" style="margin-top:10px">Showing first ${shown.toLocaleString()} of ${total.toLocaleString()} — refine your search.</div>`;}
@@ -1216,8 +1217,10 @@ const LIB_DESC={search:true,group:true,
     {key:"status",label:"Status",get:r=>r.status,values:()=>STATUS_ORDER.slice()},
     {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(state.lib.map(m=>m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0))},
     {key:"tag",label:"Tag",multi:true,get:r=>r.m.tags||[],values:()=>[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b))},
-    {key:"encounter",label:"Encounter",multi:true,get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].enc]:[],values:()=>usageVals("enc")},
-    {key:"adventure",label:"Adventure",multi:true,get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].adv]:[],values:()=>usageVals("adv")},
+    {key:"encounter",label:"Encounter",multi:true,emptyLabel:"Not in any encounter",get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].enc]:[],values:()=>usageVals("enc")},
+    {key:"adventure",label:"Adventure",multi:true,emptyLabel:"Not in any adventure",get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].adv]:[],values:()=>usageVals("adv"),
+      // Group headers carry the adventure's FP4 identity colour dot.
+      groupLabelHTML:(k,label)=>{if(k==="∅")return esc(label);const a=(state.adv||[]).find(x=>(x.name||"Untitled adventure")===k);return (a?advDotStatic(a.color):"")+esc(label);}},
   ],
   sortKeys:[
     {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
@@ -1300,7 +1303,7 @@ function renderLibBatchBar(){
   let bar=document.getElementById("libBatchBar");
   if(!libSel.size){if(bar)bar.remove();return;}
   if(!bar){bar=document.createElement("div");bar.id="libBatchBar";bar.className="batch-bar";document.body.appendChild(bar);}
-  bar.innerHTML=`<span class="bb-n">${libSel.size} selected</span><button class="btn sm" id="bbStatus">Set status ▾</button><button class="btn ghost sm" id="bbClear">Clear</button>`;
+  bar.innerHTML=`<span class="bb-n">${libSel.size} selected</span><button class="btn primary sm" id="bbStatus">Set status ▾</button><button class="btn ghost sm" id="bbClear">Clear</button>`;
   bar.querySelector("#bbStatus").addEventListener("click",e=>{e.stopPropagation();const opts=STATUSES.filter(s=>s!=="Preset");const p=showPopover(e.currentTarget,opts.map(s=>`<button class="popitem" data-s="${s}">${s}</button>`).join(""));p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();batchSetStatus(b.dataset.s);}));});
   bar.querySelector("#bbClear").addEventListener("click",()=>clearLibSel());
 }
@@ -1626,7 +1629,7 @@ function presetModal(){
   else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
   let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
-  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">🗑</button></div>`;
+  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">${TRASH_SVG}</button></div>`;
   h+=`<div class="lib-scroll">`;
   if(!libs.length)h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   else if(!recs.length)h+=`<div class="empty-state" style="padding:26px">No libraries match these filters.</div>`;
@@ -1682,6 +1685,9 @@ const ADV_COLORS=["#e2654d","#e08b3f","#d9a941","#ccc24a","#9fb84a","#6aa84f","#
 // Clickable color dot before an adventure name (sidebar card + open title). Reusable wherever an
 // adventure is shown (e.g. future bestiary grouping by adventure).
 function advDot(advId,color){return `<button class="adv-dot${color?"":" none"}" data-advcolor="${advId}"${color?` style="background:${color};border-color:${color}"`:""} title="Adventure color"></button>`;}
+// Non-interactive colour dot for showing an adventure's identity colour where clicking shouldn't open
+// the colour picker (e.g. a bestiary group header grouped by adventure). Reuses the .adv-dot visual.
+function advDotStatic(color){return `<span class="adv-dot static${color?"":" none"}"${color?` style="background:${color};border-color:${color}"`:""}></span>`;}
 function openAdvColorMenu(anchor,advId){
   const a=state.adv.find(x=>x.id===advId);if(!a)return;
   const sw=c=>`<button class="adv-sw${a.color===c?" on":""}" data-sw="${c}" style="background:${c}" title="${c}"></button>`;
@@ -1906,7 +1912,7 @@ function encHTML(a,e){
       <div class="read">${encReadHTML(a,e,bud,spent)}</div>
     </div>
     <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
-    <label class="f encnotes">Battlefield notes<textarea data-encnotes="${e.id}" placeholder="Terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
+    <label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>

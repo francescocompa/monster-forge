@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 50 — Bestiary adventure grouping + library polish + fixes
+- **Bestiary grouping by adventure** now shows each adventure's **identity colour
+  dot** (FP4) in the group header; the no-adventure bucket reads **Not in any
+  adventure** (and **Not in any encounter** when grouped by encounter). New
+  non-interactive `advDotStatic` + generic `groupLabelHTML`/`emptyLabel` hooks on
+  the control descriptor.
+- **Preset-library manager:** the remove control is now a proper **red trash-bin
+  SVG** (was a 🗑 emoji).
+- **Batch-select bar (Bestiary):** the **Set status** button no longer stretches
+  full-width or shows the grey browser default — it's a content-width accent
+  button (base `.btn` never set a background, so the un-modified button fell back
+  to the UA button-face; `.batch-bar .btn` now also pins `width:auto`).
+- **Combatant minion tag** (the read-only tag on a loaded minion statblock, not the
+  quick-combatant toggle) is now **right-aligned** in the statblock row.
+- **Encounter battlefield notes:** dropped the "Battlefield notes" label; the cue
+  now lives in the textarea placeholder.
+
 ## Batch 49 — Encounter scenes + minion chip
 - **Encounter scenes:** an adventure can now group its encounters into named,
   collapsible **scene** containers (`a.scenes[]` + `enc.sceneId`). A **＋ Scene**
