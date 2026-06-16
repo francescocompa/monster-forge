@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 71 — Refactor phase 1: split app.js by concern
+- `app.js` (3,334 lines) split into six classic scripts loaded in order — `core.js`, `forge.js`,
+  `engine.js`, `bestiary.js`, `adventures.js`, `app.js` — still one shared global scope, still no build.
+  Pure code-move: the concatenation is byte-identical to the old `app.js`, so behaviour is unchanged.
+- The jsdom smoke test earned its keep immediately: it caught the one cross-script hazard (the
+  `#forgePaste` handler referenced `openImportModal`, which now lives in a later-loading file — fixed by
+  deferring the lookup to click time). The tooling's file lists were updated to match.
+- No user-facing changes.
+
 ## Batch 70 — Dev tooling (no-build safety net)
 - Added a dev-only tooling layer — the shipped site stays no-build. `npm run verify` runs `node --check`,
   ESLint, and a jsdom smoke test. See `DEVELOPMENT.md`.

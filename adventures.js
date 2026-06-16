@@ -1,0 +1,693 @@
+// Monster Forge — ADVENTURES: adventures, scenes, encounters, combatants, and the encounter budget.
+// Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
+// core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
+
+function renderAdvList(){
+  const box=$("#advItems");
+  const active=state.adv.filter(a=>!a.archived),arch=state.adv.filter(a=>a.archived);
+  // Always open an adventure when entering the tab: restore the last-opened one, else the most recent.
+  if(!curAdv()){let sa="";try{sa=localStorage.getItem("mf_seladv")||"";}catch(e){}
+    state.selAdv=(sa&&state.adv.some(a=>a.id===sa&&!a.archived))?sa:(active[0]?active[0].id:null);}
+  if(state.selAdv){try{localStorage.setItem("mf_seladv",state.selAdv);}catch(e){}}
+  // Em dash when the adventure is still untitled (the default name), else up to 3 initials (B66).
+  const aiIni=a=>`<span class="ai-ini">${a.name&&a.name.trim()?esc(advInitials(a.name)):"—"}</span>`;
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div></div>${aiMenu(a)}</div>`).join("");
+  box.innerHTML=html;
+  // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
+  // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;state.selAdv=el.dataset.adv;renderAdvList();}));
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();const a=state.adv.find(x=>x.id===el.dataset.adv);if(a)openAdvCardMenu(el,a);}));
+  box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
+  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=advDName(src)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${advDName(src)}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
+  const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.removeProperty("width");}
+  const lay=$(".adv-layout");if(lay){lay.classList.toggle("detail-open",!!curAdv());lay.classList.toggle("adv-mini",advMini());}
+  renderAdvDetail();
+}
+// Collapsed adventures column: compact menu reachable by right-click on a colour card (B63).
+function openAdvCardMenu(anchor,a){
+  const p=showPopover(anchor,`<button class="popitem" data-acm="open">Open</button><button class="popitem" data-acm="color">Colour</button><button class="popitem" data-acm="dup">Duplicate</button><button class="popitem" data-acm="arch">${a.archived?"Unarchive":"Archive"}</button><div class="popsep"></div><button class="popitem danger" data-acm="del">Delete</button>`);
+  p.querySelectorAll("[data-acm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const act=b.dataset.acm;
+    if(act==="color"){closePopover();openAdvColorMenu(anchor,a.id);return;}
+    closePopover();
+    if(act==="open"){state.selAdv=a.id;renderAdvList();}
+    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}
+    else if(act==="arch"){a.archived=!a.archived;saveAdv();renderAdvList();}
+    else if(act==="del"){confirmModal(`Delete "${a.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);if(state.selAdv===a.id)state.selAdv=null;saveAdv();renderAdvList();});}
+  }));
+}
+function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
+$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
+function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
+function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
+function baseBudget(p){const lv=partyLevels(p);return [0,1,2].map(di=>lv.reduce((s,l)=>s+BUDGET[clamp(l,1,20)][di],0));}
+function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
+function addMonsterCombatant(enc,monsterId){
+  const cid=uid();
+  enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:state.settings.defaults.faction});
+  const m=state.lib.find(x=>x.id===monsterId);
+  if(m&&m.lair&&m.lair.on&&(m.lair.items||[]).some(it=>it.name||it.text)){
+    const lines=[];
+    if(m.lair.intro)lines.push(applyRefsFor(m,m.lair.intro));
+    m.lair.items.filter(it=>it.name||it.text).forEach(it=>lines.push(`${it.name?it.name+": ":""}${applyRefsFor(m,it.text)}`));
+    enc.combatants.push({type:"event",id:uid(),name:`${m.name} — Lair Action`,init:"20",text:lines.join("\n"),lairFor:cid});
+  }
+  return cid;
+}
+function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
+// Per-creature XP for the budget. MCDM minions use the special low minion-XP table (so a horde
+// counts fairly); everyone else uses standard CR XP. `count` multiplies either way.
+function combatIsMinion(c){return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):c.type==="quick"?!!c.minion:false;}
+function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
+function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
+function encBudget(adv,e){
+  const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
+  // Ally creatures raise the party's budget ≈ a PC of level round(CR). A minion ally contributes
+  // proportionally less (scaled by minion-XP ÷ standard-XP), matching the enemy-side minion math.
+  e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);
+    const f=combatIsMinion(c)?((MINION_XP[cr]||0)/(CR_XP[cr]||1)):1;
+    for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1)*f;}}});
+  return base.map((b,i)=>Math.round(b+add[i]));
+}
+function encSpent(e){return e.combatants.filter(c=>c.faction==="Enemy"&&c.type!=="event").reduce((s,c)=>s+combatXP(c),0);}
+function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2])return["over","Over High"];if(spent>=bud[2]*0.92)return["high","High"];if(spent>=bud[1]*0.92)return["moderate","Moderate"];if(spent>=bud[0]*0.85)return["low","Low"];return["trivial","Trivial"];}
+
+function renderAdvDetail(){
+  const a=curAdv(),d=$("#advDetail");
+  if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  setCrumbs(["Adventures",advDName(a)]);
+  const bud=baseBudget(partyOf(a,null));
+  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${advDot(a.id,a.color)}<h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
+    <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
+    <div class="menu" id="menu-adv-opts">
+      <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
+      <button id="advToggleNotes">${a.notesOn?"Remove notes":"Add notes"}</button>
+      <div class="sep"></div>
+      <button id="advDuplicate">Duplicate adventure</button>
+      <button id="advArchive">${a.archived?"Unarchive":"Archive"} adventure</button>
+      <div class="sep"></div>
+      <button class="danger" id="delAdv">Delete adventure</button>
+    </div></div></div>
+    <div class="party-bar">
+      <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
+      <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
+      <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
+      <div style="flex-basis:100%">
+        <div class="adv-bud-chips">
+          <div class="bud-chip low"><span class="bc-lbl">Low</span><span class="bc-val">${bud[0].toLocaleString()}</span></div>
+          <div class="bud-chip mod"><span class="bc-lbl">Moderate</span><span class="bc-val">${bud[1].toLocaleString()}</span></div>
+          <div class="bud-chip high"><span class="bc-lbl">High</span><span class="bc-val">${bud[2].toLocaleString()}</span></div>
+        </div>
+      </div>
+    </div>
+    ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
+    <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
+    <div class="ctrl-chips" id="encChips"></div>
+    <div id="encList"></div>
+    <div class="fab-split menu-wrap" id="encFab">
+      <button class="btn primary sm" id="addEnc" style="width:auto">＋ Encounter</button>
+      <button class="kebab split-caret" data-menu="encfab" title="More encounter actions" aria-label="More encounter actions">▾</button>
+      <div class="menu" id="menu-encfab">
+        <button id="encAddScene">＋ Scene</button>
+        <button id="encImport">⤵ Import from another adventure</button>
+        <div class="sep"></div>
+        <button id="encArchiveAll">Archive all encounters</button>
+        <button class="danger" id="encClearAll">Clear all encounters</button>
+      </div>
+    </div>
+    <div id="archWrap"></div>`;
+  $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
+  d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
+  const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
+  $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${advDName(a)}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
+  $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
+  $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
+  $("#advToggleUneven").addEventListener("click",()=>{a.uneven=!a.uneven;syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
+  wrapStepper($("#pSize"),1,1);wrapStepper($("#pLevel"),1,1);
+  $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
+  $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
+  {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}
+  $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
+  $("#encAddScene").addEventListener("click",()=>addScene(a));
+  $("#encImport").addEventListener("click",()=>openImportEnc(a));
+  $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
+  $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
+  bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
+  renderPCgrid(a);renderEncList(a);
+}
+// Whether a notes field is added to a newly-created item, per Settings (B65).
+function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
+function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
+// Display name: an empty (untitled) item shows its default label everywhere except its own input,
+// which keeps the placeholder so there's nothing to clear (B66).
+function advDName(a){return (a&&a.name&&a.name.trim())||"New Adventure";}
+function sceneDName(s){return (s&&s.name&&s.name.trim())||"New Scene";}
+function encDName(e){return (e&&e.name&&e.name.trim())||"New Encounter";}
+function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
+function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
+
+// The encounter most recently edited (focused) gets a highlight. Editing = focusing any field inside
+// it (delegated) or adding a combatant; we update classes in place so no re-render is needed.
+function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector("#advDetail .enc.focused"))return;a._focusEnc=encId;
+  $$("#advDetail .enc.focused").forEach(x=>x.classList.remove("focused"));
+  const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
+// ---- Encounter list controls (search / filter / sort) — manual order is the default (no sort). ----
+let encCtrl={q:"",filters:{},sort:{key:"manual",dir:1},group:null};
+const ENC_DESC={search:true,icons:["search","sort"],defaultSortKey:"manual",params:[],
+  sortKeys:[{key:"manual",label:"Manual order"},{key:"alpha",label:"Name"},{key:"diff",label:"Difficulty"}]};
+function encFilterActive(){return !!(encCtrl.q||Object.keys(encCtrl.filters).some(k=>(encCtrl.filters[k]||[]).length)||encCtrl.sort.key!=="manual");}
+// Apply search/filter/sort to a list of encounters. Manual sort preserves the array (drag) order.
+function encApply(a,list){
+  const q=(encCtrl.q||"").toLowerCase().trim();
+  let recs=list.filter(e=>{
+    if(q&&!(e.name||"").toLowerCase().includes(q))return false;
+    for(const p of ENC_DESC.params){const sel=encCtrl.filters[p.key]||[];if(!sel.length)continue;const vs=p.get(e,a)||[];if(!vs.some(v=>sel.includes(v)))return false;}
+    return true;});
+  const k=encCtrl.sort.key,dir=encCtrl.sort.dir;
+  if(k==="alpha")recs=recs.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")*dir);
+  else if(k==="diff"){const rat=e=>encSpent(e)/(encBudget(a,e)[2]||1);recs=recs.slice().sort((x,y)=>(rat(x)-rat(y))*dir);}
+  return recs;
+}
+function sceneArchived(a,sceneId){const s=sceneOf(a,sceneId);return !!(s&&s.archived);}
+// An encounter is treated as archived if it's individually archived OR sits in an archived scene.
+function encArchived(a,e){return !!(e.archived||sceneArchived(a,e.sceneId));}
+// Deep-copy an encounter into adventure `a` under `sceneId` (new ids for the encounter + its combatants;
+// monsterId still points at the shared global bestiary, so statblock links survive the copy).
+function cloneEncInto(a,srcEnc,sceneId){const e=JSON.parse(JSON.stringify(srcEnc));e.id=uid();e.sceneId=sceneId||null;e.archived=false;e.combatants=(e.combatants||[]).map(c=>Object.assign({},c,{id:uid()}));a.encounters.push(e);return e;}
+function openImportEnc(a){
+  const others=state.adv.filter(x=>x.id!==a.id);
+  if(!others.length){toast("No other adventures to import from.");return;}
+  const body=others.map(o=>{
+    const scenes=o.scenes||[];
+    const sceneRows=scenes.map(s=>{const n=o.encounters.filter(e=>e.sceneId===s.id).length;return `<label class="imp-row"><input type="checkbox" data-imp="scene:${o.id}:${s.id}"><span class="imp-k">Scene</span><span class="imp-nm">${esc(s.name)}</span><span class="imp-n">${n} enc.</span></label>`;}).join("");
+    const loose=o.encounters.filter(e=>!scenes.some(s=>s.id===e.sceneId));
+    const encRows=loose.map(e=>`<label class="imp-row"><input type="checkbox" data-imp="enc:${o.id}:${e.id}"><span class="imp-k enc">Enc</span><span class="imp-nm">${esc(e.name)}</span></label>`).join("");
+    if(!sceneRows&&!encRows)return "";
+    return `<div class="imp-adv"><div class="imp-adv-h">${advDotStatic(o.color)}${esc(o.name)}</div>${sceneRows}${encRows}</div>`;
+  }).join("")||`<div class="empty-state">Other adventures have no encounters.</div>`;
+  openModalRaw(`<h3>Import from another adventure</h3><div class="hint" style="margin:-4px 0 12px">Checked scenes (with their encounters) and encounters are copied into "${esc(a.name)}".</div><div class="imp-scroll">${body}</div><div class="lib-foot"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impCopy" style="width:auto">Copy selected</button></div>`);
+  $("#impCancel").addEventListener("click",closeModal);
+  $("#impCopy").addEventListener("click",()=>{
+    const checked=[...$("#modal").querySelectorAll("[data-imp]:checked")];
+    if(!checked.length){closeModal();return;}
+    let nEnc=0,nSc=0;
+    checked.forEach(cb=>{const[kind,advId,id]=cb.dataset.imp.split(":");const src=state.adv.find(x=>x.id===advId);if(!src)return;
+      if(kind==="scene"){const s=(src.scenes||[]).find(x=>x.id===id);if(!s)return;const ns={id:uid(),name:s.name,collapsed:false,notes:s.notes||"",archived:false};a.scenes.push(ns);nSc++;src.encounters.filter(e=>e.sceneId===id).forEach(e=>{cloneEncInto(a,e,ns.id);nEnc++;});}
+      else{const e=src.encounters.find(x=>x.id===id);if(e){cloneEncInto(a,e,null);nEnc++;}}});
+    saveAdv();closeModal();renderAdvDetail();toast(`Imported ${nEnc} encounter${nEnc===1?"":"s"}${nSc?` · ${nSc} scene${nSc===1?"":"s"}`:""}.`);
+  });
+}
+function sceneOf(a,id){return id?(a.scenes||[]).find(s=>s.id===id):null;}
+// A scene is a named collapsible container grouping some of an adventure's encounters. Encounters keep
+// their order in the flat a.encounters array; we render scene-by-scene (filtering by sceneId), then a
+// trailing "Ungrouped" bucket for encounters with no scene (or pointing at a deleted one).
+function sceneHTML(a,s,encs){
+  const chev=`<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const head=`<div class="scene-h" data-scenedrop="${s.id}">
+      <button class="scene-collapse${s.collapsed?" closed":""}" data-scenecollapse="${s.id}" title="${s.collapsed?"Expand":"Collapse"}" aria-label="${s.collapsed?"Expand":"Collapse"}">${chev}</button>
+      <input class="scene-name" value="${esc(s.name)}" data-scenename="${s.id}" placeholder="New Scene">
+      <span class="scene-count">${encs.length} enc.</span>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
+        <div class="menu" id="menu-scene-${s.id}">
+          <button data-scenenotes-tog="${s.id}">${s.notesOn?"Remove notes":"Add notes"}</button>
+          <button data-scenearch="${s.id}">${s.archived?"Unarchive scene":"Archive scene"}</button>
+          <div class="sep"></div>
+          <button class="danger" data-scenedel="${s.id}">Delete scene</button>
+        </div>
+      </div>
+    </div>`;
+  if(s.collapsed)return `<div class="scene${s.archived?" arch":""} collapsed" data-scene="${s.id}" draggable="true">${head}</div>`;
+  const body=`<div class="scene-body">
+      ${s.notesOn?`<label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>`:""}
+      <div class="scene-droparea" data-scenedrop="${s.id}">
+        ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
+        ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
+      </div>
+    </div>`;
+  return `<div class="scene${s.archived?" arch":""}" data-scene="${s.id}" draggable="true">${head}${body}</div>`;
+}
+function renderEncList(a){
+  const box=$("#encList");if(!box)return;
+  if(!box._focusBound){box._focusBound=true;box.addEventListener("focusin",e=>{const enc=e.target.closest(".enc[data-enc]");if(enc)setEncFocus(a,enc.dataset.enc);});}
+  renderCtrlChips($("#encChips"),encCtrl,ENC_DESC,()=>renderEncList(a));
+  const scenes=a.scenes||[];
+  const activeScenes=scenes.filter(s=>!s.archived),archScenes=scenes.filter(s=>s.archived);
+  const visible=encApply(a,a.encounters);                       // filtered + sorted view
+  const inScene=sid=>visible.filter(e=>!e.archived&&e.sceneId===sid);
+  const sceneAdd=`<button class="addbtn" id="addScene" style="width:100%;margin-top:2px">＋ Scene</button>`;
+  if(activeScenes.length){
+    const ungrouped=visible.filter(e=>!e.archived&&!activeScenes.some(s=>s.id===e.sceneId)&&!sceneArchived(a,e.sceneId));
+    box.innerHTML=activeScenes.map(s=>sceneHTML(a,s,inScene(s.id))).join("")
+      +sceneAdd
+      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:""}</div>`;
+  }else{
+    const active=visible.filter(e=>!e.archived);
+    box.innerHTML=(active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">${encFilterActive()?"No encounters match these controls.":"No active encounters."}</div>`)+sceneAdd;
+  }
+  const aw=$("#archWrap");
+  const archEncs=a.encounters.filter(e=>e.archived&&!sceneArchived(a,e.sceneId));
+  const archTotal=archScenes.length+archEncs.length; // top-level archived blocks (scenes + loose encounters)
+  if(archScenes.length||archEncs.length){
+    const archInner=archScenes.map(s=>sceneHTML(a,s,a.encounters.filter(e=>e.sceneId===s.id))).join("")+archEncs.map(e=>encHTML(a,e)).join("");
+    aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${archTotal})</button></div><div id="archBody" style="display:none">${archInner}</div>`;
+    const toggle=document.getElementById("archToggle"),body=document.getElementById("archBody");
+    toggle.addEventListener("click",()=>{const open=body.style.display!=="none";body.style.display=open?"none":"block";toggle.classList.toggle("open",!open);});
+  }else{aw.innerHTML="";}
+  bindEncEvents(a);
+}
+// The XP target is OFF until the DM drags the marker. While inactive it parks at the low-end of the
+// budget, renders dimmed, and the target/delta read-out is hidden (e.target stays null).
+function encTargetActive(e){return e.target!=null;}
+function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
+function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
+function encReadHTML(a,e,bud,spent){
+  const p=partyOf(a,e);
+  const extra=`${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  if(!encTargetActive(e))return `Spent <b>${spent.toLocaleString()} XP</b> · <span style="color:var(--faint)">drag the marker to set a target</span>${extra}`;
+  const tgt=encTargetVal(e,bud),d=spent-tgt;
+  const dtxt=d===0?`<span style="color:var(--ok)">on target</span>`:d>0?`<span style="color:var(--accent)">+${d.toLocaleString()} over target</span>`:`<span style="color:var(--dim)">${Math.abs(d).toLocaleString()} under target</span>`;
+  return `Spent <b>${spent.toLocaleString()} XP</b> · target ${tgt.toLocaleString()} · ${dtxt}${extra}`;
+}
+// Patch an encounter's derived numbers (difficulty pill, budget bar, target marker, read-out, and
+// each combatant's XP) in place — used on count/target edits so we never rebuild (and refocus) the input.
+function updateEncMeta(a,e){
+  const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
+  const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
+  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
+  const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
+  const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
+  const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(encTargetActive(e)?(bud[2]?encTargetVal(e,bud)/bud[2]*100:0):0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
+  const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
+  e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
+}
+function encHTML(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
+  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
+  const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
+  const head=`<div class="eh">
+      <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <input class="enm" value="${esc(e.name)}" data-encname="${e.id}" placeholder="New Encounter">
+      <span class="pill ${cls}">${label}</span>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
+        <div class="menu" id="menu-enc-${e.id}">
+          <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
+          <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
+          <button data-pushenc="${e.id}">Copy encounter for Claude</button>
+          <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
+          <div class="sep"></div>
+          <div class="menu-wrap submenu-wrap">
+            <button class="submenu-trigger" data-menu="encmove-${e.id}">Move<span class="submenu-arrow">▸</span></button>
+            <div class="menu submenu" id="menu-encmove-${e.id}">
+              <button data-encmove="${e.id}:top">Move to top</button>
+              <button data-encmove="${e.id}:up">Move up</button>
+              <button data-encmove="${e.id}:down">Move down</button>
+              <button data-encmove="${e.id}:bottom">Move to bottom</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <button class="danger" data-encdel="${e.id}">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  const foc=e.id===a._focusEnc?" focused":"";
+  if(e.collapsed)return `<div class="enc ${e.archived?"arch":""} collapsed${foc}" data-enc="${e.id}" draggable="true">${head}</div>`;
+  return `<div class="enc ${e.archived?"arch":""}${foc}" data-enc="${e.id}" draggable="true">
+    ${head}
+    <div class="budget">
+      <div class="bartrack">
+        <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+        <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
+      </div>
+      <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
+      <div class="read">${encReadHTML(a,e,bud,spent)}</div>
+    </div>
+    <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
+    ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
+    <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
+    <div class="addrow">
+      <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
+      <div class="menu-wrap">
+        <button class="kebab addc-plus" data-menu="addc-${e.id}" title="More ways to add" aria-label="More ways to add">＋</button>
+        <div class="menu" id="menu-addc-${e.id}">
+          <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
+          <button data-addchassis="${e.id}">＋ From chassis (auto-saves)</button>
+          <button data-addforge="${e.id}">＋ Forge new monster →</button>
+          <button data-addev="${e.id}">＋ Event / entity</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function ovrInner(e){const o=e.partyOverride;return `<div class="row">
+  <label class="f">Size<input type="number" min="1" max="12" value="${o.size}" data-ovrsize="${e.id}" style="width:74px"></label>
+  <label class="f" ${o.uneven?'style="display:none"':""}>Level<input type="number" min="1" max="20" value="${o.level}" data-ovrlevel="${e.id}" style="width:74px"></label>
+  <label class="toggle" style="margin-bottom:8px"><input type="checkbox" data-ovruneven="${e.id}" ${o.uneven?"checked":""}> Uneven</label>
+  </div>${o.uneven?`<div class="pcgrid" style="margin-top:8px">${(o.levels||[]).slice(0,o.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-ovrpc="${e.id}:${i}">`).join("")}</div>`:""}`;}
+function combatHTML(e,c){
+  if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
+  const fc=facClass(c.faction);const xp=combatXP(c);
+  const facSel=`<select class="fac ${fc}" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>`;
+  if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
+    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
+    ${facSel}
+    <button type="button" class="mini-chip${c.minion?" on":""}" data-minion="${c.id}" aria-pressed="${c.minion?"true":"false"}" title="MCDM minion — counts as minion XP toward the budget">minion</button>
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
+  const m=monOf(c);
+  return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
+    <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
+    ${facSel}
+    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
+    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${monsterOptionsHTML(c.monsterId)}</select>${m&&m.minion?`<span class="minion-tag" title="MCDM minion — counts as ${(MINION_XP[m.cr]??0).toLocaleString()} XP each toward the budget">minion</span>`:""}</div></div>`;
+}
+// Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
+// then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
+function monsterOptionsHTML(selId){
+  if(!state.lib.length)return"";
+  const opt=m=>`<option value="${m.id}" ${m.id===selId?"selected":""}>${esc(m.name)} (CR ${m.cr})</option>`;
+  const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
+  let html=recent?`<optgroup label="Last edited">${opt(recent)}</optgroup>`:"";
+  const byCR={};state.lib.forEach(m=>{(byCR[m.cr]=byCR[m.cr]||[]).push(m);});
+  Object.keys(byCR).sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0)).forEach(cr=>{
+    const list=byCR[cr].slice().sort((a,b)=>a.name.localeCompare(b.name));
+    html+=`<optgroup label="CR ${cr}">${list.map(opt).join("")}</optgroup>`;});
+  return html;
+}
+function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
+function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
+function bindEncEvents(a){
+  const q=sel=>$$("#advDetail "+sel);
+  q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
+  q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
+  q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
+  q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
+  q("[data-encnotes-tog]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encnotesTog);if(e){e.notesOn=!e.notesOn;if(!e.notesOn)e.notes="";saveAdv();renderAdvDetail();}}));
+  q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
+  q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
+  q("#addScene").forEach(el=>el.addEventListener("click",()=>addScene(a)));
+  q("[data-scenename]").forEach(el=>el.addEventListener("change",()=>{const s=sceneOf(a,el.dataset.scenename);if(s){s.name=el.value.trim()||"Scene";saveAdv();}}));
+  q("[data-scenenotes]").forEach(el=>el.addEventListener("input",()=>{const s=sceneOf(a,el.dataset.scenenotes);if(s){s.notes=el.value;saveAdv();}}));
+  q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
+  q("[data-scenearch]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenearch);if(s){s.archived=!s.archived;saveAdv();renderAdvDetail();}}));
+  q("[data-scenenotes-tog]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenenotesTog);if(s){s.notesOn=!s.notesOn;if(!s.notesOn)s.notes="";saveAdv();renderAdvDetail();}}));
+  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const e=blankEncounter(el.dataset.sceneadd);a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
+  q("[data-scenedel]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.scenedel,s=sceneOf(a,sid);if(!s)return;const n=a.encounters.filter(e=>e.sceneId===sid).length;
+    const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderAdvDetail();};
+    n?confirmModal(`Delete scene "${s.name}"? Its ${n} encounter${n>1?"s":""} will become ungrouped.`,go):go();}));
+  bindEncDrag(a,q);
+  bindEncTarget(a,q);
+  q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
+  q("[data-ovrsize]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrlevel]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
+  q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
+  q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
+  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addquick;findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}));
+  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addev;findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
+  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
+  q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
+  q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
+  // Minion flag on a quick combatant is a toggle chip (was a cramped checkbox). Flipping it changes
+  // the combatant's XP, so re-render the list to refresh budget bars + the chip state.
+  q("[data-minion]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.minion);if(!c)return;c.minion=!c.minion;saveAdv();renderEncList(a);}));
+  q("[data-cf]").forEach(el=>{
+    const[cid,f]=el.dataset.cf.split(":");
+    if(el.tagName==="SELECT"){
+      el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});
+    } else if(el.type==="number"){
+      // count: patch derived totals in place. Never re-render the input — keyboard arrows and the
+      // native spinner fire change/input immediately (not just on blur) and would drop focus.
+      el.addEventListener("input",()=>{const{e,c}=findCombat(a,cid);if(!c)return;c[f]=clamp(Number(el.value||1),1,99);saveAdv();updateEncMeta(a,e);});
+    } else {
+      el.addEventListener("input",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();}); // free-text: no re-render
+    }
+  });
+  q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
+}
+// Encounters share one array but render in two groups (active / archived). Reorder within a group,
+// then write the regrouped order back into the slots that group occupied so the other group is untouched.
+function setGroupOrder(a,archived,group){let k=0;a.encounters.forEach((e,i)=>{if(e.archived===archived)a.encounters[i]=group[k++];});}
+function moveEncTo(a,id,where){
+  const e=findEnc(a,id);if(!e)return;
+  const group=a.encounters.filter(x=>x.archived===e.archived),pos=group.indexOf(e);
+  let tgt=where==="up"?pos-1:where==="down"?pos+1:where==="top"?0:group.length-1;
+  tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
+  group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderAdvDetail();
+}
+function reorderEncRel(a,fromId,toId,after){
+  if(!fromId||!toId||fromId===toId)return;
+  const from=findEnc(a,fromId),to=findEnc(a,toId);
+  if(!from||!to||from.archived!==to.archived)return;
+  const group=a.encounters.filter(x=>x.archived===from.archived);
+  group.splice(group.indexOf(from),1);
+  let idx=group.indexOf(to);if(after)idx++;
+  group.splice(idx,0,from);
+  from.sceneId=to.sceneId||null; // dropping onto an encounter adopts that encounter's scene
+  setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
+}
+// Move an encounter into a scene (or out of all scenes when sceneId is null/""), placing it after the
+// scene's last current member so it lands at the end of that group.
+function moveEncToScene(a,encId,sceneId){
+  const e=findEnc(a,encId);if(!e||e.archived)return;
+  sceneId=sceneId||null;
+  if((e.sceneId||null)===sceneId)return;
+  e.sceneId=sceneId;
+  const group=a.encounters.filter(x=>!x.archived);
+  group.splice(group.indexOf(e),1);
+  let last=-1;group.forEach((x,i)=>{if((x.sceneId||null)===sceneId)last=i;});
+  group.splice(last+1,0,e);
+  setGroupOrder(a,false,group);saveAdv();renderAdvDetail();
+}
+let dragEncId=null,dropTarget=null;
+// Skip drag-init when the press starts on an interactive control inside the card so editing
+// inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
+function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
+let dragSceneId=null,dropScene=null;
+function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after,#advDetail .scene.drop-before,#advDetail .scene.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));$$("#advDetail [data-scenedrop].scene-drop").forEach(x=>x.classList.remove("scene-drop"));}
+// Reorder a scene within a.scenes (active scenes among active, archived among archived).
+function reorderScene(a,fromId,toId,after){
+  if(!fromId||!toId||fromId===toId)return;
+  const arr=a.scenes,from=arr.find(s=>s.id===fromId),to=arr.find(s=>s.id===toId);
+  if(!from||!to||!!from.archived!==!!to.archived)return;
+  arr.splice(arr.indexOf(from),1);let idx=arr.indexOf(to);if(after)idx++;arr.splice(idx,0,from);
+  saveAdv();renderAdvDetail();
+}
+function bindEncDrag(a,q){
+  q(".enc[data-enc]").forEach(enc=>{
+    enc.addEventListener("dragstart",ev=>{
+      if(dragInert(ev.target)){ev.preventDefault();return;}
+      ev.stopPropagation(); // don't also start a scene-drag on the enclosing .scene
+      dragEncId=enc.dataset.enc;dropTarget=null;ev.dataTransfer.effectAllowed="move";
+      try{ev.dataTransfer.setData("text/plain",enc.dataset.enc);}catch(_){}
+      // Use the header as a compact drag-image instead of hiding the body — hiding reflowed the
+      // list mid-gesture and made drop targets jump (the "buggy drag"). Fade is applied after the
+      // snapshot via rAF so the source stays full-height (stable targets) but visibly inert.
+      const eh=enc.querySelector(".eh");if(eh)try{ev.dataTransfer.setDragImage(eh,14,14);}catch(_){}
+      requestAnimationFrame(()=>enc.classList.add("dragging"));
+    });
+    enc.addEventListener("dragend",()=>{enc.classList.remove("dragging");clearDropMarks();dragEncId=null;dropTarget=null;});
+    enc.addEventListener("dragover",ev=>{
+      if(!dragEncId||dragEncId===enc.dataset.enc)return;
+      const from=findEnc(a,dragEncId),to=findEnc(a,enc.dataset.enc);
+      if(!from||!to||from.archived!==to.archived)return;
+      ev.preventDefault();
+      const r=enc.getBoundingClientRect(),after=ev.clientY>r.top+r.height/2;
+      clearDropMarks();enc.classList.add(after?"drop-after":"drop-before");
+      dropTarget={id:enc.dataset.enc,after};
+    });
+    enc.addEventListener("drop",ev=>{ev.preventDefault();const dt=dropTarget,id=dragEncId;clearDropMarks();
+      if(dt)reorderEncRel(a,id,dt.id,dt.after);});
+  });
+  // Scene headers, scene bodies, and the Ungrouped bucket are drop zones: dropping a dragged encounter
+  // anywhere that isn't an encounter card re-parents it to that scene (empty value = ungrouped). When
+  // the pointer is over an .enc, its own handler wins (reorder + adopt scene), so we bail here.
+  q("[data-scenedrop]").forEach(zone=>{
+    zone.addEventListener("dragover",ev=>{
+      if(!dragEncId||ev.target.closest(".enc"))return;
+      const from=findEnc(a,dragEncId);if(!from||from.archived)return;
+      ev.preventDefault();ev.stopPropagation();
+      clearDropMarks();zone.classList.add("scene-drop");
+    });
+    zone.addEventListener("drop",ev=>{
+      if(!dragEncId||ev.target.closest(".enc"))return;
+      ev.preventDefault();ev.stopPropagation();
+      const id=dragEncId,sc=zone.dataset.scenedrop;clearDropMarks();
+      moveEncToScene(a,id,sc);
+    });
+  });
+  // Scenes reorder among themselves (grab the scene header; encounters inside drag independently).
+  q(".scene[data-scene]").forEach(scene=>{
+    scene.addEventListener("dragstart",ev=>{
+      if(dragInert(ev.target)||ev.target.closest(".enc")){ev.preventDefault();return;}
+      dragSceneId=scene.dataset.scene;dropScene=null;ev.dataTransfer.effectAllowed="move";
+      try{ev.dataTransfer.setData("text/plain",scene.dataset.scene);}catch(_){}
+      const h=scene.querySelector(".scene-h");if(h)try{ev.dataTransfer.setDragImage(h,14,14);}catch(_){}
+      requestAnimationFrame(()=>scene.classList.add("dragging"));
+    });
+    scene.addEventListener("dragend",()=>{scene.classList.remove("dragging");clearDropMarks();dragSceneId=null;dropScene=null;});
+    scene.addEventListener("dragover",ev=>{
+      if(!dragSceneId||dragSceneId===scene.dataset.scene)return;
+      const from=sceneOf(a,dragSceneId),to=sceneOf(a,scene.dataset.scene);
+      if(!from||!to||!!from.archived!==!!to.archived)return;
+      ev.preventDefault();ev.stopPropagation();
+      const r=scene.getBoundingClientRect(),after=ev.clientY>r.top+r.height/2;
+      clearDropMarks();scene.classList.add(after?"drop-after":"drop-before");
+      dropScene={id:scene.dataset.scene,after};
+    });
+    scene.addEventListener("drop",ev=>{if(!dragSceneId)return;ev.preventDefault();ev.stopPropagation();const dt=dropScene,id=dragSceneId;clearDropMarks();if(dt)reorderScene(a,id,dt.id,dt.after);});
+  });
+}
+function bindEncTarget(a,q){
+  q("[data-enctgt]").forEach(handle=>{
+    const enc=handle.closest(".enc"),e=findEnc(a,enc.dataset.enctgt||handle.dataset.enctgt);if(!e)return;
+    const track=handle.parentElement,tip=handle.querySelector(".tgt-tip");let dragging=false;
+    const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
+      let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
+      e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";updateEncMeta(a,e);};
+    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
+    handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
+    handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});
+  });
+}
+function openBestiaryPicker(a,e){
+  if(!e)return;
+  if(!state.lib.length){toast("No saved creatures yet — Forge one, or use Quick / Forge from the ⋯ menu.");return;}
+  const ctrl=blankCtrl();ctrl.sort.key="name";
+  const pool=()=>state.lib.map(m=>({m}));
+  const desc={search:true,group:true,
+    params:[
+      {key:"type",label:"Type",get:r=>r.m.type||"—",values:()=>[...new Set(state.lib.map(m=>m.type||"—"))].sort()},
+      {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(state.lib.map(m=>m.cr))].sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0))},
+    ],
+    sortKeys:[
+      {key:"name",label:"Name",cmp:(x,y)=>x.m.name.localeCompare(y.m.name)},
+      {key:"cr",label:"CR",cmp:(x,y)=>(CR_NUM[x.m.cr]??0)-(CR_NUM[y.m.cr]??0)},
+    ]};
+  openModalRaw(`<h3 class="modal-h-row"><span>Add combatant — pick from Bestiary</span><button class="cr-help" id="bpHelp" aria-label="About this picker">?</button></h3>
+    <div class="ctrl-icons" id="bpCtrlIcons"></div>
+    <div class="ctrl-chips" id="bpChips"></div>
+    <div id="bpBody" class="picker-scroll"></div>
+    <div class="mrow picker-foot">
+      <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis</button>
+      <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
+      <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
+    </div>`);
+  bindHelpHover($("#bpHelp"),`Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.`);
+  const cardOf=o=>pickerCardHTML(o,"＋ Add",false);
+  function draw(){
+    renderCtrlChips($("#bpChips"),ctrl,desc,draw);
+    renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
+    $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>state.lib.find(m=>m.id===b.dataset.cardprev)));
+    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
+  }
+  bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
+  draw();
+  $("#bpClose").addEventListener("click",closeModal);
+  $("#bpForge").addEventListener("click",()=>{closeModal();forgeForEncounter(a,e);});
+  $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e,true);});
+}
+// "Forge new →" from anywhere: park a pendingForge target, load a blank monster, jump to the Forge.
+function forgeForEncounter(a,e){pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}
+function pushEncounter(a,e){
+  const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
+  const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,
+    party:{size:p.size,levels:partyLevels(p),overridden:!!e.partyOverride},
+    battlefield_notes:e.notes||"",
+    budget:{low:bud[0],moderate:bud[1],high:bud[2],spent,reads_as:label,note:"allies (faction Ally) already folded into budget via CR→level"},
+    combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),minion:combatIsMinion(c),xp_each:combatXPEach(c),count:Number(c.count),faction:c.faction};}),
+    environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
+  const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
+  copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
+}
+
+function doExportJSON(){
+  const data={kind:"monster-forge",exported:new Date().toISOString(),monsters:state.lib,adventures:state.adv};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
+}
+// Export/Import JSON now live in Settings only (B64); the #fileIn change handler is shared.
+$("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
+// Rule finder (B66): hover the (?) for an explainer, click to toggle the study mode.
+{const rb=$("#ruleFinderBtn");if(rb){
+  rb.addEventListener("mouseenter",()=>{if(!ruleFinder)tailPopover(rb,`<div class="cr-pop"><b>Rule finder</b><br>Highlights every rules-glossary term, condition, and detected spell on the statblock; hover one for its definition. Rolls are paused while it's on. Click to start; click again (✕) to exit.</div>`);});
+  rb.addEventListener("mouseleave",()=>{if(!ruleFinder)closePopover();});
+  rb.addEventListener("click",e=>{e.stopPropagation();closePopover();toggleRuleFinder();});
+}}
+// Click-to-roll: delegated on the statblock preview. Left-click = quick roll (attack NAME rolls
+// attack + damage); right-click = options popover.
+$("#statblock").addEventListener("click",e=>{
+  if(!clickRollOn())return;
+  const t=e.target.closest("[data-roll]");
+  // Cmd/Ctrl-click a rollable → open the custom-roll popover pre-filled (same as right-click).
+  if(t&&(e.metaKey||e.ctrlKey)){e.preventDefault();openRollMenu(t);return;}
+  const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
+  if(t)quickRoll(t);
+});
+$("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();openRollMenu(t);});
+// Animated d20 that follows the pointer over anything rollable (a real CSS cursor can't be
+// animated). Only active while click-to-roll is on; the native cursor is hidden via .mf-clickroll.
+let _diceCur=null;
+// Font Awesome d20 (dice-d20, free solid) — used only for the rollable cursor.
+const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48.7 125.8l53.2 31.9c7.8 4.7 17.8 2 22.2-5.9L201.6 12.1c3-5.4-.9-12.1-7.1-12.1c-1.6 0-3.2 .5-4.6 1.4L47.9 98.8c-9.6 6.6-9.2 20.9 .8 26.9zM16 171.7l0 123.5c0 8 10.4 11 14.7 4.4l60-92c5-7.6 2.6-17.8-5.2-22.5L40.2 158C29.6 151.6 16 159.3 16 171.7zM310.4 12.1l77.6 139.6c4.4 7.9 14.5 10.6 22.2 5.9l53.2-31.9c10-6 10.4-20.3 .8-26.9L322.1 1.4c-1.4-.9-3-1.4-4.6-1.4c-6.2 0-10.1 6.7-7.1 12.1zM496 171.7c0-12.4-13.6-20.1-24.2-13.7l-45.3 27.2c-7.8 4.7-10.1 14.9-5.2 22.5l60 92c4.3 6.7 14.7 3.6 14.7-4.4l0-123.5zm-49.3 246L286.1 436.6c-8.1 .9-14.1 7.8-14.1 15.9l0 52.8c0 3.7 3 6.8 6.8 6.8c.8 0 1.6-.1 2.4-.4l172.7-64c6.1-2.2 10.1-8 10.1-14.5c0-9.3-8.1-16.5-17.3-15.4zM233.2 512c3.7 0 6.8-3 6.8-6.8l0-52.6c0-8.1-6.1-14.9-14.1-15.9l-160.6-19c-9.2-1.1-17.3 6.1-17.3 15.4c0 6.5 4 12.3 10.1 14.5l172.7 64c.8 .3 1.6 .4 2.4 .4zM41.7 382.9l170.9 20.2c7.8 .9 13.4-7.5 9.5-14.3l-85.7-150c-5.9-10.4-20.7-10.8-27.3-.8L30.2 358.2c-6.5 9.9-.3 23.3 11.5 24.7zm439.6-24.8L402.9 238.1c-6.5-10-21.4-9.6-27.3 .8L290.2 388.5c-3.9 6.8 1.6 15.2 9.5 14.3l170.1-20c11.8-1.4 18-14.7 11.5-24.6zm-216.9 11l78.4-137.2c6.1-10.7-1.6-23.9-13.9-23.9l-145.7 0c-12.3 0-20 13.3-13.9 23.9l78.4 137.2c3.7 6.4 13 6.4 16.7 0zM174.4 176l163.2 0c12.2 0 19.9-13.1 14-23.8l-80-144c-2.8-5.1-8.2-8.2-14-8.2l-3.2 0c-5.8 0-11.2 3.2-14 8.2l-80 144c-5.9 10.7 1.8 23.8 14 23.8z"/></svg>`;
+function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
+let _ptrX=0,_ptrY=0,_cmdHeld=false;
+function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
+// Show the spinning d20 over rollable elements, and anywhere while Cmd/Ctrl is held (since that arms
+// the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
+function updateDiceCursor(overRoll){
+  if((clickRollOn()&&overRoll)||_cmdHeld){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
+  else if(_diceCur)_diceCur.classList.remove("show");
+}
+document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
+document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+// Esc exits rule finder. If a definition popover is showing, close that first (one Esc per layer);
+// note .refpop nodes persist hidden in the DOM, so test for the visible .show class.
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
+  if($(".refpop.show")){e.preventDefault();hideRefpopNow(0);return;}
+  if($(".popover"))return; // let an open popover handle its own Esc
+  e.preventDefault();toggleRuleFinder();});
+// ⌘/Ctrl-S saves the Forge to the Bestiary (instead of the browser's Save Page dialog). B68.
+document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==="s"||e.key==="S")){if(_curView!=="forge")return;e.preventDefault();const b=$("#saveMonster");if(b)b.click();}});
+function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
+document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
+window.addEventListener("blur",dropCmd);
+// Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
+// which keep their own modifier-click behaviour, e.g. bestiary multi-select).
+const ROLL_INERT="input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal,.refpop,.roll-log";
+function openCustomRollAt(x,y){openCustomRoll({getBoundingClientRect:()=>({left:x,right:x,top:y,bottom:y,width:0,height:0})});}
+document.addEventListener("click",e=>{
+  if(!(e.metaKey||e.ctrlKey)||!clickRollOn())return;
+  if(e.target.closest(ROLL_INERT))return;
+  e.preventDefault();
+  openCustomRollAt(e.clientX,e.clientY);
+});
+// Mobile: a long-press on any non-interactive spot opens the custom roll (the touch equivalent of
+// Cmd/Ctrl-click) (B65).
+(function(){let timer=null,sx=0,sy=0,fired=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+  document.addEventListener("touchstart",e=>{
+    if(!clickRollOn()||e.touches.length!==1)return;
+    const t=e.touches[0];if(e.target.closest(ROLL_INERT))return;
+    sx=t.clientX;sy=t.clientY;fired=false;
+    clear();timer=setTimeout(()=>{fired=true;timer=null;openCustomRollAt(sx,sy);if(navigator.vibrate)navigator.vibrate(15);},500);
+  },{passive:true});
+  document.addEventListener("touchmove",e=>{if(!timer)return;const t=e.touches[0];if(Math.abs(t.clientX-sx)>10||Math.abs(t.clientY-sy)>10)clear();},{passive:true});
+  document.addEventListener("touchend",e=>{clear();if(fired){fired=false;e.preventDefault();}},{passive:false});
+  document.addEventListener("touchcancel",clear,{passive:true});
+})();
+// Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
+function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
+async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
+function clearLocalCache(){const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("mf_cache:")===0)keys.push(k);}keys.forEach(k=>localStorage.removeItem(k));toast("Local cache cleared — reload to re-fetch from the cloud.");}

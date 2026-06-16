@@ -13,7 +13,7 @@ import globals from "globals";
 import * as espree from "espree";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SHARED_FILES = ["data.js", "parsers.js", "app.js"];
+const SHARED_FILES = ["data.js", "parsers.js", "core.js", "forge.js", "engine.js", "bestiary.js", "adventures.js", "app.js"];
 
 // Collect every name declared at the top level of the shared scripts.
 function collectSharedGlobals() {
@@ -43,7 +43,7 @@ const sharedGlobals = collectSharedGlobals();
 
 export default [
   {
-    files: ["data.js", "parsers.js", "app.js"],
+    files: SHARED_FILES,
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

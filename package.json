@@ -5,8 +5,8 @@
   "description": "D&D 2024 homebrew monster & encounter builder — no-build static site.",
   "type": "module",
   "scripts": {
-    "check": "node --check data.js && node --check parsers.js && node --check app.js",
-    "lint": "eslint data.js parsers.js app.js",
+    "check": "for f in data.js parsers.js core.js forge.js engine.js bestiary.js adventures.js app.js; do node --check \"$f\" || exit 1; done",
+    "lint": "eslint data.js parsers.js core.js forge.js engine.js bestiary.js adventures.js app.js",
     "test": "node --test test/*.test.js",
     "verify": "npm run check && npm run lint && npm test"
   },

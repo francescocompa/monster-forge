@@ -44,7 +44,7 @@ export function bootApp() {
   window.addEventListener("error", (e) => errors.push(e.error || e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(e.reason));
 
-  for (const file of ["data.js", "parsers.js", "app.js"]) {
+  for (const file of ["data.js", "parsers.js", "core.js", "forge.js", "engine.js", "bestiary.js", "adventures.js", "app.js"]) {
     const s = window.document.createElement("script");
     s.textContent = readFileSync(join(ROOT, file), "utf8");
     try {
