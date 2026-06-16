@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 42 — Encounter & combatant UX (FP3)
+- **XP-target marker is OFF until dragged:** it parks at the **low-end** of the
+  budget, renders dimmed/hollow, and the "target / ±delta" read-out is hidden until
+  the DM positions it (`e.target` stays null; click or drag activates it).
+- **Combatant statblock dropdown** is grouped by **CR** (ascending) with the
+  **last-edited** creature pinned in a "Last edited" group on top (`_savedAt`).
+- **Add-combatant picker:** fixed footer (card list scrolls inside) with
+  **From chassis…**, **Forge new →**, and **Done**.
+- **Add from chassis:** picks a base, **auto-creates & saves a Bestiary entry**, and
+  drops it straight into the encounter — no trip through the Forge.
+- **Chassis preview popover:** an 👁 on each chassis card shows a compact statblock
+  (stats, ability mods, trait / action names) before you pick it.
+- **Screen-aware menus:** the "+" / ⋯ dropdowns flip **upward** when they'd run off
+  the bottom of the viewport.
+- **Edit-vs-new guard:** starting a New creature warns first if the Forge holds
+  unsaved changes (`forgeUnsaved`).
+- **Invisible encounter title:** the name field is borderless until hover/focus.
+
 ## Batch 41 — Add-section refactor (FP6) + forge fold-in fixes
 - **One "＋ Add section" control** replaces the five always-present enable
   checkboxes (Legendary / Villain / Lair / Regional / Minion). Picking one reveals

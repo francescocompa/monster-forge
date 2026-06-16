@@ -389,7 +389,9 @@ select::-ms-expand{display:none}
 .enc.drop-after::after{bottom:-10px}
 .enc .eh{display:flex;gap:8px;align-items:center;margin-bottom:9px}
 .enc.collapsed .eh{margin-bottom:0}
-.enc .eh input.enm{flex:1;min-width:120px;font-size:15px;font-weight:600}
+.enc .eh input.enm{flex:1;min-width:120px;font-size:15px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;transition:background .12s,border-color .12s}
+.enc .eh input.enm:hover{border-color:var(--line)}
+.enc .eh input.enm:focus{background:var(--in);border-color:var(--accent)}
 .enc-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:22px;height:22px;display:grid;place-items:center;padding:0;flex:none;border-radius:4px;transition:background .12s,color .12s}
 .enc-collapse:hover{color:var(--txt);background:var(--panel2)}
 .enc-collapse svg{transition:transform .15s}
@@ -406,6 +408,9 @@ select::-ms-expand{display:none}
 .budget .fill{height:100%;transition:width .2s}
 .budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
 .budget .tgt:hover,.budget .tgt.drag{background:var(--accent);transform:scale(1.15)}
+/* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
+.budget .tgt.inactive{background:var(--faint);opacity:.45;width:10px;height:10px;margin:-5px 0 0 -5px;box-shadow:none}
+.budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
 .budget .tgt .tgt-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--in);border:1px solid var(--line);color:var(--txt);font-size:10px;padding:2px 6px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-variant-numeric:tabular-nums}
 .budget .tgt:hover .tgt-tip,.budget .tgt.drag .tgt-tip{opacity:1}
 .budget .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px}
@@ -450,6 +455,13 @@ select::-ms-expand{display:none}
 .modal h3{margin:0 0 12px;font-size:17px}
 .modal textarea{min-height:210px;font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre}
 .modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+/* Add-combatant picker: card list scrolls inside, action footer stays put at the bottom. */
+.picker-scroll{max-height:48vh;overflow:auto;margin:0 -4px;padding:0 4px}
+.modal .mrow.picker-foot{position:sticky;bottom:-20px;margin:0 -20px -20px;padding:12px 20px;background:var(--panel);border-top:1px solid var(--line);align-items:center}
+/* Chassis statblock-preview eye + its popover. */
+.card h4 .chprev{background:none;border:none;cursor:pointer;font-size:12px;opacity:.5;padding:0 2px;vertical-align:middle}
+.card h4 .chprev:hover{opacity:1}
+.popover .chprev-pop{max-width:300px;font-size:11.5px;line-height:1.45}
 
 /* ── Bestiary (Batch 13) ─────────────────────────────────────────────────── */
 .lib-head{position:sticky;top:0;z-index:6;background:var(--bg);margin:-20px -24px 36px;padding:0 24px 12px;border-bottom:1px solid var(--line)}

@@ -1384,7 +1384,11 @@ function presetCardHTML(o){const m=o.m;return `<div class="card preset" data-pic
   <div class="tags"><span class="tag cr">CR ${m.cr}</span><span class="tag st st-Preset">Preset</span></div>
 </div>`;}
 bindCtrlIcons($("#libCtrlIcons"),libCtrl,LIB_DESC,renderLibrary);
-$("#libNew").addEventListener("click",()=>{loadMonster(blankMonster());switchView("forge");});
+// True when the Forge holds content that differs from its saved Bestiary copy (or was never saved).
+function forgeUnsaved(){if(!monsterDirty())return false;const saved=state.lib.find(x=>x.id===M.id);return !saved||contentSig(M)!==contentSig(saved);}
+function startFreshMonster(){const go=()=>{loadMonster(blankMonster());switchView("forge");};
+  if(forgeUnsaved())confirmModal("Start a new creature? The current Forge has unsaved changes that will be lost.",go);else go();}
+$("#libNew").addEventListener("click",startFreshMonster);
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
 $("#forgePaste").addEventListener("click",openImportModal);
@@ -1392,7 +1396,7 @@ $("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any
 
 $("#saveMonster").addEventListener("click",async()=>{
   if(!validName())return;
-  const rec=clone(M);rec.chassis=false;
+  const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
   const i=state.lib.findIndex(x=>x.id===rec.id);
   if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
   await saveLib();
@@ -1435,7 +1439,7 @@ function monsterDirty(){const m=M;
 // entry counts as "from chassis (unedited)" only while its current content still matches that
 // signature; the first edit flips it to home-brew. Bestiary meta (status/tags/archive) is
 // excluded from the signature so re-statusing doesn't change the origin.
-const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_fromSrc","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup"];
+const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_fromSrc","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup","_savedAt"];
 function contentSig(m){const c=stripSrc(clone(m));SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
 function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis,src:m._fromSrc||""}:{kind:"brew"};}
 function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
@@ -1454,15 +1458,36 @@ function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;
   const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)out.senses=clone(se);
   if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)out.shortName=clone(m.shortName);
   return out;}
+// A fresh home-brew monster derived from a chassis (origin tracking stamped, preset markers dropped).
+function chassisToMonster(ch,id){const b=clone(ch);b.id=id||uid();b.chassis=false;b._auto={ac:false,hp:false};
+  b._fromChassis=ch.name;b._fromSrc=ch._srcCode||(ch._source?prettySource(ch._source):"")||"";
+  delete b._chassisSig;delete b._preset;delete b._source;return b;}
+// Compact statblock preview for a chassis/preset (shown in a popover before picking it).
+function chassisPreviewHTML(m){
+  const pb=pbForCR(m.cr),abil=ABILS.map(a=>`${a.toUpperCase()} ${sgn(mod(m[a]))}`).join(" · ");
+  const names=arr=>(arr||[]).map(e=>e&&e.name).filter(Boolean);
+  const sec=(lbl,arr)=>names(arr).length?`<div class="blk-item"><b>${lbl}:</b> ${esc(names(arr).join(", "))}</div>`:"";
+  return `<div class="chprev-pop"><div class="refcard-h">${esc(m.name)}${m._srcCode?` <span class="refcard-src">${esc(m._srcCode)}</span>`:""}</div>
+    <div class="refcard-meta">${esc([m.size,m.type,m.align].filter(Boolean).join(" "))||"—"}</div>
+    <div class="refcard-sub"><b>AC</b> ${m.ac??"—"} · <b>HP</b> ${m.hp??"—"} · <b>CR</b> ${m.cr} (${xpOf(m).toLocaleString()} XP) · <b>PB</b> ${sgn(pb)}</div>
+    <div class="refcard-body"><div class="blk-item">${abil}</div>${sec("Traits",m.traits)}${sec("Actions",m.actions)}${sec("Bonus",m.bonus)}${sec("Reactions",m.reactions)}</div></div>`;
+}
 function applyChassis(ch,keepId,merge){
-  let base;
-  if(merge)base=mergeChassis(ch);
-  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};base._fromChassis=ch.name;base._fromSrc=ch._srcCode||(ch._source?prettySource(ch._source):"")||"";delete base._chassisSig;}
-  delete base._preset;delete base._source;
+  const base=merge?mergeChassis(ch):chassisToMonster(ch,(keepId&&M)?M.id:uid());
+  if(merge){delete base._preset;delete base._source;}
   loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
 }
+// Add-from-chassis: build the bestiary entry from a chassis, save it, and drop it into the encounter
+// without a trip through the Forge.
+function openChassisForEncounter(a,e){
+  if(!e)return;
+  openChassis(false,{onPick:ch=>{const rec=normalizeMonster(chassisToMonster(ch));rec._savedAt=Date.now();
+    state.lib.unshift(rec);saveLib();addMonsterCombatant(e,rec.id);saveAdv();renderEncList(a);
+    closeModal();toast(`Added “${rec.name}” — saved to Bestiary.`);}});
+}
 function findChassis(id){return CHASSIS.find(x=>x.id===id)||enPresets().find(x=>x.id===id);}
-function openChassis(fromForge){
+function openChassis(fromForge,opts){
+  opts=opts||{};
   const ctrl=blankCtrl();ctrl.sort.key="cr";
   const chPool=()=>[...CHASSIS.map(m=>({m,src:"Built-in"})),...enPresets().map(m=>({m,src:m._source||"Uploaded"}))];
   const desc={search:true,group:true,
@@ -1474,19 +1499,24 @@ function openChassis(fromForge){
       {key:"cr",label:"CR",cmp:(a,b)=>(CR_NUM[a.m.cr]??0)-(CR_NUM[b.m.cr]??0)},
       {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
     ]};
-  openModalRaw(`<h3>Start from a chassis</h3>
-    <p class="hint" style="margin:-4px 0 10px">Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>
+  const forEnc=!!opts.onPick;
+  openModalRaw(`<h3>${forEnc?"Add from a chassis":"Start from a chassis"}</h3>
+    <p class="hint" style="margin:-4px 0 10px">${forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":""}Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.</p>
     <div class="ctrl-icons" id="chCtrlIcons"></div>
     <div class="ctrl-chips" id="chChips"></div>
     <div id="chBody"></div>`);
-  const cardOf=o=>`<div class="card" style="cursor:default">${srcBadgeHTML(o)}<h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">Use as base</button></div></div>`;
+  const pickLabel=forEnc?"Add to encounter":"Use as base";
+  const cardOf=o=>`<div class="card" style="cursor:default">${srcBadgeHTML(o)}<h4 style="padding-right:0">${esc(o.m.name)} <button class="chprev" data-chprev="${esc(o.m.id)}" title="Preview statblock" aria-label="Preview statblock">👁</button></h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">${pickLabel}</button></div></div>`;
   function draw(){
     renderCtrlChips($("#chChips"),ctrl,desc,draw);
     const body=$("#chBody");let recs=ctrlApply(chPool(),ctrl,desc);
     if(ctrl.group!=="source")recs=collapseVariants(recs);
     renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries…”) to add more bases."}`,cap:200});
     bindSrcDrops(body,recs,draw);
-    body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;closeModal();
+    body.querySelectorAll("[data-chprev]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const ch=findChassis(b.dataset.chprev);if(ch)showPopover(b,chassisPreviewHTML(ch));}));
+    body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
+      if(opts.onPick){opts.onPick(ch);return;}
+      closeModal();
       if(fromForge===true&&monsterDirty())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
   }
   bindCtrlIcons($("#chCtrlIcons"),ctrl,desc,draw);
@@ -1706,13 +1736,18 @@ function renderEncList(a){
   }else{aw.innerHTML="";}
   bindEncEvents(a);
 }
-// Effective XP target for an encounter (defaults to the Moderate budget until the DM drags it).
-function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[1];}
+// The XP target is OFF until the DM drags the marker. While inactive it parks at the low-end of the
+// budget, renders dimmed, and the target/delta read-out is hidden (e.target stays null).
+function encTargetActive(e){return e.target!=null;}
+function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
 function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
 function encReadHTML(a,e,bud,spent){
-  const p=partyOf(a,e),tgt=encTargetVal(e,bud),d=spent-tgt;
+  const p=partyOf(a,e);
+  const extra=`${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  if(!encTargetActive(e))return `Spent <b>${spent.toLocaleString()} XP</b> · <span style="color:var(--faint)">drag the marker to set a target</span>${extra}`;
+  const tgt=encTargetVal(e,bud),d=spent-tgt;
   const dtxt=d===0?`<span style="color:var(--ok)">on target</span>`:d>0?`<span style="color:var(--accent)">+${d.toLocaleString()} over target</span>`:`<span style="color:var(--dim)">${Math.abs(d).toLocaleString()} under target</span>`;
-  return `Spent <b>${spent.toLocaleString()} XP</b> · target ${tgt.toLocaleString()} · ${dtxt}${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  return `Spent <b>${spent.toLocaleString()} XP</b> · target ${tgt.toLocaleString()} · ${dtxt}${extra}`;
 }
 // Patch an encounter's derived numbers (difficulty pill, budget bar, target marker, read-out, and
 // each combatant's XP) in place — used on count/target edits so we never rebuild (and refocus) the input.
@@ -1723,7 +1758,7 @@ function updateEncMeta(a,e){
   const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
   const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
-  const tgt=root.querySelector(".budget .tgt");if(tgt)tgt.style.left=(bud[2]?encTargetVal(e,bud)/bud[2]*100:0)+"%";
+  const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(bud[2]?encTargetVal(e,bud)/bud[2]*100:0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
   const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
@@ -1763,7 +1798,7 @@ function encHTML(a,e){
     <div class="budget">
       <div class="bartrack">
         <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
-        <div class="tgt" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${tgt.toLocaleString()} XP</span></div>
+        <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
       </div>
       <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
       <div class="read">${encReadHTML(a,e,bud,spent)}</div>
@@ -1777,6 +1812,7 @@ function encHTML(a,e){
         <button class="kebab addc-plus" data-menu="addc-${e.id}" title="More ways to add" aria-label="More ways to add">＋</button>
         <div class="menu" id="menu-addc-${e.id}">
           <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
+          <button data-addchassis="${e.id}">＋ From chassis (auto-saves)</button>
           <button data-addforge="${e.id}">＋ Forge new monster →</button>
           <button data-addev="${e.id}">＋ Event / entity</button>
         </div>
@@ -1806,7 +1842,20 @@ function combatHTML(e,c){
     <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
-    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${state.lib.map(x=>`<option value="${x.id}" ${x.id===c.monsterId?"selected":""}>${esc(x.name)} (CR ${x.cr})</option>`).join("")}</select></div></div>`;
+    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${monsterOptionsHTML(c.monsterId)}</select></div></div>`;
+}
+// Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
+// then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
+function monsterOptionsHTML(selId){
+  if(!state.lib.length)return"";
+  const opt=m=>`<option value="${m.id}" ${m.id===selId?"selected":""}>${esc(m.name)} (CR ${m.cr})</option>`;
+  const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
+  let html=recent?`<optgroup label="Last edited">${opt(recent)}</optgroup>`:"";
+  const byCR={};state.lib.forEach(m=>{(byCR[m.cr]=byCR[m.cr]||[]).push(m);});
+  Object.keys(byCR).sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0)).forEach(cr=>{
+    const list=byCR[cr].slice().sort((a,b)=>a.name.localeCompare(b.name));
+    html+=`<optgroup label="CR ${cr}">${list.map(opt).join("")}</optgroup>`;});
+  return html;
 }
 function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
 function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
@@ -1828,7 +1877,8 @@ function bindEncEvents(a){
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
   q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:"Enemy"});saveAdv();renderAdvDetail();}));
   q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
-  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.addforge);pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}));
+  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
+  q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
@@ -1902,7 +1952,7 @@ function bindEncTarget(a,q){
     const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
       let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
       e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";updateEncMeta(a,e);};
-    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}});
+    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
     handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
     handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});
   });
@@ -1925,8 +1975,12 @@ function openBestiaryPicker(a,e){
     <p class="hint" style="margin:-4px 0 10px">Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.</p>
     <div class="ctrl-icons" id="bpCtrlIcons"></div>
     <div class="ctrl-chips" id="bpChips"></div>
-    <div id="bpBody"></div>
-    <div class="mrow"><button class="btn ghost sm" id="bpClose" style="width:auto;margin-left:auto">Done</button></div>`);
+    <div id="bpBody" class="picker-scroll"></div>
+    <div class="mrow picker-foot">
+      <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis…</button>
+      <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
+      <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
+    </div>`);
   const cardOf=o=>`<div class="card" style="cursor:default"><h4 style="padding-right:0">${esc(o.m.name)}</h4><div class="meta">${esc([o.m.size,o.m.type].filter(Boolean).join(" "))||"—"}</div><div class="tags"><span class="tag cr">CR ${o.m.cr}</span><span class="tag">${xpOf(o.m).toLocaleString()} XP</span></div><div style="margin-top:auto;padding-top:8px"><button class="btn ghost sm" data-pick="${esc(o.m.id)}" style="width:100%">＋ Add</button></div></div>`;
   function draw(){
     renderCtrlChips($("#bpChips"),ctrl,desc,draw);
@@ -1936,7 +1990,11 @@ function openBestiaryPicker(a,e){
   bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
   draw();
   $("#bpClose").addEventListener("click",closeModal);
+  $("#bpForge").addEventListener("click",()=>{closeModal();forgeForEncounter(a,e);});
+  $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e);});
 }
+// "Forge new →" from anywhere: park a pendingForge target, load a blank monster, jump to the Forge.
+function forgeForEncounter(a,e){pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}
 function pushEncounter(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
   const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,
@@ -2061,7 +2119,11 @@ function openImportModal(){
 document.addEventListener("click",e=>{
   const k=e.target.closest("[data-menu]");
   document.querySelectorAll(".menu.open").forEach(mn=>{if(!k||(mn.id!=="menu-"+k.dataset.menu&&!mn.contains(k)))mn.classList.remove("open");});
-  if(k){const mn=document.getElementById("menu-"+k.dataset.menu);if(mn){mn.classList.toggle("open");e.stopPropagation();}}
+  if(k){const mn=document.getElementById("menu-"+k.dataset.menu);if(mn){
+    const willOpen=!mn.classList.contains("open");mn.classList.toggle("open");
+    // Screen-aware: flip a bottom-anchored menu upward when it would overrun the viewport.
+    if(willOpen&&!mn.classList.contains("submenu")){mn.classList.remove("up");if(mn.getBoundingClientRect().bottom>window.innerHeight-8)mn.classList.add("up");}
+    e.stopPropagation();}}
 });
 
 function wrapStepper(input,step,min){
