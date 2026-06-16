@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 49 — Encounter scenes + minion chip
+- **Encounter scenes:** an adventure can now group its encounters into named,
+  collapsible **scene** containers (`a.scenes[]` + `enc.sceneId`). A **＋ Scene**
+  button sits beside **＋ Encounter**; each scene has an editable name, a collapse
+  chevron, an encounter count, and a ⋯ menu (add an encounter to the scene, delete
+  the scene — its encounters fall back to **Ungrouped**, not deleted). Encounters
+  **drag between scenes**: drop onto another encounter to adopt its scene + position,
+  or onto a scene header / body / the Ungrouped bucket to re-parent. Adventures with
+  no scenes render exactly as before (flat list).
+- **Minion checkbox → chip:** the cramped, clipped minion checkbox on quick
+  combatants is now a clean toggle **chip** matching the existing MINION tag (click
+  to enable/disable; re-renders to refresh XP + budget).
+
 ## Batch 48 — Minion edge cases
 - **Minion allies** now raise the encounter budget proportionally (scaled by
   minion-XP ÷ standard-XP) instead of as a full creature — matching the enemy-side

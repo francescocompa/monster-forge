@@ -221,8 +221,9 @@ function normalizeMonster(m){
 }
 function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
+  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed}));
   a.encounters=(a.encounters||[]).map(e=>{
-    e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
+    e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
     e.combatants=(e.combatants||[]).map(c=>{
       if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:"Enemy"};
@@ -1767,7 +1768,7 @@ function renderAdvDetail(){
       </div>
     </div>
     <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
-    <div class="section-label">Encounters <button class="btn primary sm fab" id="addEnc" style="width:auto">＋ Encounter</button></div>
+    <div class="section-label">Encounters <span class="sl-acts"><button class="btn ghost sm" id="addScene" style="width:auto">＋ Scene</button><button class="btn primary sm fab" id="addEnc" style="width:auto">＋ Encounter</button></span></div>
     <div id="encList"></div>
     <div id="archWrap"></div>`;
   $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
@@ -1781,7 +1782,8 @@ function renderAdvDetail(){
   $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
-  $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,combatants:[]});saveAdv();renderAdvDetail();});
+  $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:null,combatants:[]});saveAdv();renderAdvDetail();});
+  $("#addScene").addEventListener("click",()=>{a.scenes.push({id:uid(),name:"New Scene",collapsed:false});saveAdv();renderAdvDetail();});
   renderPCgrid(a);renderEncList(a);
 }
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
@@ -1792,11 +1794,40 @@ function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.inner
 function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector("#advDetail .enc.focused"))return;a._focusEnc=encId;
   $$("#advDetail .enc.focused").forEach(x=>x.classList.remove("focused"));
   const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
+function sceneOf(a,id){return id?(a.scenes||[]).find(s=>s.id===id):null;}
+// A scene is a named collapsible container grouping some of an adventure's encounters. Encounters keep
+// their order in the flat a.encounters array; we render scene-by-scene (filtering by sceneId), then a
+// trailing "Ungrouped" bucket for encounters with no scene (or pointing at a deleted one).
+function sceneHTML(a,s,encs){
+  const chev=`<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const head=`<div class="scene-h" data-scenedrop="${s.id}">
+      <button class="scene-collapse${s.collapsed?" closed":""}" data-scenecollapse="${s.id}" title="${s.collapsed?"Expand":"Collapse"}" aria-label="${s.collapsed?"Expand":"Collapse"}">${chev}</button>
+      <input class="scene-name" value="${esc(s.name)}" data-scenename="${s.id}" placeholder="Scene name">
+      <span class="scene-count">${encs.length} enc.</span>
+      <div class="menu-wrap">
+        <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
+        <div class="menu" id="menu-scene-${s.id}">
+          <button data-sceneadd="${s.id}">＋ Encounter in this scene</button>
+          <div class="sep"></div>
+          <button class="danger" data-scenedel="${s.id}">Delete scene</button>
+        </div>
+      </div>
+    </div>`;
+  if(s.collapsed)return `<div class="scene collapsed" data-scene="${s.id}">${head}</div>`;
+  return `<div class="scene" data-scene="${s.id}">${head}<div class="scene-body" data-scenedrop="${s.id}">${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">Drag encounters here, or add one from the ⋯ menu.</div>`}</div></div>`;
+}
 function renderEncList(a){
   const box=$("#encList");if(!box)return;
   if(!box._focusBound){box._focusBound=true;box.addEventListener("focusin",e=>{const enc=e.target.closest(".enc[data-enc]");if(enc)setEncFocus(a,enc.dataset.enc);});}
   const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
-  box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+  const scenes=a.scenes||[];
+  if(scenes.length){
+    const ungrouped=active.filter(e=>!sceneOf(a,e.sceneId));
+    box.innerHTML=scenes.map(s=>sceneHTML(a,s,active.filter(e=>e.sceneId===s.id))).join("")
+      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:`<div class="hint scene-empty">No ungrouped encounters.</div>`}</div>`;
+  }else{
+    box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+  }
   const addBtn=$("#addEnc");if(addBtn)addBtn.className="btn primary sm fab";
   const aw=$("#archWrap");
   if(arch.length){
@@ -1905,7 +1936,7 @@ function combatHTML(e,c){
     <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
     <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
-    <label class="mini-ck" title="MCDM minion — counts as minion XP toward the budget"><input type="checkbox" data-cf="${c.id}:minion" ${c.minion?"checked":""}> minion</label>
+    <button type="button" class="mini-chip${c.minion?" on":""}" data-minion="${c.id}" aria-pressed="${c.minion?"true":"false"}" title="MCDM minion — counts as minion XP toward the budget">minion</button>
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
   const m=monOf(c);
@@ -1939,6 +1970,12 @@ function bindEncEvents(a){
   q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
+  q("[data-scenename]").forEach(el=>el.addEventListener("change",()=>{const s=sceneOf(a,el.dataset.scenename);if(s){s.name=el.value.trim()||"Scene";saveAdv();}}));
+  q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
+  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.sceneadd;const e={id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:sid,combatants:[]};a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
+  q("[data-scenedel]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.scenedel,s=sceneOf(a,sid);if(!s)return;const n=a.encounters.filter(e=>e.sceneId===sid).length;
+    const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderAdvDetail();};
+    n?confirmModal(`Delete scene "${s.name}"? Its ${n} encounter${n>1?"s":""} will become ungrouped.`,go):go();}));
   bindEncDrag(a,q);
   bindEncTarget(a,q);
   q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
@@ -1952,12 +1989,12 @@ function bindEncEvents(a){
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
   q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
+  // Minion flag on a quick combatant is a toggle chip (was a cramped checkbox). Flipping it changes
+  // the combatant's XP, so re-render the list to refresh budget bars + the chip state.
+  q("[data-minion]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.minion);if(!c)return;c.minion=!c.minion;saveAdv();renderEncList(a);}));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
-    if(el.type==="checkbox"){
-      // minion flag on a quick combatant — changes its XP, so re-render to update budget + tag.
-      el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.checked;saveAdv();renderEncList(a);});
-    } else if(el.tagName==="SELECT"){
+    if(el.tagName==="SELECT"){
       el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});
     } else if(el.type==="number"){
       // count: patch derived totals in place. Never re-render the input — keyboard arrows and the
@@ -1987,13 +2024,27 @@ function reorderEncRel(a,fromId,toId,after){
   group.splice(group.indexOf(from),1);
   let idx=group.indexOf(to);if(after)idx++;
   group.splice(idx,0,from);
+  from.sceneId=to.sceneId||null; // dropping onto an encounter adopts that encounter's scene
   setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
+}
+// Move an encounter into a scene (or out of all scenes when sceneId is null/""), placing it after the
+// scene's last current member so it lands at the end of that group.
+function moveEncToScene(a,encId,sceneId){
+  const e=findEnc(a,encId);if(!e||e.archived)return;
+  sceneId=sceneId||null;
+  if((e.sceneId||null)===sceneId)return;
+  e.sceneId=sceneId;
+  const group=a.encounters.filter(x=>!x.archived);
+  group.splice(group.indexOf(e),1);
+  let last=-1;group.forEach((x,i)=>{if((x.sceneId||null)===sceneId)last=i;});
+  group.splice(last+1,0,e);
+  setGroupOrder(a,false,group);saveAdv();renderAdvDetail();
 }
 let dragEncId=null,dropTarget=null;
 // Skip drag-init when the press starts on an interactive control inside the card so editing
 // inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
 function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
-function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));}
+function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));$$("#advDetail [data-scenedrop].scene-drop").forEach(x=>x.classList.remove("scene-drop"));}
 function bindEncDrag(a,q){
   q(".enc[data-enc]").forEach(enc=>{
     enc.addEventListener("dragstart",ev=>{
@@ -2018,6 +2069,23 @@ function bindEncDrag(a,q){
     });
     enc.addEventListener("drop",ev=>{ev.preventDefault();const dt=dropTarget,id=dragEncId;clearDropMarks();
       if(dt)reorderEncRel(a,id,dt.id,dt.after);});
+  });
+  // Scene headers, scene bodies, and the Ungrouped bucket are drop zones: dropping a dragged encounter
+  // anywhere that isn't an encounter card re-parents it to that scene (empty value = ungrouped). When
+  // the pointer is over an .enc, its own handler wins (reorder + adopt scene), so we bail here.
+  q("[data-scenedrop]").forEach(zone=>{
+    zone.addEventListener("dragover",ev=>{
+      if(!dragEncId||ev.target.closest(".enc"))return;
+      const from=findEnc(a,dragEncId);if(!from||from.archived)return;
+      ev.preventDefault();ev.stopPropagation();
+      clearDropMarks();zone.classList.add("scene-drop");
+    });
+    zone.addEventListener("drop",ev=>{
+      if(!dragEncId||ev.target.closest(".enc"))return;
+      ev.preventDefault();ev.stopPropagation();
+      const id=dragEncId,sc=zone.dataset.scenedrop;clearDropMarks();
+      moveEncToScene(a,id,sc);
+    });
   });
 }
 function bindEncTarget(a,q){
