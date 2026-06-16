@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 72 — Refactor phase 2a: decompose renderPreview
+- The 8 KB `renderPreview` is now a thin coordinator over named pure builders — `sbHeaderHTML`,
+  `sbAbilityTableHTML`, `sbMetaHTML`, `sbEntryBlockHTML`, `sbEntriesHTML`.
+- Behaviour-preserving: the rendered statblock HTML was verified byte-identical to the old output for
+  an archmage, a blank creature, and a goblin (traits / attack / legendary / condition immunities).
+- No user-facing changes. (Remaining render-builders to decompose: `renderRollLog`, `entryHTML`,
+  `colorizeStatblock`, `openRollPopover`.)
+
 ## Batch 71 — Refactor phase 1: split app.js by concern
 - `app.js` (3,334 lines) split into six classic scripts loaded in order — `core.js`, `forge.js`,
   `engine.js`, `bestiary.js`, `adventures.js`, `app.js` — still one shared global scope, still no build.
