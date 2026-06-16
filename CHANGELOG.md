@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 46 — FP4: adventure color identity
+- Each adventure can carry a **color**. A filled **dot** sits before the name in the
+  sidebar card and the open adventure title; clicking it opens a curated 10-color
+  preset palette (+ “No color”).
+- A selected adventure's sidebar card uses its color for the **highlight border**.
+- Migrated in `normalizeAdv`; the `advDot` helper is reusable for future
+  adventure-colored UI (e.g. grouping the bestiary by adventure).
+
 ## Batch 45 — FP5: budget chips + FAB standardization
 - **Adventure budget caps** are now **three color-coded chips** (Low green /
   Moderate amber / High red, each with its XP value), replacing the old gradient bar.

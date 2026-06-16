@@ -384,7 +384,15 @@ select::-ms-expand{display:none}
 .adv-list .ai{padding:7px 8px 7px 11px;border-radius:7px;margin-bottom:4px;cursor:default;border:1px solid transparent;display:flex;align-items:center;gap:4px}
 .adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--panel2);border-color:var(--accent)}
 .adv-list .ai .ai-info{flex:1;min-width:0;cursor:pointer;padding:3px 0}
-.adv-list .ai .nm{font-size:14px;font-weight:600}.adv-list .ai .dt{font-size:11px;color:var(--faint)}
+.adv-list .ai .nm{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}.adv-list .ai .dt{font-size:11px;color:var(--faint);margin-left:19px}
+/* FP4: per-adventure color dot (sidebar + open title) + the preset-color picker. */
+.adv-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--faint);background:transparent;cursor:pointer;padding:0;flex:none;transition:transform .1s}
+.adv-dot:hover{transform:scale(1.25)}
+.ch-left .adv-dot{width:15px;height:15px}
+.adv-sw-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding:2px 2px 4px}
+.adv-sw{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:transform .1s}
+.adv-sw:hover{transform:scale(1.12)}
+.adv-sw.on{border-color:#fff;box-shadow:0 0 0 1px var(--panel)}
 .adv-list .ai .ai-kbtn{background:none;border:1px solid transparent;color:var(--faint);border-radius:5px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:15px;line-height:1;cursor:pointer}
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}

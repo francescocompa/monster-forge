@@ -220,7 +220,7 @@ function normalizeMonster(m){
   return m;
 }
 function normalizeAdv(a){
-  a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];
+  a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
@@ -1675,13 +1675,26 @@ function chassisConflictModal(ch){
 }
 
 function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}"><button data-aim-dup="${a.id}">Duplicate</button><button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button><div class="sep"></div><button class="danger" data-aim-del="${a.id}">Delete</button></div></div>`;}
+// FP4 — per-adventure color identity. Curated palette that reads well on the dark theme.
+const ADV_COLORS=["#e2654d","#e08b3f","#d9a941","#6aa84f","#4db6ac","#5b9bd5","#7e8cd6","#b07cd6","#d76a9e","#8a93a0"];
+// Clickable color dot before an adventure name (sidebar card + open title). Reusable wherever an
+// adventure is shown (e.g. future bestiary grouping by adventure).
+function advDot(advId,color){return `<button class="adv-dot${color?"":" none"}" data-advcolor="${advId}"${color?` style="background:${color};border-color:${color}"`:""} title="Adventure color"></button>`;}
+function openAdvColorMenu(anchor,advId){
+  const a=state.adv.find(x=>x.id===advId);if(!a)return;
+  const sw=c=>`<button class="adv-sw${a.color===c?" on":""}" data-sw="${c}" style="background:${c}" title="${c}"></button>`;
+  const p=showPopover(anchor,`<div class="adv-sw-grid">${ADV_COLORS.map(sw).join("")}</div><button class="popitem" data-sw="" style="margin-top:4px">No color</button>`);
+  p.querySelectorAll("[data-sw]").forEach(b=>b.addEventListener("click",()=>{a.color=b.dataset.sw;saveAdv();closePopover();renderAdvList();}));
+}
 function renderAdvList(){
   const box=$("#advItems");
   const active=state.adv.filter(a=>!a.archived),arch=state.adv.filter(a=>a.archived);
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"><div class="ai-info"><div class="nm">${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
-  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="ai-info"><div class="nm">${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
+  const selStyle=a=>a.id===state.selAdv&&a.color?` style="border-color:${a.color}"`:"";
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"${selStyle(a)}><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
-  box.querySelectorAll(".ai-info").forEach(el=>el.addEventListener("click",()=>{state.selAdv=el.closest("[data-adv]").dataset.adv;renderAdvList();}));
+  box.querySelectorAll(".ai-info").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor]"))return;state.selAdv=el.closest("[data-adv]").dataset.adv;renderAdvList();}));
+  box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=src.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${src.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
@@ -1722,7 +1735,7 @@ function renderAdvDetail(){
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",a.name||"Untitled"]);
   const bud=baseBudget(partyOf(a,null));
-  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2></div>
+  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${advDot(a.id,a.color)}<h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
@@ -1749,6 +1762,7 @@ function renderAdvDetail(){
     <div id="encList"></div>
     <div id="archWrap"></div>`;
   $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
+  d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim()||"Untitled";saveAdv();renderAdvList();});
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${a.name}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
   $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=a.name+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
