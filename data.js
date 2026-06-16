@@ -75,23 +75,25 @@ const ATK=o=>Object.assign({mode:"attack",name:"",kind:"Melee",ability:"str",atk
 const SPELL=o=>Object.assign({mode:"spell",name:"Spellcasting",ability:"cha",dc:"",atk:"",groups:[{freq:"At Will",spells:""}]},o);
 
 // ── Snippet library ───────────────────────────────────────────────────────────
-// Canonical 2024-style wording, genericised with [C]/[c]/[s] reference tokens and
-// {DC} (expands to 8 + PB + best ability mod). Inserted via the per-section
-// "From library" dropdowns or by typing a known name into an entry's Name field.
+// Canonical 2024-style wording, genericised with bracket shortcuts: [C]/[c]/[s]
+// reference tokens, [ABIL SAVE]/[ABIL ATK] (or bare [SAVE]/[ATK] = highest stat) and
+// dice averages like [2d6]. These stay LIVE in the entry text and expand at render
+// (applyRefsFor) so they retune to the creature's CR/abilities when reskinned.
+// Inserted via the per-section "From library" dropdowns or by typing a known name.
 const TRAIT_SNIPS={
   "Aggressive":"As a Bonus Action, [c] moves up to its Speed toward an enemy it can see.",
   "Amorphous":"[C] can move through a space as narrow as 1 inch without expending extra movement to do so.",
   "Amphibious":"[C] can breathe air and water.",
   "Beast Whisperer":"[C] can communicate with Beasts as if they shared a language.",
   "Brave":"[C] has Advantage on saving throws against being Frightened.",
-  "Charge":"If [c] moves at least 20 feet straight toward a target and then hits it with a melee attack on the same turn, the target takes an extra 7 (2d6) damage of the attack's type.",
-  "Death Burst":"[C] explodes when it dies. Dexterity Saving Throw: DC {DC}, each creature in a 5-foot Emanation originating from [c]. Failure: 5 (2d4) damage. Success: Half damage.",
+  "Charge":"If [c] moves at least 20 feet straight toward a target and then hits it with a melee attack on the same turn, the target takes an extra [2d6] damage of the attack's type.",
+  "Death Burst":"[C] explodes when it dies. Dexterity Saving Throw: [DEX SAVE], each creature in a 5-foot Emanation originating from [c]. Failure: [2d4] damage. Success: Half damage.",
   "Devil's Sight":"Magical Darkness doesn't impede [c]'s Darkvision.",
   "Echolocation":"[C] can't use [c]'s Blindsight while it has the Deafened condition.",
   "False Appearance":"While [c] remains motionless, it is indistinguishable from an ordinary object.",
   "Flyby":"[C] doesn't provoke an Opportunity Attack when it flies out of an enemy's reach.",
   "Hold Breath":"[C] can hold its breath for 1 hour.",
-  "Incorporeal Movement":"[C] can move through other creatures and objects as if they were Difficult Terrain. [C] takes 5 (1d10) Force damage if it ends its turn inside an object.",
+  "Incorporeal Movement":"[C] can move through other creatures and objects as if they were Difficult Terrain. [C] takes [1d10] Force damage if it ends its turn inside an object.",
   "Keen Hearing and Sight":"[C] has Advantage on Wisdom (Perception) checks that rely on hearing or sight.",
   "Keen Senses":"[C] has Advantage on Wisdom (Perception) checks that rely on hearing, sight, or smell.",
   "Keen Smell":"[C] has Advantage on Wisdom (Perception) checks that rely on smell.",
@@ -99,14 +101,14 @@ const TRAIT_SNIPS={
   "Magic Resistance":"[C] has Advantage on saving throws against spells and other magical effects.",
   "Nimble Escape":"[C] takes the Disengage or Hide action.",
   "Pack Tactics":"[C] has Advantage on an attack roll against a creature if at least one of [c]'s allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition.",
-  "Pounce":"If [c] moves at least 20 feet straight toward a creature and then hits it with a melee attack on the same turn, the target must succeed on a DC {DC} Strength saving throw or have the Prone condition. If the target is Prone, [c] can make one melee attack against it as a Bonus Action.",
+  "Pounce":"If [c] moves at least 20 feet straight toward a creature and then hits it with a melee attack on the same turn, the target must succeed on a [STR SAVE] Strength saving throw or have the Prone condition. If the target is Prone, [c] can make one melee attack against it as a Bonus Action.",
   "Reckless":"At the start of its turn, [c] can gain Advantage on melee attack rolls during that turn, but attack rolls against it have Advantage until the start of its next turn.",
   "Regeneration":"[C] regains 10 Hit Points at the start of each of its turns. If [c] takes Acid or Fire damage, this trait doesn't function on [c]'s next turn. [C] dies only if it starts its turn with 0 Hit Points and doesn't regenerate.",
   "Rejuvenation":"If [c] is destroyed, it gains a new body in 1d10 days, regaining all its Hit Points and becoming active again. The new body appears within [c]'s lair.",
   "Relentless":"If [c] takes damage that would reduce it to 0 Hit Points, it drops to 1 Hit Point instead (recharges after a Short or Long Rest).",
   "Shapechanger":"[C] can shape-shift into a Beast or Humanoid, or back into its true form, as a Bonus Action. Its game statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
   "Siege Monster":"[C] deals double damage to objects and structures.",
-  "Sneak Attack":"Once per turn, [c] deals an extra 7 (2d6) damage to a creature it hits with an attack roll if [c] has Advantage on the roll, or if another enemy of the target is within 5 feet of it, that enemy doesn't have the Incapacitated condition, and [c] doesn't have Disadvantage on the roll.",
+  "Sneak Attack":"Once per turn, [c] deals an extra [2d6] damage to a creature it hits with an attack roll if [c] has Advantage on the roll, or if another enemy of the target is within 5 feet of it, that enemy doesn't have the Incapacitated condition, and [c] doesn't have Disadvantage on the roll.",
   "Spell Immunity":"[C] is immune to three spells chosen by its creator. Typical choices are Heat Metal, Lightning Bolt, and Magic Missile.",
   "Spider Climb":"[C] can climb difficult surfaces, including along ceilings, without needing to make an ability check.",
   "Standing Leap":"[C]'s Long Jump is up to 30 feet and its High Jump is up to 15 feet, with or without a running start.",
@@ -162,7 +164,7 @@ const ATK_PRESETS={
   "Acid Splash":{kind:"Ranged",ability:"cha",dice:"1d6",dtype:"Acid",addMod:false,range:"60"},
 };
 const TEXT_ACTIONS={
-  "Frightful Presence":"Each creature of [c]'s choice within 120 feet of [c] and aware of it must succeed on a DC {DC} Wisdom saving throw or have the Frightened condition for 1 minute. A Frightened creature repeats the save at the end of each of its turns, ending the effect on itself on a success.",
+  "Frightful Presence":"Each creature of [c]'s choice within 120 feet of [c] and aware of it must succeed on a [WIS SAVE] Wisdom saving throw or have the Frightened condition for 1 minute. A Frightened creature repeats the save at the end of each of its turns, ending the effect on itself on a success.",
   "Teleport":"[C] teleports up to 30 feet to an unoccupied space it can see.",
   "Change Shape":"[C] transforms into a Beast or Humanoid of challenge rating equal to or less than its own, or back into its true form. Its game statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
 };
@@ -182,32 +184,32 @@ const REACT_SNIPS={
   "Deflect Missiles":{trigger:"[C] is hit by a ranged attack roll and takes Bludgeoning, Piercing, or Slashing damage.",response:"[C] reduces the damage by 1d10 plus its Dexterity modifier."},
   "Opportunity Attack":{trigger:"A creature [c] can see leaves [c]'s reach.",response:"[C] makes one melee attack against the triggering creature."},
 };
-// Generic, reskinnable presets in the same [C]/[c]/{DC} token style as the trait library.
+// Generic, reskinnable presets in the same [C]/[c]/[SAVE] bracket-shortcut style as the trait library.
 const LEGEND_SNIPS={
   "Attack":"[C] makes one attack.",
   "Move":"[C] moves up to its Speed without provoking Opportunity Attacks.",
   "Cantrip":"[C] casts one of its cantrips.",
   "Detect":"[C] makes a Wisdom (Perception) check.",
   "Teleport":"[C] teleports, along with any equipment it is wearing or carrying, up to 30 feet to an unoccupied space it can see.",
-  "Frightening Gaze":"[C] targets one creature it can see within 30 feet. The target makes a DC {DC} Wisdom saving throw or has the Frightened condition until the end of [c]'s next turn.",
+  "Frightening Gaze":"[C] targets one creature it can see within 30 feet. The target makes a [WIS SAVE] Wisdom saving throw or has the Frightened condition until the end of [c]'s next turn.",
   "Tail Swipe":"[C] makes one melee attack with its tail against a creature within reach.",
-  "Wing Attack (Costs 2 Uses)":"[C] beats its wings. Each creature within 10 feet of [c] makes a DC {DC} Dexterity saving throw, taking 14 (4d6) Bludgeoning damage on a failed save, or half as much on a success. [C] can then fly up to half its Speed.",
-  "Drain (Costs 2 Uses)":"One creature within 30 feet of [c] makes a DC {DC} Constitution saving throw, taking 14 (4d6) Necrotic damage on a failed save, or half as much on a success.",
+  "Wing Attack (Costs 2 Uses)":"[C] beats its wings. Each creature within 10 feet of [c] makes a [DEX SAVE] Dexterity saving throw, taking [4d6] Bludgeoning damage on a failed save, or half as much on a success. [C] can then fly up to half its Speed.",
+  "Drain (Costs 2 Uses)":"One creature within 30 feet of [c] makes a [CON SAVE] Constitution saving throw, taking [4d6] Necrotic damage on a failed save, or half as much on a success.",
   "Summon (Costs 2 Uses)":"[C] summons one ally of challenge rating 2 or lower in an unoccupied space within 30 feet; it acts on [c]'s initiative.",
 };
 const VILLAIN_SNIPS={
   "Reposition":"[C] and each ally within 30 feet of it can move up to their Speed without provoking Opportunity Attacks.",
   "Signature Strike":"[C] makes one attack against each creature of its choice that it can reach.",
-  "Area Assault":"Each creature in a 20-foot-radius Sphere centered on a point [c] can see within 60 feet makes a DC {DC} Dexterity saving throw, taking 21 (6d6) damage on a failed save, or half as much on a success.",
+  "Area Assault":"Each creature in a 20-foot-radius Sphere centered on a point [c] can see within 60 feet makes a [DEX SAVE] Dexterity saving throw, taking [6d6] damage on a failed save, or half as much on a success.",
   "Rallying Command":"Each ally within 30 feet of [c] can immediately use its Reaction to make one attack.",
-  "Desperate Gambit":"[C] takes the Dodge action and regains 22 (4d10) Hit Points. Until the start of its next turn, the first attack roll against [c] each turn has Disadvantage.",
-  "Mass Debilitation":"Each enemy within 30 feet of [c] makes a DC {DC} Constitution saving throw or has the Frightened condition until the end of [c]'s next turn.",
+  "Desperate Gambit":"[C] takes the Dodge action and regains [4d10] Hit Points. Until the start of its next turn, the first attack roll against [c] each turn has Disadvantage.",
+  "Mass Debilitation":"Each enemy within 30 feet of [c] makes a [CON SAVE] Constitution saving throw or has the Frightened condition until the end of [c]'s next turn.",
 };
 const LAIR_SNIPS={
-  "Grasping Terrain":"The ground in a 20-foot-radius area [c] can see becomes Difficult Terrain until the next lair action. Each creature there makes a DC {DC} Strength saving throw or has the Restrained condition until the next lair action.",
-  "Eruption":"[C] targets a point it can see within 60 feet. Each creature within a 5-foot radius makes a DC {DC} Dexterity saving throw, taking 11 (2d10) damage on a failed save, or half as much on a success.",
+  "Grasping Terrain":"The ground in a 20-foot-radius area [c] can see becomes Difficult Terrain until the next lair action. Each creature there makes a [STR SAVE] Strength saving throw or has the Restrained condition until the next lair action.",
+  "Eruption":"[C] targets a point it can see within 60 feet. Each creature within a 5-foot radius makes a [DEX SAVE] Dexterity saving throw, taking [2d10] damage on a failed save, or half as much on a success.",
   "Obscuring Veil":"A 20-foot-radius Sphere of magical mist appears within 120 feet of [c], Heavily Obscuring its area until the next lair action.",
-  "Hazardous Ground":"A 15-foot-radius area [c] can see becomes hazardous until the next lair action. A creature that enters it for the first time on a turn or starts its turn there makes a DC {DC} Constitution saving throw, taking 7 (2d6) damage on a failure.",
+  "Hazardous Ground":"A 15-foot-radius area [c] can see becomes hazardous until the next lair action. A creature that enters it for the first time on a turn or starts its turn there makes a [CON SAVE] Constitution saving throw, taking [2d6] damage on a failure.",
   "Summon Hazard":"[C] conjures a creature of challenge rating 1 or lower in an unoccupied space it can see within 60 feet; it acts on initiative count 20.",
 };
 const LIB_PROMPT='<option value="">＋ From library…</option>';

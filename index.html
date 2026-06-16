@@ -110,11 +110,10 @@
 
           <fieldset class="fieldset">
             <div class="fs-title">Skills, defenses &amp; senses</div>
-            <div class="fs-sub">Skills</div>
+            <div class="fs-sub">Skills &amp; tools</div>
             <div id="skillRows"></div>
-            <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
             <div id="toolRows"></div>
-            <button class="addbtn" id="addTool" style="width:100%;margin-top:6px">＋ Add tool proficiency</button>
+            <button class="addbtn" id="addSkill" style="width:100%;margin-top:6px">＋ Add skill</button>
             <div class="fs-sub" style="margin-top:16px">Damage modifier</div>
             <div id="dmgRows"></div>
             <button class="addbtn" id="addDmg" style="width:100%;margin-top:6px">＋ Add damage</button>
@@ -129,9 +128,9 @@
             </div>
             <div class="grid g2" style="margin-top:10px">
               <label class="f">Gear
-                <div style="display:flex;gap:5px;align-items:flex-start">
-                  <div class="chipfield" id="f_gear_field" style="flex:1"><span class="chips" id="gearChips"></span><input type="text" id="f_gear_input" class="chipinput" placeholder="add gear…" autocomplete="off"></div>
-                  <button type="button" class="addbtn" id="suggestGear" style="flex:none;width:auto;padding:0 10px;white-space:nowrap" title="Suggest gear from attacks & AC note">Suggest</button>
+                <div class="chipfield with-action" id="f_gear_field">
+                  <div class="cf-main"><span class="chips" id="gearChips"></span><input type="text" id="f_gear_input" class="chipinput" placeholder="add gear…" autocomplete="off"></div>
+                  <button type="button" class="cf-action" id="suggestGear" title="Suggest gear from attack names & AC note"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M234.7 42.7L197 56.8c-3 1.1-5 4-5 7.2s2 6.1 5 7.2l37.7 14.1L248.8 123c1.1 3 4 5 7.2 5s6.1-2 7.2-5l14.1-37.7L315 71.2c3-1.1 5-4 5-7.2s-2-6.1-5-7.2L277.3 42.7 263.2 5c-1.1-3-4-5-7.2-5s-6.1 2-7.2 5L234.7 42.7zM46.1 395.4c-18.7 18.7-18.7 49.1 0 67.9l34.6 34.6c18.7 18.7 49.1 18.7 67.9 0L529.9 116.5c18.7-18.7 18.7-49.1 0-67.9L495.3 14.1c-18.7-18.7-49.1-18.7-67.9 0L46.1 395.4zM484.6 82.6l-105 105-23.3-23.3 105-105 23.3 23.3zM7.5 117.2C3 118.9 0 123.2 0 128s3 9.1 7.5 10.8L64 160l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L128 160l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L128 96 106.8 39.5C105.1 35 100.8 32 96 32s-9.1 3-10.8 7.5L64 96 7.5 117.2zm352 256C355 374.9 352 379.2 352 384s3 9.1 7.5 10.8L416 416l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L480 416l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L480 352l-21.2-56.5c-1.7-4.5-6-7.5-10.8-7.5s-9.1 3-10.8 7.5L416 352l-56.5 21.2z"/></svg></button>
                 </div>
               </label>
               <label class="f">Languages<input type="text" id="f_lang" placeholder="Common"></label>
@@ -223,8 +222,8 @@
               <tr><td><code>[Name]</code> · <code>[name]</code></td><td class="res">Aliases for <code>[C]</code> / <code>[c]</code>.</td></tr>
               <tr><td><code>[s]</code></td><td class="res">Verb “-s” for a singular subject; drops to nothing when <b>Plural</b> is on. e.g. <code>make[s]</code> → makes / make.</td></tr>
               <tr><td><code>[2d6 + 6]</code></td><td class="res">Averages any dice expression on render → <b>13 (2d6 + 6)</b>.</td></tr>
-              <tr><td><code>[STR SAVE]</code></td><td class="res">Save DC for that ability (8 + PB + modifier) → e.g. <b>DC 12</b>. Any ability: STR/DEX/CON/INT/WIS/CHA.</td></tr>
-              <tr><td><code>[STR ATK]</code></td><td class="res">Attack / check modifier for that ability (PB + modifier) → e.g. <b>+4</b>.</td></tr>
+              <tr><td><code>[STR SAVE]</code> · <code>[SAVE]</code></td><td class="res">Save DC for that ability (8 + PB + modifier) → e.g. <b>DC 12</b>. Any ability: STR/DEX/CON/INT/WIS/CHA. Bare <code>[SAVE]</code> uses the creature's <b>highest</b> ability.</td></tr>
+              <tr><td><code>[STR ATK]</code> · <code>[ATK]</code></td><td class="res">Attack / check modifier for that ability (PB + modifier) → e.g. <b>+4</b>. Bare <code>[ATK]</code> uses the creature's <b>highest</b> ability.</td></tr>
               <tr><td><code>[C+]</code> · <code>[c+]</code> · <code>[C-]</code> · <code>[c-]</code></td><td class="res">Override the article for one reference: <code>+</code> adds "the", <code>-</code> removes it — ignoring the <b>Proper name</b> toggle. Capital letter = capitalised.</td></tr>
               <tr><td><code>{C}</code> · <code>{c}</code> · <code>{s}</code></td><td class="res">Brace forms are accepted too, in case square brackets clash with your text.</td></tr>
             </tbody></table>

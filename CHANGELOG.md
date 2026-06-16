@@ -4,6 +4,33 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 36 — Bestiary origin, bracket-driven library & UI polish (B43)
+- **Bestiary origin badge:** every card now shows whether it's **⚒ Home-brew**
+  (created or edited here) or **⊕ Chassis** (loaded from a chassis and saved without
+  edits). The first edit flips it to home-brew; re-statusing/tagging doesn't.
+- **Gear "Suggest" → wand icon:** the Suggest button is now a ghost magic-wand icon
+  inside the Gear field, divider-separated (the chip area is cropped at the divider).
+- **Dropdown chevron spacing:** more right padding on every native select so the text
+  no longer crowds the chevron.
+- **Tool proficiencies folded into "Add skill":** the separate _Add tool proficiency_
+  button is gone; the **＋ Add skill** button now opens a dropdown of skills with a
+  **Tools** subgroup after them.
+- **Bare `[SAVE]` / `[ATK]`:** with no ability named, these now use the creature's
+  **highest** ability modifier (e.g. `[SAVE]` → save DC from the best stat).
+- **Bracket shortcuts in preset features:** the custom-action **Save block** snippet and
+  the whole built-in library (traits, actions, bonus, reactions, legendary, villain, lair)
+  now use **live bracket tokens** (`[CON SAVE]`, `[2d6]`, …) instead of baked-in numbers,
+  so inserted features retune to the creature's CR/abilities. Attack-row hints expand
+  tokens too.
+- **Recharge / X-per-day control:** the per-row freq button is now a ghost **＋** icon in
+  the entry's name bar (was a `↻`).
+- **Live feature-name suggestions:** typing in a Trait/Action/Bonus/Reaction **name**
+  field now suggests built-in snippets **and** every distinct feature harvested from
+  loaded chassis, presets and saved monsters.
+- **Library overrides built-ins:** when a typed name matches a feature in your library
+  (saved bestiary + uploaded presets), that version fills in instead of the built-in
+  snippet; curated built-ins still win over the example chassis text.
+
 ## Batch 35 — Bracket shortcuts + library aggregation (B41–B42 + fixes)
 - **New bracket tokens** (work in any trait/action/note, expand in preview + every
   export):

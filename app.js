@@ -379,8 +379,16 @@ function renderTools(){const box=$("#toolRows");if(!box)return;
   box.querySelectorAll(".tlName").forEach(el=>el.addEventListener("change",e=>{M.tools[+e.target.dataset.ti]=e.target.value;renderPreview();}));
   box.querySelectorAll("[data-rmtool]").forEach(el=>el.addEventListener("click",e=>{M.tools.splice(+e.target.dataset.rmtool,1);renderTools();renderPreview();}));
 }
-$("#addSkill").addEventListener("click",()=>{M.skills.push(["Perception","prof"]);renderSkills();renderPreview();});
-$("#addTool").addEventListener("click",()=>{(M.tools=M.tools||[]).push("Thieves' Tools");renderTools();renderPreview();});
+// B43 — "Add skill" opens a dropdown of skills, with the tool proficiencies as a subgroup after.
+function openSkillToolMenu(anchor){
+  const have=new Set(M.skills.map(s=>s[0])),haveT=new Set(M.tools||[]);
+  const sk=Object.keys(SKILLS).filter(k=>!have.has(k)).map(k=>`<button class="popitem" data-addsk="${k}">${k.replace(/_/g," ")}</button>`).join("")||`<div class="pop-empty">All skills added</div>`;
+  const tl=TOOLS.filter(t=>!haveT.has(t)).map(t=>`<button class="popitem" data-addtl="${esc(t)}">${esc(t)}</button>`).join("")||`<div class="pop-empty">All tools added</div>`;
+  const p=showPopover(anchor,`<div class="popscroll"><div class="pop-grp-lbl">Skills</div>${sk}<div class="popsep"></div><div class="pop-grp-lbl">Tools</div>${tl}</div>`);
+  p.querySelectorAll("[data-addsk]").forEach(b=>b.addEventListener("click",()=>{closePopover();M.skills.push([b.dataset.addsk,"prof"]);renderSkills();renderPreview();}));
+  p.querySelectorAll("[data-addtl]").forEach(b=>b.addEventListener("click",()=>{closePopover();(M.tools=M.tools||[]).push(b.dataset.addtl);renderTools();renderPreview();}));
+}
+$("#addSkill").addEventListener("click",e=>{e.stopPropagation();openSkillToolMenu(e.currentTarget);});
 
 function arrFor(k){return k==="traits"?M.traits:k==="actions"?M.actions:k==="bonus"?M.bonus:k==="reactions"?M.reactions:k==="villain"?M.villain.items:k==="legend"?M.legend.items:k==="lair"?M.lair.items:[];}
 function attackText(e){
@@ -407,12 +415,12 @@ function applyMinion(on){
   }
   renderEntries();renderPreview();
 }
-const SNIPS=[["Save block","*Constitution Saving Throw:* DC {DC}, each creature in a 15-foot Cone. *Failure:* 0 (2d6) damage. *Success:* Half damage."],["Multiattack","[C] make[s] two attacks."]];
+const SNIPS=[["Save block","*Constitution Saving Throw:* [CON SAVE], each creature in a 15-foot Cone. *Failure:* [2d6] damage. *Success:* Half damage."],["Multiattack","[C] make[s] two attacks."]];
 // Traits/bonus/reactions are always alpha-sorted; actions keep statblock/manual order
 // (Multiattack first) and get move arrows, like legend/villain/lair.
 const ALWAYS_SORTED=new Set(["traits","bonus","reactions"]);
 function rowCtrls(kind,i){const arrows=ALWAYS_SORTED.has(kind)?"":`<button class="iconbtn up" data-mv="${kind}:${i}:-1" title="Move up">▲</button><button class="iconbtn down" data-mv="${kind}:${i}:1" title="Move down">▼</button>`;
-  const freq=["actions","bonus","reactions"].includes(kind)?`<button class="iconbtn freqbtn" data-freq="${kind}:${i}" title="Recharge / X per day">↻</button>`:"";
+  const freq=["actions","bonus","reactions"].includes(kind)?`<button class="iconbtn freqbtn" data-freq="${kind}:${i}" title="Add Recharge / X-per-day to the name">＋</button>`:"";
   return arrows+freq+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
 // Append a Recharge / X-per-day tag to an entry's TITLE (not its body); replaces any existing freq tag.
 function applyFreqTag(kind,i,tag){const e=arrFor(kind)[i];const n=(e.name||"").replace(/\s*\((?:Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i,"").trim();e.name=tag?((n?n+" ":"")+tag):n;renderEntries();renderPreview();}
@@ -453,7 +461,7 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
       <label class="f" style="grid-column:span 2;flex-direction:row;align-items:center;gap:6px;margin-top:18px"><input type="checkbox" data-k="${kind}" data-i="${i}" data-f="addMod" ${e.addMod?"checked":""}> add ability to damage</label>
     </div>
     <input type="text" class="atk-extra" placeholder="Rider, e.g. plus 7 (2d6) Poison damage." data-k="${kind}" data-i="${i}" data-f="extra" value="${esc(e.extra)}">
-    <div class="hint" style="margin-top:6px">→ ${esc(attackText(e))}</div></div>`;}
+    <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(attackText(e)))}</div></div>`;}
   return `<div class="entry"><div class="ehead"><input type="text" placeholder="Name"${dlFor(kind)?` list="${dlFor(kind)}"`:""} data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name)}">${rowCtrls(kind,i)}</div>
     <textarea placeholder="Description" data-k="${kind}" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea>
     ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
@@ -493,7 +501,7 @@ function bindEntries(){
         // Typing in a text/number field (ev==="input") must NOT re-render the whole list — that
         // destroys the focused input and jumps the scroll. Patch only this entry's live hint.
         if(ev==="input"){const ent=el.closest(".entry"),hint=ent&&ent.querySelector(".hint"),obj=arrFor(k)[i];
-          if(hint&&obj)hint.textContent="→ "+(obj.mode==="attack"?attackText(obj):applyRefs(spellLines(obj).main));}
+          if(hint&&obj)hint.textContent="→ "+applyRefs(obj.mode==="attack"?attackText(obj):spellLines(obj).main);}
         else renderEntries();
       }
       renderPreview();});
@@ -532,17 +540,27 @@ function findCI(map,key){return Object.keys(map).find(k=>k.toLowerCase()===key);
 function actionTextFor(name){if(TEXT_ACTIONS[name])return expandSnip(TEXT_ACTIONS[name]);if(ATK_PRESETS[name])return attackText(ATK(Object.assign({name},ATK_PRESETS[name])));return null;}
 // type-to-autofill: typing a known snippet name into an entry's Name field fills it in
 function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;const key=e.name.trim().toLowerCase();
-  if(e.mode==="attack"){const p=findCI(ATK_PRESETS,key);if(p)Object.assign(e,clone(ATK_PRESETS[p]),{mode:"attack",name:p});else return;}
-  else if(e.mode==="react"){const p=findCI(REACT_SNIPS,key);if(!p)return;e.name=p;e.trigger=expandSnip(REACT_SNIPS[p].trigger);e.response=expandSnip(REACT_SNIPS[p].response);}
-  else{const map=kind==="traits"?TRAIT_SNIPS:kind==="bonus"?BONUS_SNIPS:null;
-    if(kind==="actions"){const keys=[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)];const p=keys.find(k=>k.toLowerCase()===key);if(!p)return;e.name=p;e.text=actionTextFor(p);}
-    else{if(!map)return;const p=findCI(map,key);if(!p)return;e.name=p;e.text=expandSnip(map[p]);}}
-  if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
+  const modeOK=h=>!(e.mode==="attack"&&h.mode!=="attack")&&!(e.mode==="react"&&h.trigger===undefined);
+  const applyFull=h=>{arrFor(kind)[i]=clone(h);if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();};
+  const done=()=>{if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();};
+  // 1. user library (saved bestiary + uploaded presets) overrides built-in snippets of the same name
+  const userHit=aggregatedUserFor(kind).get(key);if(userHit&&modeOK(userHit)){applyFull(userHit);return;}
+  // 2. curated built-in snippet
+  if(e.mode==="attack"){const p=findCI(ATK_PRESETS,key);if(p){Object.assign(e,clone(ATK_PRESETS[p]),{mode:"attack",name:p});done();return;}}
+  else if(e.mode==="react"){const p=findCI(REACT_SNIPS,key);if(p){e.name=p;e.trigger=expandSnip(REACT_SNIPS[p].trigger);e.response=expandSnip(REACT_SNIPS[p].response);done();return;}}
+  else if(kind==="actions"){const keys=[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)];const p=keys.find(k=>k.toLowerCase()===key);if(p){e.name=p;e.text=actionTextFor(p);done();return;}}
+  else{const map=kind==="traits"?TRAIT_SNIPS:kind==="bonus"?BONUS_SNIPS:null;if(map){const p=findCI(map,key);if(p){e.name=p;e.text=expandSnip(map[p]);done();return;}}}
+  // 3. any aggregated feature incl. built-in chassis (so every datalist suggestion fills)
+  const anyHit=aggregatedFor(kind).get(key);if(anyHit&&modeOK(anyHit))applyFull(anyHit);}
 // insert a fresh entry chosen from a section's "From library" dropdown
 // B42 — aggregate same-kind features (by name) from every loaded chassis/preset/saved monster,
 // so the "From library" dropdowns also offer real features harvested across the bestiary.
 function aggKindArr(m,kind){return kind==="traits"?m.traits:kind==="actions"?m.actions:kind==="bonus"?m.bonus:kind==="reactions"?m.reactions:kind==="legend"?(m.legend&&m.legend.items):kind==="villain"?(m.villain&&m.villain.items):kind==="lair"?(m.lair&&m.lair.items):null;}
-function aggregatedFor(kind){const map=new Map();[...state.lib,...CHASSIS,...enPresets()].forEach(m=>{(aggKindArr(m,kind)||[]).forEach(e=>{const nm=(e&&e.name||"").trim();if(!nm)return;const k=nm.toLowerCase();if(!map.has(k))map.set(k,e);});});return map;}
+function aggMapFrom(mons,kind){const map=new Map();mons.forEach(m=>{(aggKindArr(m,kind)||[]).forEach(e=>{const nm=(e&&e.name||"").trim();if(!nm)return;const k=nm.toLowerCase();if(!map.has(k))map.set(k,e);});});return map;}
+function aggregatedFor(kind){return aggMapFrom([...state.lib,...CHASSIS,...enPresets()],kind);}
+// User library only (saved bestiary + uploaded presets, no built-in chassis) — these override
+// the curated built-in snippets when a typed name matches (B43 item 10).
+function aggregatedUserFor(kind){return aggMapFrom([...state.lib,...enPresets()],kind);}
 let aggCache={};
 function refreshAggOptgroup(kind,sel){
   sel.querySelectorAll("optgroup.agg-grp").forEach(g=>g.remove());
@@ -610,12 +628,23 @@ function buildLibSelects(){
     cimmSel.addEventListener("mousedown",rebuildCimmSel); // refresh just before the native list opens
     cimmSel.addEventListener("change",()=>{const v=cimmSel.value;if(v){const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");renderCimm();renderPreview();cimmSel.value="";}});
   }
-  buildDatalist("dl-traits",Object.keys(TRAIT_SNIPS));
-  buildDatalist("dl-atk",Object.keys(ATK_PRESETS));
-  buildDatalist("dl-textact",[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)]);
-  buildDatalist("dl-bonus",Object.keys(BONUS_SNIPS));
-  buildDatalist("dl-react",Object.keys(REACT_SNIPS));
-  buildMonsterDatalists();
+  buildMonsterDatalists(); // also rebuilds the feature-name datalists
+}
+// Live-typing suggestions for entry Name fields: built-in snippet names PLUS every distinct
+// feature harvested from loaded chassis/presets/saved monsters (B43). A library entry with the
+// same name as a built-in is folded in once (built-in display kept); autofillEntry then prefers
+// the library version's content. An optional modeFilter limits the aggregated half (e.g. attacks).
+function featureSuggestNames(kind,builtin,modeFilter){
+  const set=new Map();builtin.forEach(n=>set.set(n.toLowerCase(),n));
+  aggregatedFor(kind).forEach((e,k)=>{if(modeFilter&&!modeFilter(e))return;if(!set.has(k))set.set(k,e.name);});
+  return [...set.values()].sort((a,b)=>a.localeCompare(b));
+}
+function buildFeatureDatalists(){
+  buildDatalist("dl-traits",featureSuggestNames("traits",Object.keys(TRAIT_SNIPS)));
+  buildDatalist("dl-atk",featureSuggestNames("actions",Object.keys(ATK_PRESETS),e=>e.mode==="attack"));
+  buildDatalist("dl-textact",featureSuggestNames("actions",[...Object.keys(TEXT_ACTIONS),...Object.keys(ATK_PRESETS)]));
+  buildDatalist("dl-bonus",featureSuggestNames("bonus",Object.keys(BONUS_SNIPS)));
+  buildDatalist("dl-react",featureSuggestNames("reactions",Object.keys(REACT_SNIPS)));
 }
 // Type / Subtype / Alignment comboboxes: suggestions mined from the saved
 // bestiary, the built-in chassis and uploaded statblock presets. Free text is
@@ -631,6 +660,7 @@ function buildMonsterDatalists(){
   buildDatalist("dl-type",monsterFieldValues("type"));
   buildDatalist("dl-subtype",monsterFieldValues("subtype"));
   buildDatalist("dl-align",monsterFieldValues("align",ALIGN_CANON));
+  if(typeof buildFeatureDatalists==="function")buildFeatureDatalists(); // refresh feature name suggestions with current library
 }
 // Stat focus: highlight the ability cell used by the focused attack/spell entry.
 let _statFocusCell=null;
@@ -668,6 +698,7 @@ function loadMonster(m){
   $("#fsLegend").classList.toggle("collapsed",!M.legend.on);$("#fsVillain").classList.toggle("collapsed",!M.villain.on);
   $("#fsLair").classList.toggle("collapsed",!M.lair.on);$("#fsRegional").classList.toggle("collapsed",!M.regional.on);
   if(M._auto.ac||M._auto.hp)applyCRAuto();
+  if(M._fromChassis&&!M._chassisSig)M._chassisSig=contentSig(M); // capture the pristine chassis baseline (B43)
   refreshAbil();renderDmg();renderSkills();renderTools();renderCimm();renderGear();renderEntries();renderPreview();
   requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top
 }
@@ -694,9 +725,13 @@ function refPhrase(cap){const sn=M.shortName||{word:"creature",proper:false};con
 function applyRefsFor(mon,t){if(!t)return t;const sn=(mon&&mon.shortName)||{word:"creature",proper:false,plural:false};const w=sn.word||"creature";
   const ph=cap=>sn.proper?w:((cap?"The ":"the ")+w);const sfx=sn.plural?"":"s";
   // [ABIL SAVE] → save DC, [ABIL ATK] → attack/check modifier (PB + ability mod, from this creature's CR).
+  // Bare [SAVE]/[ATK] (no ability) fall back to the creature's HIGHEST ability modifier.
   const pb=mon?pbForCR(mon.cr):2,abmod=a=>mon?mod(mon[a.toLowerCase()]??10):0,capw=w.charAt(0).toUpperCase()+w.slice(1);
+  const bestMod=Math.max(...ABILS.map(a=>abmod(a)));
   t=t.replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+SAVE[\]}]/gi,(_,a)=>"DC "+(8+pb+abmod(a)))
      .replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+ATK[\]}]/gi,(_,a)=>sgn(pb+abmod(a)))
+     .replace(/[[{]\s*SAVE\s*[\]}]/gi,"DC "+(8+pb+bestMod))
+     .replace(/[[{]\s*ATK\s*[\]}]/gi,sgn(pb+bestMod))
      // local article override: + forces "the", - removes it (capital = capitalised first letter)
      .replace(/[[{]C\+[\]}]/g,"The "+w).replace(/[[{]c\+[\]}]/g,"the "+w).replace(/[[{]C-[\]}]/g,capw).replace(/[[{]c-[\]}]/g,w);
   return avgBrackets(t.replace(/\[C\]/g,ph(true)).replace(/\[c\]/g,ph(false)).replace(/\[Name\]/g,ph(true)).replace(/\[name\]/g,ph(false)).replace(/\[s\]/g,sfx)
@@ -1081,6 +1116,12 @@ let crTargetsHTML="";
 function refreshForgeStatus(){const el=$("#forgeStatus");if(!el)return;el.className="tag st st-"+(M.status||"Draft")+" statchip";el.innerHTML=esc(M.status||"Draft")+' <span class="caret">▾</span>';}
 function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>`<button class="popitem${s===M.status?" on":""}" data-s="${s}">${s}</button>`).join(""));
   p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{closePopover();M.status=b.dataset.s;refreshForgeStatus();renderPreview();}));}
+// Origin chip on a bestiary card: distinguishes home-brew (created/edited here) from an entry
+// loaded straight from a chassis and saved without edits (B43).
+function originBadgeHTML(m){const o=originOf(m);
+  return o.kind==="chassis"
+    ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis — saved without edits">⊕ Chassis</span>`
+    :`<span class="tag origin brew" title="Home-brew — created or edited here">⚒ Home-brew</span>`;}
 function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}" draggable="true">
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
@@ -1099,6 +1140,7 @@ function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" arch
   <div class="tags">
     <span class="tag cr">CR ${m.cr}</span>
     <span class="tag st st-${m.status} statchip" data-stchip="${m.id}">${m.status} <span class="caret">▾</span></span>
+    ${originBadgeHTML(m)}
     <button class="tag addtag" data-addtag="${m.id}" title="Add tag">＋ tag</button>
   </div>
   <div class="card-tags">
@@ -1198,6 +1240,14 @@ function monsterDirty(){const m=M;
   const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)return true;
   if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)return true;
   return false;}
+// B43 — origin tracking: a monster loaded straight from a chassis carries `_fromChassis`
+// (the chassis name) plus `_chassisSig`, a content signature captured at load. A bestiary
+// entry counts as "from chassis (unedited)" only while its current content still matches that
+// signature; the first edit flips it to home-brew. Bestiary meta (status/tags/archive) is
+// excluded from the signature so re-statusing doesn't change the origin.
+const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup"];
+function contentSig(m){const c=clone(m);SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
+function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis}:{kind:"brew"};}
 function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
   if(m.name.trim())out.name=m.name;
   ["type","subtype","align","acnote","hpf","gear","dmgnote","cimm"].forEach(k=>{if(m[k])out[k]=m[k];});
@@ -1216,7 +1266,7 @@ function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;
 function applyChassis(ch,keepId,merge){
   let base;
   if(merge)base=mergeChassis(ch);
-  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};}
+  else{base=clone(ch);base.id=(keepId&&M)?M.id:uid();base.chassis=false;base._auto={ac:false,hp:false};base._fromChassis=ch.name;delete base._chassisSig;}
   delete base._preset;delete base._source;
   loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
 }

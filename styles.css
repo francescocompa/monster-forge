@@ -122,7 +122,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{resize:vertical;min-height:60px;line-height:1.45}
 textarea::-webkit-resizer{background:linear-gradient(135deg,transparent 0 45%,var(--faint) 45% 55%,transparent 55% 70%,var(--faint) 70% 80%,transparent 80%);border-radius:0 0 5px 0}
 /* Form selects use the native browser dropdown (own arrow + native option list, dark via color-scheme) */
-select{padding-right:24px}
+select{padding-right:30px}
 .with-badge{position:relative}
 .with-badge .badge{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;letter-spacing:.06em;color:var(--amber);background:rgba(217,169,65,.14);border:1px solid #6d5a26;border-radius:4px;padding:1px 5px;pointer-events:none;display:none}
 .with-badge.suggested input{color:var(--amber);font-style:italic}
@@ -181,6 +181,9 @@ select{padding-right:24px}
 .menu .sep{height:1px;background:var(--line);margin:4px 2px}
 .iconbtn:hover{border-color:var(--bad);color:var(--bad)}
 .iconbtn.up:hover,.iconbtn.down:hover{border-color:var(--accent);color:var(--accent)}
+/* Recharge / X-per-day "+" — ghost icon in the entry name bar (B43) */
+.iconbtn.freqbtn{background:none;border-color:transparent;color:var(--faint);font-size:16px}
+.iconbtn.freqbtn:hover{background:var(--panel2);border-color:var(--accent);color:var(--accent)}
 .addbtn{background:none;border:1px dashed var(--line);color:var(--dim);border-radius:5px;padding:7px 10px;font-size:12px;letter-spacing:.01em}
 .addbtn:hover{border-color:var(--accent);color:var(--accent)}
 .addrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
@@ -276,6 +279,9 @@ select{padding-right:24px}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-size:10px;background:#0e0f12;border:1px solid var(--line);color:var(--dim);border-radius:4px;padding:2px 7px}
 .tag.cr{color:var(--amber);border-color:#5c4d24}
+.tag.origin{font-size:9.5px;letter-spacing:.02em;padding:2px 6px}
+.tag.origin.chassis{color:var(--info);border-color:#2c4a63;background:rgba(90,150,210,.08)}
+.tag.origin.brew{color:var(--dim);border-color:var(--line);background:var(--panel2)}
 .card .acts{display:flex;gap:6px;margin-top:auto;padding-top:6px}
 .card .acts button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;padding:6px;font-size:11px}
 .card .acts button:hover{border-color:var(--accent);color:var(--txt)}
@@ -386,7 +392,7 @@ select{padding-right:24px}
 /* The sticky header pins at the scroll padding-box top (20px down); this paints over that gap so cards don't bleed above it while scrolling */
 .lib-head::before{content:"";position:absolute;top:-20px;left:0;right:0;height:20px;background:var(--bg)}
 .lib-head .col-head{margin-bottom:8px}
-.toolbar select.filt{width:auto;flex:none;padding:7px 26px 7px 10px;font-size:12px;color:var(--dim)}
+.toolbar select.filt{width:auto;flex:none;padding:7px 30px 7px 10px;font-size:12px;color:var(--dim)}
 .splitbtn{display:inline-flex;align-items:stretch}
 .splitbtn .btn.primary.sm{border-radius:7px 0 0 7px}
 .splitbtn .kebab.split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 7px 7px 0;width:28px;height:auto;font-size:13px}
@@ -495,6 +501,10 @@ select{padding-right:24px}
 .popover .popback:hover{color:var(--txt)}
 .popover .popsep{height:1px;background:var(--line);margin:4px 2px}
 .popover .popchev{position:absolute;right:9px;top:7px;color:var(--faint)}
+/* Scrollable grouped popover (Add skill/tool dropdown — B43) */
+.popover .popscroll{display:flex;flex-direction:column;gap:2px;max-height:min(58vh,380px);overflow-y:auto;margin:-1px;padding:1px}
+.popover .pop-grp-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding:6px 10px 2px;position:sticky;top:0;background:var(--panel2);z-index:1}
+.popover .pop-empty{padding:7px 10px;font-size:12px;color:var(--faint)}
 .popover .popscroll{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
 .popover .pcount{display:inline-block;background:var(--accent);color:#fff;border-radius:8px;font-size:9px;line-height:14px;padding:0 5px;margin-left:5px;vertical-align:middle}
 .popover.tail-pop{overflow:visible}
@@ -553,6 +563,12 @@ select{padding-right:24px}
 .chipinput{flex:1;min-width:90px;border:none!important;background:transparent!important;padding:2px 2px!important;font-size:12.5px;width:auto!important;color-scheme:dark}
 .chipinput:focus{outline:none;border:none!important}
 .chipinput:-webkit-autofill,.chipinput:-webkit-autofill:hover,.chipinput:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 30px #0e0f12 inset!important;-webkit-text-fill-color:var(--txt)!important}
+/* Chipfield with a trailing ghost-icon action, divider-separated and cropped within the field (B43) */
+.chipfield.with-action{flex-wrap:nowrap;align-items:stretch;padding:0;overflow:visible;cursor:default}
+.chipfield.with-action .cf-main{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 7px;min-height:34px;max-height:94px;overflow-y:auto;cursor:text}
+.chipfield.with-action .cf-action{flex:none;width:38px;border:none;border-left:1px solid var(--line);background:none;color:var(--faint);display:grid;place-items:center;padding:0;cursor:pointer;border-radius:0 4px 4px 0;transition:color .12s,background .12s}
+.chipfield.with-action .cf-action:hover{color:var(--accent);background:var(--panel2)}
+.chipfield.with-action .cf-action svg{width:15px;height:15px;fill:currentColor;display:block}
 
 /* Spell / condition reference links + hover card */
 .reflink{color:var(--info);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:help}
