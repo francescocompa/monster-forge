@@ -8,7 +8,8 @@ const SETTINGS_DEFAULT={
   clickRoll:{on:true,adv:true,crit:true,editFormula:true},
   defaults:{partySize:4,partyLevel:1,faction:"Enemy"},
   homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
-  notes:{adventure:true,scene:true,encounter:true} // include a notes field on newly-created items (B65)
+  notes:{adventure:true,scene:true,encounter:true}, // include a notes field on newly-created items (B65)
+  refPopovers:{on:true} // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
 function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}
@@ -1142,11 +1143,12 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
       const cm=near.match(/\(level\s+(\d+)\s+version\)/i);if(cm)cast=+cm[1];
       body.querySelectorAll(".cc-dice[data-roll]").forEach(d=>{if(normRoll(d.dataset.roll)===base){d.dataset.scalebase=sp._scale.base;d.dataset.scaleper=sp._scale.per;d.dataset.scalelvl=sp._scale.lvl;if(cast)d.dataset.scalecast=cast;}});}}
   }
-  // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible") — unwrap
-  // any self-ref link to a plain coloured span (B64). Also drop the rule-finder amber highlight so a
-  // self term doesn't read as a findable rule that opens nothing (B68 — parity with conditions).
+  // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible"). The self
+  // term is rendered as PLAIN TEXT — no link, no colour, no rule-finder highlight — so a definition
+  // never visually points back at the card you're already reading (B64 → B68: was a coloured span;
+  // now stripped to plain text for spells/conditions/rules alike).
   const self=(name||"").toLowerCase();
-  p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self){const sp=document.createElement("span");sp.className=r.className.replace(/\breflink\b/,"").replace(/\brf-hit\b/,"").trim();sp.textContent=r.textContent;r.replaceWith(sp);}});
+  p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self)r.replaceWith(document.createTextNode(r.textContent));});
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";}
@@ -1155,9 +1157,12 @@ function hideRefpopNow(level){document.querySelectorAll(".refpop").forEach(p=>{i
 // without it vanishing (B64).
 function hideRefpopFrom(level){clearTimeout(_refTimer);_refTimer=setTimeout(()=>hideRefpopNow(level),360);}
 function hideRefpop(){hideRefpopFrom(0);}
-document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
+// Definition popovers (spell/condition/rule) are suppressible via Settings, but the rule finder always
+// shows them — its whole purpose is to surface definitions on hover (B68).
+function refPopOn(){return ruleFinder||!(state.settings&&state.settings.refPopovers)||state.settings.refPopovers.on!==false;}
+document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
 document.addEventListener("mouseout",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
-document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest(".refpop")))hideRefpopNow(0);},true);
+document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest(".refpop")))hideRefpopNow(0);},true);
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
@@ -1401,11 +1406,16 @@ function buildRuleCats(){
 }
 function ruleFindRoot(root){
   if(!root)return;
-  // Spells: only the ones the app already linked (no raw name-matching → no false positives).
-  root.querySelectorAll(".cc-spell .reflink,.reflink[data-ref='spell']").forEach(s=>s.classList.add("rf-hit"));
+  // Any already-linked reference (spell / condition-immunity / rule) becomes a finder hit — no raw
+  // name-matching of spells, so no false positives.
+  root.querySelectorAll(".reflink").forEach(s=>s.classList.add("rf-hit"));
   const cats=buildRuleCats();if(!cats.length)return;
-  // Statblock prose lives in .blk/.va/.sb-note-b; a popover body has none, so walk the body itself.
-  const conts=root.querySelectorAll(".blk:not(.cc-skip),.va,.sb-note-b");
+  // Walk the header stats (.topstats: Initiative/Speed) + value lines (.meta: skills/senses/immunities/
+  // languages) + prose blocks consistently. Previously only .blk was walked when blocks existed, so the
+  // header & value lines were silently skipped for any creature that had traits/actions (B68). A popover
+  // body matches none of these, so walk the body itself.
+  const sel=".topstats,.meta,.blk:not(.cc-skip),.va,.sb-note-b";
+  const conts=root.querySelectorAll(sel);
   (conts.length?[...conts]:[root]).forEach(c=>walkColorize(c,cats));
 }
 function toggleRuleFinder(){
@@ -1557,7 +1567,7 @@ function renderRollLog(scrollNew){
   };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
-  el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+  el.innerHTML=`<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +(rollLogOpen?`<div class="rl-body">${groups.map(groupHTML).join("")}</div>`:"");
   bindRollLogDrag(el,el.querySelector(".rl-head"));
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
@@ -3016,6 +3026,8 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
   if($(".refpop.show")){e.preventDefault();hideRefpopNow(0);return;}
   if($(".popover"))return; // let an open popover handle its own Esc
   e.preventDefault();toggleRuleFinder();});
+// ⌘/Ctrl-S saves the Forge to the Bestiary (instead of the browser's Save Page dialog). B68.
+document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==="s"||e.key==="S")){if(_curView!=="forge")return;e.preventDefault();const b=$("#saveMonster");if(b)b.click();}});
 function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
 document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
 window.addEventListener("blur",dropCmd);
@@ -3060,6 +3072,11 @@ function renderSettings(){
       <div class="set-head">Click-to-roll dice<span class="set-kbd">⌘/Ctrl-click anywhere = custom roll</span></div>
       ${SW("clickRoll.on","Enable click-to-roll")}
       <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Definition popovers</div>
+      ${SW("refPopovers.on","Spell &amp; condition popovers")}
+      <div class="set-note">Hover or click a linked spell or condition to see its rules. The rule finder still shows definitions while it's active.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Adventure defaults</div>

@@ -467,8 +467,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .roll-log .rl-grow{flex:1}
 .roll-log .rl-title{font-weight:600;color:var(--txt)}
 .roll-log .rl-n{font-size:10px;color:var(--faint);background:var(--in);border:1px solid var(--line);border-radius:10px;padding:0 6px;line-height:15px}
-.roll-log .rl-tog{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:4px}
-.roll-log .rl-tog:hover{color:var(--txt)}
+.roll-log .rl-tog{background:none;border:none;color:var(--dim);cursor:pointer;width:20px;height:20px;display:grid;place-items:center;padding:0;border-radius:4px;flex:none;transition:background .12s,color .12s}
+.roll-log .rl-tog:hover{color:var(--txt);background:var(--panel3)}
+.roll-log .rl-tog svg{display:block;transition:transform .15s}
+.roll-log .rl-tog.closed svg{transform:rotate(-90deg)}
 .roll-log .rl-clear{background:none;border:none;color:var(--bad);cursor:pointer;padding:3px 4px;border-radius:4px;display:grid;place-items:center}
 .roll-log .rl-clear:hover{background:rgba(214,79,69,.16)}
 .roll-log .rl-clear svg{display:block;width:12px;height:12px}
@@ -1015,7 +1017,7 @@ body.rule-finder button,body.rule-finder a,body.rule-finder input,body.rule-find
 /* Only the statblock is dimmed; the rule-explanation popover stays fully readable (B67). */
 body.rule-finder .sb h2,body.rule-finder .sb h3,body.rule-finder .sb p,body.rule-finder .sb .blk,
 body.rule-finder .sb .va,body.rule-finder .sb .sb-note-b,body.rule-finder .sb .typeline,
-body.rule-finder .sb table,body.rule-finder .sb .k{color:var(--faint)}
+body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:var(--faint)}
 .rf-hit{color:var(--amber)!important;background:none!important;text-decoration:underline;text-decoration-color:var(--amber);text-underline-offset:2px;font-weight:600;cursor:help}
 .rf-hit:hover{color:#f0d489!important}
 .rc-table{border-collapse:collapse;width:100%;margin:6px 0;font-size:11.5px}

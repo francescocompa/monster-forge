@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 69 — Rule-finder consistency, popover toggle, ⌘S
+- **Rule finder now scans the whole statblock consistently.** Header stats (Initiative, Speed) and the
+  value lines (skills, senses, condition immunities, languages) are highlighted whether or not the
+  creature has traits/actions. Previously, any creature *with* body blocks silently skipped the header
+  and value lines (so "Initiative" highlighted on a blank creature but not on a full one).
+- **No more yellow attack-label text in the rule finder.** Italic labels like "Melee / Ranged" are
+  dimmed with the rest of the prose; only actual rule terms stay amber.
+- **New setting — "Spell & condition popovers"** (Settings → Definition popovers). Turn off the
+  hover/click definition cards for spells and conditions while keeping everything else. The rule finder
+  still shows definitions while it's active.
+- **⌘/Ctrl-S saves the Forge** to the Bestiary (instead of the browser's Save-Page dialog) when the
+  Forge is open.
+- **Self-references in popovers are now plain text.** A definition that mentions its own name (e.g. the
+  Charmed card saying "charmed") shows it with no colour and no link — matching the rule-finder
+  behaviour — so a card never points back at itself.
+- **Roll-log collapse uses the standard chevron** instead of a tiny unicode triangle.
+
 ## Batch 68 — Rule-finder & popover fixes
 - **No false unsaved-edits prompt** when loading a chassis from the picker. The picker now checks
   `forgeUnsaved()` (which ignores an unedited chassis/preset) instead of the raw `monsterDirty()`, so
