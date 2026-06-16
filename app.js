@@ -1724,13 +1724,17 @@ function addMonsterCombatant(enc,monsterId){
 function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
 // Per-creature XP for the budget. MCDM minions use the special low minion-XP table (so a horde
 // counts fairly); everyone else uses standard CR XP. `count` multiplies either way.
-function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);return cr!=null?(CR_XP[cr]||0):0;}
-function combatIsMinion(c){return c.type==="monster"&&!!(monOf(c)&&monOf(c).minion);}
+function combatIsMinion(c){return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):c.type==="quick"?!!c.minion:false;}
+function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
 function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
 function encBudget(adv,e){
   const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
-  e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1);}}});
-  return base.map((b,i)=>b+add[i]);
+  // Ally creatures raise the party's budget ≈ a PC of level round(CR). A minion ally contributes
+  // proportionally less (scaled by minion-XP ÷ standard-XP), matching the enemy-side minion math.
+  e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);
+    const f=combatIsMinion(c)?((MINION_XP[cr]||0)/(CR_XP[cr]||1)):1;
+    for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1)*f;}}});
+  return base.map((b,i)=>Math.round(b+add[i]));
 }
 function encSpent(e){return e.combatants.filter(c=>c.faction==="Enemy"&&c.type!=="event").reduce((s,c)=>s+combatXP(c),0);}
 function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2])return["over","Over High"];if(spent>=bud[2]*0.92)return["high","High"];if(spent>=bud[1]*0.92)return["moderate","Moderate"];if(spent>=bud[0]*0.85)return["low","Low"];return["trivial","Trivial"];}
@@ -1901,6 +1905,7 @@ function combatHTML(e,c){
     <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
     <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
+    <label class="mini-ck" title="MCDM minion — counts as minion XP toward the budget"><input type="checkbox" data-cf="${c.id}:minion" ${c.minion?"checked":""}> minion</label>
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
     <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
   const m=monOf(c);
@@ -1949,7 +1954,10 @@ function bindEncEvents(a){
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
-    if(el.tagName==="SELECT"){
+    if(el.type==="checkbox"){
+      // minion flag on a quick combatant — changes its XP, so re-render to update budget + tag.
+      el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.checked;saveAdv();renderEncList(a);});
+    } else if(el.tagName==="SELECT"){
       el.addEventListener("change",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();if(["cr","faction","monsterId"].includes(f))renderEncList(a);});
     } else if(el.type==="number"){
       // count: patch derived totals in place. Never re-render the input — keyboard arrows and the

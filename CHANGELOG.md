@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 48 — Minion edge cases
+- **Minion allies** now raise the encounter budget proportionally (scaled by
+  minion-XP ÷ standard-XP) instead of as a full creature — matching the enemy-side
+  minion math (5 CR-1 minion allies ≈ 1 standard ally).
+- **Quick (CR-only) combatants** can be flagged as minions via a **minion checkbox**
+  in their row; the flag flows through XP, the budget, and the Claude export.
+
 ## Batch 47 — Minion encounter math + B44 polish
 - **MCDM minion encounter budgeting:** a minion combatant now contributes the
   special low **minion XP** (Flee, Mortals! table) instead of standard CR XP, so a
