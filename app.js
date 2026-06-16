@@ -24,12 +24,27 @@ const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",BOO
 // upload flow can surface a single consolidated alert instead of silently dropping data.
 let _storageFailed=false;
 function _store(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){_storageFailed=true;return false;}}
-function loadPresets(){try{state.presets=(JSON.parse(localStorage.getItem(PRESET_KEY))||[]).map(normalizeMonster);}catch(e){state.presets=[];}}
-function savePresets(){_store(PRESET_KEY,state.presets);}
-function loadSpells(){try{state.spells=JSON.parse(localStorage.getItem(SPELL_KEY))||[];}catch(e){state.spells=[];}}
-function saveSpells(){_store(SPELL_KEY,state.spells);}
-function loadConditions(){try{state.conditions=JSON.parse(localStorage.getItem(COND_KEY))||[];}catch(e){state.conditions=[];}}
-function saveConditions(){_store(COND_KEY,state.conditions);}
+// ── Reference libraries live in IndexedDB (B59) ──────────────────────────────
+// The 5etools dumps (a parsed bestiary alone is several MB) blow past the ~5MB localStorage cap,
+// which silently dropped data on the live origin. IndexedDB holds far more, persists, and works
+// everywhere. Small ref state (books/disabled/leg-groups/meta) stays in localStorage.
+const IDB_NAME="monsterforge",IDB_STORE="kv";let _idbP=null;
+function idbOpen(){if(_idbP)return _idbP;_idbP=new Promise((res,rej)=>{let req;try{req=indexedDB.open(IDB_NAME,1);}catch(e){return rej(e);}
+  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE);};
+  req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});return _idbP;}
+function idbGet(key){return idbOpen().then(db=>new Promise((res,rej)=>{const r=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);})).catch(()=>undefined);}
+function idbSet(key,val){return idbOpen().then(db=>new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(val,key);tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);})).catch(()=>{_storageFailed=true;return false;});}
+// Read an IDB list, migrating any legacy localStorage copy on first run (then freeing the LS key).
+async function _loadIdbList(idbKey,lsKey){let v=await idbGet(idbKey);
+  if(v==null){let old=null;try{old=JSON.parse(localStorage.getItem(lsKey));}catch(e){}
+    if(old!=null){v=old;if(await idbSet(idbKey,old)){try{localStorage.removeItem(lsKey);}catch(e){}}}}
+  return v||[];}
+async function loadPresets(){try{state.presets=(await _loadIdbList("presets",PRESET_KEY)).map(normalizeMonster);}catch(e){state.presets=[];}}
+function savePresets(){idbSet("presets",state.presets);}
+async function loadSpells(){try{state.spells=await _loadIdbList("spells",SPELL_KEY);}catch(e){state.spells=[];}}
+function saveSpells(){idbSet("spells",state.spells);}
+async function loadConditions(){try{state.conditions=await _loadIdbList("conditions",COND_KEY);}catch(e){state.conditions=[];}}
+function saveConditions(){idbSet("conditions",state.conditions);}
 function loadBooks(){try{state.books=JSON.parse(localStorage.getItem(BOOK_KEY))||{};}catch(e){state.books={};}}
 function saveBooks(){_store(BOOK_KEY,state.books);}
 function loadDisabled(){try{state.disabledLibs=JSON.parse(localStorage.getItem(DISLIB_KEY))||[];}catch(e){state.disabledLibs=[];}}
@@ -38,7 +53,7 @@ function loadLegGroups(){try{state.legendaryGroups=JSON.parse(localStorage.getIt
 function saveLegGroups(){_store(LEGGRP_KEY,state.legendaryGroups);}
 function loadRefMeta(){try{state.refMeta=JSON.parse(localStorage.getItem(REFMETA_KEY))||{};}catch(e){state.refMeta={};}}
 function saveRefMeta(){_store(REFMETA_KEY,state.refMeta);}
-function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();loadPresets();loadSpells();loadConditions();reannotateBooks();reapplyLegGroups();}
+async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions()]);reannotateBooks();reapplyLegGroups();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
 function reannotateBooks(persist){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
@@ -706,9 +721,15 @@ function findCI(map,key){return Object.keys(map).find(k=>k.toLowerCase()===key);
 function actionTextFor(name){if(TEXT_ACTIONS[name])return expandSnip(TEXT_ACTIONS[name]);if(ATK_PRESETS[name])return attackText(ATK(Object.assign({name},ATK_PRESETS[name])));return null;}
 // FP2 — bracketize an imported feature's concrete text into our live tokens, so a library/chassis
 // feature retunes to the new creature's CR/abilities on import. (Built-in snippets are already bracketed.)
-function bracketize(text,srcName){
+// `mon` (optional) gates DC/attack-bonus replacement to numbers that actually match this stat block
+// (B59 item 12) — so a feature's own DC/+hit becomes a live [SAVE]/[ATK] token, but an unrelated
+// hard-coded number is left alone. Without `mon` the replacements are unconditional (import path).
+function bracketize(text,srcName,mon){
   if(!text)return text;let t=String(text);
   const AB={strength:"STR",dexterity:"DEX",constitution:"CON",intelligence:"INT",wisdom:"WIS",charisma:"CHA"};
+  const ABK={STR:"str",DEX:"dex",CON:"con",INT:"int",WIS:"wis",CHA:"cha"};
+  const pb=mon?pbForCR(mon.cr):0,am=a=>mon?mod(mon[a]??10):0,best=mon?Math.max(...ABILS.map(am)):0;
+  const okSave=(code,n)=>!mon||+n===8+pb+am(ABK[code]),okBest=n=>!mon||+n===8+pb+best,okAtk=n=>!mon||+n===pb+best;
   if(srcName&&srcName.trim()){
     const rx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
     const full=srcName.trim(),words=full.split(/\s+/),last=words[words.length-1];
@@ -727,14 +748,14 @@ function bracketize(text,srcName){
   }
   // dice average "N (XdY ± Z)" → "[XdY±Z]"
   t=t.replace(/\b\d+\s*\(\s*(\d+\s*d\s*\d+(?:\s*[+\-]\s*\d+)?)\s*\)/gi,(_,d)=>"["+d.replace(/\s+/g,"")+"]");
-  // "<Ability> Saving Throw: DC N" → keep wording, swap the DC for the token
-  t=t.replace(/(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(\s+Saving\s+Throw:?\s*)DC\s*\d+/gi,(_,ab,mid)=>ab+mid+"["+AB[ab.toLowerCase()]+" SAVE]");
+  // "<Ability> Saving Throw: DC N" → keep wording, swap the DC for the token (matching DCs only when mon)
+  t=t.replace(/(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(\s+Saving\s+Throw:?\s*)DC\s*(\d+)/gi,(m0,ab,mid,n)=>{const c=AB[ab.toLowerCase()];return okSave(c,n)?ab+mid+"["+c+" SAVE]":m0;});
   // "DC N <Ability> saving throw/save" → "[ABIL SAVE] <Ability> saving throw"
-  t=t.replace(/DC\s*\d+(\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+(?:saving throw|save))/gi,(_,rest,ab)=>"["+AB[ab.toLowerCase()]+" SAVE]"+rest);
+  t=t.replace(/DC\s*(\d+)(\s+(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+(?:saving throw|save))/gi,(m0,n,rest,ab)=>{const c=AB[ab.toLowerCase()];return okSave(c,n)?"["+c+" SAVE]"+rest:m0;});
   // any remaining bare "DC N" → highest-ability save DC
-  t=t.replace(/\bDC\s*\d+/g,"[SAVE]");
+  t=t.replace(/\bDC\s*(\d+)/g,(m0,n)=>okBest(n)?"[SAVE]":m0);
   // attack bonus → highest-ability attack
-  t=t.replace(/(Attack Roll:\*?\s*)\+\d+/gi,"$1[ATK]").replace(/\+\d+\s+to hit/gi,"[ATK] to hit");
+  t=t.replace(/(Attack Roll:\*?\s*)\+(\d+)/gi,(m0,pre,n)=>okAtk(n)?pre+"[ATK]":m0).replace(/\+(\d+)\s+to hit/gi,(m0,n)=>okAtk(n)?"[ATK] to hit":m0);
   // capitalise the creature reference at a sentence start
   t=t.replace(/(^|[.!?]\s+)\[c\]/g,"$1[C]");
   return t;
@@ -1104,23 +1125,50 @@ function renderPreview(){
   h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
   h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
   h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
+  // data-spells lets a post-pass re-link spell names mentioned in spellcasting-derived feature text.
+  const spAttr=e=>e&&e._spells&&e._spells.length?` data-spells="${encodeURIComponent(JSON.stringify(e._spells))}"`:"";
   const blk=e=>{
-    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk cc-skip"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
+    // Spellcasting: the MAIN line is colourised (DC / to-hit), but the spell-group lines are skipped
+    // because their spell names are already linked via linkSpells.
+    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
     const body=e.mode==="attack"?attackText(e):e.text;
-    return `<p class="blk"><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+    return `<p class="blk"${spAttr(e)}><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
   };
   const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
   if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
   if(m.actions.some(e=>e.name||e.text||e.mode==="spell"))h+=`<h3>Actions</h3>${sec(m.actions)}`;
   if(m.bonus.some(e=>e.name||e.text))h+=`<h3>Bonus Actions</h3>${sec(m.bonus)}`;
-  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<p class="blk"><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtInline(applyRefs(e.response))}</p>`).join("");
+  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<p class="blk"${spAttr(e)}><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtInline(applyRefs(e.response))}</p>`).join("");
   if(m.legend.on&&m.legend.items.some(e=>e.name||e.text))h+=`<h3>Legendary Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.legend.intro))}</i></p>${sec(m.legend.items)}`;
   if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.villain.intro))}</i></p>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(e.text))}</div>`).join("");
   if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
   if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
   (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
   $("#statblock").innerHTML=h;
+  linkSpellFeatures($("#statblock"));
   colorizeStatblock();
+}
+// Re-link spell names mentioned in spellcasting-derived feature bodies (reactions, hidden bonus
+// actions, etc.). Scoped to each block's own [data-spells] list — so only genuine spells link, no
+// false positives on common words. Runs before colorizeStatblock (which then skips .reflink).
+function linkSpellFeatures(root){
+  if(!root)return;
+  root.querySelectorAll("[data-spells]").forEach(el=>{
+    let names;try{names=JSON.parse(decodeURIComponent(el.dataset.spells));}catch(e){return;}
+    names=(names||[]).filter(n=>findSpell(n));if(!names.length)return;
+    names.sort((a,b)=>b.length-a.length);
+    const re=new RegExp("(?<![\\w'’])("+names.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")(?![\\w'’])","g");
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest(".reflink,.cc-spell,a,.nm")?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach(node=>{const text=node.nodeValue;re.lastIndex=0;if(!re.test(text))return;re.lastIndex=0;
+      const frag=document.createDocumentFragment();let pos=0,m;
+      while((m=re.exec(text))){if(m.index>pos)frag.appendChild(document.createTextNode(text.slice(pos,m.index)));
+        const outer=document.createElement("span");outer.className="cc-spell";
+        const inner=document.createElement("span");inner.className="reflink";inner.dataset.ref="spell";inner.dataset.name=m[1];inner.textContent=m[1];
+        outer.appendChild(inner);frag.appendChild(outer);pos=m.index+m[1].length;}
+      if(pos<text.length)frag.appendChild(document.createTextNode(text.slice(pos)));
+      node.parentNode.replaceChild(frag,node);});
+  });
 }
 // B53: colour-code the statblock PREVIEW only (gated by settings). Works on prose paragraphs
 // (.blk/.va/.sb-note-b) via a TreeWalker — never the structured header lines or the export text.
@@ -1157,7 +1205,7 @@ function colorizeStatblock(){
     cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:null});
     cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
     cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
-    cats.push({re:/\b(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/g,cls:()=>"cc-save"});
+    cats.push({re:/\b(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:()=>"cc-save"});
   }
   // Recognised conditions become reflinks (underline + hover/click popover) when the matching
   // condition is in an uploaded library — same affordance as the condition-immunities line.
@@ -1769,7 +1817,18 @@ function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;
 // A fresh home-brew monster derived from a chassis (origin tracking stamped, preset markers dropped).
 function chassisToMonster(ch,id){const b=clone(ch);b.id=id||uid();b.chassis=false;b._auto={ac:false,hp:false};
   b._fromChassis=ch.name;b._fromSrc=ch._srcCode||(ch._source?prettySource(ch._source):"")||"";
-  delete b._chassisSig;delete b._preset;delete b._source;return b;}
+  delete b._chassisSig;delete b._preset;delete b._source;bracketizeChassis(b);return b;}
+// B59 item 12 — on chassis load, turn matching literals into live bracket tokens: the creature's
+// self-reference → [c]/[C] (with a derived short name so display is unchanged), and any DC / +to-hit /
+// dice-average that matches the stat block → [SAVE]/[ATK]/[XdY]. Non-matching numbers are left as-is.
+function bracketizeChassis(m){
+  const words=(m.name||"").trim().split(/\s+/),w=(words[words.length-1]||"").toLowerCase();
+  if(w&&m.shortName&&(m.shortName.word||"creature")==="creature")m.shortName={word:w,proper:false,plural:false};
+  const fields=["text","trigger","response","extra"];
+  const doArr=arr=>(arr||[]).forEach(e=>fields.forEach(f=>{if(e[f]!=null)e[f]=bracketize(e[f],m.name,m);}));
+  [m.traits,m.actions,m.bonus,m.reactions,m.legend&&m.legend.items,m.villain&&m.villain.items,m.lair&&m.lair.items].forEach(doArr);
+  if(m.regional&&m.regional.text)m.regional.text=bracketize(m.regional.text,m.name,m);
+  return m;}
 // Compact statblock preview for a chassis/preset (shown in a popover before picking it).
 function chassisPreviewHTML(m){
   const pb=pbForCR(m.cr),abil=ABILS.map(a=>`${a.toUpperCase()} ${sgn(mod(m[a]))}`).join(" · ");
@@ -1798,7 +1857,7 @@ function openChassis(fromForge,opts){
   opts=opts||{};
   const ctrl=blankCtrl();ctrl.sort.key="cr";
   const chPool=()=>[...CHASSIS.map(m=>({m,src:"Built-in"})),...enPresets().map(m=>({m,src:bookLabelOf(m)||"Uploaded"}))];
-  const desc={search:true,group:true,
+  const desc={search:true,group:true,icons:["filter","sort","group"], // search is an always-open inline field, not an icon
     params:[
       {key:"source",label:"Source",get:r=>r.src,values:()=>["Built-in",...presetSourceLabels()]},
       {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(chPool().map(r=>r.m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0))},
@@ -1810,11 +1869,13 @@ function openChassis(fromForge,opts){
   const forEnc=!!opts.onPick;
   const helpText=(forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":"")+"Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.";
   openModalRaw(`<h3 class="modal-h-row">${opts.onBack?`<button class="modal-back" id="chBack" title="Back" aria-label="Back">${BACK_SVG}</button>`:""}<span>${forEnc?"Add from a chassis":"Start from a chassis"}</span><button class="cr-help" id="chHelp" aria-label="About this picker">?</button></h3>
-    <div class="ctrl-icons" id="chCtrlIcons"></div>
+    <div class="picker-tools"><input type="search" class="picker-search" id="chSearch" placeholder="Search creatures…" autocomplete="off" spellcheck="false"><div class="ctrl-icons" id="chCtrlIcons"></div></div>
     <div class="ctrl-chips" id="chChips"></div>
     <div id="chBody"></div>`);
   if(opts.onBack)$("#chBack").addEventListener("click",()=>{closeModal();opts.onBack();});
   bindHelpHover($("#chHelp"),helpText);
+  const chSearch=$("#chSearch");chSearch.value=ctrl.q||"";chSearch.addEventListener("input",()=>{ctrl.q=chSearch.value;draw();});
+  setTimeout(()=>chSearch.focus(),0);
   const pickLabel=forEnc?"Add to encounter":"Use as base";
   const cardOf=o=>pickerCardHTML(o,pickLabel,true,true);
   function draw(){
@@ -1890,7 +1951,7 @@ function presetModal(){
   else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
   let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
-  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">${TRASH_SVG}</button></div>`;
+  h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><button class="btn ghost sm" id="prClearSel" style="width:auto" title="Clear selection">Clear</button><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">${TRASH_SVG}</button></div>`;
   h+=`<div class="lib-scroll">`;
   if(!libs.length)h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   else if(!recs.length)h+=`<div class="empty-state" style="padding:26px">No libraries match these filters.</div>`;
@@ -1920,6 +1981,7 @@ function presetModal(){
   $("#modal").querySelectorAll(".grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
   // Toggle reflects the selection's combined state: on=all enabled, off=all disabled,
   // mid (indeterminate)=mixed. A click enables all unless they're already all enabled.
+  $("#prClearSel").addEventListener("click",()=>{presetSel.clear();prUpdateSelUI();});
   $("#prToggle").addEventListener("change",()=>{const keys=[...presetSel];if(!keys.length)return;
     const allOn=keys.every(k=>{const p=splitLibKey(k);return isLibEnabled(p[0],p[1]);});const target=!allOn;
     keys.forEach(k=>{const p=splitLibKey(k);setLibEnabled(p[0],p[1],target);});refreshLibPools();presetModal();});
@@ -1958,6 +2020,10 @@ function openAdvColorMenu(anchor,advId){
 function renderAdvList(){
   const box=$("#advItems");
   const active=state.adv.filter(a=>!a.archived),arch=state.adv.filter(a=>a.archived);
+  // Always open an adventure when entering the tab: restore the last-opened one, else the most recent.
+  if(!curAdv()){let sa="";try{sa=localStorage.getItem("mf_seladv")||"";}catch(e){}
+    state.selAdv=(sa&&state.adv.some(a=>a.id===sa&&!a.archived))?sa:(active[0]?active[0].id:null);}
+  if(state.selAdv){try{localStorage.setItem("mf_seladv",state.selAdv);}catch(e){}}
   const selStyle=a=>a.id===state.selAdv&&a.color?` style="border-color:${a.color}"`:"";
   let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}"${selStyle(a)}><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
   if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}" data-adv="${a.id}" style="opacity:.5"><div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(a.name)}</div></div>${aiMenu(a)}</div>`).join("");
@@ -2145,10 +2211,12 @@ function sceneHTML(a,s,encs){
       </div>
     </div>`;
   if(s.collapsed)return `<div class="scene${s.archived?" arch":""} collapsed" data-scene="${s.id}" draggable="true">${head}</div>`;
-  const body=`<div class="scene-body" data-scenedrop="${s.id}">
+  const body=`<div class="scene-body">
       <label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>
-      ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
-      ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
+      <div class="scene-droparea" data-scenedrop="${s.id}">
+        ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
+        ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
+      </div>
     </div>`;
   return `<div class="scene${s.archived?" arch":""}" data-scene="${s.id}" draggable="true">${head}${body}</div>`;
 }
@@ -2548,7 +2616,9 @@ $("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[da
 // Animated d20 that follows the pointer over anything rollable (a real CSS cursor can't be
 // animated). Only active while click-to-roll is on; the native cursor is hidden via .mf-clickroll.
 let _diceCur=null;
-function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=DICE_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
+// Font Awesome d20 (dice-d20, free solid) — used only for the rollable cursor.
+const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48.7 125.8l53.2 31.9c7.8 4.7 17.8 2 22.2-5.9L201.6 12.1c3-5.4-.9-12.1-7.1-12.1c-1.6 0-3.2 .5-4.6 1.4L47.9 98.8c-9.6 6.6-9.2 20.9 .8 26.9zM16 171.7l0 123.5c0 8 10.4 11 14.7 4.4l60-92c5-7.6 2.6-17.8-5.2-22.5L40.2 158C29.6 151.6 16 159.3 16 171.7zM310.4 12.1l77.6 139.6c4.4 7.9 14.5 10.6 22.2 5.9l53.2-31.9c10-6 10.4-20.3 .8-26.9L322.1 1.4c-1.4-.9-3-1.4-4.6-1.4c-6.2 0-10.1 6.7-7.1 12.1zM496 171.7c0-12.4-13.6-20.1-24.2-13.7l-45.3 27.2c-7.8 4.7-10.1 14.9-5.2 22.5l60 92c4.3 6.7 14.7 3.6 14.7-4.4l0-123.5zm-49.3 246L286.1 436.6c-8.1 .9-14.1 7.8-14.1 15.9l0 52.8c0 3.7 3 6.8 6.8 6.8c.8 0 1.6-.1 2.4-.4l172.7-64c6.1-2.2 10.1-8 10.1-14.5c0-9.3-8.1-16.5-17.3-15.4zM233.2 512c3.7 0 6.8-3 6.8-6.8l0-52.6c0-8.1-6.1-14.9-14.1-15.9l-160.6-19c-9.2-1.1-17.3 6.1-17.3 15.4c0 6.5 4 12.3 10.1 14.5l172.7 64c.8 .3 1.6 .4 2.4 .4zM41.7 382.9l170.9 20.2c7.8 .9 13.4-7.5 9.5-14.3l-85.7-150c-5.9-10.4-20.7-10.8-27.3-.8L30.2 358.2c-6.5 9.9-.3 23.3 11.5 24.7zm439.6-24.8L402.9 238.1c-6.5-10-21.4-9.6-27.3 .8L290.2 388.5c-3.9 6.8 1.6 15.2 9.5 14.3l170.1-20c11.8-1.4 18-14.7 11.5-24.6zm-216.9 11l78.4-137.2c6.1-10.7-1.6-23.9-13.9-23.9l-145.7 0c-12.3 0-20 13.3-13.9 23.9l78.4 137.2c3.7 6.4 13 6.4 16.7 0zM174.4 176l163.2 0c12.2 0 19.9-13.1 14-23.8l-80-144c-2.8-5.1-8.2-8.2-14-8.2l-3.2 0c-5.8 0-11.2 3.2-14 8.2l-80 144c-5.9 10.7 1.8 23.8 14 23.8z"/></svg>`;
+function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
 document.addEventListener("mousemove",e=>{
   const on=state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on;
   const t=on&&e.target.closest&&e.target.closest("[data-roll]");
@@ -2762,7 +2832,7 @@ function wrapStepper(input,step,min){
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
-  loadRefLibs();buildCondDatalist();buildSpellDatalist();
+  await loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
   buildMonsterDatalists();
   loadMonster(blankMonster());

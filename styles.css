@@ -379,10 +379,17 @@ select::-ms-expand{display:none}
 .mf-clickroll .sb [data-roll]:hover{filter:brightness(1.2)}
 /* Animated d20 cursor over rollable elements (B58) — CSS can't animate a real cursor, so a
    pointer-following spinner stands in. Replaces the native cursor (set to none above). */
-#diceCursor{position:fixed;z-index:9999;pointer-events:none;width:22px;height:22px;margin:-11px 0 0 -11px;color:var(--amber-soft);opacity:0;transition:opacity .1s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
-#diceCursor.show{opacity:1;animation:diceSpin 1.1s linear infinite}
-#diceCursor svg{width:22px;height:22px;display:block}
-@keyframes diceSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+#diceCursor{position:fixed;z-index:9999;pointer-events:none;width:24px;height:24px;margin:-12px 0 0 -12px;color:var(--amber-soft);opacity:0;transition:opacity .12s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+#diceCursor.show{opacity:1;animation:diceSpin 1.8s ease-in-out infinite}
+#diceCursor svg{width:24px;height:24px;display:block}
+/* Eased tumble: rotates with a subtle scale swell, then rests upright & small for a beat. */
+@keyframes diceSpin{
+  0%   {transform:rotate(0deg)   scale(.82)}
+  14%  {transform:rotate(0deg)   scale(.82)}   /* dwell — upright & small */
+  50%  {transform:rotate(180deg) scale(1.12)}  /* mid-tumble, swelled */
+  86%  {transform:rotate(360deg) scale(.82)}
+  100% {transform:rotate(360deg) scale(.82)}   /* dwell again */
+}
 @media (prefers-reduced-motion:reduce){#diceCursor.show{animation:none}}
 .mf-clickroll .sb .roll-atkname[data-roll]{border-bottom:1px dashed var(--accent-soft)}
 .mf-clickroll .sb .ab td.roll-num[data-roll]{border-bottom:none;text-decoration:underline dashed rgba(231,192,112,.5);text-underline-offset:2px}
@@ -572,6 +579,8 @@ select::-ms-expand{display:none}
 .scene-body .scenenotes{margin-bottom:10px}
 .scene-body .scenenotes textarea{min-height:38px;font-size:12px}
 .scene-body .scene-add{margin-top:2px}
+/* Drop target sits below the notes box (B59), so the dashed landing box never overlaps it. */
+.scene-droparea{margin-top:4px;border-radius:9px;min-height:30px}
 .scene-empty{padding:8px 4px;font-style:italic}
 .scene-loose{padding-top:2px}
 .scene-loose:empty{min-height:12px}
@@ -600,7 +609,7 @@ select::-ms-expand{display:none}
 .budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
 .budget .tgt:hover,.budget .tgt.drag{background:var(--accent);transform:scale(1.15)}
 /* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
-.budget .tgt.inactive{background:var(--faint);opacity:.45;width:10px;height:10px;margin:-5px 0 0 -5px;box-shadow:none}
+.budget .tgt.inactive{background:var(--faint);opacity:.45;box-shadow:none} /* same size as placed (B59) */
 .budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
 .budget .tgt .tgt-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--in);border:1px solid var(--line);color:var(--txt);font-size:10px;padding:2px 6px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-variant-numeric:tabular-nums}
 .budget .tgt:hover .tgt-tip,.budget .tgt.drag .tgt-tip{opacity:1}
@@ -791,6 +800,10 @@ select::-ms-expand{display:none}
 .popover.tail-pop.tail-down::after{bottom:-5px;border-left:none;border-top:none}
 
 /* Notion-style control bar: icons + active-modifier chips + group headers (Batch 15) */
+/* Chassis picker: always-open inline search + the remaining control icons on one line (B59). */
+.picker-tools{display:flex;gap:8px;align-items:center;margin:2px 0 6px}
+.picker-search{flex:1;min-width:0;font-size:13px;padding:7px 10px;background:var(--in);border:1px solid var(--line);border-radius:7px;color:var(--txt)}
+.picker-search:focus{outline:none;border-color:var(--accent)}
 .ctrl-icons{display:flex;gap:2px;align-items:center}
 .ctrl-ico{background:none;border:none;color:var(--faint);border-radius:5px;width:28px;height:28px;flex:none;display:grid;place-items:center;cursor:pointer;padding:0}
 .ctrl-ico:hover{color:var(--txt);background:var(--panel2)}

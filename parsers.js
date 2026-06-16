@@ -189,7 +189,19 @@ function scFreqGroups(sc){
   if(sc.spells)Object.keys(sc.spells).sort((a,b)=>+a-+b).forEach(lv=>{const g=sc.spells[lv];const lab=lv==="0"?"Cantrips":(lv+(lv==="1"?"st":lv==="2"?"nd":lv==="3"?"rd":"th")+"-level"+(g.slots?` (${g.slots} slot${g.slots>1?"s":""})`:""));groups.push({freq:lab,spells:names(g.spells).join(", ")});});
   return groups;
 }
-function scSpellEntry(sc){const hdr=entriesToText(sc.headerEntries||[]);const dcM=hdr.match(/DC\s*(\d+)/i);return {mode:"spell",name:richStrip(sc.name||"Spellcasting"),ability:sc.ability||"int",dc:dcM?Number(dcM[1]):"",atk:"",groups:scFreqGroups(sc)};}
+function scSpellEntry(sc){const hdr=entriesToText(sc.headerEntries||[]);const dcM=hdr.match(/DC\s*(\d+)/i);return {mode:"spell",name:richStrip(sc.name||"Spellcasting"),ability:sc.ability||"int",dc:dcM?Number(dcM[1]):"",atk:"",groups:scFreqGroups(sc),_spells:scSpellNames(sc)};}
+// Every spell display-name referenced anywhere in a spellcasting block (lists + header/footer
+// {@spell} tags), so feature text can re-link them (B59 item 3).
+function scSpellNames(sc){const out=[];
+  const add=arr=>(arr||[]).forEach(x=>{const n=richStrip(x).replace(/\s*\([^)]*\)\s*$/,"").trim();if(n)out.push(n);});
+  add(sc.will);["daily","rest","weekly","recharge"].forEach(k=>{if(sc[k])Object.keys(sc[k]).forEach(f=>add(sc[k][f]));});
+  if(sc.spells)Object.keys(sc.spells).forEach(lv=>add(sc.spells[lv].spells));
+  const raw=JSON.stringify([sc.headerEntries||[],sc.footerEntries||[]]);let m,re=/\{@spell\s+([^}|]+)(?:\|[^}]*)?\}/gi;
+  while((m=re.exec(raw)))out.push(m[1].trim());
+  return [...new Set(out)];}
+// A spellcasting block whose spell list is "hidden" (e.g. Misty Step (3/Day)) renders as a plain
+// feature: just the name + its header sentence, no spell-group breakdown (B59 item 4).
+function scIsHidden(sc){return Array.isArray(sc.hidden)&&sc.hidden.length>0;}
 // Map one resolved 5etools monster object onto a Forge monster.
 function mapMonsterJSON(mon,legGroups){
   const m=blankMonster();m._auto={ac:false,hp:false};
@@ -254,8 +266,11 @@ function mapMonsterJSON(mon,legGroups){
   // spell-mode entry (reactions keep a text body since that section renders trigger/response).
   if(mon.spellcasting)[].concat(mon.spellcasting).forEach(sc=>{
     const disp=(sc.displayAs||sc.type||"").toLowerCase();
-    if(disp.indexOf("reaction")>=0)(m.reactions=m.reactions||[]).push({mode:"react",name:richStrip(sc.name||"Spellcasting"),trigger:"",response:renderSpellcasting(sc)});
-    else{const e=scSpellEntry(sc);if(disp.indexOf("bonus")>=0)(m.bonus=m.bonus||[]).push(e);else (m.actions=m.actions||[]).push(e);}
+    if(disp.indexOf("reaction")>=0)(m.reactions=m.reactions||[]).push({mode:"react",name:richStrip(sc.name||"Spellcasting"),trigger:"",response:renderSpellcasting(sc),_spells:scSpellNames(sc)});
+    else{
+      // Hidden-list blocks (Misty Step etc.) become a plain name+header feature; others stay structured.
+      const e=scIsHidden(sc)?{mode:"text",name:richStrip(sc.name||"Spellcasting"),text:entriesToText(sc.headerEntries||[]),_spells:scSpellNames(sc)}:scSpellEntry(sc);
+      if(disp.indexOf("bonus")>=0)(m.bonus=m.bonus||[]).push(e);else (m.actions=m.actions||[]).push(e);}
   });
   if(mon.legendary){const intro=entriesToText(mon.legendaryHeader||[]);m.legend={on:true,intro,items:toEntries(mon.legendary)};}
   if(mon.mythic){const intro=entriesToText(mon.mythicHeader||[]);if(!m.legend.on)m.legend={on:true,intro,items:[]};m.legend.items=m.legend.items.concat(toEntries(mon.mythic));}

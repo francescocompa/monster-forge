@@ -4,6 +4,30 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 59 — IndexedDB storage, spellcasting & chassis polish
+- **Reference libraries now live in IndexedDB** (presets/spells/conditions), with a one-time
+  migration out of localStorage. Fixes the silent data loss on GitHub Pages where the ~5MB
+  localStorage cap was exceeded (a parsed bestiary alone is ~10MB). Your own monsters still sync
+  via JSONBin; the small ref state stays in localStorage.
+- **Spellcasting import fixes:** a "hidden"-list block (e.g. *Misty Step (3/Day)*) now renders as a
+  plain feature — name + its sentence — instead of a malformed spell-group list. Spell names
+  mentioned in any spellcasting-derived feature (reactions, bonus actions, …) are now linked with the
+  hover popover (scoped to each block's own spells, so no false positives). The Spellcasting line's
+  **save DC and to-hit are now coloured**.
+- **Saving-throw phrase is coloured** ("Dexterity Saving Throw" → blue, matching the scheme: blue =
+  the roll, yellow = the DC target number).
+- **Chassis picker:** an always-open inline **search field** (type immediately); the search is no
+  longer hidden behind a popover icon.
+- **Loading a chassis bracketises matching parts** — the creature's self-reference, and any DC /
+  to-hit / dice-average that matches the stat block, become live `[c]`/`[SAVE]`/`[ATK]`/`[XdY]`
+  tokens (non-matching numbers are left alone), so edits to the stats flow through automatically.
+- **Animated d20 cursor** now uses a real d20 and an eased tumble (rotation + a subtle scale swell,
+  resting upright & small for a beat).
+- **Preset library:** a **Clear** button in the batch-selection bar.
+- **Adventures:** opening the tab now restores the last-opened adventure (or the most recent).
+- **XP target marker** is the same size whether placed or not yet placed.
+- **Scene drop zone** sits below the notes box, so the dashed landing box no longer overlaps it.
+
 ## Batch 58 — Tools, colour audit & roll-popover polish
 - **Tool checks are rollable with the right ability** — added the XPHB 2024 tool→ability
   map (`TOOL_ABIL`); each tool now rolls `1d20 + its ability mod + PB` and shows the modifier.
