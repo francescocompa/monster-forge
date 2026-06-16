@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 53 — Statblock colour-coding
+- The Forge **statblock preview** now colour-codes prose (gated by Settings):
+  **damage types** (elemental palette), **dice / +to-hit** (also tagged for
+  click-to-roll), **save DCs** and **saving-throw** phrases, **conditions**, and
+  **ranges & areas**. The **ability-score block** tints mods/saves by sign.
+- Colouring runs as a TreeWalker over the prose bodies only (`.blk`/`.va`/notes) —
+  the structured header lines (AC/Speed/Senses/CR…) and the exports are untouched.
+
 ## Batch 52 — Settings page
 - New **Settings** view, opened by a **gear icon in the appbar** (present on every
   view). Persists to `localStorage` (`mf_settings`), merged over defaults at load.

@@ -1074,6 +1074,48 @@ function renderPreview(){
   if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
   (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
   $("#statblock").innerHTML=h;
+  colorizeStatblock();
+}
+// B53: colour-code the statblock PREVIEW only (gated by settings). Works on prose paragraphs
+// (.blk/.va/.sb-note-b) via a TreeWalker — never the structured header lines or the export text.
+const CC_CONDITIONS=["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious"];
+function normRoll(s){return s.replace(/\s+/g,"").replace(/−/g,"-");}
+function colorizeNode(node,cats){
+  const text=node.nodeValue;if(!text.trim())return;const hits=[];
+  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
+  if(!hits.length)return;
+  hits.sort((a,b)=>a.s-b.s||b.e-a.e);
+  const out=[];let pos=0;
+  hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
+  if(pos<text.length)out.push({t:text.slice(pos)});
+  const frag=document.createDocumentFragment();
+  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;sp.dataset.rolltype=o.rtype;}frag.appendChild(sp);}});
+  node.parentNode.replaceChild(frag,node);
+}
+function colorizeStatblock(){
+  const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
+  const root=$("#statblock");if(!root)return;
+  if(s.abilityBlock)root.querySelectorAll(".ab td.num").forEach(td=>{const v=parseInt(td.textContent.replace("−","-"),10);if(isNaN(v))return;td.classList.add(v>0?"cc-mod-pos":v<0?"cc-mod-neg":"cc-mod-zero");});
+  const cats=[];
+  if(s.damage)cats.push({re:new RegExp("\\b("+DMG_TYPES.join("|")+")\\b","gi"),cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
+  if(s.dice){
+    cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-roll",roll:m=>normRoll(m[0]),rtype:"damage"});
+    cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
+    cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
+    cats.push({re:/\b(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/g,cls:()=>"cc-save"});
+  }
+  if(s.conditions)cats.push({re:new RegExp("\\b("+CC_CONDITIONS.join("|")+")\\b","gi"),cls:()=>"cc-cond"});
+  if(s.ranges){
+    cats.push({re:/\b\d+(?:\/\d+)?\s*(?:ft\.?|feet)\b/gi,cls:()=>"cc-range"});
+    cats.push({re:/\b\d+-foot(?:[ \-](?:cone|cube|line|sphere|radius|emanation|cylinder))?\b/gi,cls:()=>"cc-range"});
+  }
+  if(!cats.length)return;
+  const skip=".nm,.reflink,a,.cc-roll,.cc-dmg,.cc-cond,.cc-range,.cc-dc,.cc-save";
+  root.querySelectorAll(".blk,.va,.sb-note-b").forEach(container=>{
+    const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest(skip)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach(node=>colorizeNode(node,cats));
+  });
 }
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
 function notionSingle(m){
