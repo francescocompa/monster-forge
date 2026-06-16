@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 51 — Scenes overhaul
+- **Section renamed Encounters → Scenes.** Scene blocks are now **neutral** (grey
+  left-rule, no amber) and the scene name is no longer force-uppercased.
+- **+ Scene moved into the list** (dashed add-button, like add-combatant/add-section);
+  the **Scenes header** now carries right-aligned **filter tools** — search, filter
+  (difficulty / faction / has-minion) and sort (Name / Difficulty / Spent XP).
+  Manual drag order is the default (no chip until you pick a sort).
+- **Inside each scene:** a **notes** field under the title, and an **+ Encounter in
+  this scene** button at the bottom (removed from the scene ⋯ menu).
+- **Scenes can be archived** from their ⋯ menu — the scene and its encounters move to
+  the Archived area and are excluded from the active list.
+- **Scenes are draggable** to reorder (grab the scene header), like encounters.
+- **Encounter FAB is now a split button** (＋ Encounter ▾, keeping the rounded pill):
+  the caret opens **Import from another adventure…** (pick individual scenes /
+  encounters to copy in), **Archive all encounters**, and **Clear all encounters**.
+
 ## Batch 50 — Bestiary adventure grouping + library polish + fixes
 - **Bestiary grouping by adventure** now shows each adventure's **identity colour
   dot** (FP4) in the group header; the no-adventure bucket reads **Not in any

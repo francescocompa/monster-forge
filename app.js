@@ -221,7 +221,7 @@ function normalizeMonster(m){
 }
 function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
-  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed}));
+  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",archived:!!s.archived}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
@@ -1123,8 +1123,8 @@ const ICO_GROUP=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" str
 const CTRL_ICONS=[["search",ICO_SEARCH,"Search"],["filter",ICO_FILTER,"Filter"],["sort",ICO_SORT,"Sort"],["group",ICO_GROUP,"Group by"]];
 const TRASH_SVG=`<svg viewBox="0 0 448 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>`;
 function blankCtrl(){return {q:"",filters:{},sort:{key:"name",dir:1},group:null};}
-function ctrlIconButtonsHTML(){return CTRL_ICONS.map(([k,svg,t])=>`<button class="ctrl-ico" data-ico="${k}" title="${t}" aria-label="${t}">${svg}</button>`).join("");}
-function bindCtrlIcons(host,ctrl,desc,onChange){if(!host)return;host.innerHTML=ctrlIconButtonsHTML();host.addEventListener("click",e=>{const b=e.target.closest("[data-ico]");if(!b)return;e.stopPropagation();openCtrlMenu(b.dataset.ico,b,ctrl,desc,onChange);});}
+function ctrlIconButtonsHTML(desc){const allow=desc&&desc.icons;return CTRL_ICONS.filter(([k])=>!allow||allow.includes(k)).map(([k,svg,t])=>`<button class="ctrl-ico" data-ico="${k}" title="${t}" aria-label="${t}">${svg}</button>`).join("");}
+function bindCtrlIcons(host,ctrl,desc,onChange){if(!host)return;host.innerHTML=ctrlIconButtonsHTML(desc);host.addEventListener("click",e=>{const b=e.target.closest("[data-ico]");if(!b)return;e.stopPropagation();openCtrlMenu(b.dataset.ico,b,ctrl,desc,onChange);});}
 
 // --- menus (each icon opens a popover; selections mutate `ctrl` and call onChange) ---
 function openCtrlMenu(kind,anchor,ctrl,desc,onChange){
@@ -1165,7 +1165,7 @@ function renderCtrlChips(host,ctrl,desc,onChange){
   if(!host)return;const chips=[];
   if(ctrl.q)chips.push({cls:"q",ico:ICO_SEARCH,txt:`“${ctrl.q}”`,open:"search",clear:()=>{ctrl.q="";}});
   desc.params.forEach(pp=>(ctrl.filters[pp.key]||[]).forEach(v=>chips.push({cls:"f",ico:ICO_FILTER,txt:`${pp.label}: ${pp.fmt?pp.fmt(v):v}`,open:"filter",clear:()=>{const cur=ctrl.filters[pp.key]||[],i=cur.indexOf(v);if(i>=0)cur.splice(i,1);if(!cur.length)delete ctrl.filters[pp.key];}})));
-  if(ctrl.sort.key!=="name"||ctrl.sort.dir!==1){const sk=desc.sortKeys.find(s=>s.key===ctrl.sort.key);chips.push({cls:"s",ico:ICO_SORT,txt:`${sk?sk.label:ctrl.sort.key} ${ctrl.sort.dir<0?"↓":"↑"}`,open:"sort",clear:()=>{ctrl.sort={key:"name",dir:1};}});}
+  const dft=desc.defaultSortKey||"name";if(ctrl.sort.key!==dft||ctrl.sort.dir!==1){const sk=desc.sortKeys.find(s=>s.key===ctrl.sort.key);chips.push({cls:"s",ico:ICO_SORT,txt:`${sk?sk.label:ctrl.sort.key} ${ctrl.sort.dir<0?"↓":"↑"}`,open:"sort",clear:()=>{ctrl.sort={key:dft,dir:1};}});}
   if(ctrl.group){const gp=desc.params.find(p=>p.key===ctrl.group);chips.push({cls:"g",ico:ICO_GROUP,txt:`Group: ${gp?gp.label:ctrl.group}`,open:"group",clear:()=>{ctrl.group=null;}});}
   if(!chips.length){host.innerHTML="";host.style.display="none";return;}
   host.style.display="";
@@ -1774,8 +1774,19 @@ function renderAdvDetail(){
       </div>
     </div>
     <label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>
-    <div class="section-label">Encounters <span class="sl-acts"><button class="btn ghost sm" id="addScene" style="width:auto">＋ Scene</button><button class="btn primary sm fab" id="addEnc" style="width:auto">＋ Encounter</button></span></div>
+    <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
+    <div class="ctrl-chips" id="encChips"></div>
     <div id="encList"></div>
+    <div class="fab-split menu-wrap" id="encFab">
+      <button class="btn primary sm" id="addEnc" style="width:auto">＋ Encounter</button>
+      <button class="kebab split-caret" data-menu="encfab" title="More encounter actions" aria-label="More encounter actions">▾</button>
+      <div class="menu" id="menu-encfab">
+        <button id="encImport">⤵ Import from another adventure…</button>
+        <div class="sep"></div>
+        <button id="encArchiveAll">Archive all encounters</button>
+        <button class="danger" id="encClearAll">Clear all encounters</button>
+      </div>
+    </div>
     <div id="archWrap"></div>`;
   $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
@@ -1788,10 +1799,14 @@ function renderAdvDetail(){
   $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
-  $("#addEnc").addEventListener("click",()=>{a.encounters.push({id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:null,combatants:[]});saveAdv();renderAdvDetail();});
-  $("#addScene").addEventListener("click",()=>{a.scenes.push({id:uid(),name:"New Scene",collapsed:false});saveAdv();renderAdvDetail();});
+  $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
+  $("#encImport").addEventListener("click",()=>openImportEnc(a));
+  $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
+  $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
+  bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
   renderPCgrid(a);renderEncList(a);
 }
+function blankEncounter(sceneId){return {id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:sceneId||null,combatants:[]};}
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
 function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
@@ -1800,6 +1815,58 @@ function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.inner
 function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector("#advDetail .enc.focused"))return;a._focusEnc=encId;
   $$("#advDetail .enc.focused").forEach(x=>x.classList.remove("focused"));
   const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
+// ---- Encounter list controls (search / filter / sort) — manual order is the default (no sort). ----
+let encCtrl={q:"",filters:{},sort:{key:"manual",dir:1},group:null};
+const ENC_DESC={search:true,icons:["search","filter","sort"],defaultSortKey:"manual",
+  params:[
+    {key:"difficulty",label:"Difficulty",multi:true,get:(e,a)=>[diffOf(encSpent(e),encBudget(a,e))[1]],values:()=>["Empty","Trivial","Low","Moderate","High","Over High"]},
+    {key:"faction",label:"Faction",multi:true,get:e=>[...new Set(e.combatants.filter(c=>c.type!=="event").map(c=>c.faction).filter(Boolean))],values:()=>FACTIONS.slice()},
+    {key:"contents",label:"Contents",multi:true,get:e=>e.combatants.some(c=>combatIsMinion(c))?["Has minion"]:[],values:()=>["Has minion"]},
+  ],
+  sortKeys:[{key:"manual",label:"Manual order"},{key:"alpha",label:"Name"},{key:"diff",label:"Difficulty"},{key:"xp",label:"Spent XP"}]};
+function encFilterActive(){return !!(encCtrl.q||Object.keys(encCtrl.filters).some(k=>(encCtrl.filters[k]||[]).length)||encCtrl.sort.key!=="manual");}
+// Apply search/filter/sort to a list of encounters. Manual sort preserves the array (drag) order.
+function encApply(a,list){
+  const q=(encCtrl.q||"").toLowerCase().trim();
+  let recs=list.filter(e=>{
+    if(q&&!(e.name||"").toLowerCase().includes(q))return false;
+    for(const p of ENC_DESC.params){const sel=encCtrl.filters[p.key]||[];if(!sel.length)continue;const vs=p.get(e,a)||[];if(!vs.some(v=>sel.includes(v)))return false;}
+    return true;});
+  const k=encCtrl.sort.key,dir=encCtrl.sort.dir;
+  if(k==="alpha")recs=recs.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")*dir);
+  else if(k==="xp")recs=recs.slice().sort((x,y)=>(encSpent(x)-encSpent(y))*dir);
+  else if(k==="diff"){const rat=e=>encSpent(e)/(encBudget(a,e)[2]||1);recs=recs.slice().sort((x,y)=>(rat(x)-rat(y))*dir);}
+  return recs;
+}
+function sceneArchived(a,sceneId){const s=sceneOf(a,sceneId);return !!(s&&s.archived);}
+// An encounter is treated as archived if it's individually archived OR sits in an archived scene.
+function encArchived(a,e){return !!(e.archived||sceneArchived(a,e.sceneId));}
+// Deep-copy an encounter into adventure `a` under `sceneId` (new ids for the encounter + its combatants;
+// monsterId still points at the shared global bestiary, so statblock links survive the copy).
+function cloneEncInto(a,srcEnc,sceneId){const e=JSON.parse(JSON.stringify(srcEnc));e.id=uid();e.sceneId=sceneId||null;e.archived=false;e.combatants=(e.combatants||[]).map(c=>Object.assign({},c,{id:uid()}));a.encounters.push(e);return e;}
+function openImportEnc(a){
+  const others=state.adv.filter(x=>x.id!==a.id);
+  if(!others.length){toast("No other adventures to import from.");return;}
+  const body=others.map(o=>{
+    const scenes=o.scenes||[];
+    const sceneRows=scenes.map(s=>{const n=o.encounters.filter(e=>e.sceneId===s.id).length;return `<label class="imp-row"><input type="checkbox" data-imp="scene:${o.id}:${s.id}"><span class="imp-k">Scene</span><span class="imp-nm">${esc(s.name)}</span><span class="imp-n">${n} enc.</span></label>`;}).join("");
+    const loose=o.encounters.filter(e=>!scenes.some(s=>s.id===e.sceneId));
+    const encRows=loose.map(e=>`<label class="imp-row"><input type="checkbox" data-imp="enc:${o.id}:${e.id}"><span class="imp-k enc">Enc</span><span class="imp-nm">${esc(e.name)}</span></label>`).join("");
+    if(!sceneRows&&!encRows)return "";
+    return `<div class="imp-adv"><div class="imp-adv-h">${advDotStatic(o.color)}${esc(o.name)}</div>${sceneRows}${encRows}</div>`;
+  }).join("")||`<div class="empty-state">Other adventures have no encounters.</div>`;
+  openModalRaw(`<h3>Import from another adventure</h3><div class="hint" style="margin:-4px 0 12px">Checked scenes (with their encounters) and encounters are copied into "${esc(a.name)}".</div><div class="imp-scroll">${body}</div><div class="lib-foot"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impCopy" style="width:auto">Copy selected</button></div>`);
+  $("#impCancel").addEventListener("click",closeModal);
+  $("#impCopy").addEventListener("click",()=>{
+    const checked=[...$("#modal").querySelectorAll("[data-imp]:checked")];
+    if(!checked.length){closeModal();return;}
+    let nEnc=0,nSc=0;
+    checked.forEach(cb=>{const[kind,advId,id]=cb.dataset.imp.split(":");const src=state.adv.find(x=>x.id===advId);if(!src)return;
+      if(kind==="scene"){const s=(src.scenes||[]).find(x=>x.id===id);if(!s)return;const ns={id:uid(),name:s.name,collapsed:false,notes:s.notes||"",archived:false};a.scenes.push(ns);nSc++;src.encounters.filter(e=>e.sceneId===id).forEach(e=>{cloneEncInto(a,e,ns.id);nEnc++;});}
+      else{const e=src.encounters.find(x=>x.id===id);if(e){cloneEncInto(a,e,null);nEnc++;}}});
+    saveAdv();closeModal();renderAdvDetail();toast(`Imported ${nEnc} encounter${nEnc===1?"":"s"}${nSc?` · ${nSc} scene${nSc===1?"":"s"}`:""}.`);
+  });
+}
 function sceneOf(a,id){return id?(a.scenes||[]).find(s=>s.id===id):null;}
 // A scene is a named collapsible container grouping some of an adventure's encounters. Encounters keep
 // their order in the flat a.encounters array; we render scene-by-scene (filtering by sceneId), then a
@@ -1813,31 +1880,44 @@ function sceneHTML(a,s,encs){
       <div class="menu-wrap">
         <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
         <div class="menu" id="menu-scene-${s.id}">
-          <button data-sceneadd="${s.id}">＋ Encounter in this scene</button>
+          <button data-scenearch="${s.id}">${s.archived?"Unarchive scene":"Archive scene"}</button>
           <div class="sep"></div>
           <button class="danger" data-scenedel="${s.id}">Delete scene</button>
         </div>
       </div>
     </div>`;
-  if(s.collapsed)return `<div class="scene collapsed" data-scene="${s.id}">${head}</div>`;
-  return `<div class="scene" data-scene="${s.id}">${head}<div class="scene-body" data-scenedrop="${s.id}">${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">Drag encounters here, or add one from the ⋯ menu.</div>`}</div></div>`;
+  if(s.collapsed)return `<div class="scene${s.archived?" arch":""} collapsed" data-scene="${s.id}" draggable="true">${head}</div>`;
+  const body=`<div class="scene-body" data-scenedrop="${s.id}">
+      <label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>
+      ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
+      ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
+    </div>`;
+  return `<div class="scene${s.archived?" arch":""}" data-scene="${s.id}" draggable="true">${head}${body}</div>`;
 }
 function renderEncList(a){
   const box=$("#encList");if(!box)return;
   if(!box._focusBound){box._focusBound=true;box.addEventListener("focusin",e=>{const enc=e.target.closest(".enc[data-enc]");if(enc)setEncFocus(a,enc.dataset.enc);});}
-  const active=a.encounters.filter(e=>!e.archived),arch=a.encounters.filter(e=>e.archived);
+  renderCtrlChips($("#encChips"),encCtrl,ENC_DESC,()=>renderEncList(a));
   const scenes=a.scenes||[];
-  if(scenes.length){
-    const ungrouped=active.filter(e=>!sceneOf(a,e.sceneId));
-    box.innerHTML=scenes.map(s=>sceneHTML(a,s,active.filter(e=>e.sceneId===s.id))).join("")
-      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:`<div class="hint scene-empty">No ungrouped encounters.</div>`}</div>`;
+  const activeScenes=scenes.filter(s=>!s.archived),archScenes=scenes.filter(s=>s.archived);
+  const visible=encApply(a,a.encounters);                       // filtered + sorted view
+  const inScene=sid=>visible.filter(e=>!e.archived&&e.sceneId===sid);
+  const sceneAdd=`<button class="addbtn" id="addScene" style="width:100%;margin-top:2px">＋ Scene</button>`;
+  if(activeScenes.length){
+    const ungrouped=visible.filter(e=>!e.archived&&!activeScenes.some(s=>s.id===e.sceneId)&&!sceneArchived(a,e.sceneId));
+    box.innerHTML=activeScenes.map(s=>sceneHTML(a,s,inScene(s.id))).join("")
+      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:`<div class="hint scene-empty">No ungrouped encounters.</div>`}</div>`
+      +sceneAdd;
   }else{
-    box.innerHTML=active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">No active encounters.</div>`;
+    const active=visible.filter(e=>!e.archived);
+    box.innerHTML=(active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">${encFilterActive()?"No encounters match these controls.":"No active encounters."}</div>`)+sceneAdd;
   }
-  const addBtn=$("#addEnc");if(addBtn)addBtn.className="btn primary sm fab";
   const aw=$("#archWrap");
-  if(arch.length){
-    aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${arch.length})</button></div><div id="archBody" style="display:none">${arch.map(e=>encHTML(a,e)).join("")}</div>`;
+  const archEncs=a.encounters.filter(e=>e.archived&&!sceneArchived(a,e.sceneId));
+  const archTotal=archScenes.length+archEncs.length; // top-level archived blocks (scenes + loose encounters)
+  if(archScenes.length||archEncs.length){
+    const archInner=archScenes.map(s=>sceneHTML(a,s,a.encounters.filter(e=>e.sceneId===s.id))).join("")+archEncs.map(e=>encHTML(a,e)).join("");
+    aw.innerHTML=`<div class="section-label" style="margin-top:24px"><button class="arch-reveal" id="archToggle"><span class="arch-chev">▶</span> Archived (${archTotal})</button></div><div id="archBody" style="display:none">${archInner}</div>`;
     const toggle=document.getElementById("archToggle"),body=document.getElementById("archBody");
     toggle.addEventListener("click",()=>{const open=body.style.display!=="none";body.style.display=open?"none":"block";toggle.classList.toggle("open",!open);});
   }else{aw.innerHTML="";}
@@ -1976,9 +2056,12 @@ function bindEncEvents(a){
   q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
+  q("#addScene").forEach(el=>el.addEventListener("click",()=>{a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",archived:false});saveAdv();renderAdvDetail();}));
   q("[data-scenename]").forEach(el=>el.addEventListener("change",()=>{const s=sceneOf(a,el.dataset.scenename);if(s){s.name=el.value.trim()||"Scene";saveAdv();}}));
+  q("[data-scenenotes]").forEach(el=>el.addEventListener("input",()=>{const s=sceneOf(a,el.dataset.scenenotes);if(s){s.notes=el.value;saveAdv();}}));
   q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
-  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.sceneadd;const e={id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:sid,combatants:[]};a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
+  q("[data-scenearch]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenearch);if(s){s.archived=!s.archived;saveAdv();renderAdvDetail();}}));
+  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const e=blankEncounter(el.dataset.sceneadd);a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
   q("[data-scenedel]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.scenedel,s=sceneOf(a,sid);if(!s)return;const n=a.encounters.filter(e=>e.sceneId===sid).length;
     const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderAdvDetail();};
     n?confirmModal(`Delete scene "${s.name}"? Its ${n} encounter${n>1?"s":""} will become ungrouped.`,go):go();}));
@@ -2050,11 +2133,21 @@ let dragEncId=null,dropTarget=null;
 // Skip drag-init when the press starts on an interactive control inside the card so editing
 // inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
 function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
-function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));$$("#advDetail [data-scenedrop].scene-drop").forEach(x=>x.classList.remove("scene-drop"));}
+let dragSceneId=null,dropScene=null;
+function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after,#advDetail .scene.drop-before,#advDetail .scene.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));$$("#advDetail [data-scenedrop].scene-drop").forEach(x=>x.classList.remove("scene-drop"));}
+// Reorder a scene within a.scenes (active scenes among active, archived among archived).
+function reorderScene(a,fromId,toId,after){
+  if(!fromId||!toId||fromId===toId)return;
+  const arr=a.scenes,from=arr.find(s=>s.id===fromId),to=arr.find(s=>s.id===toId);
+  if(!from||!to||!!from.archived!==!!to.archived)return;
+  arr.splice(arr.indexOf(from),1);let idx=arr.indexOf(to);if(after)idx++;arr.splice(idx,0,from);
+  saveAdv();renderAdvDetail();
+}
 function bindEncDrag(a,q){
   q(".enc[data-enc]").forEach(enc=>{
     enc.addEventListener("dragstart",ev=>{
       if(dragInert(ev.target)){ev.preventDefault();return;}
+      ev.stopPropagation(); // don't also start a scene-drag on the enclosing .scene
       dragEncId=enc.dataset.enc;dropTarget=null;ev.dataTransfer.effectAllowed="move";
       try{ev.dataTransfer.setData("text/plain",enc.dataset.enc);}catch(_){}
       // Use the header as a compact drag-image instead of hiding the body — hiding reflowed the
@@ -2092,6 +2185,27 @@ function bindEncDrag(a,q){
       const id=dragEncId,sc=zone.dataset.scenedrop;clearDropMarks();
       moveEncToScene(a,id,sc);
     });
+  });
+  // Scenes reorder among themselves (grab the scene header; encounters inside drag independently).
+  q(".scene[data-scene]").forEach(scene=>{
+    scene.addEventListener("dragstart",ev=>{
+      if(dragInert(ev.target)||ev.target.closest(".enc")){ev.preventDefault();return;}
+      dragSceneId=scene.dataset.scene;dropScene=null;ev.dataTransfer.effectAllowed="move";
+      try{ev.dataTransfer.setData("text/plain",scene.dataset.scene);}catch(_){}
+      const h=scene.querySelector(".scene-h");if(h)try{ev.dataTransfer.setDragImage(h,14,14);}catch(_){}
+      requestAnimationFrame(()=>scene.classList.add("dragging"));
+    });
+    scene.addEventListener("dragend",()=>{scene.classList.remove("dragging");clearDropMarks();dragSceneId=null;dropScene=null;});
+    scene.addEventListener("dragover",ev=>{
+      if(!dragSceneId||dragSceneId===scene.dataset.scene)return;
+      const from=sceneOf(a,dragSceneId),to=sceneOf(a,scene.dataset.scene);
+      if(!from||!to||!!from.archived!==!!to.archived)return;
+      ev.preventDefault();ev.stopPropagation();
+      const r=scene.getBoundingClientRect(),after=ev.clientY>r.top+r.height/2;
+      clearDropMarks();scene.classList.add(after?"drop-after":"drop-before");
+      dropScene={id:scene.dataset.scene,after};
+    });
+    scene.addEventListener("drop",ev=>{if(!dragSceneId)return;ev.preventDefault();ev.stopPropagation();const dt=dropScene,id=dragSceneId;clearDropMarks();if(dt)reorderScene(a,id,dt.id,dt.after);});
   });
 }
 function bindEncTarget(a,q){

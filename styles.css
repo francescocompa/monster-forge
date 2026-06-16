@@ -431,24 +431,44 @@ select::-ms-expand{display:none}
 .enc-collapse:hover{color:var(--txt);background:var(--panel2)}
 .enc-collapse svg{transition:transform .15s}
 .enc-collapse.closed svg{transform:rotate(-90deg)}
-/* Scenes — named collapsible containers grouping an adventure's encounters. */
-.section-label .sl-acts{display:flex;gap:8px;align-items:center}
-.scene{border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:9px;background:rgba(217,164,65,.05);margin-bottom:18px}
-.scene-h{display:flex;gap:8px;align-items:center;padding:9px 12px}
+/* Scenes — neutral named collapsible containers grouping an adventure's encounters. */
+.section-label .sl-acts{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0}
+.scene{position:relative;border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:9px;background:var(--panel2);margin-bottom:18px}
+.scene.arch{opacity:.62}
+.scene.dragging{opacity:.4;cursor:grabbing}
+.scene.drop-before::before,.scene.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent);z-index:3}
+.scene.drop-before::before{top:-10px}
+.scene.drop-after::after{bottom:-10px}
+.scene-h{display:flex;gap:8px;align-items:center;padding:9px 12px;cursor:grab}
+.scene-h input.scene-name,.scene-h .scene-collapse,.scene-h .menu-wrap{cursor:auto}
+.scene.collapsed .scene-h{cursor:grab}
 .scene-h .scene-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:22px;height:22px;display:grid;place-items:center;padding:0;flex:none;border-radius:4px;transition:background .12s,color .12s}
-.scene-h .scene-collapse:hover{color:var(--txt);background:var(--panel2)}
+.scene-h .scene-collapse:hover{color:var(--txt);background:var(--panel3)}
 .scene-h .scene-collapse svg{transition:transform .15s}
 .scene-h .scene-collapse.closed svg{transform:rotate(-90deg)}
-.scene-h input.scene-name{flex:1;min-width:120px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--amber-soft);background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;transition:background .12s,border-color .12s}
+.scene-h input.scene-name{flex:1;min-width:120px;font-size:14px;font-weight:600;color:var(--txt);background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;cursor:text;transition:background .12s,border-color .12s}
 .scene-h input.scene-name:hover{border-color:var(--line)}
-.scene-h input.scene-name:focus{background:var(--in);border-color:var(--amber);outline:none}
+.scene-h input.scene-name:focus{background:var(--in);border-color:var(--accent);outline:none}
 .scene-h .scene-count{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
-.scene-body{padding:2px 12px 4px}
-.scene-body .enc{margin-bottom:12px}
-.scene-empty{padding:10px 4px;font-style:italic}
+.scene-body{padding:0 12px 8px}
+.scene-body .enc{margin-bottom:12px;background:var(--panel)}
+.scene-body .scenenotes{margin-bottom:10px}
+.scene-body .scenenotes textarea{min-height:38px;font-size:12px}
+.scene-body .scene-add{margin-top:2px}
+.scene-empty{padding:8px 4px;font-style:italic}
 .scene-loose{padding-top:2px}
 .scene-loose-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin:6px 0 10px}
 [data-scenedrop].scene-drop{outline:2px dashed var(--accent);outline-offset:-3px;border-radius:9px;background:rgba(226,101,77,.07)}
+/* Import-from-adventure modal */
+.imp-scroll{max-height:52vh;overflow:auto;margin:0 -4px}
+.imp-adv{margin-bottom:14px}
+.imp-adv-h{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px;padding:4px 6px;color:var(--txt)}
+.imp-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
+.imp-row:hover{background:var(--panel2)}
+.imp-row .imp-k{flex:none;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--amber-soft);background:rgba(217,164,65,.14);border:1px solid #6e5a29;border-radius:4px;padding:1px 5px}
+.imp-row .imp-k.enc{color:var(--info);background:rgba(91,155,213,.14);border-color:#345168}
+.imp-row .imp-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-row .imp-n{flex:none;font-size:11px;color:var(--faint)}
 .kebab.addc-plus{font-size:18px;font-weight:600;line-height:1}
 .menu .menu-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:4px 10px 2px}
 .menu .submenu-wrap{position:relative}
