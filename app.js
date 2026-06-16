@@ -1014,7 +1014,9 @@ function fmtBlock(t){return esc(String(t||"")).replace(/\*\*(.+?)\*\*/g,"<b>$1</
 // A spell chip may carry a "(comment)" next to the name (e.g. "Fly (level 5 version)"); ignore the
 // bracketed part when resolving the reference.
 function findSpell(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enSpells().find(s=>(s.name||"").toLowerCase()===n);}
-function findCondition(name){const n=String(name||"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
+// A condition-immunity entry may carry a "(comment)" too (e.g. "charmed (with mind blank)"); ignore
+// the bracketed part when resolving the reference — same as findSpell.
+function findCondition(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
 function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
 function linkSpells(str){return String(str||"").split(",").map(tok=>{const t=tok.trim();if(!t)return "";return `<span class="cc-spell">${findSpell(t)?refSpan("spell",t):esc(t)}</span>`;}).filter(Boolean).join(", ");}
@@ -1074,8 +1076,9 @@ function renderPreview(){
   const rfm=v=>"1d20"+(v>=0?"+":"")+v;
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const md=mod(m[a]),sv=md+(m.saves.includes(a)?pb:0),A=a.toUpperCase();return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${A}">${sgn(md)}</td><td class="num roll-num" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${A}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
-  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${s[0].replace(/_/g," ")}</span> ${sgn(mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb))}`).join(", ")}</p>`;
-  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${esc(m.tools.slice().sort((a,b)=>a.localeCompare(b)).join(", "))}</p>`;
+  // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
+  if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
+  if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>`<span class="roll-num" data-roll="1d20${pb>=0?"+":""}${pb}" data-rolltype="check" data-rolllabel="${esc(t)}">${esc(t)}</span> ${sgn(pb)}`).join(", ")}</p>`;
   if(def.vuln)h+=`<p><span class="k">Vulnerabilities</span> ${esc(def.vuln)}</p>`;
   if(def.res)h+=`<p><span class="k">Resistances</span> ${esc(def.res)}</p>`;
   const conds=(m.cimm||"").split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b));
@@ -1134,7 +1137,7 @@ function colorizeStatblock(){
     // 2024 attack jargon "Melee/Ranged Attack Roll: +N" → rollable d20+N (whole phrase underlined).
     cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
     // dice that resolve to damage (followed by "… damage") are tagged DMG; bare dice get no tag.
-    cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\s+(?:[a-zA-Z]+\s+)?damage)/gi,cls:()=>"cc-roll",roll:m=>normRoll(m[0]),rtype:"damage"});
+    cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\)?\s+(?:[a-zA-Z]+\s+)?damage)/gi,cls:()=>"cc-roll",roll:m=>normRoll(m[0]),rtype:"damage"});
     cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-roll",roll:m=>normRoll(m[0]),rtype:null});
     cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
     cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
@@ -1154,6 +1157,19 @@ function colorizeStatblock(){
     const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(node=>colorizeNode(node,cats));
   });
+  // attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
+  // regex (which needs the +N contiguous) never matches and chassis-preset attacks weren't rollable.
+  // Tag the +N that immediately follows an italic "…Attack Roll:" label.
+  root.querySelectorAll(".blk i,.va i").forEach(it=>{
+    if(!/Attack Roll:\s*$/i.test(it.textContent))return;
+    const nx=it.nextSibling;if(!nx||nx.nodeType!==3)return;
+    const mm=nx.nodeValue.match(/^(\s*)([+\-−]\d+)/);if(!mm)return;
+    const parent=nx.parentNode;
+    if(mm[1])parent.insertBefore(document.createTextNode(mm[1]),nx);
+    const sp=document.createElement("span");sp.className="cc-roll";sp.dataset.roll="1d20"+normRoll(mm[2]);sp.dataset.rolltype="attack";sp.textContent=mm[2];
+    parent.insertBefore(sp,nx);
+    nx.nodeValue=nx.nodeValue.slice(mm[0].length);
+  });
   // Make an attack entry's NAME roll the attack (+ its damage) in one click.
   root.querySelectorAll(".blk,.va").forEach(blk=>{
     const atk=blk.querySelector('.cc-roll[data-rolltype="attack"]'),dmg=blk.querySelector('.cc-roll[data-rolltype="damage"]'),nm=blk.querySelector(".nm");
@@ -1166,6 +1182,7 @@ function colorizeStatblock(){
     const idx=t.indexOf(mm[0]),before=t.slice(0,idx),after=t.slice(idx+mm[0].length);
     nm.textContent="";if(before)nm.appendChild(document.createTextNode(before));
     const sp=document.createElement("span");sp.className="cc-roll";sp.dataset.roll="1d6";sp.dataset.rolllabel=before.replace(/\.\s*$/,"").trim()||"Recharge";sp.textContent=mm[0];
+    const num=mm[0].match(/\d+/);if(num)sp.dataset.rollmin=num[0]; // recharge succeeds when the d6 ≥ this
     nm.appendChild(sp);if(after)nm.appendChild(document.createTextNode(after));
   });
   if(state.settings.clickRoll&&state.settings.clickRoll.on){
@@ -1209,23 +1226,25 @@ function doRoll(formula,opts,meta){
   opts=opts||{};meta=meta||{};
   const r=rollFormula(formula,opts);
   const crit=!!opts.crit||(meta.type==="attack"&&r.nat20); // attack nat-20 glows as a crit
+  // Win/lose colouring only when a pass/fail threshold is known (e.g. a recharge roll).
+  const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
   const src=meta.source||rollSource();
-  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,source:src,
-    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,source:src}});
+  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,source:src,
+    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollLogOpen=true;renderRollLog();toast(`${meta.label||"Roll"}: ${r.total}`);
   return r;
 }
-function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,source:rl.source});}
+function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
-function quickRoll(t){doRoll(t.dataset.roll,{},{label:rollLabelFor(t),type:t.dataset.rolltype});}
+function quickRoll(t){doRoll(t.dataset.roll,{},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null});}
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
 function rollAttackSequence(nameEl){
   const label=nameEl.textContent.replace(/\.\s*$/,"").trim();
   const atk=doRoll(nameEl.dataset.roll,{},{label,type:"attack"});
   if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage"});
 }
-function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
+function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 function advIconHTML(adv){return `<span class="rl-adv ${adv}" title="${adv==="adv"?"Advantage":"Disadvantage"}">${DICE_ICON}</span>`;}
 function renderRollLog(){
   let el=document.getElementById("rollLog");
@@ -1233,7 +1252,7 @@ function renderRollLog(){
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
-  const row=r=>`<div class="rl-row${r.crit?" crit":""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}</span><span class="rl-parts">${r.adv?advIconHTML(r.adv):""}${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}</span></div>`;
+  const row=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}</span><span class="rl-parts">${r.adv?advIconHTML(r.adv):""}${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}</span></div>`;
   el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div><button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +(rollLogOpen?`<div class="rl-body">${ordered.map(row).join("")}</div>`:"");
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
@@ -1246,7 +1265,7 @@ function renderRollLog(){
 }
 function openRollLogMenu(anchor){
   const sortLabel=rollLogSort==="desc"?"Newest at bottom":"Newest at top";
-  const p=showPopover(anchor,`<button class="popitem" data-rlm="notation">Dice notation…</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll…</button><div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
+  const p=showPopover(anchor,`<button class="popitem" data-rlm="notation">Dice notation</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll</button><div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
   p.querySelectorAll("[data-rlm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const a=b.dataset.rlm;
     if(a==="notation"){closePopover();showPopover(anchor,diceHelpHTML());}
     else if(a==="sort"){rollLogSort=rollLogSort==="desc"?"asc":"desc";closePopover();renderRollLog();}
@@ -1992,7 +2011,7 @@ function renderAdvDetail(){
       <button class="kebab split-caret" data-menu="encfab" title="More encounter actions" aria-label="More encounter actions">▾</button>
       <div class="menu" id="menu-encfab">
         <button id="encAddScene">＋ Scene</button>
-        <button id="encImport">⤵ Import from another adventure…</button>
+        <button id="encImport">⤵ Import from another adventure</button>
         <div class="sep"></div>
         <button id="encArchiveAll">Archive all encounters</button>
         <button class="danger" id="encClearAll">Clear all encounters</button>
@@ -2446,7 +2465,7 @@ function openBestiaryPicker(a,e){
     <div class="ctrl-chips" id="bpChips"></div>
     <div id="bpBody" class="picker-scroll"></div>
     <div class="mrow picker-foot">
-      <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis…</button>
+      <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis</button>
       <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
       <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
     </div>`);
@@ -2494,6 +2513,14 @@ $("#statblock").addEventListener("click",e=>{
   const t=e.target.closest("[data-roll]");if(t)quickRoll(t);
 });
 $("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
+// Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
+// which keep their own modifier-click behaviour, e.g. bestiary multi-select).
+document.addEventListener("click",e=>{
+  if(!(e.metaKey||e.ctrlKey))return;
+  if(e.target.closest("input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal"))return;
+  e.preventDefault();
+  openCustomRoll({getBoundingClientRect:()=>({left:e.clientX,right:e.clientX,top:e.clientY,bottom:e.clientY,width:0,height:0})});
+});
 // Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
 function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
 async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}

@@ -4,6 +4,27 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 57 — Roll & colour round
+- **Condition immunities** now ignore a trailing `(comment)` when matching a known
+  condition — `charmed (with mind blank)` resolves to the *charmed* reference (same
+  rule already used for spell chips).
+- **Skills and tools are rollable:** a skill rolls `1d20 + its shown modifier`; a
+  tool rolls `1d20 + proficiency bonus` (the ability is the DM's choice, so PB only).
+- **Chassis-preset attacks roll again:** the `*Melee Attack Roll:* +N` jargon was
+  split across an italic by the formatter, so the attack bonus (and the attack name)
+  weren't tagged as rollable; the `+N` after an italic "…Attack Roll:" is now tagged,
+  and damage wrapped in parentheses (`(8d6)`) is recognised too.
+- **⌘/Ctrl-click anywhere** opens a quick custom-roll popover at the cursor
+  (documented in the dice-notation help).
+- **Roll-log result** is now neutral (white); green/red are used **only** when a
+  pass/fail is evident — e.g. a **recharge** roll shows green when the d6 meets the
+  recharge number, red when it doesn't.
+- **Ability colours** changed: STR red, DEX light blue, CON orange, INT purple,
+  WIS green, CHA pink. Ability codename pills are a **fixed width** (sized to the
+  longest) with a larger gap before the scores. **Mod/Save bonuses are white.**
+- Dropped the trailing `…` from action menu items / buttons (Dice notation, Custom
+  roll, Import from another adventure, From chassis).
+
 ## Batch 56 — Roll/colour fixes + spellcasting import
 - **Roll-log:** header buttons collapsed into a **kebab menu** (Dice notation ·
   Sort order [newest top/bottom] · Custom roll · Clear log). Right-click a log entry
