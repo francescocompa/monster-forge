@@ -396,8 +396,8 @@ select::-ms-expand{display:none}
 .roll-log .rl-clear:hover{background:rgba(214,79,69,.16)}
 .roll-log .rl-clear svg{display:block;width:12px;height:12px}
 .roll-log .rl-body{max-height:40vh;overflow:auto}
-.roll-log .rl-help{flex:none;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:var(--in);border:1px solid var(--line);color:var(--dim);font-size:10px;cursor:pointer;padding:0}
-.roll-log .rl-help:hover{color:var(--txt);border-color:var(--accent)}
+.roll-log .rl-kebab{flex:none;background:none;border:none;color:var(--dim);cursor:pointer;font-size:15px;line-height:1;padding:2px 6px;border-radius:4px}
+.roll-log .rl-kebab:hover{color:var(--txt);background:var(--panel2)}
 .roll-log .rl-row{display:flex;align-items:flex-start;gap:9px;padding:6px 9px;border-bottom:1px solid var(--line)}
 .roll-log .rl-row:last-child{border-bottom:none}
 .roll-log .rl-row.crit{background:linear-gradient(90deg,rgba(231,192,112,.18),rgba(231,192,112,.04));box-shadow:inset 2px 0 0 var(--amber)}
@@ -409,7 +409,7 @@ select::-ms-expand{display:none}
 .roll-log .rl-tag{flex:none;font-size:8.5px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:1px 4px;border:1px solid}
 .roll-log .rl-tag-attack{color:var(--accent-soft);border-color:#6e3329;background:rgba(226,101,77,.14)}
 .roll-log .rl-tag-damage{color:#e06a6a;border-color:#7a3636;background:rgba(224,106,106,.12)}
-.roll-log .rl-tag-check{color:var(--info);border-color:#345168;background:rgba(91,155,213,.12)}
+.roll-log .rl-tag-check{color:#b48ce6;border-color:#5a4a78;background:rgba(180,140,230,.14)}
 .roll-log .rl-tag-save{color:#6bb6e6;border-color:#345168;background:rgba(91,155,213,.12)}
 .roll-log .rl-parts{color:var(--faint);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px}
 .roll-log .rl-adv{flex:none;display:inline-grid;place-items:center}
