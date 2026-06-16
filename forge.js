@@ -3,13 +3,23 @@
 // Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
+// Render one editor row per entry. Each kind/mode has its own builder; entryHTML just dispatches (B74).
 function entryHTML(arr,kind){return arr.map((e,i)=>{
-  if(kind==="reactions"){return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead">${nameField(kind,i,e,"Name")}${rowCtrls(kind,i)}</div>
+  if(kind==="reactions")return entryReactionHTML(e,i,kind);
+  if(kind==="villain")return entryVillainHTML(e,i,kind);
+  if(e.mode==="spell")return entrySpellHTML(e,i,kind);
+  if(e.mode==="attack")return entryAttackHTML(e,i,kind);
+  return entryTextHTML(e,i,kind);
+}).join("");}
+// Reaction row: name + trigger + response.
+function entryReactionHTML(e,i,kind){return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead">${nameField(kind,i,e,"Name")}${rowCtrls(kind,i)}</div>
     <input type="text" placeholder="Trigger" data-k="${kind}" data-i="${i}" data-f="trigger" value="${esc(e.trigger||"")}" style="margin-bottom:6px">
     <textarea placeholder="Response" data-k="${kind}" data-i="${i}" data-f="response">${esc(e.response||"")}</textarea></div>`;}
-  if(kind==="villain"){return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select>${nameField("villain",i,e,"Name")}<button class="iconbtn" data-rm="villain:${i}">✕</button></div>
+// Villain-action row: round selector + name + effect.
+function entryVillainHTML(e,i,kind){return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead"><select data-k="villain" data-i="${i}" data-f="round" style="width:104px;flex:none">${[1,2,3].map(r=>`<option value="${r}" ${(+e.round||1)===r?"selected":""}>Round ${r}</option>`).join("")}</select>${nameField("villain",i,e,"Name")}<button class="iconbtn" data-rm="villain:${i}">✕</button></div>
     <textarea placeholder="Effect" data-k="villain" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea></div>`;}
-  if(e.mode==="spell"){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0),dc=e.dc||(8+pb+ab);return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}" draggable="true" data-drag><div class="ehead"><span class="kind">Spellcasting</span><span class="entry-dc">DC ${dc}</span>${nameField(kind,i,e,"Spellcasting")}${rowCtrls(kind,i)}</div>
+// Spellcasting row: ability/DC/atk + spell groups.
+function entrySpellHTML(e,i,kind){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0),dc=e.dc||(8+pb+ab);return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}" draggable="true" data-drag><div class="ehead"><span class="kind">Spellcasting</span><span class="entry-dc">DC ${dc}</span>${nameField(kind,i,e,"Spellcasting")}${rowCtrls(kind,i)}</div>
     <div class="atk-fields" style="grid-template-columns:repeat(3,1fr)">
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
       <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
@@ -23,7 +33,8 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
       <button class="iconbtn" data-sgrm="${i}:${gi}">✕</button></div>`).join("")}
     <button class="addbtn" data-sgadd="${i}" style="width:100%;margin-top:4px">＋ Add spell group</button>
     <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(spellLines(e).main))}</div></div>`;}
-  if(e.mode==="attack"){return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}" draggable="true" data-drag><div class="ehead"><span class="kind">Attack</span>${nameField(kind,i,e,"Attack name")}${rowCtrls(kind,i)}</div>
+// Attack row: kind/ability/atk/reach/range/dice/type/targets + rider.
+function entryAttackHTML(e,i,kind){return `<div class="entry" data-entry-kind="${kind}" data-entry-i="${i}" data-entry-abil="${e.ability}" draggable="true" data-drag><div class="ehead"><span class="kind">Attack</span>${nameField(kind,i,e,"Attack name")}${rowCtrls(kind,i)}</div>
     <div class="atk-fields">
       <label class="f">Kind<select data-k="${kind}" data-i="${i}" data-f="kind">${["Melee","Ranged","Melee or Ranged"].map(k=>`<option ${k===e.kind?"selected":""}>${k}</option>`).join("")}</select></label>
       <label class="f">Ability<select data-k="${kind}" data-i="${i}" data-f="ability">${ABILS.map(a=>`<option value="${a}" ${a===e.ability?"selected":""}>${a.toUpperCase()}</option>`).join("")}</select></label>
@@ -37,10 +48,10 @@ function entryHTML(arr,kind){return arr.map((e,i)=>{
     </div>
     <input type="text" class="atk-extra" placeholder="Rider, e.g. plus 7 (2d6) Poison damage." data-k="${kind}" data-i="${i}" data-f="extra" value="${esc(e.extra)}">
     <div class="hint" style="margin-top:6px">→ ${esc(applyRefs(attackText(e)))}</div></div>`;}
-  return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead">${nameField(kind,i,e,"Name")}${rowCtrls(kind,i)}</div>
+// Plain text row (traits / generic actions / bonus / legendary / lair): name + description (+ snippets for actions).
+function entryTextHTML(e,i,kind){return `<div class="entry" ${dragAttr(kind,i)}><div class="ehead">${nameField(kind,i,e,"Name")}${rowCtrls(kind,i)}</div>
     <textarea placeholder="Description" data-k="${kind}" data-i="${i}" data-f="text">${esc(e.text||"")}</textarea>
-    ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;
-}).join("");}
+    ${kind==="actions"?`<div class="snips">${SNIPS.map((s,si)=>`<button class="snip" data-snip="${si}" data-target="${kind}:${i}">${s[0]}</button>`).join("")}</div>`:""}</div>`;}
 function sortEntries(kind){arrFor(kind).sort((a,b)=>(a.name||"").toLowerCase().localeCompare((b.name||"").toLowerCase()));}
 function renderSgChips(ai,gi){
   const g=M.actions[ai]&&M.actions[ai].groups&&M.actions[ai].groups[gi];
