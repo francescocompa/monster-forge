@@ -588,7 +588,7 @@ function prettySource(s){return (s||"").replace(/\.(md|json)$/i,"").replace(/_(S
 function groupedRefOptions(items,placeholder){
   const groups={};
   (items||[]).forEach(it=>{const name=it.name||it;const src=(it&&(it._srcCode||it._source))||"Other";(groups[src]=groups[src]||[]).push(name);});
-  const srcs=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  const srcs=Object.keys(groups).sort((a,b)=>((a==="XPHB"?0:1)-(b==="XPHB"?0:1))||a.localeCompare(b)); // XPHB pinned first
   return `<option value="">${esc(placeholder)}</option>`+srcs.map(s=>`<optgroup label="${esc(s)}">`+[...new Set(groups[s])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`).join("");
 }
 // Spell picker options: grouped by spell level (Cantrip, Level 1…), each option labelled
@@ -623,7 +623,8 @@ function buildLibSelects(){
   $$("select[data-lib]").forEach(sel=>{sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";});sel.addEventListener("mousedown",()=>refreshAggOptgroup(sel.dataset.lib,sel));});
   const cimmSel=$("#cimm-sel");
   if(cimmSel){
-    const rebuildCimmSel=()=>{cimmSel.innerHTML=groupedRefOptions(enConditions()||[],"Pick condition…");};
+    // Condition immunities exclude diseases (5etools `disease` category); XPHB is pinned first (groupedRefOptions).
+    const rebuildCimmSel=()=>{cimmSel.innerHTML=groupedRefOptions((enConditions()||[]).filter(c=>c.category!=="Diseases"),"Pick condition…");};
     rebuildCimmSel();
     cimmSel.addEventListener("mousedown",rebuildCimmSel); // refresh just before the native list opens
     cimmSel.addEventListener("change",()=>{const v=cimmSel.value;if(v){const a=cimmList();if(!a.some(x=>x.toLowerCase()===v.toLowerCase()))a.push(v);M.cimm=a.join(", ");renderCimm();renderPreview();cimmSel.value="";}});
@@ -676,7 +677,6 @@ $$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.ad
   else arrFor(k).push(T("",""));renderEntries();renderPreview();}));
 $$("[data-addatk]").forEach(b=>b.addEventListener("click",()=>{const best=mod(M.str)>=mod(M.dex)?"str":"dex";M.actions.push(ATK({ability:best}));renderEntries();renderPreview();}));
 $$("[data-addspell]").forEach(b=>b.addEventListener("click",()=>{const best=["int","wis","cha"].reduce((p,a)=>mod(M[a])>mod(M[p])?a:p,"cha");M.actions.push(SPELL({ability:best}));renderEntries();renderPreview();}));
-$$("[data-addmulti]").forEach(b=>b.addEventListener("click",()=>{M.actions.unshift(T("Multiattack","[C] make[s] two attacks."));renderEntries();renderPreview();}));
 
 function loadMonster(m){
   M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
@@ -1765,7 +1765,6 @@ function doExportJSON(){
 }
 $("#exportAll").addEventListener("click",doExportJSON);
 $("#importAll").addEventListener("click",()=>$("#fileIn").click());
-$("#pasteStatblock").addEventListener("click",openImportModal);
 $("#libPaste").addEventListener("click",openImportModal);
 $("#presetManage").addEventListener("click",()=>{presetSel.clear();presetModal();});
 // Accumulates raw bestiary monsters across every upload this session so cross-file

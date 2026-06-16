@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 37 — Forge quick-fixes + dropdown standardization (FP1)
+- **Removed the Multiattack action button** — it's already available as a chip inside a
+  custom action.
+- **Removed "Paste statblock"** from the sidebar (Paste 5etools is still in the Forge ⋯
+  menu and the Bestiary add menu).
+- **Condition Immunities dropdown:** pins the **XPHB** group to the top and no longer
+  lists **diseases** (only true conditions/statuses).
+- **Unified dropdown chevrons:** every dropdown — native `<select>`s _and_ the
+  Type/Subtype/Alignment comboboxes — now uses the **same chevron glyph and right
+  margin** (previously the comboboxes showed a different browser arrow with no spacing).
+
 ## Batch 36 — Bestiary origin, bracket-driven library & UI polish (B43)
 - **Bestiary origin badge:** every card now shows whether it's **⚒ Home-brew**
   (created or edited here) or **⊕ Chassis** (loaded from a chassis and saved without
