@@ -157,29 +157,29 @@ function mainSaveDC(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const sp=m.actions.f
   if(sp)return{val:sp.dc!==""&&sp.dc!=null?Number(sp.dc):8+pb+mod(m[sp.ability]||0),cr:false,abil:sp.ability};
   // CR-target DC is keyed off the creature's best ability
   return{val:boh?boh[4]:null,cr:true,abil:ABILS.reduce((a,b)=>mod(m[b])>mod(m[a])?b:a,"str")};}
-function renderPreview(){
-  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
-  const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
-  const ab=mainAttackBonus(m),dc=mainSaveDC(m);
-  const chip=(lbl,val,approx,tip,suf)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}${suf?` <span class="dabil">${suf}</span>`:""}</b></div>`;
-  // SHOW_DERIVED gates the legacy AC/Attack/Save-DC chip row above the statblock (B23).
-  // Kept (not deleted) so it can return as an opt-in "legacy" feature.
-  $("#derived").innerHTML=SHOW_DERIVED?(chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
-    +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
-    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
-  crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
-  $("#forgeTitle").textContent=m.name||"New Creature";
-  refreshForgeStatus();
-  if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
+// renderPreview is split into pure HTML builders (header / ability table / meta / entry sections) plus
+// a coordinator that updates the surrounding chrome and commits + post-processes the statblock (B72).
+
+// Name, type line, and the AC/Initiative/HP/Speed header block.
+function sbHeaderHTML(m){
   const initVal=initOf(m);
-  const def=defenseStrings(m);
   let h=`<div class="topbar"></div><h2>${m.name.trim()?esc(m.name):`<span class="sb-name-ph">Unnamed Creature</span>`}</h2>`;
   h+=`<div class="typeline">${esc([m.size,m.type+(m.subtype?` (${m.subtype})`:""),m.align].filter(Boolean).join(" "))||"&nbsp;"}${m.minion?` <span class="minion-tag">Minion</span>`:""}</div><hr class="rule">`;
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
-  h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
+  return h;
+}
+// The six-column STR/DEX/CON · INT/WIS/CHA ability table (score / rollable mod / rollable save).
+function sbAbilityTableHTML(m,pb){
+  let h=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   const rfm=v=>"1d20"+(v>=0?"+":"")+v;
   [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase(),FN=ABIL_NAME[a];return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${FN}" data-abil="${a}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${FN}" data-abil="${a}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
-  h+=`</table><hr class="rule thin"><div class="meta">`;
+  h+=`</table>`;
+  return h;
+}
+// The meta block: skills, tools, defenses, immunities, gear, senses, languages, CR line.
+function sbMetaHTML(m,pb,xp){
+  const def=defenseStrings(m);
+  let h=`<hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}" data-abil="${SKILLS[s[0]]}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
   if(m.tools&&m.tools.length)h+=`<p><span class="k">Tools</span> ${m.tools.slice().sort((a,b)=>a.localeCompare(b)).map(t=>{const ab=TOOL_ABIL[t]||"int",mv=mod(m[ab])+pb;return `<span class="cc-skill" data-ab="${ab}">${esc(t)}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(t)}" data-abil="${ab}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
@@ -198,19 +198,26 @@ function renderPreview(){
   h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
   h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
   h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
+  return h;
+}
+// One entry paragraph (trait / action / spellcasting / attack), bracket-refs applied.
+function sbEntryBlockHTML(e){
   // data-spells lets a post-pass re-link spell names mentioned in spellcasting-derived feature text.
+  const spAttr=x=>x&&x._spells&&x._spells.length?` data-spells="${encodeURIComponent(JSON.stringify(x._spells))}"`:"";
+  // Spellcasting: the MAIN line is colourised (DC / to-hit), but the spell-group lines are skipped
+  // because their spell names are already linked via linkSpells.
+  if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
+  const body=e.mode==="attack"?attackText(e):e.text;
+  // Carry the attack's ability + damage type onto the name so a click can tint/annotate the roll.
+  const ab=e.mode==="attack"&&e.ability?` data-abil="${esc(e.ability)}"`:"";
+  const dt=e.mode==="attack"&&e.dtype?` data-dmgtype="${esc(e.dtype)}"`:"";
+  return `<p class="blk"${spAttr(e)}><span class="nm"${ab}${dt}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+}
+// All action/trait/legendary/villain/lair/regional/notes sections.
+function sbEntriesHTML(m){
   const spAttr=e=>e&&e._spells&&e._spells.length?` data-spells="${encodeURIComponent(JSON.stringify(e._spells))}"`:"";
-  const blk=e=>{
-    // Spellcasting: the MAIN line is colourised (DC / to-hit), but the spell-group lines are skipped
-    // because their spell names are already linked via linkSpells.
-    if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
-    const body=e.mode==="attack"?attackText(e):e.text;
-    // Carry the attack's ability + damage type onto the name so a click can tint/annotate the roll.
-    const ab=e.mode==="attack"&&e.ability?` data-abil="${esc(e.ability)}"`:"";
-    const dt=e.mode==="attack"&&e.dtype?` data-dmgtype="${esc(e.dtype)}"`:"";
-    return `<p class="blk"${spAttr(e)}><span class="nm"${ab}${dt}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
-  };
-  const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
+  const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(sbEntryBlockHTML).join("");
+  let h="";
   if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
   if(m.actions.some(e=>e.name||e.text||e.mode==="spell"))h+=`<h3>Actions</h3>${sec(m.actions)}`;
   if(m.bonus.some(e=>e.name||e.text))h+=`<h3>Bonus Actions</h3>${sec(m.bonus)}`;
@@ -220,6 +227,25 @@ function renderPreview(){
   if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
   if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
   (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
+  return h;
+}
+// Update the chrome around the statblock (legacy derived chips, CR-target tip, title, status), then
+// build the statblock HTML from the section builders, commit it, and run the link/colour post-pass.
+function renderPreview(){
+  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
+  const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
+  const ab=mainAttackBonus(m),dc=mainSaveDC(m);
+  const chip=(lbl,val,approx,tip,suf)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}${suf?` <span class="dabil">${suf}</span>`:""}</b></div>`;
+  // SHOW_DERIVED gates the legacy AC/Attack/Save-DC chip row above the statblock (B23).
+  // Kept (not deleted) so it can return as an opt-in "legacy" feature.
+  $("#derived").innerHTML=SHOW_DERIVED?(chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
+    +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
+    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
+  crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
+  $("#forgeTitle").textContent=m.name||"New Creature";
+  refreshForgeStatus();
+  if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
+  const h=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xp)+sbEntriesHTML(m);
   $("#statblock").innerHTML=h;
   linkSpellFeatures($("#statblock"));
   if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
