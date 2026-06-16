@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 40 — Forge entry overhaul, combo everywhere, FP2 + CSS tokens
+- **Combo dropdowns project-wide:** every feature-**name** field (traits / actions /
+  bonus / reactions / legendary / villain / lair) now uses the combo suggestion
+  dropdown — typing filters built-in snippets **and** library features.
+- **Picking a suggestion imports the body too** (not just the name).
+- **Bracketize on import:** importing a library/chassis feature rewrites its concrete
+  text into live tokens — creature name → `[c]`/`[C]`, `DC N` / `<Ability> Saving
+  Throw: DC N` → `[ABIL SAVE]`/`[SAVE]`, `N (XdY)` → `[XdY]`, attack `+N` → `[ATK]` —
+  so it retunes to the new creature. (Built-in snippets are already bracketed.)
+- **Free drag-reorder** for the manually-ordered sections (actions/legendary/villain/
+  lair), replacing the ▲▼ move arrows (mirrors the encounter-block drag).
+- **Recharge / X-per-day "+"** moved **inside** the entry name field (divider-separated,
+  like the Gear field).
+- **CR-suggested AC / HP** show the value as a **placeholder** (empty field, behaves as
+  set, no need to clear).
+- **Short name:** Proper-name + Plural folded into a **gear popover** inside the field.
+- Sidebar **"Preset libraries…"** uses the library **book icon**.
+- **CSS:** introduced `--accent-hover`, `--in`, `--shadow-pop` tokens and swapped the
+  repeated literals (no visual change).
+
 ## Batch 39 — Identity combo dropdowns
 - **Type / Subtype / Alignment** are now proper combo fields. The **chevron opens the
   native OS dropdown** (your screenshot-2 style) listing every value — the canonical
