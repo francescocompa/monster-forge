@@ -5,6 +5,11 @@ site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
 ## Batch 51 — Scenes overhaul
+- _Follow-up fixes:_ filter tools trimmed to **search + sort** (Name / Difficulty;
+  dropped the filter menu and the Spent-XP sort); **＋ Scene** moved to sit directly
+  under the scenes and above Ungrouped; Ungrouped shows nothing when empty (no
+  placeholder text); added **＋ Scene** to the encounter-FAB dropdown; the encounter
+  and Bestiary FABs use **rounded-square** corners (8px) instead of full pills.
 - **Section renamed Encounters → Scenes.** Scene blocks are now **neutral** (grey
   left-rule, no amber) and the scene name is no longer force-uppercased.
 - **+ Scene moved into the list** (dashed add-button, like add-combatant/add-section);

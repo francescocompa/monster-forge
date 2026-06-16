@@ -1781,6 +1781,7 @@ function renderAdvDetail(){
       <button class="btn primary sm" id="addEnc" style="width:auto">＋ Encounter</button>
       <button class="kebab split-caret" data-menu="encfab" title="More encounter actions" aria-label="More encounter actions">▾</button>
       <div class="menu" id="menu-encfab">
+        <button id="encAddScene">＋ Scene</button>
         <button id="encImport">⤵ Import from another adventure…</button>
         <div class="sep"></div>
         <button id="encArchiveAll">Archive all encounters</button>
@@ -1800,6 +1801,7 @@ function renderAdvDetail(){
   $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   $("#advNotes").addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});
   $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
+  $("#encAddScene").addEventListener("click",()=>addScene(a));
   $("#encImport").addEventListener("click",()=>openImportEnc(a));
   $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
@@ -1807,6 +1809,7 @@ function renderAdvDetail(){
   renderPCgrid(a);renderEncList(a);
 }
 function blankEncounter(sceneId){return {id:uid(),name:"New Encounter",archived:false,notes:"",partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function addScene(a){a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",archived:false});saveAdv();renderAdvDetail();}
 function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
 function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
@@ -1817,13 +1820,8 @@ function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector
   const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
 // ---- Encounter list controls (search / filter / sort) — manual order is the default (no sort). ----
 let encCtrl={q:"",filters:{},sort:{key:"manual",dir:1},group:null};
-const ENC_DESC={search:true,icons:["search","filter","sort"],defaultSortKey:"manual",
-  params:[
-    {key:"difficulty",label:"Difficulty",multi:true,get:(e,a)=>[diffOf(encSpent(e),encBudget(a,e))[1]],values:()=>["Empty","Trivial","Low","Moderate","High","Over High"]},
-    {key:"faction",label:"Faction",multi:true,get:e=>[...new Set(e.combatants.filter(c=>c.type!=="event").map(c=>c.faction).filter(Boolean))],values:()=>FACTIONS.slice()},
-    {key:"contents",label:"Contents",multi:true,get:e=>e.combatants.some(c=>combatIsMinion(c))?["Has minion"]:[],values:()=>["Has minion"]},
-  ],
-  sortKeys:[{key:"manual",label:"Manual order"},{key:"alpha",label:"Name"},{key:"diff",label:"Difficulty"},{key:"xp",label:"Spent XP"}]};
+const ENC_DESC={search:true,icons:["search","sort"],defaultSortKey:"manual",params:[],
+  sortKeys:[{key:"manual",label:"Manual order"},{key:"alpha",label:"Name"},{key:"diff",label:"Difficulty"}]};
 function encFilterActive(){return !!(encCtrl.q||Object.keys(encCtrl.filters).some(k=>(encCtrl.filters[k]||[]).length)||encCtrl.sort.key!=="manual");}
 // Apply search/filter/sort to a list of encounters. Manual sort preserves the array (drag) order.
 function encApply(a,list){
@@ -1834,7 +1832,6 @@ function encApply(a,list){
     return true;});
   const k=encCtrl.sort.key,dir=encCtrl.sort.dir;
   if(k==="alpha")recs=recs.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")*dir);
-  else if(k==="xp")recs=recs.slice().sort((x,y)=>(encSpent(x)-encSpent(y))*dir);
   else if(k==="diff"){const rat=e=>encSpent(e)/(encBudget(a,e)[2]||1);recs=recs.slice().sort((x,y)=>(rat(x)-rat(y))*dir);}
   return recs;
 }
@@ -1906,8 +1903,8 @@ function renderEncList(a){
   if(activeScenes.length){
     const ungrouped=visible.filter(e=>!e.archived&&!activeScenes.some(s=>s.id===e.sceneId)&&!sceneArchived(a,e.sceneId));
     box.innerHTML=activeScenes.map(s=>sceneHTML(a,s,inScene(s.id))).join("")
-      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:`<div class="hint scene-empty">No ungrouped encounters.</div>`}</div>`
-      +sceneAdd;
+      +sceneAdd
+      +`<div class="scene-loose" data-scenedrop="">${ungrouped.length?`<div class="scene-loose-lbl">Ungrouped</div>${ungrouped.map(e=>encHTML(a,e)).join("")}`:""}</div>`;
   }else{
     const active=visible.filter(e=>!e.archived);
     box.innerHTML=(active.length?active.map(e=>encHTML(a,e)).join(""):`<div class="hint">${encFilterActive()?"No encounters match these controls.":"No active encounters."}</div>`)+sceneAdd;
@@ -2056,7 +2053,7 @@ function bindEncEvents(a){
   q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
-  q("#addScene").forEach(el=>el.addEventListener("click",()=>{a.scenes.push({id:uid(),name:"New Scene",collapsed:false,notes:"",archived:false});saveAdv();renderAdvDetail();}));
+  q("#addScene").forEach(el=>el.addEventListener("click",()=>addScene(a)));
   q("[data-scenename]").forEach(el=>el.addEventListener("change",()=>{const s=sceneOf(a,el.dataset.scenename);if(s){s.name=el.value.trim()||"Scene";saveAdv();}}));
   q("[data-scenenotes]").forEach(el=>el.addEventListener("input",()=>{const s=sceneOf(a,el.dataset.scenenotes);if(s){s.notes=el.value;saveAdv();}}));
   q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
