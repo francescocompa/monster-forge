@@ -539,7 +539,20 @@ function autofillEntry(kind,i){const e=arrFor(kind)[i];if(!e||!e.name)return;con
     else{if(!map)return;const p=findCI(map,key);if(!p)return;e.name=p;e.text=expandSnip(map[p]);}}
   if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}
 // insert a fresh entry chosen from a section's "From library" dropdown
+// B42 — aggregate same-kind features (by name) from every loaded chassis/preset/saved monster,
+// so the "From library" dropdowns also offer real features harvested across the bestiary.
+function aggKindArr(m,kind){return kind==="traits"?m.traits:kind==="actions"?m.actions:kind==="bonus"?m.bonus:kind==="reactions"?m.reactions:kind==="legend"?(m.legend&&m.legend.items):kind==="villain"?(m.villain&&m.villain.items):kind==="lair"?(m.lair&&m.lair.items):null;}
+function aggregatedFor(kind){const map=new Map();[...state.lib,...CHASSIS,...enPresets()].forEach(m=>{(aggKindArr(m,kind)||[]).forEach(e=>{const nm=(e&&e.name||"").trim();if(!nm)return;const k=nm.toLowerCase();if(!map.has(k))map.set(k,e);});});return map;}
+let aggCache={};
+function refreshAggOptgroup(kind,sel){
+  sel.querySelectorAll("optgroup.agg-grp").forEach(g=>g.remove());
+  const map=aggregatedFor(kind);aggCache[kind]=map;if(!map.size)return;
+  const og=document.createElement("optgroup");og.className="agg-grp";og.label="From bestiary";
+  [...map.values()].map(e=>e.name).sort((a,b)=>a.localeCompare(b)).forEach(n=>{const o=document.createElement("option");o.value="agg:"+n;o.textContent=n;og.appendChild(o);});
+  sel.appendChild(og);
+}
 function insertLib(kind,val){if(!val)return;const ci=val.indexOf(":"),pre=ci>=0?val.slice(0,ci):"",name=ci>=0?val.slice(ci+1):val;
+  if(pre==="agg"){const e=aggCache[kind]&&aggCache[kind].get(name.toLowerCase());if(e){arrFor(kind).push(clone(e));if(ALWAYS_SORTED.has(kind))sortEntries(kind);renderEntries();renderPreview();}return;}
   if(kind==="traits")M.traits.push(T(name,expandSnip(TRAIT_SNIPS[name])));
   else if(kind==="actions"){if(pre==="atk")M.actions.push(ATK(Object.assign({name},clone(ATK_PRESETS[name]))));else M.actions.push(T(name,expandSnip(TEXT_ACTIONS[name])));}
   else if(kind==="bonus")M.bonus.push(T(name,expandSnip(BONUS_SNIPS[name])));
@@ -589,7 +602,7 @@ function buildLibSelects(){
   ls("legend").innerHTML=LIB_PROMPT+list(Object.keys(LEGEND_SNIPS));
   ls("villain").innerHTML=LIB_PROMPT+list(Object.keys(VILLAIN_SNIPS));
   ls("lair").innerHTML=LIB_PROMPT+list(Object.keys(LAIR_SNIPS));
-  $$("select[data-lib]").forEach(sel=>sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";}));
+  $$("select[data-lib]").forEach(sel=>{sel.addEventListener("change",()=>{insertLib(sel.dataset.lib,sel.value);sel.value="";});sel.addEventListener("mousedown",()=>refreshAggOptgroup(sel.dataset.lib,sel));});
   const cimmSel=$("#cimm-sel");
   if(cimmSel){
     const rebuildCimmSel=()=>{cimmSel.innerHTML=groupedRefOptions(enConditions()||[],"Pick condition…");};
@@ -680,6 +693,12 @@ function sensesStr(m){const s=m.senses||{};let p=[];
 function refPhrase(cap){const sn=M.shortName||{word:"creature",proper:false};const w=sn.word||"creature";return sn.proper?w:((cap?"The ":"the ")+w);}
 function applyRefsFor(mon,t){if(!t)return t;const sn=(mon&&mon.shortName)||{word:"creature",proper:false,plural:false};const w=sn.word||"creature";
   const ph=cap=>sn.proper?w:((cap?"The ":"the ")+w);const sfx=sn.plural?"":"s";
+  // [ABIL SAVE] → save DC, [ABIL ATK] → attack/check modifier (PB + ability mod, from this creature's CR).
+  const pb=mon?pbForCR(mon.cr):2,abmod=a=>mon?mod(mon[a.toLowerCase()]??10):0,capw=w.charAt(0).toUpperCase()+w.slice(1);
+  t=t.replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+SAVE[\]}]/gi,(_,a)=>"DC "+(8+pb+abmod(a)))
+     .replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+ATK[\]}]/gi,(_,a)=>sgn(pb+abmod(a)))
+     // local article override: + forces "the", - removes it (capital = capitalised first letter)
+     .replace(/[[{]C\+[\]}]/g,"The "+w).replace(/[[{]c\+[\]}]/g,"the "+w).replace(/[[{]C-[\]}]/g,capw).replace(/[[{]c-[\]}]/g,w);
   return avgBrackets(t.replace(/\[C\]/g,ph(true)).replace(/\[c\]/g,ph(false)).replace(/\[Name\]/g,ph(true)).replace(/\[name\]/g,ph(false)).replace(/\[s\]/g,sfx)
     .replace(/\{C\}/g,ph(true)).replace(/\{c\}/g,ph(false)).replace(/\{Name\}/g,ph(true)).replace(/\{name\}/g,ph(false)).replace(/\{s\}/g,sfx)
     .replace(/\bThe creature\b/g,ph(true)).replace(/\bthe creature\b/g,ph(false)));}

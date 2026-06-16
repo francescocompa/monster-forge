@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 35 — Bracket shortcuts + library aggregation (B41–B42 + fixes)
+- **New bracket tokens** (work in any trait/action/note, expand in preview + every
+  export):
+  - `[STR SAVE]` → save DC for that ability (8 + PB + mod), e.g. `DC 15`.
+  - `[STR ATK]` → attack/check modifier (PB + mod), e.g. `+7`. Any ability.
+  - `[C+]` / `[c+]` force the article ("the"); `[C-]` / `[c-]` remove it —
+    overriding the Proper-name toggle for one reference (capital = capitalised).
+- **"From library" aggregation:** the trait/action/bonus/reaction/legendary/
+  villain/lair pickers now include a **From bestiary** group listing every distinct
+  feature (by name) harvested from all loaded chassis, presets and saved monsters;
+  picking one inserts a copy.
+- **Bestiary header fix:** cards no longer bleed above the sticky header while
+  scrolling (the 20px scroll-padding gap is now painted over).
+- **Mobile batch bar:** anchors to the left edge and grows rightward instead of
+  centering off-screen.
+
 ## Batch 34 — Gear, spellcasting/action & focus fixes (B38–B40 + add-ons)
 - **Gear "Suggest" button:** the Gear field is now a chipfield (like Condition
   Immunities). A **Suggest** button harvests manufactured weapons from attack

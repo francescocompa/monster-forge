@@ -383,6 +383,8 @@ select{padding-right:24px}
 
 /* ── Bestiary (Batch 13) ─────────────────────────────────────────────────── */
 .lib-head{position:sticky;top:0;z-index:6;background:var(--bg);margin:-20px -24px 36px;padding:0 24px 12px;border-bottom:1px solid var(--line)}
+/* The sticky header pins at the scroll padding-box top (20px down); this paints over that gap so cards don't bleed above it while scrolling */
+.lib-head::before{content:"";position:absolute;top:-20px;left:0;right:0;height:20px;background:var(--bg)}
 .lib-head .col-head{margin-bottom:8px}
 .toolbar select.filt{width:auto;flex:none;padding:7px 26px 7px 10px;font-size:12px;color:var(--dim)}
 .splitbtn{display:inline-flex;align-items:stretch}
@@ -611,6 +613,8 @@ select{padding-right:24px}
   .adv-layout:not(.detail-open) .adv-detail{display:none}
   .adv-layout.detail-open .adv-list{display:none}
   .adv-back{display:grid;flex:none}
+  /* batch bar: anchor to the left edge and grow rightward instead of centering (which can overflow off-screen) */
+  .batch-bar{left:12px;right:12px;transform:none;max-width:none;justify-content:flex-start;flex-wrap:wrap;white-space:normal}
 }
 
 @media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
