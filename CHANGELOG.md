@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 47 — Minion encounter math + B44 polish
+- **MCDM minion encounter budgeting:** a minion combatant now contributes the
+  special low **minion XP** (Flee, Mortals! table) instead of standard CR XP, so a
+  horde counts fairly (e.g. 5 CR-1 minions = 200 XP ≈ one standard CR-1 creature; a
+  CR-11 minion is 720 XP, not 7,200). New `MINION_XP` table + `combatXPEach` /
+  `combatIsMinion`. Minion combatant rows show a **MINION** tag; the Claude encounter
+  export tags minions and uses their minion XP.
+- **Preset-libraries `?`** help now opens on **hover** (all `?` helpers are now
+  hover-consistent); the sidebar **“Preset libraries”** button drops its trailing “…”.
+- **Doubled the adventure color palette** to 20 swatches.
+
 ## Batch 46 — FP4: adventure color identity
 - Each adventure can carry a **color**. A filled **dot** sits before the name in the
   sidebar card and the open adventure title; clicking it opens a curated 10-color

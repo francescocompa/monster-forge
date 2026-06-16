@@ -1556,7 +1556,7 @@ function openChassis(fromForge,opts){
     renderCtrlChips($("#chChips"),ctrl,desc,draw);
     const body=$("#chBody");let recs=ctrlApply(chPool(),ctrl,desc);
     if(ctrl.group!=="source")recs=collapseVariants(recs);
-    renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries…”) to add more bases."}`,cap:200});
+    renderRecords(body,recs,ctrl,desc,{cardOf,emptyMsg:`No matches.${state.presets.length?"":" Upload 5etools .json libraries from the sidebar (“Preset libraries”) to add more bases."}`,cap:200});
     bindSrcDrops(body,recs,draw);
     body.querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>findChassis(b.dataset.cardprev)));
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
@@ -1648,7 +1648,8 @@ function presetModal(){
   renderCtrlChips($("#prChips"),presetCtrl,desc,presetModal);
   $("#prClose").addEventListener("click",closeModal);
   $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
-  $("#prHelp").addEventListener("click",e=>{e.stopPropagation();showPopover($("#prHelp"),`<div class="help-pop">${PRESET_HINT}</div>`);});
+  {const ph=$("#prHelp"),openPh=e=>{e.stopPropagation();showPopover(ph,`<div class="help-pop">${PRESET_HINT}</div>`);};
+    ph.addEventListener("mouseenter",openPh);ph.addEventListener("click",openPh);ph.addEventListener("mouseleave",()=>closePopover());}
   $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmStack(`Remove this reference sheet?`,()=>removeReference(k));}));
   $("#modal").querySelectorAll(".lib-sel").forEach(cb=>cb.addEventListener("change",()=>{const row=cb.closest(".preset-row"),key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);prUpdateSelUI();}));
   $("#modal").querySelectorAll(".grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
@@ -1676,7 +1677,7 @@ function chassisConflictModal(ch){
 
 function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}"><button data-aim-dup="${a.id}">Duplicate</button><button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button><div class="sep"></div><button class="danger" data-aim-del="${a.id}">Delete</button></div></div>`;}
 // FP4 — per-adventure color identity. Curated palette that reads well on the dark theme.
-const ADV_COLORS=["#e2654d","#e08b3f","#d9a941","#6aa84f","#4db6ac","#5b9bd5","#7e8cd6","#b07cd6","#d76a9e","#8a93a0"];
+const ADV_COLORS=["#e2654d","#e08b3f","#d9a941","#ccc24a","#9fb84a","#6aa84f","#4caf7d","#4db6ac","#45a7bf","#5b9bd5","#4f7fc8","#7e8cd6","#8f7bd4","#b07cd6","#c06fc0","#d76a9e","#d2647a","#b6794a","#8a93a0","#7a8290"];
 // Clickable color dot before an adventure name (sidebar card + open title). Reusable wherever an
 // adventure is shown (e.g. future bestiary grouping by adventure).
 function advDot(advId,color){return `<button class="adv-dot${color?"":" none"}" data-advcolor="${advId}"${color?` style="background:${color};border-color:${color}"`:""} title="Adventure color"></button>`;}
@@ -1721,7 +1722,11 @@ function addMonsterCombatant(enc,monsterId){
   return cid;
 }
 function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
-function combatXP(c){if(c.type==="monster"&&monOf(c))return xpOf(monOf(c))*Number(c.count||1);const cr=combatCR(c);return cr!=null?(CR_XP[cr]||0)*Number(c.count||1):0;}
+// Per-creature XP for the budget. MCDM minions use the special low minion-XP table (so a horde
+// counts fairly); everyone else uses standard CR XP. `count` multiplies either way.
+function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);return cr!=null?(CR_XP[cr]||0):0;}
+function combatIsMinion(c){return c.type==="monster"&&!!(monOf(c)&&monOf(c).minion);}
+function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
 function encBudget(adv,e){
   const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
   e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);for(let i=0;i<3;i++)add[i]+=BUDGET[lv][i]*Number(c.count||1);}}});
@@ -1904,7 +1909,7 @@ function combatHTML(e,c){
     <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
     ${facSel}
     <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
-    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${monsterOptionsHTML(c.monsterId)}</select></div></div>`;
+    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${monsterOptionsHTML(c.monsterId)}</select>${m&&m.minion?`<span class="minion-tag" title="MCDM minion — counts as ${(MINION_XP[m.cr]??0).toLocaleString()} XP each toward the budget">minion</span>`:""}</div></div>`;
 }
 // Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
 // then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
@@ -2064,7 +2069,7 @@ function pushEncounter(a,e){
     party:{size:p.size,levels:partyLevels(p),overridden:!!e.partyOverride},
     battlefield_notes:e.notes||"",
     budget:{low:bud[0],moderate:bud[1],high:bud[2],spent,reads_as:label,note:"allies (faction Ally) already folded into budget via CR→level"},
-    combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),xp_each:c.type==="monster"&&m?xpOf(m):(combatCR(c)!=null?CR_XP[combatCR(c)]:0),count:Number(c.count),faction:c.faction};}),
+    combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),minion:combatIsMinion(c),xp_each:combatXPEach(c),count:Number(c.count),faction:c.faction};}),
     environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
   const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
   copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");

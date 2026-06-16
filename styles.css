@@ -477,6 +477,7 @@ select::-ms-expand{display:none}
 .cbt .sec{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:11px;color:var(--faint)}
 .cbt .sec select{flex:1;font-size:12px}
 .cbt .sec .lab{flex:none}
+.cbt .sec .minion-tag{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
 .cbt textarea{margin-top:6px;min-height:42px;font-size:12px}
 
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--in);color:var(--txt);border:1px solid var(--accent);padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5)}
