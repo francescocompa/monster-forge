@@ -205,7 +205,12 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const clone=o=>JSON.parse(JSON.stringify(o));
-function toast(t,ms){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),ms||1900);}
+// asHtml lets roll notifications highlight the result number; callers MUST esc any user content (B77).
+function toast(t,ms,asHtml){const e=$("#toast");if(asHtml)e.innerHTML=t;else e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),ms||1900);}
+// Wrap a roll's result number in a highlight span for the notification toast.
+function rollNum(n){return `<span class="toast-num">${n}</span>`;}
+// Capitalise a single word (e.g. a lower-case damage type → "Piercing").
+function capWord(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function showBanner(t,withCancel){const b=$("#banner");b.innerHTML=esc(t)+(withCancel?'<button id="bannerCancel">Cancel</button>':"");b.classList.add("show");if(withCancel)$("#bannerCancel").onclick=withCancel;}
 function hideBanner(){$("#banner").classList.remove("show");}
 function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[m.cr]??0);}

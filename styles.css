@@ -381,6 +381,16 @@ select::-ms-expand{display:none}
 .sb-wrap{flex:none;position:relative}
 .derived:empty{display:none}
 .sb{background:linear-gradient(180deg,var(--sb),var(--sb2));color:var(--txt);border:1px solid var(--sb-edge);border-radius:8px;padding:16px 18px 18px;position:relative;box-shadow:0 8px 28px rgba(0,0,0,.45);font-size:13px;line-height:1.45}
+/* Skeleton shown in the statblock until the first render replaces it — avoids the box collapsing
+   to nothing while ref libraries / cloud data load on startup. B77. */
+.sb-skel{display:flex;flex-direction:column;gap:11px}
+.sb-skel .sk{height:13px;border-radius:5px;background:linear-gradient(90deg,var(--sb2) 25%,var(--sb-edge) 37%,var(--sb2) 63%);background-size:400% 100%;animation:sk-sheen 1.4s ease infinite}
+.sb-skel .sk-title{height:24px;width:52%}
+.sb-skel .sk-sub{height:11px;width:36%}
+.sb-skel .sk-hr{height:2px;background:var(--sb-edge);margin:3px 0}
+.sb-skel .sk-line.short{width:58%}
+.sb-skel .sk-grid{height:88px;border-radius:7px}
+@keyframes sk-sheen{0%{background-position:100% 0}100%{background-position:0 0}}
 .sb .topbar{height:4px;margin:-16px -18px 13px;border-radius:8px 8px 0 0;background:linear-gradient(90deg,var(--accent),#8f3527)}
 /* B53/B55 statblock colour-coding (preview only). Each category one fixed, non-overlapping hue. */
 /* B63: the colour-code classes are shared by the statblock AND the reference popovers, so the
@@ -457,7 +467,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .dice-help .dh-ex{color:var(--dim);margin-bottom:8px}
 .dice-help .dh-tip{color:var(--dim);margin-bottom:8px}
 .dice-help .dh-tip b{display:inline;color:var(--txt)}
-.dice-help code{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--amber-soft);font-size:11.5px}
+/* Match the bracket-shortcut token style (.shortcuts code) — JetBrains Mono, readable at small size. B77. */
+.dice-help code{font-family:"JetBrains Mono",monospace;background:var(--in);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--amber-soft);font-size:11px;white-space:nowrap}
 .dice-help a{color:var(--info)}
 /* Roll-log panel */
 .roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #434956;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden;font-size:12.5px}
@@ -766,6 +777,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--in);color:var(--txt);border:1px solid var(--accent);padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* The result number in a roll notification stands out from the surrounding text. B77. */
+.toast .toast-num{font-weight:700;color:var(--amber-soft)}
 .modal-bg{position:fixed;inset:0;background:rgba(6,7,9,.72);display:none;place-items:center;z-index:50;padding:24px}
 .modal-bg.show{display:grid}
 .modal-bg.stack{z-index:60} /* stacked dialogs render above the modal that is still open */
@@ -982,7 +995,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .refcard-body .blk-item::before{content:"• ";color:var(--faint)}
 
 /* Forge: Condition Immunities chip field */
-.chipfield{display:flex;flex-wrap:wrap;align-items:center;gap:5px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 7px;min-height:36px;max-height:96px;overflow-y:auto;cursor:text}
+/* align-items/content:flex-start so overflowing chip rows scroll fully into view — with centering, the
+   top row clips and can't be scrolled to (flexbox overflow quirk). B77. */
+.chipfield{display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:5px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 7px;min-height:36px;max-height:96px;overflow-y:auto;cursor:text}
 .chipfield:focus-within{border-color:var(--accent)}
 .chipfield .chips{display:contents}
 .chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;padding:3px 5px 3px 10px;font-size:11.5px;white-space:nowrap}

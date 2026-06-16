@@ -346,6 +346,7 @@ function colorizeStatblock(){
   if(state.settings.clickRoll&&state.settings.clickRoll.on){
     root.querySelectorAll(".cc-roll[data-roll],.cc-dice[data-roll],.roll-num[data-roll]").forEach(sp=>sp.title="Click to roll · right-click for options");
     root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
+    root.querySelectorAll(".roll-rchname[data-roll]").forEach(sp=>sp.title="Roll recharge"+(sp.dataset.dmg?" + damage":""));
   }
 }
 // attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
@@ -390,6 +391,15 @@ function colorizeRechargeTags(root){
     const sp=document.createElement("span");sp.className="cc-dice";sp.dataset.roll="1d6";sp.dataset.rolllabel=before.replace(/\.\s*$/,"").trim()||"Recharge";sp.textContent=mm[0];
     const num=mm[0].match(/\d+/);if(num)sp.dataset.rollmin=num[0]; // recharge succeeds when the d6 ≥ this
     nm.appendChild(sp);if(after)nm.appendChild(document.createTextNode(after));
+    // If the action also deals damage, clicking the NAME rolls recharge + damage as one group (B77).
+    // The name becomes the single roll target; the inner tag stays for display only.
+    const blk=nm.closest(".blk,.va"),dmg=blk&&blk.querySelector('[data-rolltype="damage"]');
+    if(dmg){
+      nm.classList.add("roll-rchname");nm.dataset.roll="1d6";if(num)nm.dataset.rollmin=num[0];
+      nm.dataset.rolllabel=before.replace(/\.\s*$/,"").trim()||"Recharge";
+      nm.dataset.dmg=dmg.dataset.roll;if(dmg.dataset.dmgtype)nm.dataset.dmgtype=dmg.dataset.dmgtype;
+      delete sp.dataset.roll;delete sp.dataset.rollmin;
+    }
   });
 }
 // ── Rule finder (B66) ────────────────────────────────────────────────────────
@@ -423,8 +433,14 @@ function buildRuleCats(){
   };
   add(enRules().map(r=>r.name),"rule",findRule);
   add(enConditions().map(c=>c.name),"condition",findCondition);
+  // Statblock abbreviations/labels resolve to their (longer-named) glossary rule (B77). Only aliases
+  // whose target rule is actually loaded are added — unknown ones simply don't highlight. Case-sensitive
+  // so the uppercase labels ("AC 17", "CR 12", "PB +4") match without firing on lowercase prose.
+  Object.keys(RULE_ALIASES).forEach(al=>{const canon=RULE_ALIASES[al];if(findRule(canon))
+    cats.push({re:new RegExp("\\b"+rfEscapeName(al)+"\\b","g"),cls:()=>"rf-hit",ref:()=>({kind:"rule",name:canon})});});
   return cats;
 }
+const RULE_ALIASES={AC:"Armor Class",HP:"Hit Points",CR:"Challenge Rating",PB:"Proficiency Bonus",XP:"Experience Points"};
 function ruleFindRoot(root){
   if(!root)return;
   // Any already-linked reference (spell / condition-immunity / rule) becomes a finder hit — no raw
@@ -435,7 +451,7 @@ function ruleFindRoot(root){
   // languages) + prose blocks consistently. Previously only .blk was walked when blocks existed, so the
   // header & value lines were silently skipped for any creature that had traits/actions (B68). A popover
   // body matches none of these, so walk the body itself.
-  const sel=".topstats,.meta,.blk:not(.cc-skip),.va,.sb-note-b";
+  const sel=".topstats,.meta,.blk:not(.cc-skip),.va,.sb-note-b,h3";
   const conts=root.querySelectorAll(sel);
   (conts.length?[...conts]:[root]).forEach(c=>walkColorize(c,cats));
 }
@@ -505,13 +521,14 @@ const DMG_ABBR={acid:"Acid",bludgeoning:"Bludg.",cold:"Cold",fire:"Fire",force:"
 //  attack → "Arcane Burst: 23 to hit" · save → "Strength Saving Throw: 16"
 //  check  → "Strength Check: 12" (plain) / "Wisdom (Persuasion) Check: 14" (skill/tool)
 //  damage → "25 fire damage" (with label prefix when shown alone).
+// Returns HTML (the result number is highlighted via rollNum); label is esc'd. Render with toast(...,true).
 function naturalRollText(label,type,total,dmgType,abil){
-  const L=label||"Roll";
-  if(type==="attack")return `${L}: ${total} to hit`;
-  if(type==="save")return `${L} Saving Throw: ${total}`;
-  if(type==="check"){const af=ABIL_NAME[abil];if(af)return (af===L?`${af} Check`:`${af} (${L}) Check`)+`: ${total}`;return `${L} Check: ${total}`;}
-  if(type==="damage")return `${L}: ${total}${dmgType?" "+dmgType.toLowerCase():""} damage`;
-  return `${L}: ${total}`;
+  const L=esc(label||"Roll"),N=rollNum(total);
+  if(type==="attack")return `${L}: ${N} to hit`;
+  if(type==="save")return `${L} Saving Throw: ${N}`;
+  if(type==="check"){const af=ABIL_NAME[abil];if(af)return (af===L?`${af} Check`:`${af} (${L}) Check`)+`: ${N}`;return `${L} Check: ${N}`;}
+  if(type==="damage")return `${L}: ${N}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;
+  return `${L}: ${N}`;
 }
 function doRoll(formula,opts,meta){
   opts=opts||{};meta=meta||{};
@@ -528,7 +545,7 @@ function doRoll(formula,opts,meta){
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
   rollLogOpen=true;renderRollLog(true);
-  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200);
+  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true);
   return r;
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
@@ -539,11 +556,23 @@ function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t
 function rollAttackSequence(nameEl){
   const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
-  let msg=`${label}: ${atk.total} to hit`;
+  let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`;
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
-    msg+=`, ${dmg.total}${dmgType?" "+dmgType.toLowerCase():""} damage`;}
+    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
   if(atk.nat20)msg+=" — crit!";
-  toast(msg,3600);
+  toast(msg,3600,true);
+}
+// Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals
+// damage, its damage too — as one group in the log + one combined notification (B77).
+function rollRechargeSequence(nameEl){
+  const label=nameEl.dataset.rolllabel||nameEl.textContent.replace(/\.\s*$/,"").trim(),dmgType=nameEl.dataset.dmgtype;
+  const min=nameEl.dataset.rollmin?Number(nameEl.dataset.rollmin):null;
+  const rech=doRoll(nameEl.dataset.roll,{},{label,type:null,success:min,silent:true});
+  const ready=min==null||rech.total>=min;
+  let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" — ready":" — not yet"):""}`;
+  if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{},{label,type:"damage",dmgType,silent:true});
+    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
+  toast(msg,3600,true);
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
@@ -605,7 +634,7 @@ function bindRollLog(el,scrollNew){
   el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
   // Hover a DMG tag → small popover naming the damage type (B62).
   el.querySelectorAll(".rl-tag-damage[data-dmgtype]").forEach(t=>{
-    t.addEventListener("mouseenter",()=>showMiniTip(t,esc(t.dataset.dmgtype)+" damage"));
+    t.addEventListener("mouseenter",()=>showMiniTip(t,esc(capWord(t.dataset.dmgtype))+" damage"));
     t.addEventListener("mouseleave",hideMiniTip);});
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
     b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});

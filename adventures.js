@@ -633,6 +633,7 @@ $("#statblock").addEventListener("click",e=>{
   // Cmd/Ctrl-click a rollable → open the custom-roll popover pre-filled (same as right-click).
   if(t&&(e.metaKey||e.ctrlKey)){e.preventDefault();openRollMenu(t);return;}
   const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
+  const rn=e.target.closest(".roll-rchname[data-roll]");if(rn){rollRechargeSequence(rn);return;}
   if(t)quickRoll(t);
 });
 $("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();openRollMenu(t);});

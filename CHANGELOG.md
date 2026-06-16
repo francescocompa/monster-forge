@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 77 — Rule-finder coverage, recharge grouping, notification polish
+- **Rule finder finds more.** Statblock abbreviations now resolve to their glossary rules (AC → Armor
+  Class, HP → Hit Points, CR → Challenge Rating, XP → Experience Points), and section headers (Actions,
+  Bonus Actions, Reactions…) are scanned. (Terms whose rule isn't in the loaded set — abilities, damage
+  types, sizes, PB — still don't highlight; no rules are fabricated.)
+- **Recharge actions roll as a group.** Clicking the name of a recharge action that deals damage now
+  rolls the recharge die *and* the damage together — grouped in the roll log, with one combined
+  notification.
+- **Roll notifications highlight the result.** The rolled number is emphasised in the toast (e.g.
+  "Bite: **15** Piercing damage").
+- **Consistent damage capitalization.** The damage-type hover on a roll-log DMG tag (and the
+  notification text) now reads "Piercing damage", not "piercing damage".
+- **Scrollable chip fields.** Condition-immunity and other chip fields top-align and scroll instead of
+  clipping the top row when full.
+- **Readable dice-notation help.** The dice-notation tooltip tokens use the same JetBrains Mono chip
+  style as the bracket shortcuts.
+- **Statblock skeleton.** A shimmer placeholder fills the statblock preview on startup so the box
+  doesn't collapse before the first render.
+
 ## Batch 76 — Refactor phase 2f: decompose openRollPopover
 - Extracted the roll popover's 3-branch lead control into a pure `rollPopLeadHTML`. Verified the
   popover renders identically for normal (mode tag) / damage (CRIT chip) / spell-scale (upcast stepper)
