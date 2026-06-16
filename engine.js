@@ -549,6 +549,11 @@ function renderRollLog(scrollNew){
   // "Reset position" (shown once moved) or by resetRollLogPos().
   if(_rlPos){el.style.left=_rlPos.left+"px";el.style.top=_rlPos.top+"px";el.style.right="auto";el.style.bottom="auto";}
   else{el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
+  el.innerHTML=rollLogHTML();
+  bindRollLog(el,scrollNew);
+}
+// Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
+function rollLogHTML(){
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
   // Shared bits. The TYPE tag (carries the dmg type for the hover popover) is a row-level child on
   // the right, and the ability-colour bar sits in a reserved right gutter (data-abil on the row), so
@@ -577,8 +582,11 @@ function renderRollLog(scrollNew){
   };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
-  el.innerHTML=`<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+  return `<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +(rollLogOpen?`<div class="rl-body">${groups.map(groupHTML).join("")}</div>`:"");
+}
+// Wire up the roll-log controls + row interactions after its HTML is in the DOM.
+function bindRollLog(el,scrollNew){
   bindRollLogDrag(el,el.querySelector(".rl-head"));
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
   el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
