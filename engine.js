@@ -655,16 +655,20 @@ function openCustomRoll(anchor){openRollPopover(anchor,{value:"",formula:"1d20",
 // Roll-options popover: the shared roll-mode tag + editable clockworkmod formula + Roll + (?) help.
 // For a scalable spell (o.scale), the adv/dis tag is replaced by an upcast level field + dropdown
 // that rescales the dice (B65).
+// The lead control of the roll popover: an upcast level stepper (spell scaling), a CRIT chip (damage),
+// or the flat/adv/dis mode tag (everything else). B75.
+function rollPopLeadHTML(o,sc,isDmg,phLvl){
+  if(sc)return `<div class="upcast" title="Cast at spell level — leave blank for level ${phLvl}"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" placeholder="${phLvl}"></div>`;
+  if(isDmg)return `<button class="crit-chip" data-critchip title="Treat as a critical hit (double the dice)">CRIT</button>`;
+  return rollModeTagHTML();
+}
 function openRollPopover(anchor,o){
   const sc=o.scale;                       // spell-damage roller: level stepper
   const isDmg=!sc&&o.type==="damage";     // damage roller: crit chip
   const phLvl=sc?(sc.cast||sc.lvl):0;     // placeholder/default cast level
   let critOn=false;
   const initVal=sc?scaledFormula(sc,phLvl):(o.value!=null?o.value:(o.formula||""));
-  let lead;
-  if(sc)lead=`<div class="upcast" title="Cast at spell level — leave blank for level ${phLvl}"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" placeholder="${phLvl}"></div>`;
-  else if(isDmg)lead=`<button class="crit-chip" data-critchip title="Treat as a critical hit (double the dice)">CRIT</button>`;
-  else lead=rollModeTagHTML();
+  const lead=rollPopLeadHTML(o,sc,isDmg,phLvl);
   const html=`<div class="roll-pop">${lead}<input type="text" class="roll-edit-in" value="${esc(initVal)}" autocomplete="off" spellcheck="false" placeholder="${esc(o.placeholder||"e.g. 2d6+4")}"><button class="btn primary sm" data-rollgo style="width:auto">Roll</button><button class="roll-help" data-rollhelp title="Dice notation">?</button></div>`;
   const p=showPopover(anchor,html);
   // When opened from inside a reference popover, sit above it and keep that popover alive while the

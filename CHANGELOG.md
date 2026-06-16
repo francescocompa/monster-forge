@@ -4,10 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 76 — Refactor phase 2f: decompose openRollPopover
+- Extracted the roll popover's 3-branch lead control into a pure `rollPopLeadHTML`. Verified the
+  popover renders identically for normal (mode tag) / damage (CRIT chip) / spell-scale (upcast stepper)
+  variants. **Completes phase 2 — all 5 render builders decomposed.**
+
 ## Batch 75 — Refactor phase 2e: decompose colorizeStatblock
 - `colorizeStatblock` → coordinator + `colorizeAttackLabels` / `colorizeAttackNames` /
   `colorizeRechargeTags`. Verified byte-identical colorized statblock for an archmage and a recharge
-  dragon; click-to-roll on attack names confirmed. **Completes the render-builder decompositions.**
+  dragon; click-to-roll on attack names confirmed.
 
 ## Batch 74 — Refactor phase 2c: decompose entryHTML
 - `entryHTML` → dispatcher over `entryReactionHTML` / `entryVillainHTML` / `entrySpellHTML` /
