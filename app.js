@@ -1069,6 +1069,8 @@ function findSpell(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim(
 function findCondition(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
 function findRule(name){const n=String(name||"").trim().toLowerCase();return enRules().find(r=>(r.name||"").toLowerCase()===n);}
 function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
+// Subtle ghost dismiss icon shown top-right of every definition popover (spell/condition/rule). B68.
+const REFPOP_X_SVG=`<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>`;
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
 // Split a "Name (comment)" token into [name, "(comment)"]; the bracket part is never part of the
 // reference and must not be coloured/underlined (B58).
@@ -1124,7 +1126,8 @@ function refLevelOf(node){const pop=node&&node.closest&&node.closest(".refpop");
 function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   const html=refContent(kind,name);if(!html)return;
   hideRefpopNow(level); // drop this level + any deeper before re-showing
-  const p=refpopAt(level);p.innerHTML=html;p.dataset.refname=name;p.classList.add("show");
+  const p=refpopAt(level);p.innerHTML=`<button class="refpop-x" type="button" aria-label="Close" title="Close">${REFPOP_X_SVG}</button>`+html;p.dataset.refname=name;p.classList.add("show");
+  const xb=p.querySelector(".refpop-x");if(xb)xb.addEventListener("click",e=>{e.stopPropagation();hideRefpopNow(level);});
   const body=p.querySelector(".refcard-body");
   if(body&&ruleFinder){ruleFindRoot(body);} // rule-finder: highlight rules/conditions inside the popover too (B66)
   // Colour-code + make rollable the popover body (generic cats — no creature-specific ability rolls).
@@ -1132,14 +1135,18 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
     // Tag the spell's base damage dice with its upcast scaling so the roll popover can rescale it (B65).
     // If the link sat next to "(level N version)" wording, carry N as the default cast level (B66).
     if(kind==="spell"){const sp=findSpell(name);if(sp&&sp._scale){const base=normRoll(sp._scale.base);
-      let cast=0;const sib=anchor&&anchor.nextSibling;const near=(sib&&sib.nodeType===3?sib.nodeValue:"")||"";
+      // The "(level N version)" tail renders as a sibling of the .cc-spell wrapper (the reflink's
+      // parent), not of the reflink itself — so look past the wrapper to find it. B68.
+      let cast=0;const around=(anchor&&anchor.parentElement&&anchor.parentElement.classList.contains("cc-spell"))?anchor.parentElement:anchor;
+      const sib=around&&around.nextSibling;const near=(sib&&sib.nodeType===3?sib.nodeValue:"")||"";
       const cm=near.match(/\(level\s+(\d+)\s+version\)/i);if(cm)cast=+cm[1];
       body.querySelectorAll(".cc-dice[data-roll]").forEach(d=>{if(normRoll(d.dataset.roll)===base){d.dataset.scalebase=sp._scale.base;d.dataset.scaleper=sp._scale.per;d.dataset.scalelvl=sp._scale.lvl;if(cast)d.dataset.scalecast=cast;}});}}
   }
   // Never link a reference to itself (e.g. the Invisible condition mentioning "Invisible") — unwrap
-  // any self-ref link to a plain coloured span (B64).
+  // any self-ref link to a plain coloured span (B64). Also drop the rule-finder amber highlight so a
+  // self term doesn't read as a findable rule that opens nothing (B68 — parity with conditions).
   const self=(name||"").toLowerCase();
-  p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self){const sp=document.createElement("span");sp.className=r.className.replace(/\breflink\b/,"").trim();sp.textContent=r.textContent;r.replaceWith(sp);}});
+  p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self){const sp=document.createElement("span");sp.className=r.className.replace(/\breflink\b/,"").replace(/\brf-hit\b/,"").trim();sp.textContent=r.textContent;r.replaceWith(sp);}});
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";}
@@ -1260,7 +1267,7 @@ function colorizeNode(node,cats){
   if(!hits.length)return;
   hits.sort((a,b)=>a.s-b.s||b.e-a.e);
   const out=[];let pos=0;
-  hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
+  hits.forEach(h=>{if(h.s<pos)return;if(!h.cls&&!h.ref&&!h.roll)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
   if(pos<text.length)out.push({t:text.slice(pos)});
   const frag=document.createDocumentFragment();
   out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;if(o.abil)sp.dataset.abil=o.abil;if(o.dmgtype)sp.dataset.dmgtype=o.dmgtype;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
@@ -1381,8 +1388,12 @@ function buildRuleCats(){
     const multi=names.filter(n=>/\s/.test(n)).sort((a,b)=>b.length-a.length);
     const single=names.filter(n=>!/\s/.test(n)).sort((a,b)=>b.length-a.length);
     const ref=rfResolve(finder,kind);
-    if(multi.length)cats.push({re:new RegExp("\\b("+multi.map(rfEscapeName).join("|")+")s?\\b","gi"),cls:()=>"rf-hit",ref});
-    if(single.length)cats.push({re:new RegExp("\\b("+single.map(rfEscapeName).join("|")+")(?:es|s)?\\b","g"),cls:()=>"rf-hit",ref});
+    // Only highlight a term that actually resolves to a rule/condition — a regex match whose lookup
+    // comes back empty (case/plural edge, or a name the finder can't round-trip) gets no class, and
+    // colorizeNode then drops it (no orphan yellow term with an empty popover). B68.
+    const cls=m=>ref(m)?"rf-hit":"";
+    if(multi.length)cats.push({re:new RegExp("\\b("+multi.map(rfEscapeName).join("|")+")s?\\b","gi"),cls,ref});
+    if(single.length)cats.push({re:new RegExp("\\b("+single.map(rfEscapeName).join("|")+")(?:es|s)?\\b","g"),cls,ref});
   };
   add(enRules().map(r=>r.name),"rule",findRule);
   add(enConditions().map(c=>c.name),"condition",findCondition);
@@ -2202,7 +2213,7 @@ function openChassis(fromForge,opts){
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
       if(opts.onPick){opts.onPick(ch);return;}
       closeModal();
-      if(fromForge===true&&monsterDirty())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
+      if(fromForge===true&&forgeUnsaved())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
   }
   bindCtrlIcons($("#chCtrlIcons"),ctrl,desc,draw);
   draw();
@@ -2999,6 +3010,12 @@ function updateDiceCursor(overRoll){
 }
 document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
 document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+// Esc exits rule finder. If a definition popover is showing, close that first (one Esc per layer);
+// note .refpop nodes persist hidden in the DOM, so test for the visible .show class.
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
+  if($(".refpop.show")){e.preventDefault();hideRefpopNow(0);return;}
+  if($(".popover"))return; // let an open popover handle its own Esc
+  e.preventDefault();toggleRuleFinder();});
 function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
 document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
 window.addEventListener("blur",dropCmd);

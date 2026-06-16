@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 68 — Rule-finder & popover fixes
+- **No false unsaved-edits prompt** when loading a chassis from the picker. The picker now checks
+  `forgeUnsaved()` (which ignores an unedited chassis/preset) instead of the raw `monsterDirty()`, so
+  swapping bases without having made edits no longer asks to confirm.
+- **Esc exits the rule finder.** If a definition popover is open, the first Esc closes that popover and
+  a second Esc exits the finder.
+- **No dead amber highlights.** A rule-finder term is only highlighted if it actually resolves to a
+  rule/condition — words that matched loosely but had no definition (e.g. stray "Melee"/"Hit") are no
+  longer painted yellow with an empty hover.
+- **`(level N version)` upcast default fixed.** The cast level beside a spell name (e.g. "Lightning
+  Bolt (level 7 version)") now seeds the roll popover's level stepper. It was looking at the wrong DOM
+  node (the tail renders next to the `.cc-spell` wrapper, not the link itself).
+- **Rule-finder popovers never link to themselves** — like conditions, a definition's own name inside
+  its popover is shown as plain text (no amber link that reopens the same card).
+- **Ghost dismiss icon.** Every definition popover (spell / condition / rule) now has a small, subtle
+  ✕ in the top-right corner to close it.
+
 ## Batch 67 — Rule-finder depth, popover tables, damage abbreviations
 - **Rule finder** now reads from more reference files — upload any of 5etools' `variantrule`, `action`,
   `sense`, or `skill` JSONs as a "Rules" library (conditions still work as before and also feed the

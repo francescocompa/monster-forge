@@ -1005,6 +1005,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sb .reflink.reflink-plain:hover{color:inherit}
 .refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;box-shadow:0 14px 36px rgba(0,0,0,.6);font-size:12.5px;line-height:1.5;display:none}
 .refpop.show{display:block}
+/* Subtle ghost dismiss in the popover's top-right; sticks while the body scrolls (B68). */
+.refpop-x{position:sticky;top:-2px;float:right;margin:-4px -6px 0 6px;display:flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;border-radius:5px;background:none;color:var(--faint);opacity:.5;cursor:pointer;transition:opacity .12s,color .12s,background .12s;z-index:1}
+.refpop-x:hover{opacity:1;color:var(--txt);background:var(--in)}
 /* Rule finder (B66): dim the statblock + popover prose, make matched terms amber + underlined, and
    show a crosshair. No overlay — scroll and navigation keep working. */
 body.rule-finder{cursor:crosshair}
