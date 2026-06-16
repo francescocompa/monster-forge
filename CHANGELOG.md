@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 61 — Roll log polish, grouped rolls, ability tint, dice shorthand
+- **Grouped rolls:** consecutive log entries that share a source + name (e.g. an attack's to-hit +
+  damage) collapse into one block — the source/name shown once, each sub-roll listed under it.
+- **Ability tint:** a roll tied to an ability (STR attack, INT check, a save) gets a subtle
+  ability-coloured background in the log; the stat-block name is white with a dashed underline.
+- **Roll log:** ATK tag is now yellow; the adv/dis indicator moved next to the breakdown line; the
+  source ref is white + dashed-underlined. The mode chip says **FLAT** (fixed width) and **resets to
+  flat after every roll** (set adv/dis again right before the next).
+- **Cmd/Ctrl-click a rollable** opens the custom-roll popover pre-filled (same as right-click); the
+  spinning **d20 cursor** now also shows while Cmd/Ctrl is held (the native cursor hides).
+- **Dice shorthand:** `d20!` and `d20>d20` mean advantage, `d20<d20` means disadvantage.
+- **Vertical forge resizer:** the form/preview handle now works in the stacked layout at narrow
+  widths (drag up/down); double-click still resets.
+- Resizing audit: no horizontal overflow found across forge/bestiary/adventures at 480–1280px;
+  hardened the encounter & scene headers against name-field bleed.
+
 ## Batch 60 — Roll mode, in-prose checks, re-parse & resizable forge
 - **Roll mode tag:** the adv/disadvantage dice-icon is now a small clickable **NORMAL / ADV / DIS**
   tag (cycles on click) shown in both the custom-roll popover and the **roll-log header**. The chosen

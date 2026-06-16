@@ -1106,7 +1106,7 @@ function renderPreview(){
   h+=`<div class="topstats"><p><span class="k">AC</span> ${m.ac??"—"}${m.acnote?` (${esc(m.acnote)})`:""}</p><p><span class="k">Initiative</span> ${sgn(initVal)} (${10+initVal})</p><p><span class="k">HP</span> ${m.hp??"—"}${m.hpf?` (${esc(m.hpf)})`:""}</p><p><span class="k">Speed</span> ${esc(speedStr(m))}</p></div>`;
   h+=`<table class="ab"><tr><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td><td class="lbl"></td><td class="mh">Mod</td><td class="mh">Save</td></tr>`;
   const rfm=v=>"1d20"+(v>=0?"+":"")+v;
-  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase(),FN=ABIL_NAME[a];return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${FN}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${FN}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
+  [["str","int"],["dex","wis"],["con","cha"]].forEach(([l,r])=>{h+="<tr>"+[l,r].map(a=>{const prof=m.saves.includes(a),md=mod(m[a]),sv=md+(prof?pb:0),A=a.toUpperCase(),FN=ABIL_NAME[a];return `<td class="h lbl" data-ab="${a}"><span class="abc">${A}</span> <span class="sc">${m[a]}</span></td><td class="num roll-num" data-roll="${rfm(md)}" data-rolltype="check" data-rolllabel="${FN}" data-abil="${a}">${sgn(md)}</td><td class="num roll-num${prof?" save-prof":""}" data-roll="${rfm(sv)}" data-rolltype="save" data-rolllabel="${FN}" data-abil="${a}">${sgn(sv)}</td>`;}).join("")+"</tr>";});
   h+=`</table><hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
   if(m.skills.length)h+=`<p><span class="k">Skills</span> ${m.skills.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>{const nm=s[0].replace(/_/g," "),mv=mod(m[SKILLS[s[0]]])+skProfBonus(s[1],pb);return `<span class="cc-skill" data-ab="${SKILLS[s[0]]}">${nm}</span> <span class="roll-num" data-roll="1d20${mv>=0?"+":""}${mv}" data-rolltype="check" data-rolllabel="${esc(nm)}">${sgn(mv)}</span>`;}).join(", ")}</p>`;
@@ -1133,7 +1133,9 @@ function renderPreview(){
     // because their spell names are already linked via linkSpells.
     if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
     const body=e.mode==="attack"?attackText(e):e.text;
-    return `<p class="blk"${spAttr(e)}><span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+    // Carry the attack's ability onto the name so a click can tint the roll by ability (B61).
+    const ab=e.mode==="attack"&&e.ability?` data-abil="${esc(e.ability)}"`:"";
+    return `<p class="blk"${spAttr(e)}><span class="nm"${ab}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
   };
   const sec=arr=>arr.filter(e=>e.name||e.text||e.mode==="spell").map(blk).join("");
   if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
@@ -1177,14 +1179,14 @@ const CC_CONDITIONS=["blinded","charmed","deafened","exhaustion","frightened","g
 function normRoll(s){return s.replace(/\s+/g,"").replace(/−/g,"-");}
 function colorizeNode(node,cats){
   const text=node.nodeValue;if(!text.trim())return;const hits=[];
-  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,rlabel:cat.rlabel?cat.rlabel(m):null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
+  cats.forEach(cat=>{cat.re.lastIndex=0;let m;while((m=cat.re.exec(text))){hits.push({s:m.index,e:m.index+m[0].length,txt:m[0],cls:cat.cls(m),roll:cat.roll?cat.roll(m):null,rtype:cat.rtype||null,rlabel:cat.rlabel?cat.rlabel(m):null,abil:cat.abil?cat.abil(m):null,ref:cat.ref?cat.ref(m):null});if(m.index===cat.re.lastIndex)cat.re.lastIndex++;}});
   if(!hits.length)return;
   hits.sort((a,b)=>a.s-b.s||b.e-a.e);
   const out=[];let pos=0;
   hits.forEach(h=>{if(h.s<pos)return;if(h.s>pos)out.push({t:text.slice(pos,h.s)});out.push(h);pos=h.e;});
   if(pos<text.length)out.push({t:text.slice(pos)});
   const frag=document.createDocumentFragment();
-  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
+  out.forEach(o=>{if(o.t!==undefined){frag.appendChild(document.createTextNode(o.t));}else{const sp=document.createElement("span");sp.className=o.cls;sp.textContent=o.txt;if(o.roll){sp.dataset.roll=o.roll;if(o.rtype)sp.dataset.rolltype=o.rtype;if(o.rlabel)sp.dataset.rolllabel=o.rlabel;if(o.abil)sp.dataset.abil=o.abil;}if(o.ref){sp.classList.add("reflink");sp.dataset.ref=o.ref.kind;sp.dataset.name=o.ref.name;}frag.appendChild(sp);}});
   node.parentNode.replaceChild(frag,node);
 }
 // Full ability name → 3-letter key. Skill modifier for the current creature M (ability mod + PB if
@@ -1216,10 +1218,10 @@ function colorizeStatblock(){
     cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw/gi,cls:m=>"cc-save cc-ab cc-ab-"+_ab3(m[1])});
     // Skill check "Ability (Skill)" → rollable with this creature's modifier (+ prof) + ability bg.
     cats.push({re:/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+\(([A-Za-z][A-Za-z ]+?)\)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
-      roll:m=>"1d20"+_skMod(m[1],m[2]),rtype:"check",rlabel:m=>m[2].trim()});
+      roll:m=>"1d20"+_skMod(m[1],m[2]),rtype:"check",rlabel:m=>m[2].trim(),abil:m=>_ab3(m[1])});
     // Spellcasting ability "using Intelligence as the spellcasting ability" → rollable ability check + bg.
     cats.push({re:/(?<=using\s)(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?=\sas the spellcasting ability)/g,cls:m=>"cc-ab cc-ab-"+_ab3(m[1]),
-      roll:m=>{const a=_ab3(m[1]),md=mod(M[a]);return "1d20"+(md>=0?"+":"")+md;},rtype:"check",rlabel:m=>m[1]});
+      roll:m=>{const a=_ab3(m[1]),md=mod(M[a]);return "1d20"+(md>=0?"+":"")+md;},rtype:"check",rlabel:m=>m[1],abil:m=>_ab3(m[1])});
   }
   // Recognised conditions become reflinks (underline + hover/click popover) when the matching
   // condition is in an uploaded library — same affordance as the condition-immunities line.
@@ -1277,7 +1279,9 @@ const DICE_ICON=`<svg viewBox="0 0 640 512" width="13" height="13" fill="current
 // d% (percentile). opts.adv ("adv"/"dis") rerolls a lone d20; opts.crit doubles each die's count.
 function rollFormula(f,opts){
   opts=opts||{};const adv=opts.adv,crit=!!opts.crit;
-  const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"");
+  // Shorthand (B61): "d20!" = advantage, "d20>d20" = advantage, "d20<d20" = disadvantage.
+  const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"")
+    .replace(/\d*d20>\d*d20/gi,"2d20kh1").replace(/\d*d20<\d*d20/gi,"2d20kl1").replace(/\d*d20!/gi,"2d20kh1");
   const re=/([+-]?)(\d*)d(%|\d+)((?:kh|kl|dh|dl)\d*)?|([+-]?\d+)/gi;
   let total=0;const parts=[];let nat20=false,m;
   while((m=re.exec(norm))){
@@ -1308,26 +1312,27 @@ function doRoll(formula,opts,meta){
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
   // Custom rolls carry no source (nothing to attribute them to), so the log shows no statblock name.
   const src=meta.custom?null:(meta.source||rollSource());
-  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,source:src,
-    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,source:src}});
+  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,source:src,
+    roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
+  rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
   rollLogOpen=true;renderRollLog();toast(`${meta.label||"Roll"}: ${r.total}`);
   return r;
 }
-function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,source:rl.source});}
+function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
-function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null});}
+function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil});}
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20).
 function rollAttackSequence(nameEl){
-  const label=nameEl.textContent.replace(/\.\s*$/,"").trim();
-  const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack"});
-  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage"});
+  const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil;
+  const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil});
+  if(nameEl.dataset.dmg)doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil});
 }
-function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
+function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
 // rolls. Set via the cycling tag shown in the roll-log header and the custom-roll popover.
 let rollMode=null; // null | "adv" | "dis"
-function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: normal → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL"}</button>`;}
+function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
 function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
 function renderRollLog(){
   let el=document.getElementById("rollLog");
@@ -1335,14 +1340,26 @@ function renderRollLog(){
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
   const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
-  // Row: total (vertically centred) + a stack of [source ref] / [name + tag] / [parts] (B60).
-  const row=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${r.source?`<button class="rl-src" data-rollsrc="${esc(r.source.id||"")}" data-rollsrcname="${esc(r.source.name)}">${esc(r.source.name)}</button>`:""}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:""}${r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:""}</span><span class="rl-parts">${esc(r.parts)}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span></span></div>`;
+  // Shared bits. The adv indicator (B61) now sits in the breakdown line, not next to the type tag.
+  const rlTag=r=>r.type?`<span class="rl-tag rl-tag-${r.type}">${ROLL_TAG[r.type]||r.type.toUpperCase()}</span>`:"";
+  const rlParts=r=>`<span class="rl-parts">${esc(r.parts)}${r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:""}${r.crit?'<span class="rl-crit">CRIT</span>':""}</span>`;
+  const rlSrc=src=>src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";
+  const abAttr=ab=>ab?` data-abil="${esc(ab)}"`:"";
+  // Single entry: total + [source / name+tag / breakdown].
+  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-top"><span class="rl-lbl">${esc(r.label)}</span>${rlTag(r)}</span>${rlParts(r)}</span></div>`;
+  // Sub-roll inside a group: source + name are shown once on the group header, so omit them here.
+  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}" data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid"><span class="rl-top">${rlTag(r)}</span>${rlParts(r)}</span></div>`;
+  // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll.
+  const groupHTML=g=>g.items.length===1?single(g.items[0])
+    :`<div class="rl-group"${abAttr(g.abil)}><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
+  const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
+    if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   el.innerHTML=`<div class="rl-head"><button class="rl-tog" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${rollLogOpen?"▾":"▸"}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
-    +(rollLogOpen?`<div class="rl-body">${ordered.map(row).join("")}</div>`:"");
+    +(rollLogOpen?`<div class="rl-body">${groups.map(groupHTML).join("")}</div>`:"");
   el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
   el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
-  el.querySelectorAll(".rl-row[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
+  el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
     b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
     bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
@@ -1373,7 +1390,7 @@ function openRollPopover(anchor,o){
   const inp=p.querySelector(".roll-edit-in");if(inp){inp.focus();inp.select();}
   const at=p.querySelector("[data-rollmode]");
   if(at)at.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();at.className="roll-mode"+(rollMode?" "+rollMode:"");at.textContent=rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"NORMAL";if(document.getElementById("rollLog"))renderRollLog();});
-  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom});};
+  const go=()=>{const v=(inp&&inp.value.trim())||o.formula;if(!v)return;closePopover();doRoll(v,{adv:rollMode},{label:o.label,type:o.type,custom:o.custom,abil:o.abil});};
   p.querySelector("[data-rollgo]").addEventListener("click",e=>{e.stopPropagation();go();});
   if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
   const help=p.querySelector("[data-rollhelp]");
@@ -1389,7 +1406,7 @@ function showDiceHelp(anchor){hideDiceHelp();const p=document.createElement("div
   let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
   p.style.left=left+"px";p.style.top=top+"px";_diceTip=p;}
 function hideDiceHelp(){if(_diceTip){_diceTip.remove();_diceTip=null;}}
-function openRollMenu(span){openRollPopover(span,{formula:span.dataset.roll,label:rollLabelFor(span),type:span.dataset.rolltype});}
+function openRollMenu(span){openRollPopover(span,{formula:span.dataset.roll,label:rollLabelFor(span),type:span.dataset.rolltype,abil:span.dataset.abil});}
 function validName(){if(!M.name.trim()){toast("Give the creature a name first.");return false;}return true;}
 function notionSingle(m){
   const pb=pbForCR(m.cr),xp=xpOf(m),initVal=initOf(m),def=defenseStrings(m);
@@ -1438,13 +1455,17 @@ function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts
 // Draggable split between the form and preview columns; width persists, dbl-click resets (B60).
 function initForgeResizer(){
   const fg=document.querySelector(".forge"),rz=$("#forgeResizer");if(!fg||!rz)return;
-  try{const sv=localStorage.getItem("mf_pvw");if(sv)fg.style.setProperty("--pvw",sv);}catch(e){}
+  try{const w=localStorage.getItem("mf_pvw");if(w)fg.style.setProperty("--pvw",w);const h=localStorage.getItem("mf_pvh");if(h)fg.style.setProperty("--pvh",h);}catch(e){}
+  const vertical=()=>window.matchMedia("(max-width:1080px)").matches; // stacked layout → drag up/down
   let drag=false;
   rz.addEventListener("pointerdown",e=>{drag=true;rz.classList.add("drag");rz.setPointerCapture(e.pointerId);e.preventDefault();});
-  rz.addEventListener("pointermove",e=>{if(!drag)return;const r=fg.getBoundingClientRect();let w=Math.round(r.right-e.clientX);w=Math.max(300,Math.min(r.width-340,w));fg.style.setProperty("--pvw",w+"px");});
-  const end=e=>{if(!drag)return;drag=false;rz.classList.remove("drag");try{rz.releasePointerCapture(e.pointerId);}catch(_){}try{localStorage.setItem("mf_pvw",fg.style.getPropertyValue("--pvw"));}catch(_){}};
+  rz.addEventListener("pointermove",e=>{if(!drag)return;const r=fg.getBoundingClientRect();
+    if(vertical()){let hp=Math.round(r.bottom-e.clientY);hp=Math.max(150,Math.min(r.height-170,hp));fg.style.setProperty("--pvh",hp+"px");}
+    else{let w=Math.round(r.right-e.clientX);w=Math.max(300,Math.min(r.width-340,w));fg.style.setProperty("--pvw",w+"px");}});
+  const end=e=>{if(!drag)return;drag=false;rz.classList.remove("drag");try{rz.releasePointerCapture(e.pointerId);}catch(_){}
+    try{localStorage.setItem("mf_pvw",fg.style.getPropertyValue("--pvw"));localStorage.setItem("mf_pvh",fg.style.getPropertyValue("--pvh"));}catch(_){}};
   rz.addEventListener("pointerup",end);rz.addEventListener("pointercancel",end);
-  rz.addEventListener("dblclick",()=>{fg.style.removeProperty("--pvw");try{localStorage.removeItem("mf_pvw");}catch(_){}});
+  rz.addEventListener("dblclick",()=>{fg.style.removeProperty("--pvw");fg.style.removeProperty("--pvh");try{localStorage.removeItem("mf_pvw");localStorage.removeItem("mf_pvh");}catch(_){}});
 }
 let _curView="forge",_prevView="forge"; // track views so the gear can toggle settings closed
 function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
@@ -2645,8 +2666,11 @@ $("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?
 // attack + damage); right-click = options popover.
 $("#statblock").addEventListener("click",e=>{
   if(!state.settings.clickRoll.on)return;
+  const t=e.target.closest("[data-roll]");
+  // Cmd/Ctrl-click a rollable → open the custom-roll popover pre-filled (same as right-click).
+  if(t&&(e.metaKey||e.ctrlKey)){e.preventDefault();openRollMenu(t);return;}
   const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
-  const t=e.target.closest("[data-roll]");if(t)quickRoll(t);
+  if(t)quickRoll(t);
 });
 $("#statblock").addEventListener("contextmenu",e=>{const t=e.target.closest("[data-roll]");if(!t||!state.settings.clickRoll.on)return;e.preventDefault();openRollMenu(t);});
 // Animated d20 that follows the pointer over anything rollable (a real CSS cursor can't be
@@ -2655,12 +2679,19 @@ let _diceCur=null;
 // Font Awesome d20 (dice-d20, free solid) — used only for the rollable cursor.
 const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48.7 125.8l53.2 31.9c7.8 4.7 17.8 2 22.2-5.9L201.6 12.1c3-5.4-.9-12.1-7.1-12.1c-1.6 0-3.2 .5-4.6 1.4L47.9 98.8c-9.6 6.6-9.2 20.9 .8 26.9zM16 171.7l0 123.5c0 8 10.4 11 14.7 4.4l60-92c5-7.6 2.6-17.8-5.2-22.5L40.2 158C29.6 151.6 16 159.3 16 171.7zM310.4 12.1l77.6 139.6c4.4 7.9 14.5 10.6 22.2 5.9l53.2-31.9c10-6 10.4-20.3 .8-26.9L322.1 1.4c-1.4-.9-3-1.4-4.6-1.4c-6.2 0-10.1 6.7-7.1 12.1zM496 171.7c0-12.4-13.6-20.1-24.2-13.7l-45.3 27.2c-7.8 4.7-10.1 14.9-5.2 22.5l60 92c4.3 6.7 14.7 3.6 14.7-4.4l0-123.5zm-49.3 246L286.1 436.6c-8.1 .9-14.1 7.8-14.1 15.9l0 52.8c0 3.7 3 6.8 6.8 6.8c.8 0 1.6-.1 2.4-.4l172.7-64c6.1-2.2 10.1-8 10.1-14.5c0-9.3-8.1-16.5-17.3-15.4zM233.2 512c3.7 0 6.8-3 6.8-6.8l0-52.6c0-8.1-6.1-14.9-14.1-15.9l-160.6-19c-9.2-1.1-17.3 6.1-17.3 15.4c0 6.5 4 12.3 10.1 14.5l172.7 64c.8 .3 1.6 .4 2.4 .4zM41.7 382.9l170.9 20.2c7.8 .9 13.4-7.5 9.5-14.3l-85.7-150c-5.9-10.4-20.7-10.8-27.3-.8L30.2 358.2c-6.5 9.9-.3 23.3 11.5 24.7zm439.6-24.8L402.9 238.1c-6.5-10-21.4-9.6-27.3 .8L290.2 388.5c-3.9 6.8 1.6 15.2 9.5 14.3l170.1-20c11.8-1.4 18-14.7 11.5-24.6zm-216.9 11l78.4-137.2c6.1-10.7-1.6-23.9-13.9-23.9l-145.7 0c-12.3 0-20 13.3-13.9 23.9l78.4 137.2c3.7 6.4 13 6.4 16.7 0zM174.4 176l163.2 0c12.2 0 19.9-13.1 14-23.8l-80-144c-2.8-5.1-8.2-8.2-14-8.2l-3.2 0c-5.8 0-11.2 3.2-14 8.2l-80 144c-5.9 10.7 1.8 23.8 14 23.8z"/></svg>`;
 function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
-document.addEventListener("mousemove",e=>{
-  const on=state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on;
-  const t=on&&e.target.closest&&e.target.closest("[data-roll]");
-  if(t){const el=diceCursorEl();el.classList.add("show");el.style.left=e.clientX+"px";el.style.top=e.clientY+"px";}
+let _ptrX=0,_ptrY=0,_cmdHeld=false;
+function clickRollOn(){return !!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
+// Show the spinning d20 over rollable elements, and anywhere while Cmd/Ctrl is held (since that arms
+// the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
+function updateDiceCursor(overRoll){
+  if((clickRollOn()&&overRoll)||_cmdHeld){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
   else if(_diceCur)_diceCur.classList.remove("show");
-});
+}
+document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
+document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
+document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
+window.addEventListener("blur",dropCmd);
 // Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
 // which keep their own modifier-click behaviour, e.g. bestiary multi-select).
 document.addEventListener("click",e=>{

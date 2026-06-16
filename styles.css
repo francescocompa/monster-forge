@@ -396,6 +396,9 @@ select::-ms-expand{display:none}
   100% {transform:rotate(360deg) scale(.8)}
 }
 @media (prefers-reduced-motion:reduce){#diceCursor.show{animation:none}}
+/* While Cmd/Ctrl is held, hide the native cursor everywhere (the d20 stands in) except text fields. */
+body.cmd-armed,body.cmd-armed *{cursor:none!important}
+body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-armed [contenteditable]{cursor:auto!important}
 .mf-clickroll .sb .roll-atkname[data-roll]{border-bottom:1px dashed var(--accent-soft)}
 .mf-clickroll .sb .ab td.roll-num[data-roll]{border-bottom:none;text-decoration:underline dashed rgba(231,192,112,.5);text-underline-offset:2px}
 /* Roll-options popover */
@@ -403,7 +406,7 @@ select::-ms-expand{display:none}
 .roll-pop .roll-edit-in{flex:1;min-width:96px;font-size:12.5px;padding:6px 8px}
 /* adv/dis cycle icon (B58): no chrome, larger, state shown by icon colour only. */
 /* Shared roll-mode tag (neutral / advantage / disadvantage) — roll popover + roll-log header (B60). */
-.roll-mode{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:2px 7px;background:var(--in);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
+.roll-mode{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:2px 7px;min-width:42px;text-align:center;background:var(--in);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
 .roll-mode:hover{color:var(--txt);border-color:var(--dim)}
 .roll-mode.adv{color:var(--ok);border-color:var(--ok);background:rgba(95,168,115,.12)}
 .roll-mode.dis{color:var(--bad);border-color:var(--bad);background:rgba(210,96,74,.12)}
@@ -442,7 +445,7 @@ select::-ms-expand{display:none}
 .roll-log .rl-top{display:flex;align-items:center;gap:6px}
 .roll-log .rl-lbl{color:var(--txt);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .roll-log .rl-tag{flex:none;font-size:8.5px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:1px 4px;border:1px solid}
-.roll-log .rl-tag-attack{color:var(--accent-soft);border-color:#6e3329;background:rgba(226,101,77,.14)}
+.roll-log .rl-tag-attack{color:var(--amber-soft);border-color:#6e5a2c;background:rgba(231,192,112,.14)}
 .roll-log .rl-tag-damage{color:#e06a6a;border-color:#7a3636;background:rgba(224,106,106,.12)}
 .roll-log .rl-tag-check{color:#b48ce6;border-color:#5a4a78;background:rgba(180,140,230,.14)}
 .roll-log .rl-tag-save{color:#6bb6e6;border-color:#345168;background:rgba(91,155,213,.12)}
@@ -451,8 +454,23 @@ select::-ms-expand{display:none}
 .roll-log .rl-advlbl.adv{color:var(--ok);border-color:var(--ok)}
 .roll-log .rl-advlbl.dis{color:var(--bad);border-color:var(--bad)}
 .roll-log .rl-crit{flex:none;font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#1a1c21;background:var(--amber);border-radius:3px;padding:0 4px}
-.roll-log .rl-src{display:block;margin-bottom:1px;background:none;border:none;padding:0;font-size:10px;color:var(--info);cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;order:-1}
-.roll-log .rl-src:hover{text-decoration:underline}
+.roll-log .rl-src{display:block;margin-bottom:1px;background:none;border:none;padding:0;font-size:10px;color:#fff;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;order:-1;text-decoration:underline dashed rgba(255,255,255,.45);text-underline-offset:2px}
+.roll-log .rl-src:hover{text-decoration:underline solid #fff}
+/* Grouped rolls (B61): shared source + name shown once, then compact sub-rolls. */
+.roll-log .rl-group{border-bottom:1px solid var(--line);padding:6px 9px}
+.roll-log .rl-group:last-child{border-bottom:none}
+.roll-log .rl-ghead{display:flex;flex-direction:column;margin-bottom:3px}
+.roll-log .rl-ghead .rl-src{margin-bottom:0}
+.roll-log .rl-ghead .rl-glbl{color:var(--txt);font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roll-log .rl-group .rl-sub{border-bottom:none;padding:3px 0 3px 10px;gap:9px;border-left:2px solid var(--line);margin-left:2px}
+.roll-log .rl-group .rl-sub .rl-total{font-size:14px;min-width:26px}
+/* Subtle ability tint when a roll is tied to an ability score (B61). */
+.roll-log .rl-row[data-abil="str"],.roll-log .rl-group[data-abil="str"]{background:rgba(224,90,90,.09)}
+.roll-log .rl-row[data-abil="dex"],.roll-log .rl-group[data-abil="dex"]{background:rgba(95,180,230,.09)}
+.roll-log .rl-row[data-abil="con"],.roll-log .rl-group[data-abil="con"]{background:rgba(232,140,60,.09)}
+.roll-log .rl-row[data-abil="int"],.roll-log .rl-group[data-abil="int"]{background:rgba(160,110,214,.10)}
+.roll-log .rl-row[data-abil="wis"],.roll-log .rl-group[data-abil="wis"]{background:rgba(95,168,115,.09)}
+.roll-log .rl-row[data-abil="cha"],.roll-log .rl-group[data-abil="cha"]{background:rgba(232,120,180,.09)}
 .sb h2{font-weight:700;color:var(--accent-soft);font-size:21px;margin:0 0 1px;letter-spacing:-.01em;line-height:1.1}
 .sb .typeline{font-style:italic;color:var(--dim);font-size:12px;margin-bottom:9px}
 .sb .typeline .minion-tag{font-style:normal;font-weight:700;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
@@ -550,9 +568,9 @@ select::-ms-expand{display:none}
 .enc.drop-before::before,.enc.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent)}
 .enc.drop-before::before{top:-10px}
 .enc.drop-after::after{bottom:-10px}
-.enc .eh{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.enc .eh{display:flex;gap:8px;align-items:center;margin-bottom:9px;min-width:0}
 .enc.collapsed .eh{margin-bottom:0}
-.enc .eh input.enm{flex:1;min-width:120px;font-size:15px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;transition:background .12s,border-color .12s}
+.enc .eh input.enm{flex:1;min-width:0;font-size:15px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;transition:background .12s,border-color .12s}
 .enc .eh input.enm:hover{border-color:var(--line)}
 .enc .eh input.enm:focus{background:var(--in);border-color:var(--accent)}
 .enc-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:22px;height:22px;display:grid;place-items:center;padding:0;flex:none;border-radius:4px;transition:background .12s,color .12s}
@@ -567,14 +585,14 @@ select::-ms-expand{display:none}
 .scene.drop-before::before,.scene.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent);z-index:3}
 .scene.drop-before::before{top:-10px}
 .scene.drop-after::after{bottom:-10px}
-.scene-h{display:flex;gap:8px;align-items:center;padding:9px 12px;cursor:grab}
+.scene-h{display:flex;gap:8px;align-items:center;padding:9px 12px;cursor:grab;min-width:0}
 .scene-h input.scene-name,.scene-h .scene-collapse,.scene-h .menu-wrap{cursor:auto}
 .scene.collapsed .scene-h{cursor:grab}
 .scene-h .scene-collapse{background:none;border:none;color:var(--dim);cursor:pointer;width:22px;height:22px;display:grid;place-items:center;padding:0;flex:none;border-radius:4px;transition:background .12s,color .12s}
 .scene-h .scene-collapse:hover{color:var(--txt);background:var(--panel3)}
 .scene-h .scene-collapse svg{transition:transform .15s}
 .scene-h .scene-collapse.closed svg{transform:rotate(-90deg)}
-.scene-h input.scene-name{flex:1;min-width:120px;font-size:14px;font-weight:600;color:var(--txt);background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;cursor:text;transition:background .12s,border-color .12s}
+.scene-h input.scene-name{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--txt);background:transparent;border:1px solid transparent;border-radius:5px;padding:4px 6px;cursor:text;transition:background .12s,border-color .12s}
 .scene-h input.scene-name:hover{border-color:var(--line)}
 .scene-h input.scene-name:focus{background:var(--in);border-color:var(--accent);outline:none}
 .scene-h .scene-count{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
@@ -936,6 +954,13 @@ select::-ms-expand{display:none}
   .batch-bar{left:12px;right:12px;transform:none;max-width:none;justify-content:flex-start;flex-wrap:wrap;white-space:normal}
 }
 
-@media (max-width:1080px){.forge{grid-template-columns:1fr}.preview-col{border-left:none;border-top:1px solid var(--line)}.atk-fields{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:1080px){
+  /* Stacked layout: the resizer becomes a horizontal handle on the row boundary (drag up/down). */
+  .forge{grid-template-columns:1fr;grid-template-rows:1fr var(--pvh,45%)}
+  .preview-col{border-left:none;border-top:1px solid var(--line)}
+  .forge-resizer{top:auto;right:0;left:0;bottom:var(--pvh,45%);width:auto;height:12px;margin:0 0 -6px 0;cursor:row-resize}
+  .forge-resizer::before{width:46px;height:3px}
+  .atk-fields{grid-template-columns:repeat(3,1fr)}
+}
 @media (max-width:720px){.app{grid-template-columns:1fr}.app .rail{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
