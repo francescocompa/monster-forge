@@ -1722,7 +1722,6 @@ function renderAdvDetail(){
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",a.name||"Untitled"]);
   const bud=baseBudget(partyOf(a,null));
-  const budW=bud[2]||1;const budPcts=[Math.round(bud[0]/budW*100),Math.round(bud[1]/budW*100),100];
   d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2 contenteditable="true" id="advName" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
@@ -1738,13 +1737,10 @@ function renderAdvDetail(){
       <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
       <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
       <div style="flex-basis:100%">
-        <div class="adv-bud-bar">
-          <div class="adv-bud-track">
-            <div class="bud-seg low" style="left:0;width:${budPcts[0]}%"></div>
-            <div class="bud-seg mod" style="left:${budPcts[0]}%;width:${budPcts[1]-budPcts[0]}%"></div>
-            <div class="bud-seg high" style="left:${budPcts[1]}%;width:${100-budPcts[1]}%"></div>
-          </div>
-          <div class="adv-bud-labels"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
+        <div class="adv-bud-chips">
+          <div class="bud-chip low"><span class="bc-lbl">Low</span><span class="bc-val">${bud[0].toLocaleString()}</span></div>
+          <div class="bud-chip mod"><span class="bc-lbl">Moderate</span><span class="bc-val">${bud[1].toLocaleString()}</span></div>
+          <div class="bud-chip high"><span class="bc-lbl">High</span><span class="bc-val">${bud[2].toLocaleString()}</span></div>
         </div>
       </div>
     </div>

@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 45 — FP5: budget chips + FAB standardization
+- **Adventure budget caps** are now **three color-coded chips** (Low green /
+  Moderate amber / High red, each with its XP value), replacing the old gradient bar.
+  The per-encounter bar with the draggable target marker is unchanged.
+- **Save FAB** uses a floppy-disk save icon + label (placeholder for the intended
+  custom SVG — swap the single `<path>` in `#forgeSaveFab`).
+- The 3 floating action buttons (Forge Save, Bestiary New split, Adventures +) are
+  consistent accent pills; `.fab` now lays out an icon + label.
+
 ## Batch 44 — Fixes round 2
 - **Fly / Blindsight options gear** moved out of the field and up to the field
   **title row** (right-aligned next to the label), like the short-name gear.
