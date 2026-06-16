@@ -300,11 +300,14 @@ function bindStatic(){
   $("#f_cr").addEventListener("change",()=>{const p=parseCRInput($("#f_cr").value);if(p)setCR(p);else updateCRDisplay();});
   $("#f_size").addEventListener("change",updateHpDie);
   $("#f_snplural").addEventListener("change",()=>{M.shortName.plural=$("#f_snplural").checked;renderEntries();renderPreview();});
+  // Name options (proper name / plural) live behind the gear inside the Short name field.
+  $("#snGear").addEventListener("click",e=>{e.stopPropagation();openSnMenu(e.currentTarget);});
   ["darkvision","blindsight","tremorsense","truesight"].forEach(k=>$("#se_"+k).addEventListener("input",()=>{M.senses[k]=Number($("#se_"+k).value||0);renderPreview();}));
   $("#se_blindBeyond").addEventListener("change",()=>{M.senses.blindBeyond=$("#se_blindBeyond").checked;renderPreview();});
   $("#se_other").addEventListener("input",()=>{M.senses.other=$("#se_other").value;renderPreview();});
-  $("#f_ac").addEventListener("input",()=>{M.ac=$("#f_ac").value===""?null:Number($("#f_ac").value);M._auto.ac=false;$("#wb_ac").classList.remove("suggested");renderPreview();});
-  $("#f_hp").addEventListener("input",()=>{M.hp=$("#f_hp").value===""?null:Number($("#f_hp").value);M._auto.hp=false;$("#wb_hp").classList.remove("suggested");renderPreview();});
+  // Empty → revert to the CR-suggested value (re-auto, shows as placeholder); a typed value is manual.
+  $("#f_ac").addEventListener("input",()=>{if($("#f_ac").value===""){M._auto.ac=true;applyCRAuto();}else{M.ac=Number($("#f_ac").value);M._auto.ac=false;$("#f_ac").placeholder="";$("#wb_ac").classList.remove("suggested");}renderPreview();});
+  $("#f_hp").addEventListener("input",()=>{if($("#f_hp").value===""){M._auto.hp=true;applyCRAuto();}else{M.hp=Number($("#f_hp").value);M._auto.hp=false;$("#f_hp").placeholder="";$("#wb_hp").classList.remove("suggested");}renderPreview();});
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).addEventListener("input",()=>{M.spd[k]=Number($("#sp_"+k).value||0);renderPreview();}));
   $("#sp_hover").addEventListener("change",()=>{M.spd.hover=$("#sp_hover").checked;renderPreview();});
   ABILS.forEach(a=>{
@@ -335,12 +338,14 @@ function setPreviewCollapsed(v){
   if(v){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=M.name||"New Creature";}
 }
 // while HP is still auto (not manually set), derive it from a valid HP formula if present, else from CR
+// Auto (CR-suggested) AC/HP show the suggested number as a PLACEHOLDER (the field stays empty,
+// behaves as the suggested value, no need to clear) — mirrors the ability placeholder-10 pattern.
 function syncAutoHP(){if(!M._auto.hp)return;const f=M.hpf||"";const badge=$("#wb_hp .badge");
   if(/\d+\s*d\s*\d+/i.test(f)){M.hp=exprAvg(f);if(badge)badge.textContent="avg";}
   else{const boh=BOH[M.cr];if(boh)M.hp=boh[1];if(badge)badge.textContent="≈CR";}
-  $("#f_hp").value=M.hp??"";}
+  const el=$("#f_hp");el.value="";el.placeholder=M.hp??"";}
 function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
-  if(M._auto.ac){M.ac=boh[0];$("#f_ac").value=boh[0];$("#wb_ac").classList.add("suggested");}
+  if(M._auto.ac){M.ac=boh[0];const el=$("#f_ac");el.value="";el.placeholder=String(boh[0]);$("#wb_ac").classList.add("suggested");}
   if(M._auto.hp){$("#wb_hp").classList.add("suggested");syncAutoHP();}}
 function updateHpDie(){const el=$("#f_hpf");if(!el)return;const sz=$("#f_size");const size=(sz&&sz.value)||M.size;el.placeholder="4"+(SIZE_DIE[size]||"d8")+" + 8";}
 function updateCRDisplay(){const el=$("#f_cr");if(el)el.value=M.cr;}
@@ -425,6 +430,12 @@ function rowCtrls(kind,i){const arrows=ALWAYS_SORTED.has(kind)?"":`<button class
   return arrows+freq+`<button class="iconbtn" data-rm="${kind}:${i}">✕</button>`;}
 // Append a Recharge / X-per-day tag to an entry's TITLE (not its body); replaces any existing freq tag.
 function applyFreqTag(kind,i,tag){const e=arrFor(kind)[i];const n=(e.name||"").replace(/\s*\((?:Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i,"").trim();e.name=tag?((n?n+" ":"")+tag):n;renderEntries();renderPreview();}
+function openSnMenu(anchor){
+  const cb=k=>$(k==="proper"?"#f_snproper":"#f_snplural");
+  const item=(k,lbl,extra)=>`<button class="popitem popcheck${cb(k).checked?" on":""}" data-sn="${k}"><span class="ck">${cb(k).checked?"✓":""}</span>${lbl}${extra||""}</button>`;
+  const p=showPopover(anchor,item("proper","Proper name",' <span style="color:var(--faint)">(no “the”)</span>')+item("plural","Plural"));
+  p.querySelectorAll("[data-sn]").forEach(b=>b.addEventListener("click",()=>{const c=cb(b.dataset.sn);c.checked=!c.checked;c.dispatchEvent(new Event("change",{bubbles:true}));closePopover();}));
+}
 function openFreqMenu(anchor,target){const[k,i]=target.split(":");const e=arrFor(k)[+i];const m=(e.name||"").match(/\((Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i);const cur=m?"("+m[1]+")":"";
   const p=showPopover(anchor,FREQ_TAGS.map(o=>`<button class="popitem${o.toLowerCase()===cur.toLowerCase()?" on":""}" data-freqv="${esc(o)}">${esc(o)}</button>`).join("")+`<div class="popsep"></div><button class="popitem" data-freqv="">None</button>`);
   p.querySelectorAll("[data-freqv]").forEach(b=>b.addEventListener("click",()=>{closePopover();applyFreqTag(k,+i,b.dataset.freqv);}));}
@@ -721,7 +732,7 @@ function loadMonster(m){
   M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
   $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
   $("#f_size").value=M.size;updateCRDisplay();
-  $("#f_ac").value=M.ac??"";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M.hp??"";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
+  $("#f_ac").value=M._auto.ac?"":(M.ac??"");$("#f_ac").placeholder="";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M._auto.hp?"":(M.hp??"");$("#f_hp").placeholder="";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
   paintTri($("#f_initprof"),M.initProf||"none");updateHpDie();
   $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
   ["walk","climb","fly","swim","burrow"].forEach(k=>$("#sp_"+k).value=M.spd[k]||"");$("#sp_hover").checked=!!M.spd.hover;
