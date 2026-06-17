@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 85 — Combat Tracker v2 (CT5 + CT6): standalone tab, load popup, launch UX
+- **Combat is now its own sidebar tab** (below Adventures), always reachable. Its empty state has a
+  **Load encounter** popup that lets you pick any adventure → scene → encounter (shows status, group
+  count, and whether a combat is already running).
+- **Scene as header with prev/next.** When the loaded encounter belongs to a scene, the scene is the
+  title and a strip shows the current encounter with ‹ Prev / Next › to move between the scene's
+  encounters. Ending a combat keeps you on the tab so you can roll straight into the next fight.
+- **Encounter status.** Each encounter now carries a lifecycle status — Draft → Ready → Completed
+  (auto-set when you end its combat) — with Archived folded into the same status chip (and still the
+  operative archive flag). Click the chip on the encounter card to change it.
+- **Sword button starts combat.** The little "＋" next to Add combatant is replaced by a rounded accent
+  **⚔ button** that starts (or resumes) combat for that encounter; the old "Run combat" menu item is gone.
+- **One "Add combatant" popup.** The extra add options (Quick / From chassis / Forge new / Event) now
+  live in the picker's footer instead of a separate menu.
+- **Party is green, allies are blue** across the tracker, the active card, the encounter combatant rows,
+  and the party roster.
+
 ## Batch 84 — Combat Tracker part 3 (CT4): active statblock, click-to-roll, resources
 - **The active combatant's full statblock** now renders right in the combat view, colour-coded just like
   the Forge preview.

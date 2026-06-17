@@ -289,7 +289,6 @@ function wrapStepper(input,step,min){
   loadMonster(readForgeDraft()||blankMonster());
   combatCtx=readCombatCtx(); // restore an in-progress combat so a reload returns to it (B80)
   let savedView="forge";try{savedView=localStorage.getItem("mf_view")||"forge";}catch(e){}
-  if(savedView==="combat"&&!combatOf())savedView="adventures"; // combat ended/cleared → fall back
   if(VIEW_LABELS[savedView]&&savedView!=="forge"&&savedView!=="settings")switchView(savedView);
   hideBootLoader(); // correct tab is set — reveal the app (no Forge flash)
 })();

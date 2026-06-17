@@ -39,6 +39,12 @@ const FACTIONS=["Enemy","Ally","Neutral"];
 function migrateFaction(f){return f==="Party"?"Ally":f==="Setting"?"Neutral":(FACTIONS.includes(f)?f:"Enemy");}
 function facClass(f){return f==="Ally"?"ally":(f==="Neutral"||f==="Setting")?"setting":"enemy";}
 const STATUSES=["Draft","Ready","Archived"]; // bestiary workflow status (Batch 13)
+// Encounter lifecycle status (CT6). "completed" is auto-set when a combat ends; "archived" is folded in
+// here as a status but still mirrors the existing e.archived flag (so all prior archive behavior holds).
+const ENC_STATUSES=["draft","ready","completed","archived"];
+const ENC_STATUS_LABEL={draft:"Draft",ready:"Ready",completed:"Completed",archived:"Archived"};
+// Crossed-swords icon (user-supplied) — combat nav tab + per-encounter "start combat" button.
+const SWORDS_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="nonzero" d="M7.05 13.406l3.534 3.536-1.413 1.414 1.415 1.415-1.414 1.414-2.475-2.475-2.829 2.829-1.414-1.414 2.829-2.83-2.475-2.474 1.414-1.414 1.414 1.413 1.413-1.414zM3 3l3.546.003 11.817 11.818 1.415-1.414 1.414 1.414-2.474 2.475 2.828 2.829-1.414 1.414-2.829-2.829-2.475 2.475-1.414-1.414 1.414-1.415L3.003 6.531 3 3zm14.457 0L21 3.003l.002 3.523-4.053 4.052-3.536-3.535L17.457 3z"/></svg>';
 const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
 const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
 const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once per encounter, immediately after another creature's turn, and must use them in order (Action 1, then 2, then 3).";

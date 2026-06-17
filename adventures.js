@@ -252,7 +252,22 @@ function renderParty(a){
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
-function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:"draft",notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+// Effective lifecycle status: archived (the operative flag) wins for display; else the stored status.
+function encStatus(e){return e.archived?"archived":(e.status||"draft");}
+function setEncStatus(a,e,st){
+  if(st==="archived"){e.archived=true;}
+  else{e.archived=false;e.status=st;}
+  saveAdv();renderAdvDetail();
+}
+function openEncStatusMenu(a,e,anchor){
+  if(!e)return;const cur=encStatus(e);
+  const p=showPopover(anchor,ENC_STATUSES.map(s=>`<button class="popitem${s===cur?" on":""}" data-es="${s}">${ENC_STATUS_LABEL[s]}</button>`).join(""));
+  p.querySelectorAll("[data-es]").forEach(b=>b.addEventListener("click",()=>{closePopover();setEncStatus(a,e,b.dataset.es);}));
+}
+// Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
+function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}
+function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}
 function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
 // Display name: an empty (untitled) item shows its default label everywhere except its own input,
 // which keeps the placeholder so there's nothing to clear (B66).
@@ -411,6 +426,7 @@ function encHTML(a,e){
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}" placeholder="New Encounter">
+      <button class="enc-status st-${encStatus(e)}" data-encstatus="${e.id}" title="Encounter status">${ENC_STATUS_LABEL[encStatus(e)]}</button>
       <span class="pill ${cls}">${label}</span>
       ${e.pinned?`<span class="ai-pin" title="Pinned">${PIN_SVG}</span>`:""}
       <div class="menu-wrap">
@@ -419,12 +435,9 @@ function encHTML(a,e){
           <button data-encpin="${e.id}">${e.pinned?"Unpin":"Pin to top"}</button>
           ${moveSubmenuHTML("encmove","encmove",e.id,pinSort(a.encounters.filter(x=>x.archived===e.archived)),e)}
           <div class="sep"></div>
-          <button data-runcombat="${e.id}">▶ ${e.combat&&e.combat.active?"Resume combat":"Run combat"}</button>
-          <div class="sep"></div>
           <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
           <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
-          <button data-encarch="${e.id}">${e.archived?"Unarchive":"Archive"}</button>
           <div class="sep"></div>
           <button class="danger" data-encdel="${e.id}">Delete</button>
         </div>
@@ -446,16 +459,8 @@ function encHTML(a,e){
     ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
-      <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant <span style="color:var(--faint)">(Bestiary)</span></button>
-      <div class="menu-wrap">
-        <button class="kebab addc-plus" data-menu="addc-${e.id}" title="More ways to add" aria-label="More ways to add">＋</button>
-        <div class="menu" id="menu-addc-${e.id}">
-          <button data-addquick="${e.id}">＋ Quick combatant (CR only)</button>
-          <button data-addchassis="${e.id}">＋ From chassis (auto-saves)</button>
-          <button data-addforge="${e.id}">＋ Forge new monster →</button>
-          <button data-addev="${e.id}">＋ Event / entity</button>
-        </div>
-      </div>
+      <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant</button>
+      <button class="start-combat${e.combat&&e.combat.active?" resume":""}" data-startcombat="${e.id}" title="${e.combat&&e.combat.active?"Resume combat":"Start combat"}" aria-label="${e.combat&&e.combat.active?"Resume combat":"Start combat"}">${SWORDS_SVG}</button>
     </div>
   </div>`;
 }
@@ -504,7 +509,6 @@ function bindEncEvents(a){
   q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
   q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
   q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
-  q("[data-encarch]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encarch);e.archived=!e.archived;saveAdv();renderAdvDetail();}));
   q("[data-encnotes-tog]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encnotesTog);if(e){e.notesOn=!e.notesOn;if(!e.notesOn)e.notes="";saveAdv();renderAdvDetail();}}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
@@ -529,12 +533,9 @@ function bindEncEvents(a){
   q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
   q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
-  q("[data-addquick]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addquick;findEnc(a,el.dataset.addquick).combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}));
-  q("[data-addev]").forEach(el=>el.addEventListener("click",()=>{a._focusEnc=el.dataset.addev;findEnc(a,el.dataset.addev).combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}));
-  q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
-  q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
-  q("[data-runcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.runcombat))));
+  q("[data-startcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.startcombat))));
+  q("[data-encstatus]").forEach(el=>el.addEventListener("click",()=>openEncStatusMenu(a,findEnc(a,el.dataset.encstatus),el)));
   // Minion flag on a quick combatant is a toggle chip (was a cramped checkbox). Flipping it changes
   // the combatant's XP, so re-render the list to refresh budget bars + the chip state.
   q("[data-minion]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.minion);if(!c)return;c.minion=!c.minion;saveAdv();renderEncList(a);}));
@@ -701,13 +702,15 @@ function openBestiaryPicker(a,e){
       {key:"name",label:"Name",cmp:(x,y)=>x.m.name.localeCompare(y.m.name)},
       {key:"cr",label:"CR",cmp:(x,y)=>(CR_NUM[x.m.cr]??0)-(CR_NUM[y.m.cr]??0)},
     ]};
-  openModalRaw(`<h3 class="modal-h-row"><span>Add combatant — pick from Bestiary</span><button class="cr-help" id="bpHelp" aria-label="About this picker">?</button></h3>
+  openModalRaw(`<h3 class="modal-h-row"><span>Add combatant</span><button class="cr-help" id="bpHelp" aria-label="About this picker">?</button></h3>
     <div class="ctrl-icons" id="bpCtrlIcons"></div>
     <div class="ctrl-chips" id="bpChips"></div>
     <div id="bpBody" class="picker-scroll"></div>
     <div class="mrow picker-foot">
+      <button class="btn ghost sm" id="bpQuick" style="width:auto">Quick (CR only)</button>
       <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis</button>
       <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
+      <button class="btn ghost sm" id="bpEvent" style="width:auto">Event / entity</button>
       <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
     </div>`);
   bindHelpHover($("#bpHelp"),`Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.`);
@@ -721,6 +724,8 @@ function openBestiaryPicker(a,e){
   bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
   draw();
   $("#bpClose").addEventListener("click",closeModal);
+  $("#bpQuick").addEventListener("click",()=>{closeModal();addQuickCombatant(a,e);});
+  $("#bpEvent").addEventListener("click",()=>{closeModal();addEventCombatant(a,e);});
   $("#bpForge").addEventListener("click",()=>{closeModal();forgeForEncounter(a,e);});
   $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e,true);});
 }
@@ -745,6 +750,36 @@ let combatCtx=null; // {advId,encId} of the encounter whose combat is open (pers
 function persistCombatCtx(){try{combatCtx?localStorage.setItem("mf_combatctx",JSON.stringify(combatCtx)):localStorage.removeItem("mf_combatctx");}catch(e){}}
 function readCombatCtx(){try{const d=localStorage.getItem("mf_combatctx");return d?JSON.parse(d):null;}catch(e){return null;}}
 function combatOf(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===combatCtx.advId);const e=a&&findEnc(a,combatCtx.encId);return (e&&e.combat)?{a,e}:null;}
+// The encounter loaded into the Combat tab, regardless of whether combat is active (CT5). combatOf()
+// stays the active-combat gate for tracker actions; loadedCtx() drives the tab's framing/empty state.
+function loadedCtx(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===combatCtx.advId);const e=a&&findEnc(a,combatCtx.encId);return e?{a,e}:null;}
+// Sibling encounters in the same scene (active only), in display order — for the scene prev/next nav.
+function sceneEncs(a,e){return e.sceneId?a.encounters.filter(x=>x.sceneId===e.sceneId&&!x.archived):[];}
+// Load an encounter into the Combat tab without starting combat (used by the load popup + scene nav).
+function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistCombatCtx();switchView("combat");renderCombat();}
+// Load popup (CT5): adventure → scene → encounter tree; pick one to open it in the Combat tab.
+function openLoadCombat(){
+  const advs=state.adv.filter(a=>!a.archived);
+  const lcRow=(a,e)=>`<button class="lc-enc" data-lcpick="${a.id}:${e.id}"><span class="lc-enc-nm">${esc(encDName(e))}</span><span class="lc-enc-meta">${e.combat&&e.combat.active?'<span class="lc-active">● running</span>':""}${encStatusChipHTML(e)}<span class="lc-cnt">${e.combatants.filter(c=>c.type!=="event").length} grp</span></span></button>`;
+  let tree="";
+  advs.forEach(a=>{
+    const live=a.encounters.filter(e=>!e.archived);if(!live.length)return;
+    const liveScenes=(a.scenes||[]).filter(s=>!s.archived);
+    let inner="";
+    liveScenes.forEach(s=>{const encs=live.filter(e=>e.sceneId===s.id);if(!encs.length)return;
+      inner+=`<div class="lc-scene">${esc(sceneDName(s))}</div>`+encs.map(e=>lcRow(a,e)).join("");});
+    const loose=live.filter(e=>!liveScenes.some(s=>s.id===e.sceneId));
+    inner+=loose.map(e=>lcRow(a,e)).join("");
+    if(inner)tree+=`<div class="lc-adv"><div class="lc-adv-h">${advDot(a.id,a.color)} ${esc(advDName(a))}</div>${inner}</div>`;
+  });
+  openModalRaw(`<h3>Load encounter</h3>
+    <div class="load-combat picker-scroll">${tree||'<div class="empty-state">No encounters yet — create one in Adventures.</div>'}</div>
+    <div class="mrow picker-foot"><button class="btn ghost sm" id="lcClose" style="width:auto;margin-left:auto">Cancel</button></div>`);
+  $("#lcClose").addEventListener("click",closeModal);
+  document.querySelectorAll("[data-lcpick]").forEach(b=>b.addEventListener("click",()=>{
+    const[advId,encId]=b.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);
+    if(e){closeModal();loadCombatEncounter(a,e);}}));
+}
 function cFac(f){return f==="PC"?"pc":facClass(f);}
 // HP for a monster instance per the Combat setting (rolled from Hit Dice, else average / book HP).
 function rollMonsterHP(m){
@@ -872,7 +907,7 @@ function openCombatRowMenu(itId,anchor){
   const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
   p.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));
 }
-function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;saveAdv();combatCtx=null;persistCombatCtx();switchView("adventures");});}
+function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;saveAdv();renderCombat();});}
 function combatRowHTML(it,active){
   const dead=it.hpMax!=null&&it.hpCur<=0;
   const hp=it.hpMax==null?`<span class="ci-noh">—</span>`
@@ -917,29 +952,68 @@ function resourcePipsHTML(it){
     return `<div class="res-row"><span class="res-lbl">${esc(r.label)} ${note}</span><span class="res-pips">${pips}</span></div>`;
   }).join("")}</div>`;
 }
+// Compact lifecycle chip used on the encounter card + combat tab.
+function encStatusChipHTML(e){const st=encStatus(e);return `<span class="enc-status sm st-${st}">${ENC_STATUS_LABEL[st]}</span>`;}
+// Combat-tab header: scene-as-title with prev/next between its encounters when a scene is loaded, else
+// the lone encounter; turn controls when combat is active, a Load-other button otherwise.
+function combatHeaderHTML(a,e,sc,cb){
+  const back=`<button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const ctrls=cb?`<button class="btn ghost sm" id="combatPrev" style="width:auto">‹ Prev</button>
+      <button class="btn primary sm" id="combatNext" style="width:auto">Next turn ›</button>
+      <button class="btn ghost sm danger" id="combatEnd" style="width:auto">End combat</button>`
+    :`<button class="btn ghost sm" id="combatLoadBtn" style="width:auto">Load other</button>`;
+  let strip="";
+  if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
+    strip=`<div class="scene-strip">
+      <div class="scene-enc-name">${esc(encDName(e))} ${encStatusChipHTML(e)}</div>
+      ${sibs.length>1?`<div class="scene-nav">
+        <button class="btn ghost sm" id="scPrev" style="width:auto"${idx<=0?" disabled":""}>‹ Prev</button>
+        <span class="scene-pos">Encounter ${idx+1} / ${sibs.length}</span>
+        <button class="btn ghost sm" id="scNext" style="width:auto"${idx>=sibs.length-1?" disabled":""}>Next ›</button>
+      </div>`:""}</div>`;}
+  const title=sc?esc(sceneDName(sc)):esc(encDName(e));
+  const sub=(sc?`${esc(advDName(a))} · Scene`:esc(advDName(a)))+(cb?` · <b>Round ${cb.round}</b>`:"");
+  return `<div class="combat-head">${back}
+      <div class="ch-title"><h2>${title}${sc?"":" "+encStatusChipHTML(e)}</h2><div class="ch-sub">${sub}</div></div>
+      <div class="combat-ctrls">${ctrls}</div>
+    </div>${strip}`;
+}
+function combatNotStartedHTML(a,e){
+  const n=e.combatants.filter(c=>c.type!=="event").length;
+  const done=e.status==="completed";
+  return `<div class="combat-notstarted">
+    <p class="hint">${done?"This encounter is marked completed.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet — add some from the Adventures tab."}</p>
+    <button class="btn primary" id="combatStart" style="width:auto">${SWORDS_SVG} ${done?"Restart combat":"Start combat"}</button>
+  </div>`;
+}
 function renderCombat(){
   const body=$("#combatBody");if(!body)return;
-  const ctx=combatOf();
-  if(!ctx){setCrumbs(["Combat"]);body.innerHTML=`<div class="empty-state">No combat running.<br>Start one from an encounter's ⋯ menu → <b>Run combat</b>.</div>`;return;}
-  const {a,e}=ctx,cb=e.combat,cur=cb.order[cb.turnIndex];
+  const ctx=loadedCtx();
+  if(!ctx){setCrumbs(["Combat"]);combatRollSrc=null;
+    body.innerHTML=`<div class="combat-empty">
+      <div class="ce-icon">${SWORDS_SVG}</div>
+      <h2>No encounter loaded</h2>
+      <p class="hint">Load a scene or encounter to run its initiative — or hit the ⚔ button on an encounter in Adventures.</p>
+      <button class="btn primary" id="combatLoad" style="width:auto">Load encounter</button>
+    </div>`;
+    $("#combatLoad").addEventListener("click",openLoadCombat);return;}
+  const {a,e}=ctx,cb=e.combat,cur=cb?cb.order[cb.turnIndex]:null,sc=sceneOf(a,e.sceneId);
   // Attribute rolls made from the active statblock to this combatant (CT4).
-  combatRollSrc=(cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
-  setCrumbs(["Adventures",advDName(a),encDName(e),"Combat"]);
-  body.innerHTML=`
-    <div class="combat-head">
-      <button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <div class="ch-title"><h2>${esc(encDName(e))}</h2><div class="ch-sub">${esc(advDName(a))} · <b>Round ${cb.round}</b></div></div>
-      <div class="combat-ctrls">
-        <button class="btn ghost sm" id="combatPrev" style="width:auto">‹ Prev</button>
-        <button class="btn primary sm" id="combatNext" style="width:auto">Next turn ›</button>
-        <button class="btn ghost sm danger" id="combatEnd" style="width:auto">End combat</button>
-      </div>
-    </div>
+  combatRollSrc=(cb&&cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
+  setCrumbs(["Adventures",advDName(a),sc?sceneDName(sc):encDName(e),"Combat"]);
+  body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
     <div class="combat-grid">
       <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}</div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
-    </div>`;
+    </div>`:combatNotStartedHTML(a,e));
   $("#combatBack").addEventListener("click",()=>{state.selAdv=a.id;switchView("adventures");});
+  const scPrev=$("#scPrev"),scNext=$("#scNext");
+  if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
+    if(scPrev&&idx>0)scPrev.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx-1]));
+    if(scNext&&idx<sibs.length-1)scNext.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx+1]));}
+  const loadBtn=$("#combatLoadBtn");if(loadBtn)loadBtn.addEventListener("click",openLoadCombat);
+  const startBtn=$("#combatStart");if(startBtn)startBtn.addEventListener("click",()=>runCombat(a,e));
+  if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
   $("#combatEnd").addEventListener("click",endCombat);

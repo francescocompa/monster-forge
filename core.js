@@ -304,6 +304,9 @@ function normalizeAdv(a){
   a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived,pinned:!!s.pinned}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
+    // Lifecycle status (CT6): draft→ready→completed; "archived" is reflected from the e.archived flag
+    // (kept as the operative archive mechanism) so existing filtering/behavior is unchanged.
+    e.status=ENC_STATUSES.includes(e.status)?e.status:"draft";
     e.pinned=!!e.pinned; // pinned encounters float to the top of their scene / the ungrouped list (B78)
     e.combat=e.combat||null; // Combat Tracker state, null until a combat is started (B80)
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
