@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 86 — Combat Tracker v2 (CT7): tab chrome + add-combatant polish
+- **Cleaner combat-tab header.** The breadcrumb is just "Combat" now (it's a top-level tab). The title
+  block shows the **adventure over the scene** with a vertical adventure-colour bar; the encounter
+  selector (‹ › ghost chevrons) sits in line with it. The current encounter, its **budget rating**, and
+  its notes show in a strip below, with the **round counter + turn chevrons** right-aligned.
+- **Start/End combat moved to a tab FAB** (bottom-right). When an encounter hasn't started, the header
+  expands full width and the FAB reads "Start combat".
+- **Encounters get an Active status** while a combat is running (and again if you restart a completed one).
+- **Encounter card (Adventures):** the start-combat button now shows a "Start combat" label (collapsing
+  to just the sword icon when the card is narrow) in solid orange; the budget rating moved onto the
+  budget-bar line, right-aligned.
+- **Add-combatant popup:** taller minimum height so cards don't crowd the footer; footer reordered to
+  Forge new · From chassis · Event · Quick · Done, with icons on Forge and From chassis and a dimmed
+  "CR only" note on Quick; at narrow widths the footer wraps cleanly into three full-width rows. The
+  "load chassis" menu items (Forge toolbar + Bestiary) now use a clipboard icon.
+
 ## Batch 85 — Combat Tracker v2 (CT5 + CT6): standalone tab, load popup, launch UX
 - **Combat is now its own sidebar tab** (below Adventures), always reachable. Its empty state has a
   **Load encounter** popup that lets you pick any adventure → scene → encounter (shows status, group

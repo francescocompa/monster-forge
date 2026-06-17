@@ -253,8 +253,9 @@ function renderParty(a){
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
 function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:"draft",notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
-// Effective lifecycle status: archived (the operative flag) wins for display; else the stored status.
-function encStatus(e){return e.archived?"archived":(e.status||"draft");}
+// Effective lifecycle status: archived (the operative flag) wins, then a running combat reads "active",
+// else the stored status. (CT7)
+function encStatus(e){return e.archived?"archived":(e.combat&&e.combat.active?"active":(e.status||"draft"));}
 function setEncStatus(a,e,st){
   if(st==="archived"){e.archived=true;}
   else{e.archived=false;e.status=st;}
@@ -262,7 +263,7 @@ function setEncStatus(a,e,st){
 }
 function openEncStatusMenu(a,e,anchor){
   if(!e)return;const cur=encStatus(e);
-  const p=showPopover(anchor,ENC_STATUSES.map(s=>`<button class="popitem${s===cur?" on":""}" data-es="${s}">${ENC_STATUS_LABEL[s]}</button>`).join(""));
+  const p=showPopover(anchor,ENC_STATUS_MENU.map(s=>`<button class="popitem${s===cur?" on":""}" data-es="${s}">${ENC_STATUS_LABEL[s]}</button>`).join(""));
   p.querySelectorAll("[data-es]").forEach(b=>b.addEventListener("click",()=>{closePopover();setEncStatus(a,e,b.dataset.es);}));
 }
 // Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
@@ -427,7 +428,7 @@ function encHTML(a,e){
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}" placeholder="New Encounter">
       <button class="enc-status st-${encStatus(e)}" data-encstatus="${e.id}" title="Encounter status">${ENC_STATUS_LABEL[encStatus(e)]}</button>
-      <span class="pill ${cls}">${label}</span>
+      ${e.collapsed?`<span class="pill ${cls}">${label}</span>`:""}
       ${e.pinned?`<span class="ai-pin" title="Pinned">${PIN_SVG}</span>`:""}
       <div class="menu-wrap">
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
@@ -448,9 +449,12 @@ function encHTML(a,e){
   return `<div class="enc ${e.archived?"arch":""}${foc}" data-enc="${e.id}" draggable="true">
     ${head}
     <div class="budget">
-      <div class="bartrack">
-        <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
-        <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
+      <div class="budget-top">
+        <div class="bartrack">
+          <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+          <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
+        </div>
+        <span class="pill ${cls}">${label}</span>
       </div>
       <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
       <div class="read">${encReadHTML(a,e,bud,spent)}</div>
@@ -460,7 +464,7 @@ function encHTML(a,e){
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant</button>
-      <button class="start-combat${e.combat&&e.combat.active?" resume":""}" data-startcombat="${e.id}" title="${e.combat&&e.combat.active?"Resume combat":"Start combat"}" aria-label="${e.combat&&e.combat.active?"Resume combat":"Start combat"}">${SWORDS_SVG}</button>
+      <button class="start-combat${e.combat&&e.combat.active?" resume":""}" data-startcombat="${e.id}" title="${e.combat&&e.combat.active?"Resume combat":"Start combat"}" aria-label="${e.combat&&e.combat.active?"Resume combat":"Start combat"}">${SWORDS_SVG}<span class="sc-label">${e.combat&&e.combat.active?"Resume":"Start combat"}</span></button>
     </div>
   </div>`;
 }
@@ -707,11 +711,11 @@ function openBestiaryPicker(a,e){
     <div class="ctrl-chips" id="bpChips"></div>
     <div id="bpBody" class="picker-scroll"></div>
     <div class="mrow picker-foot">
-      <button class="btn ghost sm" id="bpQuick" style="width:auto">Quick (CR only)</button>
-      <button class="btn ghost sm" id="bpChassis" style="width:auto">From chassis</button>
-      <button class="btn ghost sm" id="bpForge" style="width:auto">Forge new →</button>
-      <button class="btn ghost sm" id="bpEvent" style="width:auto">Event / entity</button>
-      <button class="btn primary sm" id="bpClose" style="width:auto;margin-left:auto">Done</button>
+      <button class="btn ghost sm pf-btn" id="bpForge">${FORGE_ICON}<span>Forge new</span></button>
+      <button class="btn ghost sm pf-btn" id="bpChassis">${CHASSIS_ICON}<span>From chassis</span></button>
+      <button class="btn ghost sm pf-btn" id="bpEvent">Event / entity</button>
+      <button class="btn ghost sm pf-btn" id="bpQuick">Quick <small class="pf-note">CR only</small></button>
+      <button class="btn primary sm pf-done" id="bpClose">Done</button>
     </div>`);
   bindHelpHover($("#bpHelp"),`Adds the chosen creature to “${esc(e.name)}”. You can add several without closing.`);
   const cardOf=o=>pickerCardHTML(o,"＋ Add",false);
@@ -834,7 +838,8 @@ function runCombat(a,e){
     if(!e.combatants.some(c=>c.type!=="event")&&!a.party.length){toast("Add combatants or party members first.");return;}
     startCombat(a,e);
   }
-  switchView("combat");
+  if(!e.archived)e.status="active"; // started (or restarted after completed) → Active (CT7)
+  saveAdv();switchView("combat");renderCombat();
 }
 function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
 // Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
@@ -954,36 +959,44 @@ function resourcePipsHTML(it){
 }
 // Compact lifecycle chip used on the encounter card + combat tab.
 function encStatusChipHTML(e){const st=encStatus(e);return `<span class="enc-status sm st-${st}">${ENC_STATUS_LABEL[st]}</span>`;}
-// Combat-tab header: scene-as-title with prev/next between its encounters when a scene is loaded, else
-// the lone encounter; turn controls when combat is active, a Load-other button otherwise.
+const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Combat-tab header (CT7): a title block (adventure over scene, adv-colour bar) with the encounter
+// selector (ghost chevrons) in line; then an encounter bar carrying the budget pill, notes, and — when
+// combat is live — the round counter + turn chevrons (right). Start/End live in the tab FAB.
 function combatHeaderHTML(a,e,sc,cb){
-  const back=`<button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
-  const ctrls=cb?`<button class="btn ghost sm" id="combatPrev" style="width:auto">‹ Prev</button>
-      <button class="btn primary sm" id="combatNext" style="width:auto">Next turn ›</button>
-      <button class="btn ghost sm danger" id="combatEnd" style="width:auto">End combat</button>`
-    :`<button class="btn ghost sm" id="combatLoadBtn" style="width:auto">Load other</button>`;
-  let strip="";
-  if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
-    strip=`<div class="scene-strip">
-      <div class="scene-enc-name">${esc(encDName(e))} ${encStatusChipHTML(e)}</div>
-      ${sibs.length>1?`<div class="scene-nav">
-        <button class="btn ghost sm" id="scPrev" style="width:auto"${idx<=0?" disabled":""}>‹ Prev</button>
-        <span class="scene-pos">Encounter ${idx+1} / ${sibs.length}</span>
-        <button class="btn ghost sm" id="scNext" style="width:auto"${idx>=sibs.length-1?" disabled":""}>Next ›</button>
-      </div>`:""}</div>`;}
-  const title=sc?esc(sceneDName(sc)):esc(encDName(e));
-  const sub=(sc?`${esc(advDName(a))} · Scene`:esc(advDName(a)))+(cb?` · <b>Round ${cb.round}</b>`:"");
-  return `<div class="combat-head">${back}
-      <div class="ch-title"><h2>${title}${sc?"":" "+encStatusChipHTML(e)}</h2><div class="ch-sub">${sub}</div></div>
-      <div class="combat-ctrls">${ctrls}</div>
-    </div>${strip}`;
+  const sibs=sc?sceneEncs(a,e):[],idx=sibs.indexOf(e);
+  const advc=a.color||"var(--accent)";
+  const[cls,label]=diffOf(encSpent(e),encBudget(a,e));
+  const sel=(sc&&sibs.length>1)?`<div class="ct-encsel">
+      <button class="ghost-chev" id="scPrev"${idx<=0?" disabled":""} title="Previous encounter" aria-label="Previous encounter">${CHEV_L}</button>
+      <span class="ct-encpos">${idx+1}/${sibs.length}</span>
+      <button class="ghost-chev" id="scNext"${idx>=sibs.length-1?" disabled":""} title="Next encounter" aria-label="Next encounter">${CHEV_R}</button>
+    </div>`:"";
+  const top=`<div class="ct-top">
+      <button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure">${CHEV_L}</button>
+      <div class="ct-titleblock" style="border-color:${advc}">
+        <div class="ct-adv">${esc(advDName(a))}</div>
+        <div class="ct-scene">${esc(sc?sceneDName(sc):encDName(e))}</div>
+      </div>
+      <div class="ct-top-ctrls">${sel}<button class="btn ghost sm" id="combatLoadBtn" style="width:auto">Load other</button></div>
+    </div>`;
+  const notes=(e.notesOn&&e.notes)?`<div class="ct-enc-notes">${esc(e.notes)}</div>`:"";
+  const turn=cb?`<div class="ct-turn"><span class="ct-round">Round ${cb.round}</span>
+      <button class="ghost-chev" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
+      <button class="ghost-chev" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button></div>`:"";
+  const strip=`<div class="ct-encbar${cb?"":" full"}">
+      <div class="ct-encinfo"><div class="ct-encline">${sc?`<span class="ct-encname">${esc(encDName(e))}</span>`:""}<span class="pill ${cls}">${label}</span></div>${notes}</div>
+      ${turn}
+    </div>`;
+  return top+strip;
 }
 function combatNotStartedHTML(a,e){
   const n=e.combatants.filter(c=>c.type!=="event").length;
   const done=e.status==="completed";
   return `<div class="combat-notstarted">
-    <p class="hint">${done?"This encounter is marked completed.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet — add some from the Adventures tab."}</p>
-    <button class="btn primary" id="combatStart" style="width:auto">${SWORDS_SVG} ${done?"Restart combat":"Start combat"}</button>
+    <div class="ce-icon">${SWORDS_SVG}</div>
+    <p class="hint">${done?"This encounter is marked completed — start it again from the button below.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet — add some from the Adventures tab."}</p>
   </div>`;
 }
 function renderCombat(){
@@ -1000,23 +1013,24 @@ function renderCombat(){
   const {a,e}=ctx,cb=e.combat,cur=cb?cb.order[cb.turnIndex]:null,sc=sceneOf(a,e.sceneId);
   // Attribute rolls made from the active statblock to this combatant (CT4).
   combatRollSrc=(cb&&cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
-  setCrumbs(["Adventures",advDName(a),sc?sceneDName(sc):encDName(e),"Combat"]);
+  setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
+  const fab=cb?`<button class="fab combat-fab end" id="combatFab" style="width:auto">End combat</button>`
+    :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
     <div class="combat-grid">
       <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}</div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
-    </div>`:combatNotStartedHTML(a,e));
+    </div>`:combatNotStartedHTML(a,e))+fab;
   $("#combatBack").addEventListener("click",()=>{state.selAdv=a.id;switchView("adventures");});
   const scPrev=$("#scPrev"),scNext=$("#scNext");
   if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
     if(scPrev&&idx>0)scPrev.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx-1]));
     if(scNext&&idx<sibs.length-1)scNext.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx+1]));}
   const loadBtn=$("#combatLoadBtn");if(loadBtn)loadBtn.addEventListener("click",openLoadCombat);
-  const startBtn=$("#combatStart");if(startBtn)startBtn.addEventListener("click",()=>runCombat(a,e));
+  $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
-  $("#combatEnd").addEventListener("click",endCombat);
   const setHP=(id,v)=>{const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;it.hpCur=clamp(v,0,it.hpMax);saveAdv();renderCombat();};
   body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>setHP(el.dataset.hpcur,Number(el.value||0))));
   body.querySelectorAll("[data-hpd]").forEach(el=>el.addEventListener("click",()=>{const[id,kind]=el.dataset.hpd.split(":");
