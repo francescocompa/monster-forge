@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 84 — Combat Tracker part 3 (CT4): active statblock, click-to-roll, resources
+- **The active combatant's full statblock** now renders right in the combat view, colour-coded just like
+  the Forge preview.
+- **Click-to-roll, tagged to the combatant.** Click an attack, save DC, or any dice in that statblock to
+  roll it — and the roll log attributes it to the combatant by name (e.g. "Archmage 2"), not the Forge's
+  working creature.
+- **Auto-detected resource trackers.** Starting combat scans each monster for "(N/Day)" features,
+  recharge abilities, and the legendary-action pool, and turns them into clickable pips you spend and
+  restore. Legendary-action pools refresh at the start of that creature's turn.
+
 ## Batch 83 — Combat Tracker part 2 (CT3): conditions, notes, skip-defeated, ungroup
 - **Condition chips per combatant.** Add conditions from your conditions library (autocomplete) with an
   optional duration in rounds. Known conditions show their definition on hover, and timed conditions tick

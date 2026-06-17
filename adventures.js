@@ -753,6 +753,26 @@ function rollMonsterHP(m){
 }
 function rollInit(mod){return rollFormula("1d20"+(mod>0?"+"+mod:mod<0?String(mod):"")).total;}
 function sortInitiative(order){const tie=state.settings.combat.dexTiebreak;order.sort((x,y)=>(y.init-x.init)||(tie?((y.dex||0)-(x.dex||0)):0));}
+// Run fn with the global working monster M temporarily set to `m` (so the statblock builders +
+// colorizer, which read M, render an arbitrary creature). Restores M synchronously (CT4).
+function withM(m,fn){const prev=M;M=m;try{return fn();}finally{M=prev;}}
+function monById(id){return state.lib.find(x=>x.id===id);}
+// Auto-detect decrementable resources from a creature's entries (CT4): "(N/Day)" features, recharge
+// abilities, and the legendary-action pool. Stored on the combat instance; the DM can spend/restore.
+function detectResources(m){
+  const res=[],seen=new Set();
+  const items=[].concat(m.traits||[],m.actions||[],m.bonus||[],m.reactions||[],(m.legend&&m.legend.items)||[],(m.lair&&m.lair.items)||[]);
+  items.forEach(e=>{
+    const nm=(e.name||""),hay=nm+" "+(e.text||e.response||e.trigger||"");
+    const base=nm.replace(/\s*\(.*$/,"").trim()||"Feature";
+    const day=hay.match(/\((\d+)\s*\/\s*Day\)/i);
+    if(day){const k="d:"+base.toLowerCase();if(!seen.has(k)){seen.add(k);res.push({label:base,max:Number(day[1]),used:0});}}
+    const rc=nm.match(/\(Recharge\s+(\d+)(?:\s*[–-]\s*(\d+))?\)/i);
+    if(rc){const k="r:"+base.toLowerCase();if(!seen.has(k)){seen.add(k);res.push({label:base,max:1,used:0,recharge:rc[2]?`${rc[1]}–${rc[2]}`:`${rc[1]}`});}}
+  });
+  if(m.legend&&m.legend.on){const lm=(m.legend.intro||"").match(/(\d+)\s+(?:legendary action|\(per round\))/i);res.push({label:"Legendary Actions",max:lm?Number(lm[1]):3,used:0,perRound:true});}
+  return res;
+}
 // Build the ordered instances and roll initiative. count:N → N HP-separate rows sharing one rolled
 // initiative (groupId = the combatant entry). PCs roll d20 + their roster initiative modifier.
 function startCombat(a,e){
@@ -764,7 +784,7 @@ function startCombat(a,e){
     for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
       order.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
         name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
-        ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:[]});}
+        ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:m?detectResources(m):[]});}
   });
   a.party.forEach(p=>{const im=p.init===""||p.init==null?0:Number(p.init);
     order.push({id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollInit(im),initMod:im,dex:0,
@@ -792,8 +812,9 @@ function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.c
     steps++;
   }while(isDown(cb.order[ti])&&steps<=n);
   cb.turnIndex=ti;cb.round=round;
-  if(dir>0)tickConditions(cb.order[ti]);
+  if(dir>0){tickConditions(cb.order[ti]);resetRoundResources(cb.order[ti]);}
   saveAdv();renderCombat();}
+function resetRoundResources(it){if(it&&it.resources)it.resources.forEach(r=>{if(r.perRound)r.used=0;});}
 // Start-of-turn duration tick: decrement timed conditions, drop those that reach 0 (untimed = ∞).
 function tickConditions(it){
   if(!it||!it.conditions||!it.conditions.length)return;
@@ -872,20 +893,37 @@ function combatActiveHTML(it){
   const hpline=it.hpMax!=null?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP</div>`:"";
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
+  const hasSb=it.kind==="monster"&&monById(it.srcId);
+  const tail=hasSb
+    ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
+    :`<div class="ca-soon">${it.kind==="pc"?"Player character — no statblock to roll from.":it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
   return `<div class="ca-card ${cFac(it.faction)}">
     <div class="ca-name">${esc(it.name)}</div>
     <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
     ${hpline}
     ${conds}
+    ${resourcePipsHTML(it)}
     <div class="ca-note ca-noteline">${it.comment?esc(it.comment):'<span class="ca-noteph">No note</span>'} <button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">edit</button></div>
-    <div class="ca-soon">Statblock &amp; click-to-roll for the active creature arrive in the next update.</div>
+    ${tail}
   </div>`;
+}
+// Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
+function resourcePipsHTML(it){
+  if(!it.resources||!it.resources.length)return "";
+  return `<div class="ca-res">${it.resources.map((r,ri)=>{
+    const avail=Math.max(0,r.max-r.used);
+    const note=r.recharge?`<span class="res-tag" title="Recharge ${r.recharge}">⟳ ${r.recharge}</span>`:r.perRound?`<span class="res-tag" title="Resets each round">↻ rd</span>`:"";
+    const pips=Array.from({length:r.max},(_,i)=>`<button class="res-pip${i<avail?" on":""}" data-respip="${it.id}:${ri}:${i}" title="${i<avail?"Spend":"Restore"}" aria-label="${i<avail?"Spend":"Restore"} ${esc(r.label)}"></button>`).join("");
+    return `<div class="res-row"><span class="res-lbl">${esc(r.label)} ${note}</span><span class="res-pips">${pips}</span></div>`;
+  }).join("")}</div>`;
 }
 function renderCombat(){
   const body=$("#combatBody");if(!body)return;
   const ctx=combatOf();
   if(!ctx){setCrumbs(["Combat"]);body.innerHTML=`<div class="empty-state">No combat running.<br>Start one from an encounter's ⋯ menu → <b>Run combat</b>.</div>`;return;}
   const {a,e}=ctx,cb=e.combat,cur=cb.order[cb.turnIndex];
+  // Attribute rolls made from the active statblock to this combatant (CT4).
+  combatRollSrc=(cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
   setCrumbs(["Adventures",advDName(a),encDName(e),"Combat"]);
   body.innerHTML=`
     <div class="combat-head">
@@ -914,6 +952,32 @@ function renderCombat(){
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
   body.querySelectorAll("[data-rmcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,i]=el.dataset.rmcond.split(":");removeCombatCond(id,+i);}));
+  // Resource pips: filled pip → spend one, empty pip → restore one.
+  body.querySelectorAll("[data-respip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();
+    const[id,ri,i]=el.dataset.respip.split(":"),it=cb.order.find(x=>x.id===id);if(!it)return;const r=it.resources[+ri];if(!r)return;
+    r.used=clamp((+i<(r.max-r.used))?r.used+1:r.used-1,0,r.max);saveAdv();renderCombat();}));
+  // Active-combatant statblock: render the source creature (M swapped) + colour-code, then make it
+  // click-to-roll with rolls tagged to the combatant via combatRollSrc (CT4).
+  const sbHost=body.querySelector(".ca-sb");
+  if(sbHost){const m=monById(sbHost.dataset.sbmon);
+    if(m){withM(m,()=>{const pb=pbForCR(m.cr);
+        sbHost.innerHTML=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xpOf(m))+sbEntriesHTML(m);
+        linkSpellFeatures(sbHost);if(ruleFinder)ruleFindRoot(sbHost);else colorizeStatblock(sbHost);});
+      bindCombatStatblockRolls(sbHost);}}
+}
+// Click-to-roll on the active-combatant statblock — mirrors the #statblock handlers (engine.js); the
+// roll source is set view-wide via combatRollSrc so quick rolls AND popover rolls tag the combatant.
+function bindCombatStatblockRolls(root){
+  root.addEventListener("click",ev=>{
+    if(!clickRollOn())return;
+    const t=ev.target.closest("[data-roll]");
+    if(t&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();openRollMenu(t);return;}
+    const nm=ev.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
+    const rt=ev.target.closest(".roll-rchtag[data-roll]");if(rt){quickRoll(rt);return;}
+    const rn=ev.target.closest(".roll-rchname[data-roll]");if(rn){rollRechargeSequence(rn);return;}
+    if(t)quickRoll(t);
+  });
+  root.addEventListener("contextmenu",ev=>{const t=ev.target.closest("[data-roll]");if(!t||!clickRollOn())return;ev.preventDefault();openRollMenu(t);});
 }
 
 function doExportJSON(){
