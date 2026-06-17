@@ -123,12 +123,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .banner button{margin-left:auto;background:none;border:1px solid currentColor;color:inherit;border-radius:5px;padding:3px 10px;font-size:11px}
 .view{flex:1;overflow:hidden;display:none}.view.active{display:flex}
 
-.forge{display:grid;grid-template-columns:1fr var(--pvw,452px);height:100%;overflow:hidden;position:relative}
+/* minmax(0,1fr) (not bare 1fr) so the form column is capped at the available width instead of growing
+   to its widest child's min-content. Without this, a nowrap chip row inflated the column past the
+   viewport and .forge's overflow:hidden just CLIPPED it — so chip fields could never scroll. B82. */
+.forge{display:grid;grid-template-columns:minmax(0,1fr) var(--pvw,452px);height:100%;overflow:hidden;position:relative}
 /* Resizable split (B60): a hover-revealed handle on the column boundary; double-click resets. */
 .forge-resizer{position:absolute;top:0;bottom:0;right:var(--pvw,452px);width:10px;margin-right:-5px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center}
 .forge-resizer::before{content:"";width:3px;height:46px;border-radius:3px;background:var(--line);opacity:0;transition:opacity .12s,background .12s}
 .forge-resizer:hover::before,.forge-resizer.drag::before{opacity:1;background:var(--accent)}
-.form-col{overflow-y:auto;padding:20px 24px 90px}
+.form-col{overflow-y:auto;padding:20px 24px 90px;min-width:0}
 .preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px 18px 84px;display:flex;flex-direction:column;gap:13px}
 .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
 .col-head h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
@@ -169,10 +172,11 @@ fieldset.fieldset{border:1px solid var(--line);border-radius:9px;padding:14px 15
 .fs-title .count{color:var(--faint);font-weight:500;letter-spacing:.03em;text-transform:none}
 .fs-sub{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:14px 0 7px}
 .grid{display:grid;gap:10px;align-items:end}
-.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+/* minmax(0,1fr) so a nowrap child (e.g. a chip field) can't force a column wider than its share (B82). */
+.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .g-name{grid-template-columns:1.5fr .8fr 1fr .9fr}
 .g-core{grid-template-columns:1fr 1.1fr 1fr auto}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim);min-width:0}
 /* Field-title row with a right-aligned options gear (Fly→hover, Blindsight→blind-beyond). */
 label.f .f-lbl{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:13px}
 .lbl-gear{background:none;border:none;color:var(--faint);cursor:pointer;padding:0;width:16px;height:16px;display:grid;place-items:center;flex:none;border-radius:3px;transition:color .12s}
@@ -1065,6 +1069,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .chipfield{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:0 7px;height:36px;overflow-x:auto;overflow-y:hidden;cursor:text;scrollbar-width:none}
 .chipfield::-webkit-scrollbar{display:none}
 .chipfield:focus-within{border-color:var(--accent)}
+/* Scroll-fade hint (B82): when chips overflow, the hidden edge fades out so it's clearly scrollable.
+   Toggled by JS (updateChipFade) on the actual scroller — the field itself, or .cf-main for gear. */
+.chipfield.ov-r,.cf-main.ov-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
+.chipfield.ov-l,.cf-main.ov-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px);mask-image:linear-gradient(to right,transparent,#000 26px)}
+.chipfield.ov-l.ov-r,.cf-main.ov-l.ov-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
 .chipfield .chips{display:contents}
 .chip{flex:none;display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;padding:3px 5px 3px 10px;font-size:11.5px;white-space:nowrap}
 .chip.known{border-color:#5c4d24;color:var(--amber-soft)}
