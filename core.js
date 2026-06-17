@@ -312,7 +312,7 @@ function normalizeAdv(a){
 }
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
-function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell cc-ab-${a}"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
 // Damage modifiers — same shape as the Skills section: one row per type = name select +
 // 3-state toggle (Resist/Immune/Vulnerable) + remove. "All Physical" expands to B/P/S.
 const DMG3=[["res","Resist"],["imm","Immune"],["vuln","Vulnerable"]];

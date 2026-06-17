@@ -3,7 +3,7 @@
 // Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
-function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);try{localStorage.setItem("mf_view",v);}catch(e){}if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
+function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);try{localStorage.setItem("mf_view",v);}catch(e){}if(v==="library")renderLibrary();if(v==="adventures"){advListView=false;renderAdvList();}if(v==="settings")renderSettings();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 // ====== Notion-style control bars: search · filter · sort · group (Batch 15) ======
@@ -625,15 +625,7 @@ function chassisConflictModal(ch){
 
 function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}">
   <button data-aim-pin="${a.id}">${a.pinned?"Unpin":"Pin to top"}</button>
-  <div class="menu-wrap submenu-wrap">
-    <button class="submenu-trigger" data-menu="aimmove-${a.id}">Move<span class="submenu-arrow">▸</span></button>
-    <div class="menu submenu" id="menu-aimmove-${a.id}">
-      <button data-aim-move="${a.id}:top">Move to top</button>
-      <button data-aim-move="${a.id}:up">Move up</button>
-      <button data-aim-move="${a.id}:down">Move down</button>
-      <button data-aim-move="${a.id}:bottom">Move to bottom</button>
-    </div>
-  </div>
+  ${moveSubmenuHTML("aimmove","aim-move",a.id,pinSort(state.adv.filter(x=>!!x.archived===!!a.archived)),a)}
   <div class="sep"></div>
   <button data-aim-dup="${a.id}">Duplicate</button>
   <button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button>

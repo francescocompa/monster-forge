@@ -249,6 +249,17 @@ select::-ms-expand{display:none}
 .abil{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
 .abil .cell{background:var(--in);border:1px solid var(--line);border-radius:7px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column}
 .abil .cell .ab{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--amber);margin-bottom:6px}
+/* Each ability box is tinted with its ability colour (matches the statblock cc-ab scheme). B79. */
+.abil .cell{--abc:var(--line)}
+.abil .cell.cc-ab-str{--abc:rgb(224,90,90)}
+.abil .cell.cc-ab-dex{--abc:rgb(95,180,230)}
+.abil .cell.cc-ab-con{--abc:rgb(232,140,60)}
+.abil .cell.cc-ab-int{--abc:rgb(160,110,214)}
+.abil .cell.cc-ab-wis{--abc:rgb(95,168,115)}
+.abil .cell.cc-ab-cha{--abc:rgb(232,120,180)}
+.abil .cell[class*="cc-ab-"]{border-color:color-mix(in srgb,var(--abc) 55%,var(--line))}
+.abil .cell[class*="cc-ab-"] .ab{color:var(--abc)}
+.abil .cell[class*="cc-ab-"]:focus-within{border-color:var(--abc);box-shadow:0 0 0 1px var(--abc)}
 .abil .cell input{text-align:center;padding:5px 2px;font-size:17px;font-weight:700}
 .abil .cell .stepper>input{padding-right:16px;padding-left:16px}
 .abil .cell .stepbtns{width:14px}
@@ -267,13 +278,18 @@ select::-ms-expand{display:none}
 .menu-wrap{position:relative;flex:none}
 .kebab{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;width:30px;height:32px;flex:none;display:grid;place-items:center;font-size:17px;line-height:1}
 .kebab:hover{border-color:var(--accent);color:var(--txt)}
-.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:178px;z-index:30;box-shadow:var(--shadow-pop)}
+/* z-index above the floating sidebar drawer (.app.sidebar-open .rail = 48) so menus/popovers never
+   sit behind / get clipped by the sidebar (B79). Popovers are 60. */
+.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:178px;z-index:52;box-shadow:var(--shadow-pop)}
 .menu.open{display:block}
 .menu.up{top:auto;bottom:calc(100% + 4px)}
 .menu button .sub{color:var(--faint);font-weight:400;font-size:11px}
 .menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px}
 .menu button:hover{background:var(--panel3)}
 .menu button.danger{color:var(--bad)}.menu button.danger:hover{background:rgba(210,96,74,.16)}
+/* Disabled (no-op) move options — greyed and inert (B79). */
+.menu button:disabled,.popitem:disabled{opacity:.34;pointer-events:none;cursor:default}
+.menu .submenu-wrap.disabled .submenu-arrow{opacity:.34}
 .menu .sep{height:1px;background:var(--line);margin:4px 2px}
 .iconbtn:hover{border-color:var(--bad);color:var(--bad)}
 .iconbtn.up:hover,.iconbtn.down:hover{border-color:var(--accent);color:var(--accent)}

@@ -5,6 +5,22 @@
 // Pinned items float to the top of their list while keeping manual order within each group (B78).
 // Array.prototype.sort is stable, so this preserves the underlying drag/move order otherwise.
 function pinSort(arr){return arr.slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));}
+// At narrow widths the list + detail share one column; the back button forces the LIST to show without
+// deselecting the adventure (selAdv stays so re-entering the tab reopens it). Reset on select. B79.
+let advListView=false;
+// A Move submenu with no-op options disabled: top/up greyed when already first, down/bottom when last,
+// and the whole submenu disabled when the item is alone in its group. `group` is the displayed
+// (pinSorted) sibling order, matching the move* functions. B79.
+function moveSubmenuHTML(menuKey,dataAttr,id,group,item){
+  const n=group.length,i=group.indexOf(item),atTop=i<=0,atBot=i>=n-1,only=n<=1;
+  const b=(where,label,dis)=>`<button data-${dataAttr}="${id}:${where}"${dis?" disabled":""}>${label}</button>`;
+  return `<div class="menu-wrap submenu-wrap${only?" disabled":""}">
+    <button class="submenu-trigger" data-menu="${menuKey}-${id}"${only?" disabled":""}>Move<span class="submenu-arrow">▸</span></button>
+    <div class="menu submenu" id="menu-${menuKey}-${id}">
+      ${b("top","Move to top",atTop)}${b("up","Move up",atTop)}${b("down","Move down",atBot)}${b("bottom","Move to bottom",atBot)}
+    </div>
+  </div>`;
+}
 function renderAdvList(){
   const box=$("#advItems");
   const active=pinSort(state.adv.filter(a=>!a.archived)),arch=pinSort(state.adv.filter(a=>a.archived));
@@ -20,29 +36,32 @@ function renderAdvList(){
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
   // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
-  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;state.selAdv=el.dataset.adv;renderAdvList();}));
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;advListView=false;state.selAdv=el.dataset.adv;renderAdvList();}));
   box.querySelectorAll(".ai").forEach(el=>el.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();const a=state.adv.find(x=>x.id===el.dataset.adv);if(a)openAdvCardMenu(el,a);}));
   box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
-  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=advDName(src)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}));
+  box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=advDName(src)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);advListView=false;state.selAdv=c.id;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-arch]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimArch);if(!src)return;src.archived=!src.archived;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-del]").forEach(el=>el.addEventListener("click",()=>{const aId=el.dataset.aimDel;const src=state.adv.find(x=>x.id===aId);if(!src)return;confirmModal(`Delete "${advDName(src)}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==aId);if(state.selAdv===aId)state.selAdv=null;saveAdv();renderAdvList();});}));
   box.querySelectorAll("[data-aim-pin]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimPin);if(!src)return;src.pinned=!src.pinned;saveAdv();renderAdvList();}));
   box.querySelectorAll("[data-aim-move]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.aimMove.split(":");moveAdvTo(id,where);}));
   bindAdvDrag(box);
   const btn=$("#newAdv");if(btn){btn.className=`btn ${state.adv.length?"ghost":"primary"} sm`;btn.style.removeProperty("width");}
-  const lay=$(".adv-layout");if(lay){lay.classList.toggle("detail-open",!!curAdv());lay.classList.toggle("adv-mini",advMini());}
+  const lay=$(".adv-layout");if(lay){lay.classList.toggle("detail-open",!!curAdv()&&!advListView);lay.classList.toggle("adv-mini",advMini());}
   renderAdvDetail();
 }
 // Collapsed adventures column: compact menu reachable by right-click on a colour card (B63).
 function openAdvCardMenu(anchor,a){
-  const p=showPopover(anchor,`<button class="popitem" data-acm="open">Open</button><button class="popitem" data-acm="pin">${a.pinned?"Unpin":"Pin to top"}</button><div class="popsep"></div><button class="popitem" data-acm="top">Move to top</button><button class="popitem" data-acm="up">Move up</button><button class="popitem" data-acm="down">Move down</button><button class="popitem" data-acm="bottom">Move to bottom</button><div class="popsep"></div><button class="popitem" data-acm="color">Colour</button><button class="popitem" data-acm="dup">Duplicate</button><button class="popitem" data-acm="arch">${a.archived?"Unarchive":"Archive"}</button><div class="popsep"></div><button class="popitem danger" data-acm="del">Delete</button>`);
+  const grp=pinSort(state.adv.filter(x=>!!x.archived===!!a.archived)),i=grp.indexOf(a),atTop=i<=0,atBot=i>=grp.length-1;
+  const mv=(where,label,dis)=>`<button class="popitem" data-acm="${where}"${dis?" disabled":""}>${label}</button>`;
+  const moveBlock=grp.length<=1?"":`<div class="popsep"></div>${mv("top","Move to top",atTop)}${mv("up","Move up",atTop)}${mv("down","Move down",atBot)}${mv("bottom","Move to bottom",atBot)}`;
+  const p=showPopover(anchor,`<button class="popitem" data-acm="open">Open</button><button class="popitem" data-acm="pin">${a.pinned?"Unpin":"Pin to top"}</button>${moveBlock}<div class="popsep"></div><button class="popitem" data-acm="color">Colour</button><button class="popitem" data-acm="dup">Duplicate</button><button class="popitem" data-acm="arch">${a.archived?"Unarchive":"Archive"}</button><div class="popsep"></div><button class="popitem danger" data-acm="del">Delete</button>`);
   p.querySelectorAll("[data-acm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const act=b.dataset.acm;
     if(act==="color"){closePopover();openAdvColorMenu(anchor,a.id);return;}
     closePopover();
-    if(act==="open"){state.selAdv=a.id;renderAdvList();}
+    if(act==="open"){advListView=false;state.selAdv=a.id;renderAdvList();}
     else if(act==="pin"){a.pinned=!a.pinned;saveAdv();renderAdvList();}
     else if(["top","up","down","bottom"].includes(act)){moveAdvTo(a.id,act);}
-    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();}
+    else if(act==="dup"){const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));advListView=false;state.selAdv=c.id;saveAdv();renderAdvList();}
     else if(act==="arch"){a.archived=!a.archived;saveAdv();renderAdvList();}
     else if(act==="del"){confirmModal(`Delete "${a.name}"?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);if(state.selAdv===a.id)state.selAdv=null;saveAdv();renderAdvList();});}
   }));
@@ -89,7 +108,7 @@ function bindAdvDrag(box){
   });
 }
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
-$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);advListView=false;state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
 function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
@@ -170,7 +189,7 @@ function renderAdvDetail(){
       </div>
     </div>
     <div id="archWrap"></div>`;
-  $("#advBack").addEventListener("click",()=>{state.selAdv=null;renderAdvList();});
+  $("#advBack").addEventListener("click",()=>{advListView=true;renderAdvList();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${advDName(a)}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
@@ -269,15 +288,7 @@ function sceneHTML(a,s,encs){
         <button class="kebab" data-menu="scene-${s.id}" title="Scene options">⋯</button>
         <div class="menu" id="menu-scene-${s.id}">
           <button data-scenepin="${s.id}">${s.pinned?"Unpin":"Pin to top"}</button>
-          <div class="menu-wrap submenu-wrap">
-            <button class="submenu-trigger" data-menu="scenemove-${s.id}">Move<span class="submenu-arrow">▸</span></button>
-            <div class="menu submenu" id="menu-scenemove-${s.id}">
-              <button data-scenemove="${s.id}:top">Move to top</button>
-              <button data-scenemove="${s.id}:up">Move up</button>
-              <button data-scenemove="${s.id}:down">Move down</button>
-              <button data-scenemove="${s.id}:bottom">Move to bottom</button>
-            </div>
-          </div>
+          ${moveSubmenuHTML("scenemove","scenemove",s.id,pinSort((a.scenes||[]).filter(x=>!!x.archived===!!s.archived)),s)}
           <div class="sep"></div>
           <button data-scenenotes-tog="${s.id}">${s.notesOn?"Remove notes":"Add notes"}</button>
           <button data-scenearch="${s.id}">${s.archived?"Unarchive scene":"Archive scene"}</button>
@@ -366,15 +377,7 @@ function encHTML(a,e){
         <button class="kebab" data-menu="enc-${e.id}" title="More">⋯</button>
         <div class="menu" id="menu-enc-${e.id}">
           <button data-encpin="${e.id}">${e.pinned?"Unpin":"Pin to top"}</button>
-          <div class="menu-wrap submenu-wrap">
-            <button class="submenu-trigger" data-menu="encmove-${e.id}">Move<span class="submenu-arrow">▸</span></button>
-            <div class="menu submenu" id="menu-encmove-${e.id}">
-              <button data-encmove="${e.id}:top">Move to top</button>
-              <button data-encmove="${e.id}:up">Move up</button>
-              <button data-encmove="${e.id}:down">Move down</button>
-              <button data-encmove="${e.id}:bottom">Move to bottom</button>
-            </div>
-          </div>
+          ${moveSubmenuHTML("encmove","encmove",e.id,pinSort(a.encounters.filter(x=>x.archived===e.archived)),e)}
           <div class="sep"></div>
           <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
           <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
@@ -511,7 +514,7 @@ function bindEncEvents(a){
 function setGroupOrder(a,archived,group){let k=0;a.encounters.forEach((e,i)=>{if(e.archived===archived)a.encounters[i]=group[k++];});}
 function moveEncTo(a,id,where){
   const e=findEnc(a,id);if(!e)return;
-  const group=a.encounters.filter(x=>x.archived===e.archived),pos=group.indexOf(e);
+  const group=pinSort(a.encounters.filter(x=>x.archived===e.archived)),pos=group.indexOf(e);
   let tgt=where==="up"?pos-1:where==="down"?pos+1:where==="top"?0:group.length-1;
   tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
   group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderAdvDetail();

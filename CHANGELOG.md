@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 79 — Ability colours, cleaner roll labels, back-button fix, menu polish
+- **Ability boxes are colour-coded.** Each ability/save box in the Forge is tinted with its ability
+  colour (STR red, DEX blue, CON orange, INT purple, WIS green, CHA pink), matching the statblock.
+- **Cleaner roll-log labels.** Rolling an attack/feature whose name carries a usage note —
+  "(Recharge 5–6)", "(3/Day)", "(Costs 2 Actions)" — now logs just the action name, without the note.
+- **Back-to-adventures button works.** At narrow widths the ‹ button next to an adventure's title now
+  reliably returns to the adventure-cards column (it stopped working because the list immediately
+  re-opened the last adventure).
+- **Menus sit above the sidebar.** Dropdown menus no longer slip behind the floating sidebar drawer.
+- **Smarter Move options.** Move is disabled entirely when an item is the only one in its list, and the
+  individual options grey out when they'd do nothing (Move-to-top/up while already first, etc.) — across
+  adventures, scenes, and encounters.
+
 ## Batch 78 — Pins, reordering, reload memory, recharge split, chip-field scroll
 - **Pin anything to the top.** Adventures, scenes, encounters, and bestiary cards all get a Pin/Unpin
   option in their menu (Unpin replaces Pin once pinned). Pinned adventures/scenes float to the top of

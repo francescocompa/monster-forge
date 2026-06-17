@@ -513,7 +513,10 @@ function formulaCeil(f){
 }
 function gritOn(){return !!(state.settings&&state.settings.homebrew&&state.settings.homebrew.gritMin);}
 // Label = feature/ability name only (the roll type is shown as a separate tag).
-function rollLabelFor(span){if(span.dataset.rolllabel)return span.dataset.rolllabel;const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?nm.textContent.replace(/\.\s*$/,"").trim():"Roll";}
+// Strip trailing-period + any bracketed note ("(Recharge 5–6)", "(3/Day)", "(Costs 2 Actions)"…) from
+// a feature name so the roll log shows just the action name, not its usage note (B79).
+function cleanRollLabel(s){return (s||"").replace(/\s*\([^)]*\)/g,"").replace(/\.\s*$/,"").trim();}
+function rollLabelFor(span){if(span.dataset.rolllabel)return cleanRollLabel(span.dataset.rolllabel);const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?cleanRollLabel(nm.textContent):"Roll";}
 function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
@@ -557,7 +560,7 @@ function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20). One combined
 // notification (B65): "Arcane Burst: 23 to hit, 25 force damage".
 function rollAttackSequence(nameEl){
-  const label=nameEl.textContent.replace(/\.\s*$/,"").trim(),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
+  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
   let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`;
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
@@ -568,7 +571,7 @@ function rollAttackSequence(nameEl){
 // Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals
 // damage, its damage too — as one group in the log + one combined notification (B77).
 function rollRechargeSequence(nameEl){
-  const label=nameEl.dataset.rolllabel||nameEl.textContent.replace(/\.\s*$/,"").trim(),dmgType=nameEl.dataset.dmgtype;
+  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),dmgType=nameEl.dataset.dmgtype;
   const min=nameEl.dataset.rollmin?Number(nameEl.dataset.rollmin):null;
   const rech=doRoll(nameEl.dataset.roll,{},{label,type:null,success:min,silent:true});
   const ready=min==null||rech.total>=min;
