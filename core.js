@@ -457,19 +457,19 @@ function refreshAbil(){const pb=pbForCR(M.cr);ABILS.forEach(a=>{const m=mod(M[a]
 
 function renderSkills(){const box=$("#skillRows");
   box.innerHTML=M.skills.map((s,i)=>`<div class="rowline">
-    <select data-si="${i}" class="skName">${Object.keys(SKILLS).map(k=>`<option value="${k}" ${k===s[0]?"selected":""}>${k.replace(/_/g," ")}</option>`).join("")}</select>
+    <select data-si="${i}" class="skName cc-ab-${SKILLS[s[0]]||"int"}">${Object.keys(SKILLS).map(k=>`<option value="${k}" ${k===s[0]?"selected":""}>${k.replace(/_/g," ")}</option>`).join("")}</select>
     <button type="button" class="tritog skProf" data-si="${i}"></button>
     <button class="iconbtn" data-rmskill="${i}">✕</button></div>`).join("");
-  box.querySelectorAll(".skName").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][0]=e.target.value;renderPreview();}));
+  box.querySelectorAll(".skName").forEach(el=>el.addEventListener("change",e=>{M.skills[+e.target.dataset.si][0]=e.target.value;renderSkills();renderPreview();}));
   box.querySelectorAll(".skProf").forEach(el=>{paintTri(el,M.skills[+el.dataset.si][1]||"prof");el.addEventListener("click",()=>{const i=+el.dataset.si;const nv=nextTri(M.skills[i][1]||"prof");M.skills[i][1]=nv;paintTri(el,nv);renderPreview();});});
   box.querySelectorAll("[data-rmskill]").forEach(el=>el.addEventListener("click",e=>{M.skills.splice(+e.target.dataset.rmskill,1);renderSkills();renderPreview();}));
 }
 // Tool proficiencies (B39) — official 2024 tool list; a simple proficient/none list (no ability math).
 function renderTools(){const box=$("#toolRows");if(!box)return;
   box.innerHTML=(M.tools||[]).map((t,i)=>`<div class="rowline">
-    <select data-ti="${i}" class="tlName">${TOOLS.map(k=>`<option ${k===t?"selected":""}>${esc(k)}</option>`).join("")}</select>
+    <select data-ti="${i}" class="tlName cc-ab-${TOOL_ABIL[t]||"int"}">${TOOLS.map(k=>`<option ${k===t?"selected":""}>${esc(k)}</option>`).join("")}</select>
     <button class="iconbtn" data-rmtool="${i}">✕</button></div>`).join("");
-  box.querySelectorAll(".tlName").forEach(el=>el.addEventListener("change",e=>{M.tools[+e.target.dataset.ti]=e.target.value;renderPreview();}));
+  box.querySelectorAll(".tlName").forEach(el=>el.addEventListener("change",e=>{M.tools[+e.target.dataset.ti]=e.target.value;renderTools();renderPreview();}));
   box.querySelectorAll("[data-rmtool]").forEach(el=>el.addEventListener("click",e=>{M.tools.splice(+e.target.dataset.rmtool,1);renderTools();renderPreview();}));
 }
 // B43 — "Add skill" opens a dropdown of skills, with the tool proficiencies as a subgroup after.

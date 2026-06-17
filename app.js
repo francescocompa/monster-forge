@@ -253,6 +253,9 @@ document.addEventListener("click",e=>{
     const willOpen=!mn.classList.contains("open");mn.classList.toggle("open");
     // Screen-aware: flip a bottom-anchored menu upward when it would overrun the viewport.
     if(willOpen&&!mn.classList.contains("submenu")){mn.classList.remove("up");if(mn.getBoundingClientRect().bottom>window.innerHeight-8)mn.classList.add("up");}
+    // Submenus open leftward by default; flip them rightward when the left edge would be clipped
+    // (e.g. an adventure-card menu sitting against the sidebar). B81.
+    if(willOpen&&mn.classList.contains("submenu")){mn.classList.remove("flip-right");if(mn.getBoundingClientRect().left<8)mn.classList.add("flip-right");}
     e.stopPropagation();}}
 });
 
@@ -288,4 +291,8 @@ function wrapStepper(input,step,min){
   let savedView="forge";try{savedView=localStorage.getItem("mf_view")||"forge";}catch(e){}
   if(savedView==="combat"&&!combatOf())savedView="adventures"; // combat ended/cleared → fall back
   if(VIEW_LABELS[savedView]&&savedView!=="forge"&&savedView!=="settings")switchView(savedView);
+  hideBootLoader(); // correct tab is set — reveal the app (no Forge flash)
 })();
+// Remove the boot loader once the app is ready (or on a fatal init error so the page isn't stuck).
+function hideBootLoader(){const b=document.getElementById("bootLoader");if(!b)return;requestAnimationFrame(()=>{b.classList.add("hide");setTimeout(()=>b.remove(),450);});}
+window.addEventListener("error",hideBootLoader);

@@ -249,17 +249,20 @@ select::-ms-expand{display:none}
 .abil{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
 .abil .cell{background:var(--in);border:1px solid var(--line);border-radius:7px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column}
 .abil .cell .ab{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--amber);margin-bottom:6px}
-/* Each ability box is tinted with its ability colour (matches the statblock cc-ab scheme). B79. */
-.abil .cell{--abc:var(--line)}
-.abil .cell.cc-ab-str{--abc:rgb(224,90,90)}
-.abil .cell.cc-ab-dex{--abc:rgb(95,180,230)}
-.abil .cell.cc-ab-con{--abc:rgb(232,140,60)}
-.abil .cell.cc-ab-int{--abc:rgb(160,110,214)}
-.abil .cell.cc-ab-wis{--abc:rgb(95,168,115)}
-.abil .cell.cc-ab-cha{--abc:rgb(232,120,180)}
+/* Ability colour tokens (matches the statblock cc-ab scheme). Set --abc on any cc-ab-* element so
+   the Forge ability boxes + skill/tool rows can tint themselves by ability. B79/B81. */
+.cc-ab-str{--abc:rgb(224,90,90)}
+.cc-ab-dex{--abc:rgb(95,180,230)}
+.cc-ab-con{--abc:rgb(232,140,60)}
+.cc-ab-int{--abc:rgb(160,110,214)}
+.cc-ab-wis{--abc:rgb(95,168,115)}
+.cc-ab-cha{--abc:rgb(232,120,180)}
 .abil .cell[class*="cc-ab-"]{border-color:color-mix(in srgb,var(--abc) 55%,var(--line))}
 .abil .cell[class*="cc-ab-"] .ab{color:var(--abc)}
 .abil .cell[class*="cc-ab-"]:focus-within{border-color:var(--abc);box-shadow:0 0 0 1px var(--abc)}
+/* Skill / tool rows: the name select is tinted by its tied ability; text stays white (B81). */
+.rowline .skName[class*="cc-ab-"],.rowline .tlName[class*="cc-ab-"]{border-color:color-mix(in srgb,var(--abc) 55%,var(--line));color:#fff}
+.rowline .skName[class*="cc-ab-"]:focus,.rowline .tlName[class*="cc-ab-"]:focus{border-color:var(--abc);box-shadow:0 0 0 1px var(--abc);outline:none}
 .abil .cell input{text-align:center;padding:5px 2px;font-size:17px;font-weight:700}
 .abil .cell .stepper>input{padding-right:16px;padding-left:16px}
 .abil .cell .stepbtns{width:14px}
@@ -427,6 +430,20 @@ select::-ms-expand{display:none}
 .sb .ab td.lbl .abc{display:inline-block;color:var(--accent-soft);font-weight:700;min-width:38px;text-align:left}
 .sb .ab td.lbl .abc.cc-ab{color:var(--txt);text-align:center;padding:1px 6px}
 .sb .ab td.lbl .sc{margin-left:9px}
+/* Boot loader (B81): a tumbling amber d20 + wordmark, shown until init sets the right tab so there's
+   no flash of the Forge before the saved view loads. Fades out, then removed by JS. */
+.boot-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg,#0b0c0e);transition:opacity .4s ease}
+.boot-loader.hide{opacity:0;pointer-events:none}
+.boot-d20{width:54px;height:54px;color:var(--amber-soft);animation:diceSpin 1.05s ease-in-out infinite;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
+.boot-d20 svg{width:100%;height:100%;display:block}
+.boot-name{font-size:16px;font-weight:700;letter-spacing:.02em;color:var(--txt);opacity:0;animation:bootName 1.4s ease forwards}
+.boot-dots{display:flex;gap:6px}
+.boot-dots span{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:bootDot 1.1s ease-in-out infinite}
+.boot-dots span:nth-child(2){animation-delay:.18s}
+.boot-dots span:nth-child(3){animation-delay:.36s}
+@keyframes bootName{0%{opacity:0;transform:translateY(4px)}60%{opacity:1;transform:none}100%{opacity:1}}
+@keyframes bootDot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.boot-d20{animation:none}.boot-dots span{animation:none;opacity:.6}}
 /* Ability colours (B57): STR red, DEX light blue, CON orange, INT purple, WIS green, CHA pink. */
 :is(.sb,.refpop) .cc-ab-str{background:rgba(224,90,90,.22)}
 :is(.sb,.refpop) .cc-ab-dex{background:rgba(95,180,230,.22)}
@@ -637,8 +654,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    colour, showing up to 3 name initials in a contrast-checked text colour. Scoped to
    .adv-layout.adv-mini to outrank the default .adv-list .ai rules. */
 .adv-layout.adv-mini .adv-list{padding:14px 8px;display:flex;flex-direction:column;align-items:center}
-.adv-layout.adv-mini #newAdv{width:40px;height:40px;padding:0;margin:0 0 12px;border-radius:10px;font-size:0;display:flex;align-items:center;justify-content:center;flex:none}
-.adv-layout.adv-mini #newAdv .ico{font-size:18px}
+.adv-layout.adv-mini #newAdv{width:40px;height:40px;padding:0;margin:0 0 12px;border-radius:10px;font-size:0;display:flex;align-items:center;justify-content:center;flex:none;gap:0}
+.adv-layout.adv-mini #newAdv .ico{font-size:20px;line-height:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 .adv-layout.adv-mini .adv-list .ai{width:40px;height:40px;padding:0;margin:0 0 8px;border-radius:10px;background:var(--ai-color);display:flex;align-items:center;justify-content:center;border:1px solid transparent;cursor:pointer}
 .adv-layout.adv-mini .adv-list .ai:hover{background:var(--ai-color)}
 .adv-layout.adv-mini .adv-list .ai .ai-info,.adv-layout.adv-mini .adv-list .ai .adv-dot,.adv-layout.adv-mini .adv-list .ai .menu-wrap{display:none}
@@ -675,6 +692,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}
 .adv-detail{overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
+/* Adventure-colour topbar (B81): a thin bar spanning the column from the top, replacing the colour
+   dot — click it to change the colour. Default accent gradient; per-adventure colour set inline. */
+.adv-topbar{height:4px;margin:-20px -24px 16px;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer}
+/* Chevron by the title collapses the whole adventure info block (party bar + notes + roster). */
+.adv-info-toggle{background:none;border:1px solid transparent;color:var(--faint);border-radius:6px;width:26px;height:26px;flex:none;display:grid;place-items:center;padding:0;cursor:pointer}
+.adv-info-toggle:hover{border-color:var(--line);color:var(--txt)}
+.adv-info-toggle .st-chev{display:inline-flex;width:14px;height:14px;transition:transform .15s}
+.adv-info-toggle .st-chev.closed{transform:rotate(-90deg)}
 .adv-back{display:none;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;width:32px;height:32px;flex:none;padding:0;cursor:pointer}
 .adv-back svg{display:block}
 .adv-back:hover{border-color:var(--accent);color:var(--txt)}
@@ -812,6 +837,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .menu .submenu-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .menu .submenu-arrow{color:var(--faint);font-size:10px}
 .menu .submenu{right:calc(100% + 5px);left:auto;top:-5px;bottom:auto}
+.menu .submenu.flip-right{left:calc(100% + 5px);right:auto}
 .budget{margin:8px 0}
 .budget .bartrack{position:relative;padding:4px 0}
 .budget .bar{height:10px;background:var(--in);border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -1092,7 +1118,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Single fixed-height row: chips never wrap and never grow the field — instead the row scrolls
    horizontally, cropped at the right edge of the field. The scrollbar is hidden (still drag/scrollable).
    B78 (was a wrapping, vertically-growing field in B77). */
-.chipfield{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:0 7px;height:36px;overflow-x:auto;overflow-y:hidden;cursor:text;scrollbar-width:none}
+/* min-width:0 lets the field shrink to its track inside a flex row so the chips SCROLL within it
+   rather than growing the field to fit them (the flexbox min-content gotcha). B81. */
+.chipfield{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:0 7px;height:36px;overflow-x:auto;overflow-y:hidden;cursor:text;scrollbar-width:none}
 .chipfield::-webkit-scrollbar{display:none}
 .chipfield:focus-within{border-color:var(--accent)}
 .chipfield .chips{display:contents}

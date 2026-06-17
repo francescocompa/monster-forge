@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 81 — Loading screen, ability-tinted skills/tools, adventure header, fixes
+- **Boot loading screen.** A tumbling amber d20 + wordmark covers the brief startup, so reloading no
+  longer flashes the Forge before jumping to your last tab.
+- **Skill & tool rows are ability-tinted.** Each skill/tool name box now borders in its tied ability's
+  colour (Acrobatics = DEX blue, Arcana = INT purple, …); text stays white.
+- **Adventure header redo.** The colour dot by the title is replaced with a thin adventure-coloured
+  bar across the top of the column (click it to recolour). A chevron beside the title collapses the
+  whole adventure info block (party, budget, notes, roster) so you can focus on the scene list.
+- **Move submenu no longer clipped.** When a card's Move submenu would open under the sidebar, it now
+  flips open to the right instead.
+- **Chip fields really stay put now.** Condition-immunity and gear chip fields keep a fixed size and
+  scroll their chips horizontally within the box (the field no longer stretches to fit them).
+- **Collapsed New-adventure button** has its “+” properly centred.
+
 ## Batch 80 — Combat Tracker, part 1 (party roster + live initiative tracker)
 - **Party roster.** Each adventure has a collapsible Party section: add player characters with
   AC / HP / initiative modifier plus free-form custom fields (passive perception, save bonuses, …).

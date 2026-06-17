@@ -149,7 +149,9 @@ function renderAdvDetail(){
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",advDName(a)]);
   const bud=baseBudget(partyOf(a,null));
-  d.innerHTML=`<div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${advDot(a.id,a.color)}<h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
+  const infoColl=advInfoCollapsed();
+  d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
+    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="adv-info-toggle" id="advInfoToggle" title="${infoColl?"Show":"Hide"} adventure info" aria-label="Toggle adventure info"><span class="st-chev${infoColl?" closed":""}">${FS_CHEVRON}</span></button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
@@ -161,6 +163,7 @@ function renderAdvDetail(){
       <div class="sep"></div>
       <button class="danger" id="delAdv">Delete adventure</button>
     </div></div></div>
+    <div id="advInfoWrap"${infoColl?' style="display:none"':""}>
     <div class="party-bar">
       <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
       <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
@@ -176,6 +179,7 @@ function renderAdvDetail(){
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
     <div class="section-label section-toggle" id="partyHead"><span class="st-chev${partyCollapsed()?" closed":""}">${FS_CHEVRON}</span> Party roster <span class="party-count">${a.party.length}</span></div>
     <div id="partyWrap"${partyCollapsed()?' style="display:none"':""}></div>
+    </div>
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
     <div class="ctrl-chips" id="encChips"></div>
     <div id="encList"></div>
@@ -192,6 +196,7 @@ function renderAdvDetail(){
     </div>
     <div id="archWrap"></div>`;
   $("#advBack").addEventListener("click",()=>{advListView=true;renderAdvList();});
+  $("#advInfoToggle").addEventListener("click",()=>{setAdvInfoCollapsed(!advInfoCollapsed());renderAdvDetail();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${advDName(a)}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
@@ -216,6 +221,9 @@ function renderAdvDetail(){
 // Party roster (Combat Tracker, B80): named PCs with AC / HP / initiative + free-form DM fields.
 function partyCollapsed(){try{return localStorage.getItem("mf_partycoll")==="1";}catch(e){return false;}}
 function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0");}catch(e){}}
+// Whole adventure "main info" block (party bar + notes + roster) collapses from the chevron by the title.
+function advInfoCollapsed(){try{return localStorage.getItem("mf_advinfocoll")==="1";}catch(e){return false;}}
+function setAdvInfoCollapsed(v){try{localStorage.setItem("mf_advinfocoll",v?"1":"0");}catch(e){}}
 function blankPC(){return {id:uid(),name:"",ac:"",hp:"",init:"",fields:[]};}
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
