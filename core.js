@@ -336,12 +336,17 @@ function renderDmg(){const box=$("#dmgRows");if(!box)return;
 $("#addDmg").addEventListener("click",()=>{const avail=DMG_TYPES.find(d=>!(d in M.dmg))||DMG_TYPES[0];M.dmg[avail]="res";renderDmg();renderPreview();});
 
 function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener("input",()=>{M[key]=num?(el.value===""?null:Number(el.value)):el.value;renderPreview();});}
+// Chip-field scroll-fade (B82): flag the scroller (.chipfield, or .cf-main for gear) so CSS fades the
+// edge that has hidden chips — a discoverability hint that the row scrolls. Updated on scroll/resize.
+function updateChipFade(el){if(!el)return;const max=el.scrollWidth-el.clientWidth;el.classList.toggle("ov-l",el.scrollLeft>1);el.classList.toggle("ov-r",el.scrollLeft<max-1);}
+function observeChipFade(el){if(!el)return;if(!el._fadeBound){el._fadeBound=true;el.addEventListener("scroll",()=>updateChipFade(el));if(window.ResizeObserver)new ResizeObserver(()=>updateChipFade(el)).observe(el);}requestAnimationFrame(()=>updateChipFade(el));}
 // Condition Immunities as removable chips. m.cimm stays a comma-joined string (compatible with
 // import/export and the statblock); the chip UI just splits/joins it.
 function cimmList(){return (M.cimm||"").split(",").map(s=>s.trim()).filter(Boolean);}
 function renderCimm(){const box=$("#cimmChips");if(!box)return;const list=cimmList();
   box.innerHTML=list.map((c,i)=>`<span class="chip${findCondition(c)?" known":""}">${esc(c)}<button class="chipx" data-rmcimm="${i}" title="Remove">×</button></span>`).join("");
   const ci=$("#f_cimm_input");if(ci)ci.placeholder=list.length?"":"add condition…"; // drop the prompt once a chip exists (B78)
+  observeChipFade($("#f_cimm_field"));
   box.querySelectorAll("[data-rmcimm]").forEach(b=>b.addEventListener("click",()=>{const a=cimmList();a.splice(+b.dataset.rmcimm,1);M.cimm=a.join(", ");renderCimm();renderPreview();}));}
 function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
   const add=v=>{v=(v||"").replace(/;/g,",").split(",").map(x=>x.trim()).filter(Boolean);const a=cimmList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.cimm=a.join(", ");ci.value="";renderCimm();renderPreview();};
@@ -354,6 +359,7 @@ function gearList(){return (M.gear||"").split(",").map(s=>s.trim()).filter(Boole
 function renderGear(){const box=$("#gearChips");if(!box)return;const list=gearList();
   box.innerHTML=list.map((g,i)=>`<span class="chip">${esc(g)}<button class="chipx" data-rmgear="${i}" title="Remove">×</button></span>`).join("");
   const gi=$("#f_gear_input");if(gi)gi.placeholder=list.length?"":"add gear…"; // drop the prompt once a chip exists (B78)
+  observeChipFade(document.querySelector("#f_gear_field .cf-main"));
   box.querySelectorAll("[data-rmgear]").forEach(b=>b.addEventListener("click",()=>{const a=gearList();a.splice(+b.dataset.rmgear,1);M.gear=a.join(", ");renderGear();renderPreview();}));}
 function bindGear(){const gi=$("#f_gear_input");if(!gi)return;
   const add=v=>{v=(v||"").split(",").map(x=>x.trim()).filter(Boolean);const a=gearList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.gear=a.join(", ");gi.value="";renderGear();renderPreview();};

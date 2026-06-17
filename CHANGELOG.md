@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 82 — Chip-field scrolling, really fixed (form-column cap + scroll fade)
+- **Condition-immunity / gear chip fields now actually scroll.** The real cause wasn't the field — the
+  Forge form column was sized to its widest child (a bare `1fr` = `minmax(auto,1fr)`), so the nowrap chip
+  row inflated the whole column past the viewport and `.forge`'s `overflow:hidden` just clipped it. The
+  column is now capped (`minmax(0,1fr)` + `min-width:0` down the chain), so the field is bounded and its
+  chips scroll horizontally inside it.
+- **Scroll-fade hint.** When chips overflow, the hidden edge fades out (right, left, or both depending on
+  scroll position) so it's clearly scrollable.
+- *(Combat Tracker (Batch 80) was moved off `main` onto the `combat-tracker` branch — the live site no
+  longer carries the in-progress tracker; CT3/CT4 continue on that branch.)*
+
 ## Batch 81 — Loading screen, ability-tinted skills/tools, adventure header, fixes
 - **Boot loading screen.** A tumbling amber d20 + wordmark covers the brief startup, so reloading no
   longer flashes the Forge before jumping to your last tab.
