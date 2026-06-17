@@ -174,6 +174,8 @@ function renderAdvDetail(){
       </div>
     </div>
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
+    <div class="section-label section-toggle" id="partyHead"><span class="st-chev${partyCollapsed()?" closed":""}">${FS_CHEVRON}</span> Party roster <span class="party-count">${a.party.length}</span></div>
+    <div id="partyWrap"${partyCollapsed()?' style="display:none"':""}></div>
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
     <div class="ctrl-chips" id="encChips"></div>
     <div id="encList"></div>
@@ -208,7 +210,37 @@ function renderAdvDetail(){
   $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
-  renderPCgrid(a);renderEncList(a);
+  $("#partyHead").addEventListener("click",()=>{setPartyCollapsed(!partyCollapsed());renderAdvDetail();});
+  renderPCgrid(a);renderParty(a);renderEncList(a);
+}
+// Party roster (Combat Tracker, B80): named PCs with AC / HP / initiative + free-form DM fields.
+function partyCollapsed(){try{return localStorage.getItem("mf_partycoll")==="1";}catch(e){return false;}}
+function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0");}catch(e){}}
+function blankPC(){return {id:uid(),name:"",ac:"",hp:"",init:"",fields:[]};}
+function renderParty(a){
+  const box=$("#partyWrap");if(!box)return;
+  const rows=a.party.map(p=>`<div class="pc-row" data-pc="${p.id}">
+    <div class="pc-main">
+      <input class="pc-name" placeholder="Character name" data-pcf="${p.id}:name" value="${esc(p.name)}">
+      <label class="pc-stat">AC<input type="number" min="0" data-pcf="${p.id}:ac" value="${p.ac??""}"></label>
+      <label class="pc-stat">HP<input type="number" min="0" data-pcf="${p.id}:hp" value="${p.hp??""}"></label>
+      <label class="pc-stat">Init<input type="number" data-pcf="${p.id}:init" value="${p.init??""}" placeholder="—" title="Initiative modifier (left blank = rolled flat when combat starts)"></label>
+      <button class="iconbtn" data-pcfield="${p.id}" title="Add custom field">＋</button>
+      <button class="iconbtn" data-pcdel="${p.id}" title="Remove">✕</button>
+    </div>
+    ${p.fields.length?`<div class="pc-fields">${p.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-pcfl="${p.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-pcfv="${p.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-pcfdel="${p.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
+  </div>`).join("");
+  box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
+    <button class="addbtn" id="addPC" style="width:100%">＋ Add player character</button>`;
+  $("#addPC").addEventListener("click",()=>{a.party.push(blankPC());saveAdv();renderAdvDetail();});
+  const findPC=id=>a.party.find(p=>p.id===id);
+  box.querySelectorAll("[data-pcf]").forEach(el=>{const[id,f]=el.dataset.pcf.split(":");
+    el.addEventListener("input",()=>{const p=findPC(id);if(!p)return;p[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;saveAdv();});});
+  box.querySelectorAll("[data-pcfield]").forEach(el=>el.addEventListener("click",()=>{const p=findPC(el.dataset.pcfield);if(p){p.fields.push({label:"",value:""});saveAdv();renderParty(a);}}));
+  box.querySelectorAll("[data-pcdel]").forEach(el=>el.addEventListener("click",()=>{a.party=a.party.filter(p=>p.id!==el.dataset.pcdel);saveAdv();renderAdvDetail();}));
+  box.querySelectorAll("[data-pcfl]").forEach(el=>{const[id,i]=el.dataset.pcfl.split(":");el.addEventListener("input",()=>{const p=findPC(id);if(p&&p.fields[i]){p.fields[i].label=el.value;saveAdv();}});});
+  box.querySelectorAll("[data-pcfv]").forEach(el=>{const[id,i]=el.dataset.pcfv.split(":");el.addEventListener("input",()=>{const p=findPC(id);if(p&&p.fields[i]){p.fields[i].value=el.value;saveAdv();}});});
+  box.querySelectorAll("[data-pcfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.pcfdel.split(":");const p=findPC(id);if(p){p.fields.splice(i,1);saveAdv();renderParty(a);}}));
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
@@ -379,6 +411,8 @@ function encHTML(a,e){
           <button data-encpin="${e.id}">${e.pinned?"Unpin":"Pin to top"}</button>
           ${moveSubmenuHTML("encmove","encmove",e.id,pinSort(a.encounters.filter(x=>x.archived===e.archived)),e)}
           <div class="sep"></div>
+          <button data-runcombat="${e.id}">▶ ${e.combat&&e.combat.active?"Resume combat":"Run combat"}</button>
+          <div class="sep"></div>
           <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
           <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
@@ -492,6 +526,7 @@ function bindEncEvents(a){
   q("[data-addforge]").forEach(el=>el.addEventListener("click",()=>forgeForEncounter(a,findEnc(a,el.dataset.addforge))));
   q("[data-addchassis]").forEach(el=>el.addEventListener("click",()=>openChassisForEncounter(a,findEnc(a,el.dataset.addchassis))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
+  q("[data-runcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.runcombat))));
   // Minion flag on a quick combatant is a toggle chip (was a cramped checkbox). Flipping it changes
   // the combatant's XP, so re-render the list to refresh budget bars + the chip state.
   q("[data-minion]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.minion);if(!c)return;c.minion=!c.minion;saveAdv();renderEncList(a);}));
@@ -693,6 +728,110 @@ function pushEncounter(a,e){
     environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
   const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
   copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
+}
+
+// ── Combat Tracker (B80) ─────────────────────────────────────────────────────
+// A live initiative tracker launched from an encounter. enc.combat holds the ordered instances; the
+// combat view (full-screen) renders the order + the active combatant. Resumable + cloud-synced.
+let combatCtx=null; // {advId,encId} of the encounter whose combat is open (persisted across reloads)
+function persistCombatCtx(){try{combatCtx?localStorage.setItem("mf_combatctx",JSON.stringify(combatCtx)):localStorage.removeItem("mf_combatctx");}catch(e){}}
+function readCombatCtx(){try{const d=localStorage.getItem("mf_combatctx");return d?JSON.parse(d):null;}catch(e){return null;}}
+function combatOf(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===combatCtx.advId);const e=a&&findEnc(a,combatCtx.encId);return (e&&e.combat)?{a,e}:null;}
+function cFac(f){return f==="PC"?"pc":facClass(f);}
+// HP for a monster instance per the Combat setting (rolled from Hit Dice, else average / book HP).
+function rollMonsterHP(m){
+  if(state.settings.combat.hpMode==="rolled"&&m.hpf&&/\d+\s*d\s*\d+/i.test(m.hpf))return Math.max(1,rollFormula(m.hpf).total);
+  return Math.max(1,Number(m.hp||exprAvg(m.hpf||"1")||1));
+}
+function rollInit(mod){return rollFormula("1d20"+(mod>0?"+"+mod:mod<0?String(mod):"")).total;}
+function sortInitiative(order){const tie=state.settings.combat.dexTiebreak;order.sort((x,y)=>(y.init-x.init)||(tie?((y.dex||0)-(x.dex||0)):0));}
+// Build the ordered instances and roll initiative. count:N → N HP-separate rows sharing one rolled
+// initiative (groupId = the combatant entry). PCs roll d20 + their roster initiative modifier.
+function startCombat(a,e){
+  const order=[];
+  e.combatants.forEach(c=>{
+    if(c.type==="event"){order.push({id:uid(),kind:"event",srcId:null,name:c.name||"Event",init:Number(c.init)||0,initMod:0,dex:0,ac:null,hpMax:null,hpCur:null,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]});return;}
+    const m=c.type==="monster"?monOf(c):null,base=c.nickname||(m?m.name:(c.type==="quick"?"Combatant":"?"));
+    const im=m?initOf(m):0,gi=rollInit(im),count=Math.max(1,Number(c.count||1));
+    for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
+      order.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
+        name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
+        ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:[]});}
+  });
+  a.party.forEach(p=>{const im=p.init===""||p.init==null?0:Number(p.init);
+    order.push({id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollInit(im),initMod:im,dex:0,
+      ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
+      status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]});});
+  sortInitiative(order);
+  e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
+}
+function runCombat(a,e){
+  combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
+  if(!e.combat||!e.combat.active){
+    if(!e.combatants.some(c=>c.type!=="event")&&!a.party.length){toast("Add combatants or party members first.");return;}
+    startCombat(a,e);
+  }
+  switchView("combat");
+}
+function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,n=cb.order.length;if(!n)return;
+  let ti=cb.turnIndex+dir;
+  if(ti>=n){ti=0;cb.round++;}else if(ti<0){ti=n-1;cb.round=Math.max(1,cb.round-1);}
+  cb.turnIndex=ti;saveAdv();renderCombat();}
+function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;saveAdv();combatCtx=null;persistCombatCtx();switchView("adventures");});}
+function combatRowHTML(it,active){
+  const dead=it.hpMax!=null&&it.hpCur<=0;
+  const hp=it.hpMax==null?`<span class="ci-noh">—</span>`
+    :`<input class="ci-hpcur" type="number" data-hpcur="${it.id}" value="${it.hpCur}"><span class="ci-hpmax">/ ${it.hpMax}</span>
+      <span class="ci-dmg"><input type="number" class="ci-delta" data-delta="${it.id}" placeholder="0"><button data-hpd="${it.id}:dmg" title="Damage">−</button><button data-hpd="${it.id}:heal" title="Heal">+</button></span>`;
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${dead?" dead":""}" data-ci="${it.id}">
+    <div class="ci-init" title="Initiative">${it.init}</div>
+    <div class="ci-body"><div class="ci-name">${esc(it.name)}${dead?'<span class="ci-down">down</span>':""}</div>
+      ${it.kind==="event"&&it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
+    ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
+    <div class="ci-hp">${hp}</div>
+  </div>`;
+}
+function combatActiveHTML(it){
+  if(!it)return `<div class="empty-state">No active combatant.</div>`;
+  const hpline=it.hpMax!=null?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP</div>`:"";
+  const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  return `<div class="ca-card ${cFac(it.faction)}">
+    <div class="ca-name">${esc(it.name)}</div>
+    <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
+    ${hpline}
+    ${it.comment?`<div class="ca-note">${esc(it.comment)}</div>`:""}
+    <div class="ca-soon">Statblock &amp; click-to-roll for the active creature arrive in the next update.</div>
+  </div>`;
+}
+function renderCombat(){
+  const body=$("#combatBody");if(!body)return;
+  const ctx=combatOf();
+  if(!ctx){setCrumbs(["Combat"]);body.innerHTML=`<div class="empty-state">No combat running.<br>Start one from an encounter's ⋯ menu → <b>Run combat</b>.</div>`;return;}
+  const {a,e}=ctx,cb=e.combat,cur=cb.order[cb.turnIndex];
+  setCrumbs(["Adventures",advDName(a),encDName(e),"Combat"]);
+  body.innerHTML=`
+    <div class="combat-head">
+      <button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="ch-title"><h2>${esc(encDName(e))}</h2><div class="ch-sub">${esc(advDName(a))} · <b>Round ${cb.round}</b></div></div>
+      <div class="combat-ctrls">
+        <button class="btn ghost sm" id="combatPrev" style="width:auto">‹ Prev</button>
+        <button class="btn primary sm" id="combatNext" style="width:auto">Next turn ›</button>
+        <button class="btn ghost sm danger" id="combatEnd" style="width:auto">End combat</button>
+      </div>
+    </div>
+    <div class="combat-grid">
+      <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}</div>
+      <div class="combat-active">${combatActiveHTML(cur)}</div>
+    </div>`;
+  $("#combatBack").addEventListener("click",()=>{state.selAdv=a.id;switchView("adventures");});
+  $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
+  $("#combatNext").addEventListener("click",()=>combatAdvance(1));
+  $("#combatEnd").addEventListener("click",endCombat);
+  const setHP=(id,v)=>{const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;it.hpCur=clamp(v,0,it.hpMax);saveAdv();renderCombat();};
+  body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>setHP(el.dataset.hpcur,Number(el.value||0))));
+  body.querySelectorAll("[data-hpd]").forEach(el=>el.addEventListener("click",()=>{const[id,kind]=el.dataset.hpd.split(":");
+    const fld=body.querySelector(`[data-delta="${id}"]`),d=Math.abs(Number(fld&&fld.value||0));if(!d)return;
+    const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;setHP(id,it.hpCur+(kind==="dmg"?-d:d));}));
 }
 
 function doExportJSON(){

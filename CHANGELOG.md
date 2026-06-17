@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 80 — Combat Tracker, part 1 (party roster + live initiative tracker)
+- **Party roster.** Each adventure has a collapsible Party section: add player characters with
+  AC / HP / initiative modifier plus free-form custom fields (passive perception, save bonuses, …).
+- **Run combat.** An encounter's ⋯ menu has **Run combat** (▶). It snapshots the encounter's
+  combatants and the party, expands `count:N` monsters into N HP-separate rows (identical monsters
+  share one rolled initiative), rolls everyone's initiative (DEX tie-break), and opens a dedicated
+  full-screen **Combat** view.
+- **Live tracker.** Initiative order with the active combatant highlighted, round counter, Next/Prev
+  turn, per-combatant HP with quick damage/heal (and a defeated state at 0 HP), AC, and a panel for the
+  active combatant. The combat is resumable and survives a reload; **End combat** clears it.
+- **Combat setting.** A new Settings → Combat card: roll monster HP from Hit Dice or use average HP, and
+  toggle DEX initiative tie-breaking.
+- *(Coming next: condition chips, status/comment, and the active creature's full statblock with
+  click-to-roll tagged to that combatant.)*
+
 ## Batch 79 — Ability colours, cleaner roll labels, back-button fix, menu polish
 - **Ability boxes are colour-coded.** Each ability/save box in the Forge is tinted with its ability
   colour (STR red, DEX blue, CON orange, INT purple, WIS green, CHA pink), matching the statblock.
