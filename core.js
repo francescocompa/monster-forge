@@ -21,6 +21,10 @@ function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SET
 function saveSettings(){_store(SETTINGS_KEY,state.settings);}
 let M=null, pendingForge=null;
 const SHOW_DERIVED=false; // B23: legacy AC/Attack/Save-DC chips above the statblock, kept but off by default
+// Persist the in-progress Forge creature so a reload restores exactly what was being edited (B78).
+// Stored locally only (never the cloud bestiary); replayed through loadMonster on init.
+function persistForgeDraft(){try{if(M)localStorage.setItem("mf_forgedraft",JSON.stringify(M));}catch(e){}}
+function readForgeDraft(){try{const d=localStorage.getItem("mf_forgedraft");return d?JSON.parse(d):null;}catch(e){return null;}}
 
 // ── Uploaded reference libraries (Batch 13/14) ───────────────────────────────
 // 5etools .md dumps the user uploads at runtime: statblocks (chassis bases), spells,
@@ -285,15 +289,18 @@ function normalizeMonster(m){
   if(!Array.isArray(m.tags))m.tags=[];
   m.archived=!!m.archived;
   m.minion=!!m.minion;
+  m.pinned=!!m.pinned; // pinned bestiary cards ignore filters (B78)
   if(!Array.isArray(m.tools))m.tools=[];
   return m;
 }
 function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
   a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
-  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived}));
+  a.pinned=!!a.pinned; // pinned adventures float to the top of the column (B78)
+  a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived,pinned:!!s.pinned}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
+    e.pinned=!!e.pinned; // pinned encounters float to the top of their scene / the ungrouped list (B78)
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
     e.combatants=(e.combatants||[]).map(c=>{
       if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:"Enemy"};
@@ -329,6 +336,7 @@ function bindField(id,key,num){const el=$(id);if(!el)return;el.addEventListener(
 function cimmList(){return (M.cimm||"").split(",").map(s=>s.trim()).filter(Boolean);}
 function renderCimm(){const box=$("#cimmChips");if(!box)return;const list=cimmList();
   box.innerHTML=list.map((c,i)=>`<span class="chip${findCondition(c)?" known":""}">${esc(c)}<button class="chipx" data-rmcimm="${i}" title="Remove">×</button></span>`).join("");
+  const ci=$("#f_cimm_input");if(ci)ci.placeholder=list.length?"":"add condition…"; // drop the prompt once a chip exists (B78)
   box.querySelectorAll("[data-rmcimm]").forEach(b=>b.addEventListener("click",()=>{const a=cimmList();a.splice(+b.dataset.rmcimm,1);M.cimm=a.join(", ");renderCimm();renderPreview();}));}
 function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
   const add=v=>{v=(v||"").replace(/;/g,",").split(",").map(x=>x.trim()).filter(Boolean);const a=cimmList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.cimm=a.join(", ");ci.value="";renderCimm();renderPreview();};
@@ -340,6 +348,7 @@ function bindCimm(){const ci=$("#f_cimm_input");if(!ci)return;
 function gearList(){return (M.gear||"").split(",").map(s=>s.trim()).filter(Boolean);}
 function renderGear(){const box=$("#gearChips");if(!box)return;const list=gearList();
   box.innerHTML=list.map((g,i)=>`<span class="chip">${esc(g)}<button class="chipx" data-rmgear="${i}" title="Remove">×</button></span>`).join("");
+  const gi=$("#f_gear_input");if(gi)gi.placeholder=list.length?"":"add gear…"; // drop the prompt once a chip exists (B78)
   box.querySelectorAll("[data-rmgear]").forEach(b=>b.addEventListener("click",()=>{const a=gearList();a.splice(+b.dataset.rmgear,1);M.gear=a.join(", ");renderGear();renderPreview();}));}
 function bindGear(){const gi=$("#f_gear_input");if(!gi)return;
   const add=v=>{v=(v||"").split(",").map(x=>x.trim()).filter(Boolean);const a=gearList();v.forEach(t=>{if(!a.some(x=>x.toLowerCase()===t.toLowerCase()))a.push(t);});M.gear=a.join(", ");gi.value="";renderGear();renderPreview();};

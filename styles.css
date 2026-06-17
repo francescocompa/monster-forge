@@ -633,6 +633,18 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--panel2);border-color:var(--accent)}
 .adv-list .ai .ai-info{flex:1;min-width:0;cursor:pointer;padding:3px 0}
 .adv-list .ai .nm{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}.adv-list .ai .dt{font-size:11px;color:var(--faint);margin-left:19px}
+/* Pin marker + drag affordances for adventure cards / scenes / encounters (B78). */
+.ai-pin{flex:none;display:inline-flex;align-items:center;color:var(--amber-soft);opacity:.85}
+.ai-pin svg{display:block}
+.adv-list .ai[draggable="true"]{cursor:grab}
+.adv-list .ai.dragging{opacity:.4;cursor:grabbing}
+.adv-list .ai.drop-before,.adv-list .ai.drop-after{position:relative}
+.adv-list .ai.drop-before::before,.adv-list .ai.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent);z-index:2}
+.adv-list .ai.drop-before::before{top:-3px}
+.adv-list .ai.drop-after::after{bottom:-3px}
+.adv-layout.adv-mini .adv-list .ai .ai-pin{display:none}
+.adv-layout.adv-mini .adv-list .ai.pinned::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--amber-soft)}
+.adv-layout.adv-mini .adv-list .ai{position:relative}
 /* FP4: per-adventure color dot (sidebar + open title) + the preset-color picker. */
 .adv-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--faint);background:transparent;cursor:pointer;padding:0;flex:none;transition:transform .1s}
 .adv-dot:hover{transform:scale(1.25)}
@@ -826,6 +838,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .card.archived:hover{opacity:.8}
 .card.selected{outline:2px solid var(--accent);outline-offset:1px}
 .card.dragging{opacity:.4}
+/* Pinned bestiary card: amber thumbtack + ring; a pinned card shown only because pins ignore the
+   active filters reads as dimmed (filtered-out) (B78). */
+.card.pinned{border-color:#5c4d24}
+.card .card-pin{position:absolute;top:10px;left:11px;display:inline-flex;color:var(--amber-soft)}
+.card .card-pin svg{display:block}
+.card.pinned h4{padding-left:18px}
+.card.filtered-out{opacity:.5}
+.card.filtered-out:hover{opacity:.8}
 .grp.drop-into{outline:2px dashed var(--accent);outline-offset:3px;border-radius:9px}
 .batch-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:55;display:flex;flex-wrap:nowrap;white-space:nowrap;align-items:center;gap:10px;max-width:calc(100vw - 24px);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;box-shadow:0 10px 28px rgba(0,0,0,.5)}
 .batch-bar .btn{flex:none;width:auto}
@@ -995,19 +1015,22 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .refcard-body .blk-item::before{content:"• ";color:var(--faint)}
 
 /* Forge: Condition Immunities chip field */
-/* align-items/content:flex-start so overflowing chip rows scroll fully into view — with centering, the
-   top row clips and can't be scrolled to (flexbox overflow quirk). B77. */
-.chipfield{display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:5px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 7px;min-height:36px;max-height:96px;overflow-y:auto;cursor:text}
+/* Single fixed-height row: chips never wrap and never grow the field — instead the row scrolls
+   horizontally, cropped at the right edge of the field. The scrollbar is hidden (still drag/scrollable).
+   B78 (was a wrapping, vertically-growing field in B77). */
+.chipfield{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:0 7px;height:36px;overflow-x:auto;overflow-y:hidden;cursor:text;scrollbar-width:none}
+.chipfield::-webkit-scrollbar{display:none}
 .chipfield:focus-within{border-color:var(--accent)}
 .chipfield .chips{display:contents}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;padding:3px 5px 3px 10px;font-size:11.5px;white-space:nowrap}
+.chip{flex:none;display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;padding:3px 5px 3px 10px;font-size:11.5px;white-space:nowrap}
 .chip.known{border-color:#5c4d24;color:var(--amber-soft)}
 .chipinput{flex:1;min-width:90px;border:none!important;background:transparent!important;padding:2px 2px!important;font-size:12.5px;width:auto!important;color-scheme:dark}
 .chipinput:focus{outline:none;border:none!important}
 .chipinput:-webkit-autofill,.chipinput:-webkit-autofill:hover,.chipinput:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 30px var(--in) inset!important;-webkit-text-fill-color:var(--txt)!important}
 /* Chipfield with a trailing ghost-icon action, divider-separated and cropped within the field (B43) */
-.chipfield.with-action{flex-wrap:nowrap;align-items:stretch;padding:0;overflow:visible;cursor:default}
-.chipfield.with-action .cf-main{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 7px;min-height:34px;max-height:94px;overflow-y:auto;cursor:text}
+.chipfield.with-action{flex-wrap:nowrap;align-items:stretch;padding:0;height:auto;overflow:visible;cursor:default}
+.chipfield.with-action .cf-main{flex:1;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:5px;padding:0 7px;height:36px;overflow-x:auto;overflow-y:hidden;cursor:text;scrollbar-width:none}
+.chipfield.with-action .cf-main::-webkit-scrollbar{display:none}
 .chipfield.with-action .cf-action{flex:none;width:38px;border:none;border-left:1px solid var(--line);background:none;color:var(--faint);display:grid;place-items:center;padding:0;cursor:pointer;border-radius:0 4px 4px 0;transition:color .12s,background .12s}
 .chipfield.with-action .cf-action:hover{color:var(--accent);background:var(--panel2)}
 .chipfield.with-action .cf-action svg{width:15px;height:15px;fill:currentColor;display:block}

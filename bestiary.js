@@ -3,7 +3,7 @@
 // Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
-function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
+function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);try{localStorage.setItem("mf_view",v);}catch(e){}if(v==="library")renderLibrary();if(v==="adventures")renderAdvList();if(v==="settings")renderSettings();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 // ====== Notion-style control bars: search · filter · sort · group (Batch 15) ======
@@ -16,6 +16,8 @@ const ICO_SORT=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stro
 const ICO_GROUP=`<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.4" y="2.4" width="4.4" height="4.4" rx="1"/><rect x="9.2" y="2.4" width="4.4" height="4.4" rx="1"/><rect x="2.4" y="9.2" width="4.4" height="4.4" rx="1"/><rect x="9.2" y="9.2" width="4.4" height="4.4" rx="1"/></svg>`;
 const CTRL_ICONS=[["search",ICO_SEARCH,"Search"],["filter",ICO_FILTER,"Filter"],["sort",ICO_SORT,"Sort"],["group",ICO_GROUP,"Group by"]];
 const TRASH_SVG=`<svg viewBox="0 0 448 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>`;
+// Font Awesome thumbtack (free solid) — pinned-card indicator (B78).
+const PIN_SVG=`<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M32 32C32 14.3 46.3 0 64 0L320 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-3.5 0 11.4 148.2c36.2 19.1 65.3 50.7 80.4 89.6c4.8 12.3 2.4 26.3-6.4 36.2S378 384 364.8 384L224 384l0 96c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-96L19.2 384c-13.2 0-25.3-5.1-34.1-15s-11.2-23.9-6.4-36.2c15.1-38.9 44.2-70.5 80.4-89.6L67.5 64 64 64C46.3 64 32 49.7 32 32z"/></svg>`;
 function blankCtrl(){return {q:"",filters:{},sort:{key:"name",dir:1},group:null};}
 function ctrlIconButtonsHTML(desc){const allow=desc&&desc.icons;return CTRL_ICONS.filter(([k])=>!allow||allow.includes(k)).map(([k,svg,t])=>`<button class="ctrl-ico" data-ico="${k}" title="${t}" aria-label="${t}">${svg}</button>`).join("");}
 function bindCtrlIcons(host,ctrl,desc,onChange){if(!host)return;host.innerHTML=ctrlIconButtonsHTML(desc);host.addEventListener("click",e=>{const b=e.target.closest("[data-ico]");if(!b)return;e.stopPropagation();openCtrlMenu(b.dataset.ico,b,ctrl,desc,onChange);});}
@@ -164,9 +166,15 @@ function buildTagDatalist(){const dl=$("#libTagList");if(dl)dl.innerHTML=[...new
 function renderLibrary(){
   buildTagDatalist();buildMonsterDatalists();rebuildLibUsage();
   renderCtrlChips($("#libChips"),libCtrl,LIB_DESC,renderLibrary);
-  const body=$("#libBody");let recs=ctrlApply(libRecords(),libCtrl,LIB_DESC);
+  const body=$("#libBody");const all=libRecords();let recs=ctrlApply(all,libCtrl,LIB_DESC);
+  // Pinned cards ignore filters (B78): re-add any pinned creature the filter dropped — flagged dimmed
+  // (`_dim`) so it reads as "would be filtered away" — and float every pinned card to the top.
+  const shown=new Set(recs.map(r=>r.m));
+  const extra=all.filter(r=>!r.preset&&r.m.pinned&&!shown.has(r.m));
+  extra.forEach(r=>r._dim=true);
+  recs=extra.concat(recs).sort((a,b)=>(b.m.pinned?1:0)-(a.m.pinned?1:0));
   if(libCtrl.group!=="source")recs=collapseVariants(recs,r=>r.preset);
-  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML(r):cardHTML(r.m),emptyMsg:libEmptyMsg(),cap:400,collapsible:true});
+  renderRecords(body,recs,libCtrl,LIB_DESC,{cardOf:r=>r.preset?presetCardHTML(r):cardHTML(r.m,r._dim),emptyMsg:libEmptyMsg(),cap:400,collapsible:true});
   wireLibCards(body);
   bindSrcDrops(body,recs,renderLibrary);
 }
@@ -184,6 +192,7 @@ function wireLibCards(body){
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
   body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
+  body.querySelectorAll("[data-pinlib]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.pinlib);if(m){m.pinned=!m.pinned;saveLib();renderLibrary();}}));
   body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
   body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
   body.querySelectorAll("[data-stchip]").forEach(ch=>ch.addEventListener("click",e=>{e.stopPropagation();openStatusMenu(find(ch.dataset.stchip),ch);}));
@@ -257,12 +266,15 @@ function originBadgeHTML(m){const o=originOf(m);
   return o.kind==="chassis"
     ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}) — saved without edits">${esc(o.src||"Built-in")}</span>`
     :`<span class="tag origin brew" title="Homebrew — created or edited here">Homebrew</span>`;}
-function cardHTML(m){const arch=m.archived;return `<div class="card${arch?" archived":""}" data-card="${m.id}" draggable="true">
+function cardHTML(m,dimmed){const arch=m.archived;return `<div class="card${arch?" archived":""}${m.pinned?" pinned":""}${dimmed?" filtered-out":""}" data-card="${m.id}" draggable="true">
+  ${m.pinned?`<span class="card-pin" title="Pinned — ignores filters">${PIN_SVG}</span>`:""}
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
     <div class="menu" id="menu-lib-${m.id}">
       <button data-preview="${m.id}">Preview</button>
       <button data-edit="${m.id}">Edit</button>
+      <div class="sep"></div>
+      <button data-pinlib="${m.id}">${m.pinned?"Unpin":"Pin to top"}</button>
       <button data-dup="${m.id}">Duplicate</button>
       <button data-arch="${m.id}">${arch?"Restore":"Archive"}</button>
       <div class="sep"></div>
@@ -611,7 +623,23 @@ function chassisConflictModal(ch){
   $("#ccBack").addEventListener("click",closeModal);
 }
 
-function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}"><button data-aim-dup="${a.id}">Duplicate</button><button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button><div class="sep"></div><button class="danger" data-aim-del="${a.id}">Delete</button></div></div>`;}
+function aiMenu(a){return `<div class="menu-wrap" style="flex:none"><button class="ai-kbtn" data-menu="aim-${a.id}" title="Options">⋯</button><div class="menu" id="menu-aim-${a.id}">
+  <button data-aim-pin="${a.id}">${a.pinned?"Unpin":"Pin to top"}</button>
+  <div class="menu-wrap submenu-wrap">
+    <button class="submenu-trigger" data-menu="aimmove-${a.id}">Move<span class="submenu-arrow">▸</span></button>
+    <div class="menu submenu" id="menu-aimmove-${a.id}">
+      <button data-aim-move="${a.id}:top">Move to top</button>
+      <button data-aim-move="${a.id}:up">Move up</button>
+      <button data-aim-move="${a.id}:down">Move down</button>
+      <button data-aim-move="${a.id}:bottom">Move to bottom</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <button data-aim-dup="${a.id}">Duplicate</button>
+  <button data-aim-arch="${a.id}">${a.archived?"Unarchive":"Archive"}</button>
+  <div class="sep"></div>
+  <button class="danger" data-aim-del="${a.id}">Delete</button>
+</div></div>`;}
 // FP4 — per-adventure color identity. Curated palette that reads well on the dark theme.
 const ADV_COLORS=["#e2654d","#e08b3f","#d9a941","#ccc24a","#9fb84a","#6aa84f","#4caf7d","#4db6ac","#45a7bf","#5b9bd5","#4f7fc8","#7e8cd6","#8f7bd4","#b07cd6","#c06fc0","#d76a9e","#d2647a","#b6794a","#8a93a0","#7a8290"];
 // Clickable color dot before an adventure name (sidebar card + open title). Reusable wherever an

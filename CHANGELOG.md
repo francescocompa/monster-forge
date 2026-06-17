@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 78 — Pins, reordering, reload memory, recharge split, chip-field scroll
+- **Pin anything to the top.** Adventures, scenes, encounters, and bestiary cards all get a Pin/Unpin
+  option in their menu (Unpin replaces Pin once pinned). Pinned adventures/scenes float to the top of
+  their list; a pinned encounter rises to the top of its scene (or the ungrouped list); pinned bestiary
+  cards **ignore the active filters** — they always show, dimmed when they'd otherwise be filtered away.
+- **Reorder adventures.** Adventure cards are now draggable, and their menu (plus the right-click menu)
+  has a Move → top/up/down/bottom submenu — matching encounters. Scenes gained the same Move submenu.
+- **Reload remembers where you were.** A reload restores the stat block you were editing in the Forge
+  and the tab you were on (Forge / Bestiary / Adventures), instead of always dropping you back on Forge
+  with a blank creature.
+- **Recharge split into two rolls.** For a recharge action that deals damage, clicking the entry NAME
+  still rolls recharge + damage as a group, but the inner "(Recharge 5–6)" tag now rolls the recharge
+  die ONLY — so you can check the recharge without also rolling damage.
+- **Card menus organised.** Bestiary, adventure, scene, and encounter menus are grouped into logical
+  sections with separators.
+- **Chip fields scroll, not grow.** Condition-immunity / gear chip fields are a single fixed-height row
+  that scrolls horizontally (cropped at the right edge) instead of wrapping and growing the field. The
+  "add condition…" / "add gear…" prompt disappears once a chip is added.
+
 ## Batch 77 — Rule-finder coverage, recharge grouping, notification polish
 - **Rule finder finds more.** Statblock abbreviations now resolve to their glossary rules (AC → Armor
   Class, HP → Hit Points, CR → Challenge Rating, XP → Experience Points), and section headers (Actions,

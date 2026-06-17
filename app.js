@@ -274,5 +274,8 @@ function wrapStepper(input,step,min){
   await loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
   buildMonsterDatalists();
-  loadMonster(blankMonster());
+  // Restore the creature that was being edited + the last open tab across reloads (B78).
+  loadMonster(readForgeDraft()||blankMonster());
+  let savedView="forge";try{savedView=localStorage.getItem("mf_view")||"forge";}catch(e){}
+  if(VIEW_LABELS[savedView]&&savedView!=="forge"&&savedView!=="settings")switchView(savedView);
 })();

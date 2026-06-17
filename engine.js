@@ -249,6 +249,7 @@ function renderPreview(){
   $("#statblock").innerHTML=h;
   linkSpellFeatures($("#statblock"));
   if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
+  persistForgeDraft(); // remember what's being edited so a reload restores it (B78)
 }
 // Re-link spell names mentioned in spellcasting-derived feature bodies (reactions, hidden bonus
 // actions, etc.). Scoped to each block's own [data-spells] list — so only genuine spells link, no
@@ -347,6 +348,7 @@ function colorizeStatblock(){
     root.querySelectorAll(".cc-roll[data-roll],.cc-dice[data-roll],.roll-num[data-roll]").forEach(sp=>sp.title="Click to roll · right-click for options");
     root.querySelectorAll(".roll-atkname[data-roll]").forEach(sp=>sp.title="Roll attack"+(sp.dataset.dmg?" + damage":""));
     root.querySelectorAll(".roll-rchname[data-roll]").forEach(sp=>sp.title="Roll recharge"+(sp.dataset.dmg?" + damage":""));
+    root.querySelectorAll(".roll-rchtag[data-roll]").forEach(sp=>sp.title="Roll recharge only");
   }
 }
 // attackText renders "*Melee Attack Roll:* +N", and fmtInline wraps the label in <i> — so the jargon
@@ -392,13 +394,14 @@ function colorizeRechargeTags(root){
     const num=mm[0].match(/\d+/);if(num)sp.dataset.rollmin=num[0]; // recharge succeeds when the d6 ≥ this
     nm.appendChild(sp);if(after)nm.appendChild(document.createTextNode(after));
     // If the action also deals damage, clicking the NAME rolls recharge + damage as one group (B77).
-    // The name becomes the single roll target; the inner tag stays for display only.
+    // The inner "(Recharge N–N)" tag stays its own roll target that rolls ONLY the recharge die, so
+    // the DM can split the two (recharge-only vs recharge+damage) from one statblock entry (B78).
     const blk=nm.closest(".blk,.va"),dmg=blk&&blk.querySelector('[data-rolltype="damage"]');
     if(dmg){
       nm.classList.add("roll-rchname");nm.dataset.roll="1d6";if(num)nm.dataset.rollmin=num[0];
       nm.dataset.rolllabel=before.replace(/\.\s*$/,"").trim()||"Recharge";
       nm.dataset.dmg=dmg.dataset.roll;if(dmg.dataset.dmgtype)nm.dataset.dmgtype=dmg.dataset.dmgtype;
-      delete sp.dataset.roll;delete sp.dataset.rollmin;
+      sp.classList.add("roll-rchtag"); // keeps its own data-roll/rollmin → recharge-only on click
     }
   });
 }
