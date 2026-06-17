@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 83 — Combat Tracker part 2 (CT3): conditions, notes, skip-defeated, ungroup
+- **Condition chips per combatant.** Add conditions from your conditions library (autocomplete) with an
+  optional duration in rounds. Known conditions show their definition on hover, and timed conditions tick
+  down — and drop off — at the start of that combatant's turn.
+- **Per-combatant notes.** Jot a note on any combatant (e.g. "Concentrating on Haste"); it shows under
+  their name in the order and on the active card.
+- **Defeated combatants are skipped.** Advancing turns steps over anyone at 0 HP (in either direction),
+  so you no longer click past downed creatures.
+- **Ungroup.** A stacked group of identical monsters can be split so each rolls its own initiative.
+- **Per-row ⋯ menu** for add note / add condition / ungroup / remove from combat.
+
 ## Batch 82 — Chip-field scrolling, really fixed (form-column cap + scroll fade)
 - **Condition-immunity / gear chip fields now actually scroll.** The real cause wasn't the field — the
   Forge form column was sized to its widest child (a bare `1fr` = `minmax(auto,1fr)`), so the nowrap chip

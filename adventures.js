@@ -781,10 +781,76 @@ function runCombat(a,e){
   }
   switchView("combat");
 }
+function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
+// Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
+// ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
+// tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
 function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,n=cb.order.length;if(!n)return;
-  let ti=cb.turnIndex+dir;
-  if(ti>=n){ti=0;cb.round++;}else if(ti<0){ti=n-1;cb.round=Math.max(1,cb.round-1);}
-  cb.turnIndex=ti;saveAdv();renderCombat();}
+  let ti=cb.turnIndex,round=cb.round,steps=0;
+  do{ti+=dir;
+    if(ti>=n){ti=0;round++;}else if(ti<0){ti=n-1;round=Math.max(1,round-1);}
+    steps++;
+  }while(isDown(cb.order[ti])&&steps<=n);
+  cb.turnIndex=ti;cb.round=round;
+  if(dir>0)tickConditions(cb.order[ti]);
+  saveAdv();renderCombat();}
+// Start-of-turn duration tick: decrement timed conditions, drop those that reach 0 (untimed = ∞).
+function tickConditions(it){
+  if(!it||!it.conditions||!it.conditions.length)return;
+  const gone=[];
+  it.conditions=it.conditions.filter(c=>{if(c.rounds>0){c.rounds--;if(c.rounds<=0){gone.push(c.name);return false;}}return true;});
+  if(gone.length)toast(`${it.name}: ${gone.join(", ")} ended.`);
+}
+// Per-combatant edits (CT3): conditions, note, ungroup, remove.
+function combatItem(id){const ctx=combatOf();return ctx?ctx.e.combat.order.find(x=>x.id===id):null;}
+function addCombatCond(itId,name,rounds){const it=combatItem(itId);if(!it||!name)return;(it.conditions=it.conditions||[]).push({name,rounds:Math.max(0,Number(rounds)||0)});saveAdv();renderCombat();}
+function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;it.conditions.splice(i,1);saveAdv();renderCombat();}
+function setCombatNote(itId,text){const it=combatItem(itId);if(!it)return;it.comment=text;saveAdv();renderCombat();}
+// Split a count:N group into independent combatants — each re-rolls its own initiative.
+function ungroupCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
+  const cur=cb.order[cb.turnIndex];
+  cb.order.filter(x=>x.groupId===it.groupId).forEach(x=>{x.init=rollInit(x.initMod||0);x.groupId=x.id;});
+  sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
+function removeCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,idx=cb.order.findIndex(x=>x.id===itId);if(idx<0)return;
+  cb.order.splice(idx,1);if(idx<cb.turnIndex)cb.turnIndex--;
+  cb.turnIndex=Math.max(0,Math.min(cb.turnIndex,cb.order.length-1));saveAdv();renderCombat();}
+// Condition chip: known conditions become reflinks (global hover/click → definition popover).
+function condChipHTML(itId,c,i){
+  const known=findCondition(c.name);
+  const label=known?`<span class="reflink reflink-plain" data-ref="condition" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
+  return `<span class="cc-chip cc-cond${known?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
+}
+function condsHTML(it){
+  if(it.kind==="event")return "";
+  return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋</button></div>`;
+}
+function openCondAdd(itId,anchor){
+  const p=showPopover(anchor,`<div class="cond-add"><input type="text" class="popinput" list="condDatalist" placeholder="Condition…" autocomplete="off"><div class="cond-add-row"><label class="cond-rl">Rounds <input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
+  const inp=p.querySelector("input.popinput"),rd=p.querySelector(".cond-rounds");inp.focus();
+  const commit=()=>{const name=(inp.value||"").trim();closePopover();if(name)addCombatCond(itId,name,rd.value);};
+  p.querySelector(".cond-go").addEventListener("click",commit);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
+  rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
+}
+function openNoteEdit(itId,anchor){
+  const it=combatItem(itId);if(!it)return;
+  const p=showPopover(anchor,`<div class="note-edit"><textarea class="popinput note-ta" rows="3" placeholder="Note…">${esc(it.comment||"")}</textarea><button class="btn primary sm note-go" style="width:auto">Save</button></div>`);
+  const ta=p.querySelector("textarea");ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+  const commit=()=>{const v=ta.value.trim();closePopover();setCombatNote(itId,v);};
+  p.querySelector(".note-go").addEventListener("click",commit);
+  ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
+}
+function openCombatRowMenu(itId,anchor){
+  const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
+  const groupN=cb.order.filter(x=>x.groupId===it.groupId).length;
+  let html=`<button class="popitem" data-act="note">${it.comment?"Edit note":"Add note"}</button>`;
+  if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add condition</button>`;
+  if(groupN>1)html+=`<button class="popitem" data-act="ungroup">Ungroup (separate initiative)</button>`;
+  html+=`<button class="popitem danger" data-act="remove">Remove from combat</button>`;
+  const p=showPopover(anchor,html);
+  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
+  p.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));
+}
 function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;saveAdv();combatCtx=null;persistCombatCtx();switchView("adventures");});}
 function combatRowHTML(it,active){
   const dead=it.hpMax!=null&&it.hpCur<=0;
@@ -794,20 +860,24 @@ function combatRowHTML(it,active){
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${dead?" dead":""}" data-ci="${it.id}">
     <div class="ci-init" title="Initiative">${it.init}</div>
     <div class="ci-body"><div class="ci-name">${esc(it.name)}${dead?'<span class="ci-down">down</span>':""}</div>
-      ${it.kind==="event"&&it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
+      ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
+      ${condsHTML(it)}</div>
     ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
     <div class="ci-hp">${hp}</div>
+    <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
 function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
   const hpline=it.hpMax!=null?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP</div>`:"";
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
   return `<div class="ca-card ${cFac(it.faction)}">
     <div class="ca-name">${esc(it.name)}</div>
     <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
     ${hpline}
-    ${it.comment?`<div class="ca-note">${esc(it.comment)}</div>`:""}
+    ${conds}
+    <div class="ca-note ca-noteline">${it.comment?esc(it.comment):'<span class="ca-noteph">No note</span>'} <button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">edit</button></div>
     <div class="ca-soon">Statblock &amp; click-to-roll for the active creature arrive in the next update.</div>
   </div>`;
 }
@@ -840,6 +910,10 @@ function renderCombat(){
   body.querySelectorAll("[data-hpd]").forEach(el=>el.addEventListener("click",()=>{const[id,kind]=el.dataset.hpd.split(":");
     const fld=body.querySelector(`[data-delta="${id}"]`),d=Math.abs(Number(fld&&fld.value||0));if(!d)return;
     const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;setHP(id,it.hpCur+(kind==="dmg"?-d:d));}));
+  body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
+  body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
+  body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
+  body.querySelectorAll("[data-rmcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,i]=el.dataset.rmcond.split(":");removeCombatCond(id,+i);}));
 }
 
 function doExportJSON(){
