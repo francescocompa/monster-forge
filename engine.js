@@ -788,7 +788,7 @@ function claudeMonster(m){
   return "<<CLAUDE-FORGE / push this monster to my Notion Statblocks DB in MM25 two-column format; set AC/HP/XP properties; flag if a same-name page exists>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
 }
 
-const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures",combat:"Combat",settings:"Settings"};
+const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures",settings:"Settings"};
 function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
 // Draggable split between the form and preview columns; width persists, dbl-click resets (B60).
 function initForgeResizer(){

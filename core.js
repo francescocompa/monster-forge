@@ -14,8 +14,7 @@ const SETTINGS_DEFAULT={
   defaults:{partySize:4,partyLevel:1,faction:"Enemy"},
   homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
   notes:{adventure:true,scene:true,encounter:true}, // include a notes field on newly-created items (B65)
-  refPopovers:{on:true}, // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
-  combat:{hpMode:"rolled",dexTiebreak:true} // Combat Tracker (B80): roll vs average HP; break init ties on DEX
+  refPopovers:{on:true} // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
 function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}
@@ -298,14 +297,10 @@ function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
   a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
   a.pinned=!!a.pinned; // pinned adventures float to the top of the column (B78)
-  // Party roster for the Combat Tracker (B80): named PCs with AC/HP/initiative + DM custom fields.
-  a.party=(Array.isArray(a.party)?a.party:[]).map(p=>({id:p.id||uid(),name:p.name||"",ac:p.ac??"",hp:p.hp??"",init:p.init??"",
-    fields:(Array.isArray(p.fields)?p.fields:[]).map(f=>({label:f.label||"",value:f.value||""}))}));
   a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived,pinned:!!s.pinned}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
     e.pinned=!!e.pinned; // pinned encounters float to the top of their scene / the ungrouped list (B78)
-    e.combat=e.combat||null; // Combat Tracker state, null until a combat is started (B80)
     e.collapsed=!!e.collapsed;if(e.target==null)e.target=null;else e.target=Number(e.target);
     e.combatants=(e.combatants||[]).map(c=>{
       if(!c.type)return{type:"monster",id:uid(),monsterId:c.monsterId,nickname:"",count:c.count||1,faction:"Enemy"};

@@ -11,27 +11,12 @@ Newest batches first.
   colour (Acrobatics = DEX blue, Arcana = INT purple, …); text stays white.
 - **Adventure header redo.** The colour dot by the title is replaced with a thin adventure-coloured
   bar across the top of the column (click it to recolour). A chevron beside the title collapses the
-  whole adventure info block (party, budget, notes, roster) so you can focus on the scene list.
+  adventure info block (party size/level, budget, notes) so you can focus on the scene list.
 - **Move submenu no longer clipped.** When a card's Move submenu would open under the sidebar, it now
   flips open to the right instead.
 - **Chip fields really stay put now.** Condition-immunity and gear chip fields keep a fixed size and
   scroll their chips horizontally within the box (the field no longer stretches to fit them).
 - **Collapsed New-adventure button** has its “+” properly centred.
-
-## Batch 80 — Combat Tracker, part 1 (party roster + live initiative tracker)
-- **Party roster.** Each adventure has a collapsible Party section: add player characters with
-  AC / HP / initiative modifier plus free-form custom fields (passive perception, save bonuses, …).
-- **Run combat.** An encounter's ⋯ menu has **Run combat** (▶). It snapshots the encounter's
-  combatants and the party, expands `count:N` monsters into N HP-separate rows (identical monsters
-  share one rolled initiative), rolls everyone's initiative (DEX tie-break), and opens a dedicated
-  full-screen **Combat** view.
-- **Live tracker.** Initiative order with the active combatant highlighted, round counter, Next/Prev
-  turn, per-combatant HP with quick damage/heal (and a defeated state at 0 HP), AC, and a panel for the
-  active combatant. The combat is resumable and survives a reload; **End combat** clears it.
-- **Combat setting.** A new Settings → Combat card: roll monster HP from Hit Dice or use average HP, and
-  toggle DEX initiative tie-breaking.
-- *(Coming next: condition chips, status/comment, and the active creature's full statblock with
-  click-to-roll tagged to that combatant.)*
 
 ## Batch 79 — Ability colours, cleaner roll labels, back-button fix, menu polish
 - **Ability boxes are colour-coded.** Each ability/save box in the Forge is tinted with its ability
