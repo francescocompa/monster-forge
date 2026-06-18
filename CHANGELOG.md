@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 89 — Combat Tracker v2 (CT7b core): initiative card + HP tracker redesign
+- **Rebalanced combat view** — the initiative list is narrower and the active statblock/trackers panel
+  wider, separated by a Forge-style divider.
+- **Redesigned initiative card.** Initiative is an editable field (changing it re-sorts the order); a
+  status control cycles **active / waiting / dead** (dead and downed combatants are skipped on advance,
+  waiting is dimmed); the old mystery 0± field is gone.
+- **New HP tracker.** A compact ratio-coloured bar (with a temp-HP segment), an **add-dmg** field
+  (Enter applies; negative heals; temp HP absorbs first), an editable **current**, and the **max**.
+  Temp HP and a signed **max-HP adjust** (e.g. Aid +5 raises max and current) live in the ⋯ menu.
+- **Settings: Track party HP** toggle — turn it off to hide the HP tracker for player characters.
+
 ## Batch 88 — Combat Tracker v2 (CT7c, branch): load popup standardised + polish
 - **Load popup uses the standard toolbar** (like Add combatant): search, **sort** (name / creation),
   **group** (None / Status / Adventure — disable grouping is "None"), and **filter** by status + adventure,

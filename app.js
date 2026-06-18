@@ -42,7 +42,8 @@ function renderSettings(){
         <label class="f">Monster HP<select data-set="combat.hpMode"><option value="rolled" ${s.combat.hpMode==="rolled"?"selected":""}>Roll from Hit Dice</option><option value="average" ${s.combat.hpMode==="average"?"selected":""}>Average (book HP)</option></select></label>
       </div>
       ${SW("combat.dexTiebreak","Break initiative ties by DEX")}
-      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average. Initiative ties fall to the higher Dexterity.</div>
+      ${SW("combat.partyHP","Track party HP")}
+      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters.</div>
     </div>
     <div class="set-card">
       <div class="set-head set-head-row">Notes fields<span class="switch" title="Toggle all"><input type="checkbox" id="setNotesAll"><span class="sl"></span></span></div>

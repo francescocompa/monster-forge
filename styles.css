@@ -781,29 +781,45 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .combat-head .ch-title h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
 .combat-head .ch-sub{font-size:12px;color:var(--faint);margin-top:2px}
 .combat-ctrls{display:flex;gap:8px;flex-wrap:wrap}
-.combat-grid{display:grid;grid-template-columns:1fr minmax(260px,360px);gap:18px;align-items:start}
-.combat-order{display:flex;flex-direction:column;gap:7px}
-.cbt-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:9px 12px}
+/* CT7b — rebalanced grid (more room for the statblock/trackers), Forge-style divider between the
+   initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
+.combat-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(360px,1.55fr);gap:0;align-items:start}
+.combat-order{display:flex;flex-direction:column;gap:7px;padding-right:20px}
+.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px}
 .cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
 .cbt-row.active{box-shadow:0 0 0 1px rgba(226,101,77,.4);background:rgba(226,101,77,.05)}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
-.ci-init{flex:none;width:34px;height:34px;display:grid;place-items:center;font-size:16px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:7px;font-variant-numeric:tabular-nums}
+.cbt-row.waiting{opacity:.82}
+.ci-init{flex:none;width:32px;height:30px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in{flex:none;width:38px;height:30px;text-align:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
+.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;font-size:12px;border-radius:50%}
+.ci-status.st-active{color:#5fa873}.ci-status.st-waiting{color:var(--warn)}.ci-status.st-dead{color:var(--faint)}
+.ci-status:hover{background:var(--panel2)}
+.ci-status-sp{flex:none;width:20px}
 .ci-body{flex:1;min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
+.ci-wait{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid #5c4d24;border-radius:4px;padding:1px 5px}
 .ci-note{font-size:11px;color:var(--faint);margin-top:2px}
-.ci-ac{flex:none;width:54px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
-.ci-hp{flex:none;display:flex;align-items:center;gap:5px}
-.ci-hpcur{width:50px;text-align:center;font-size:14px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:4px 2px;color:var(--txt);color-scheme:dark}
-.ci-hpcur:focus{border-color:var(--accent);outline:none}
-.ci-hpmax{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
-.ci-noh{color:var(--faint)}
-.ci-dmg{display:inline-flex;align-items:center;gap:3px;margin-left:4px}
-.ci-dmg .ci-delta{width:42px;text-align:center;font-size:12px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:4px 2px;color:var(--txt);color-scheme:dark}
-.ci-dmg button{width:26px;height:28px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);border-radius:5px;font-size:15px;font-weight:700;cursor:pointer;display:grid;place-items:center}
-.ci-dmg button:hover{border-color:var(--accent);color:var(--txt)}
-.combat-active{position:sticky;top:0}
+.ci-ac{flex:none;width:44px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.ci-hp{flex:none;width:150px;display:flex;flex-direction:column;gap:4px}
+.ci-noh{color:var(--faint);align-self:center}
+.hpbar{position:relative;height:6px;background:var(--in);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.hpbar-cur{position:absolute;left:0;top:0;height:100%;transition:width .15s}
+.hpbar-tmp{position:absolute;top:0;height:100%;background:#5a8bc0}
+.hpline{display:flex;align-items:center;gap:5px}
+.ci-hp .hp-dmg{width:48px;text-align:center;font-size:12px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark}
+.ci-hp .hp-dmg:focus{border-color:var(--accent);outline:none}
+.hp-nums{display:inline-flex;align-items:center;gap:2px}
+.ci-hp .hp-cur{width:42px;text-align:center;font-size:13px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+.ci-hp .hp-cur:focus{border-color:var(--accent);outline:none}
+.hp-sl{color:var(--faint);font-size:12px}
+.hp-max{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.hp-tmp{font-size:10px;font-weight:700;color:#7fa8d4;background:rgba(90,139,192,.15);border-radius:4px;padding:1px 4px}
+.ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
+.combat-active{position:sticky;top:0;border-left:1px solid var(--line);padding-left:20px}
 .ca-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:9px;padding:16px}
 .ca-card.enemy{border-left-color:#9c4a3f}.ca-card.ally{border-left-color:#4a78b0}.ca-card.pc{border-left-color:#3f7a52}.ca-card.setting{border-left-color:#7a6a3f}
 .ca-name{font-size:18px;font-weight:700}
@@ -948,7 +964,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
   .modal .mrow.picker-foot .btn{width:auto;justify-content:center}
   .picker-foot .pf-done{grid-column:1 / -1;margin-left:0}
 }
-@media (max-width:980px){.combat-grid{grid-template-columns:1fr}.combat-active{position:static}}
+@media (max-width:980px){.combat-grid{grid-template-columns:1fr}.combat-order{padding-right:0}.combat-active{position:static;border-left:none;padding-left:0}}
 
 .scene-body{padding:0 12px 8px}
 .scene-body .enc{margin-bottom:12px;background:var(--panel)}

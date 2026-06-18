@@ -870,8 +870,20 @@ function startCombat(a,e){
       ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
       status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]});});
   sortInitiative(order);
+  order.forEach(o=>{o.hpTemp=0;}); // temp HP pool, depleted before current (CT7b)
   e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
 }
+function partyHPOn(){return !state.settings.combat||state.settings.combat.partyHP!==false;}
+// Whether an instance's HP is tracked/shown (party HP can be disabled in Settings — CT7b).
+function hpTracked(it){return it.hpMax!=null&&!(it.kind==="pc"&&!partyHPOn());}
+// Apply a signed HP change: positive = damage (depletes temp HP first), negative = heal (current only).
+function changeHP(it,amt){if(it.hpMax==null)return;
+  if(amt>0){let d=amt;const t=it.hpTemp||0;if(t>0){const u=Math.min(t,d);it.hpTemp=t-u;d-=u;}it.hpCur=clamp(it.hpCur-d,0,it.hpMax);}
+  else it.hpCur=clamp(it.hpCur-amt,0,it.hpMax);}
+// Adjust max HP by a signed delta (e.g. Aid: +5 raises max AND current); reductions clamp current.
+function adjustMaxHP(it,delta){if(it.hpMax==null)return;it.hpMax=Math.max(1,it.hpMax+delta);if(delta>0)it.hpCur=Math.min(it.hpCur+delta,it.hpMax);else it.hpCur=Math.min(it.hpCur,it.hpMax);}
+const CI_STATUSES=["active","waiting","dead"];
+const CI_STATUS_LABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
   if(!e.combat||!e.combat.active){
@@ -882,6 +894,8 @@ function runCombat(a,e){
   saveAdv();switchView("combat");renderCombat();
 }
 function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
+// "Out" of the turn order for skip purposes: downed (0 HP) or explicitly marked dead (CT7b).
+function isOut(it){return isDown(it)||(it&&it.status==="dead");}
 // Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
 // ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
 // tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
@@ -890,7 +904,7 @@ function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.c
   do{ti+=dir;
     if(ti>=n){ti=0;round++;}else if(ti<0){ti=n-1;round=Math.max(1,round-1);}
     steps++;
-  }while(isDown(cb.order[ti])&&steps<=n);
+  }while(isOut(cb.order[ti])&&steps<=n);
   cb.turnIndex=ti;cb.round=round;
   if(dir>0){tickConditions(cb.order[ti]);resetRoundResources(cb.order[ti]);}
   saveAdv();renderCombat();}
@@ -946,31 +960,58 @@ function openCombatRowMenu(itId,anchor){
   const groupN=cb.order.filter(x=>x.groupId===it.groupId).length;
   let html=`<button class="popitem" data-act="note">${it.comment?"Edit note":"Add note"}</button>`;
   if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add condition</button>`;
+  if(it.hpMax!=null)html+=`<button class="popitem" data-act="temp">Set temp HP</button><button class="popitem" data-act="max">Adjust max HP</button>`;
   if(groupN>1)html+=`<button class="popitem" data-act="ungroup">Ungroup (separate initiative)</button>`;
   html+=`<button class="popitem danger" data-act="remove">Remove from combat</button>`;
   const p=showPopover(anchor,html);
-  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
+  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="temp")openHPNumEdit(itId,anchor,"temp");else if(k==="max")openHPNumEdit(itId,anchor,"max");else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
   p.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));
 }
+// Temp-HP set (absolute) / max-HP adjust (signed delta, e.g. +5 for Aid) via a small popover (CT7b).
+function openHPNumEdit(itId,anchor,kind){
+  const it=combatItem(itId);if(!it)return;const isMax=kind==="max";
+  const p=showPopover(anchor,`<div class="note-edit"><label class="cond-rl">${isMax?"Adjust max by (±)":"Temp HP"} <input type="number" class="popinput hpnum" value="${isMax?"":(it.hpTemp||0)}" placeholder="${isMax?"+5":"0"}" style="width:80px"></label><button class="btn primary sm hpnum-go" style="width:auto">${isMax?"Apply":"Set"}</button></div>`);
+  const inp=p.querySelector(".hpnum");inp.focus();inp.select();
+  const commit=()=>{const v=Number(inp.value||0);closePopover();const t=combatItem(itId);if(!t)return;if(isMax){if(v)adjustMaxHP(t,v);}else t.hpTemp=Math.max(0,v);saveAdv();renderCombat();};
+  p.querySelector(".hpnum-go").addEventListener("click",commit);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
+}
+// Cycle the combatant status active → waiting → dead → active (CT7b).
+function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
+// Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
+function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
+  const cur=cb.order[cb.turnIndex];it.init=Number(v)||0;sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
 function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;saveAdv();renderCombat();});}
+// Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
+// (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
+function hpCellHTML(it){
+  if(!hpTracked(it))return `<span class="ci-noh">—</span>`;
+  const max=it.hpMax,cur=it.hpCur,tmp=it.hpTemp||0,ratio=max?cur/max:0;
+  const col=ratio>.5?"#5fa873":ratio>.25?"var(--warn)":"var(--bad)";
+  const curPct=clamp(max?cur/max*100:0,0,100),tmpPct=clamp(max?tmp/max*100:0,0,100-curPct);
+  return `<div class="hpbar" title="${cur} / ${max} HP${tmp?` (+${tmp} temp)`:""}"><i class="hpbar-cur" style="width:${curPct}%;background:${col}"></i>${tmp?`<i class="hpbar-tmp" style="left:${curPct}%;width:${tmpPct}%"></i>`:""}</div>
+    <div class="hpline"><input class="hp-dmg" type="number" data-hpdmg="${it.id}" placeholder="dmg" title="Apply damage (negative = heal); temp HP absorbs first"><span class="hp-nums"><input class="hp-cur" type="number" data-hpcur="${it.id}" value="${cur}" title="Current HP"><span class="hp-sl">/</span><span class="hp-max">${max}</span></span>${tmp?`<span class="hp-tmp" title="Temporary HP">+${tmp}</span>`:""}</div>`;
+}
 function combatRowHTML(it,active){
-  const dead=it.hpMax!=null&&it.hpCur<=0;
-  const hp=it.hpMax==null?`<span class="ci-noh">—</span>`
-    :`<input class="ci-hpcur" type="number" data-hpcur="${it.id}" value="${it.hpCur}"><span class="ci-hpmax">/ ${it.hpMax}</span>
-      <span class="ci-dmg"><input type="number" class="ci-delta" data-delta="${it.id}" placeholder="0"><button data-hpd="${it.id}:dmg" title="Damage">−</button><button data-hpd="${it.id}:heal" title="Heal">+</button></span>`;
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${dead?" dead":""}" data-ci="${it.id}">
-    <div class="ci-init" title="Initiative">${it.init}</div>
-    <div class="ci-body"><div class="ci-name">${esc(it.name)}${dead?'<span class="ci-down">down</span>':""}</div>
+  const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
+  const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
+    :`<input class="ci-init-in" type="number" data-initset="${it.id}" value="${it.init}" title="Initiative — edit to re-sort">`;
+  const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
+    :`<button class="ci-status st-${status}" data-cistatus="${it.id}" title="${CI_STATUS_LABEL[status]} — click to change">${status==="dead"?"☠":status==="waiting"?"⏸":"●"}</button>`;
+  const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}" data-ci="${it.id}">
+    ${initEl}${statusEl}
+    <div class="ci-body"><div class="ci-name">${esc(it.name)}${badge}</div>
       ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
       ${condsHTML(it)}</div>
     ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
-    <div class="ci-hp">${hp}</div>
+    <div class="ci-hp">${hpCellHTML(it)}</div>
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
 function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
-  const hpline=it.hpMax!=null?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP</div>`:"";
+  const hpline=hpTracked(it)?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP${it.hpTemp?` <span class="ca-tmp">+${it.hpTemp} temp</span>`:""}</div>`:"";
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
   const hasSb=it.kind==="monster"&&monById(it.srcId);
@@ -1069,11 +1110,12 @@ function renderCombat(){
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
-  const setHP=(id,v)=>{const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;it.hpCur=clamp(v,0,it.hpMax);saveAdv();renderCombat();};
-  body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>setHP(el.dataset.hpcur,Number(el.value||0))));
-  body.querySelectorAll("[data-hpd]").forEach(el=>el.addEventListener("click",()=>{const[id,kind]=el.dataset.hpd.split(":");
-    const fld=body.querySelector(`[data-delta="${id}"]`),d=Math.abs(Number(fld&&fld.value||0));if(!d)return;
-    const it=cb.order.find(x=>x.id===id);if(!it||it.hpMax==null)return;setHP(id,it.hpCur+(kind==="dmg"?-d:d));}));
+  // Current HP edited directly.
+  body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpcur);if(!it||it.hpMax==null)return;it.hpCur=clamp(Number(el.value||0),0,it.hpMax);saveAdv();renderCombat();}));
+  // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
+  body.querySelectorAll("[data-hpdmg]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpdmg),amt=Number(el.value||0);if(!it||!amt){el.value="";return;}changeHP(it,amt);saveAdv();renderCombat();}));
+  body.querySelectorAll("[data-initset]").forEach(el=>el.addEventListener("change",()=>setCombatInit(el.dataset.initset,el.value)));
+  body.querySelectorAll("[data-cistatus]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();cycleCombatStatus(el.dataset.cistatus);}));
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
