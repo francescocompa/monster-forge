@@ -785,7 +785,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .combat-order{display:flex;flex-direction:column;gap:7px}
 .cbt-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:9px 12px}
 .cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
-.cbt-row.active{box-shadow:0 0 0 1px var(--accent),0 0 14px rgba(226,101,77,.25);border-color:var(--accent)}
+.cbt-row.active{box-shadow:0 0 0 1px rgba(226,101,77,.4);background:rgba(226,101,77,.05)}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
 .ci-init{flex:none;width:34px;height:34px;display:grid;place-items:center;font-size:16px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:7px;font-variant-numeric:tabular-nums}
@@ -912,6 +912,32 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .picker-foot .pf-btn{display:inline-flex;align-items:center;gap:6px}
 .picker-foot .pf-btn svg{width:13px;height:13px;flex:none}
 .picker-foot .pf-note{font-size:10px;color:var(--faint);font-weight:500}
+/* CT7-fixes — clickable title block, footer fill, reworked load popup */
+.ct-titlebtn{background:none;border:0;border-left:3px solid var(--accent);cursor:pointer;text-align:left;font:inherit;display:block;padding:2px 0 2px 12px}
+.ct-titlebtn:hover .ct-scene{color:var(--accent-soft)}
+.picker-foot .pf-btn{flex:1;justify-content:center}
+.picker-foot .pf-done{flex:none}
+.lc-ctrls{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.lc-ctrl{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.lc-ctrl select{background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;padding:4px 6px;font-size:12px}
+.lc-scene-wrap{margin:4px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.lc-scene-wrap.running{border-color:var(--accent)}
+.lc-scene-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--panel2);border:none;color:var(--txt);padding:8px 11px;cursor:pointer;font-size:13px;font-weight:600}
+.lc-scene-h:hover{background:var(--in)}
+.lc-chev{display:inline-flex;color:var(--faint);transition:transform .15s}
+.lc-scene-h.open .lc-chev{transform:rotate(90deg)}
+.lc-scene-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-scene-n{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.lc-scene-encs{padding:5px 8px 8px}
+.lc-scene-encs[hidden]{display:none}
+.lc-enc.running{border-color:var(--accent);background:rgba(226,101,77,.08)}
+.lc-enc-adv{font-size:10.5px;color:var(--faint);font-weight:400;margin-left:4px}
+.lc-adds{display:flex;gap:6px;margin-top:6px}
+.lc-add{flex:1;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:7px;padding:6px;font-size:11.5px;cursor:pointer}
+.lc-add:hover{border-color:var(--accent);color:var(--txt)}
+.lc-statgrp{margin-bottom:12px}
+.lc-stat-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;margin:6px 0 5px 2px}
+.lc-empty{font-size:11px;color:var(--faint);padding:4px 2px}
 @media (max-width:600px){
   .modal .mrow.picker-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .modal .mrow.picker-foot .btn{width:auto;justify-content:center}

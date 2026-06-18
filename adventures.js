@@ -761,28 +761,55 @@ function loadedCtx(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===
 function sceneEncs(a,e){return e.sceneId?a.encounters.filter(x=>x.sceneId===e.sceneId&&!x.archived):[];}
 // Load an encounter into the Combat tab without starting combat (used by the load popup + scene nav).
 function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistCombatCtx();switchView("combat");renderCombat();}
-// Load popup (CT5): adventure → scene → encounter tree; pick one to open it in the Combat tab.
+// Load popup (CT5, reworked CT7-fixes): grouped adventure→scene→encounter picker with a status filter,
+// collapsible scenes (chevron, collapsed by default; the running encounter's scene auto-expands), the
+// currently-loaded line highlighted, and inline create buttons.
 function openLoadCombat(){
-  const advs=state.adv.filter(a=>!a.archived);
-  const lcRow=(a,e)=>`<button class="lc-enc" data-lcpick="${a.id}:${e.id}"><span class="lc-enc-nm">${esc(encDName(e))}</span><span class="lc-enc-meta">${e.combat&&e.combat.active?'<span class="lc-active">● running</span>':""}${encStatusChipHTML(e)}<span class="lc-cnt">${e.combatants.filter(c=>c.type!=="event").length} grp</span></span></button>`;
-  let tree="";
-  advs.forEach(a=>{
-    const live=a.encounters.filter(e=>!e.archived);if(!live.length)return;
-    const liveScenes=(a.scenes||[]).filter(s=>!s.archived);
+  const st={group:"adventure",status:"all",exp:{}};
+  const isRunning=(a,e)=>combatCtx&&combatCtx.advId===a.id&&combatCtx.encId===e.id;
+  const matchStatus=e=>st.status==="all"||encStatus(e)===st.status;
+  // auto-expand the scene holding the currently-loaded encounter
+  if(combatCtx){const a=state.adv.find(x=>x.id===combatCtx.advId),e=a&&findEnc(a,combatCtx.encId);if(e&&e.sceneId)st.exp[e.sceneId]=true;}
+  const encRow=(a,e,withAdv)=>`<button class="lc-enc${isRunning(a,e)?" running":""}" data-lcpick="${a.id}:${e.id}">
+      <span class="lc-enc-nm">${esc(encDName(e))}${withAdv?` <span class="lc-enc-adv">${esc(advDName(a))}</span>`:""}</span>
+      <span class="lc-enc-meta">${isRunning(a,e)?'<span class="lc-active">● loaded</span>':""}${encStatusChipHTML(e)}</span>
+    </button>`;
+  const sceneBlock=(a,s,encs)=>{const open=!!st.exp[s.id],hasRun=encs.some(e=>isRunning(a,e));
+    return `<div class="lc-scene-wrap${hasRun?" running":""}">
+      <button class="lc-scene-h${open?" open":""}" data-lcscene="${s.id}"><span class="lc-chev">${CHEV_R}</span><span class="lc-scene-nm">${esc(sceneDName(s))}</span><span class="lc-scene-n">${encs.length}</span></button>
+      <div class="lc-scene-encs"${open?"":" hidden"}>${encs.map(e=>encRow(a,e)).join("")}</div></div>`;};
+  const advBlock=a=>{
+    const live=a.encounters.filter(e=>!e.archived&&matchStatus(e));
+    const liveScenes=(a.scenes||[]).filter(x=>!x.archived);
     let inner="";
-    liveScenes.forEach(s=>{const encs=live.filter(e=>e.sceneId===s.id);if(!encs.length)return;
-      inner+=`<div class="lc-scene">${esc(sceneDName(s))}</div>`+encs.map(e=>lcRow(a,e)).join("");});
-    const loose=live.filter(e=>!liveScenes.some(s=>s.id===e.sceneId));
-    inner+=loose.map(e=>lcRow(a,e)).join("");
-    if(inner)tree+=`<div class="lc-adv"><div class="lc-adv-h">${advDot(a.id,a.color)} ${esc(advDName(a))}</div>${inner}</div>`;
-  });
-  openModalRaw(`<h3>Load encounter</h3>
-    <div class="load-combat picker-scroll">${tree||'<div class="empty-state">No encounters yet — create one in Adventures.</div>'}</div>
-    <div class="mrow picker-foot"><button class="btn ghost sm" id="lcClose" style="width:auto;margin-left:auto">Cancel</button></div>`);
+    liveScenes.forEach(s=>{const encs=live.filter(e=>e.sceneId===s.id);if(encs.length)inner+=sceneBlock(a,s,encs);});
+    inner+=live.filter(e=>!liveScenes.some(s=>s.id===e.sceneId)).map(e=>encRow(a,e)).join("");
+    if(!inner&&st.status!=="all")return "";
+    return `<div class="lc-adv"><div class="lc-adv-h">${advDot(a.id,a.color)} ${esc(advDName(a))}</div>${inner||'<div class="lc-empty">No encounters.</div>'}
+      <div class="lc-adds"><button class="lc-add" data-lcnewenc="${a.id}">＋ Encounter</button><button class="lc-add" data-lcnewscene="${a.id}">＋ Scene</button></div></div>`;};
+  const statusBlock=()=>{let html="";
+    ENC_STATUSES.forEach(stat=>{if(st.status!=="all"&&st.status!==stat)return;
+      const rows=[];state.adv.filter(a=>!a.archived).forEach(a=>a.encounters.filter(e=>!e.archived&&encStatus(e)===stat).forEach(e=>rows.push(encRow(a,e,true))));
+      if(rows.length)html+=`<div class="lc-statgrp"><div class="lc-stat-h">${ENC_STATUS_LABEL[stat]}</div>${rows.join("")}</div>`;});
+    return html||'<div class="empty-state">No encounters match.</div>';};
+  const draw=()=>{const body=$("#lcBody");
+    if(st.group==="status")body.innerHTML=statusBlock();
+    else{const advs=state.adv.filter(a=>!a.archived).map(advBlock).filter(Boolean).join("");body.innerHTML=advs||'<div class="empty-state">No encounters yet — add one below.</div>';}
+    body.querySelectorAll("[data-lcpick]").forEach(b=>b.addEventListener("click",()=>{const[advId,encId]=b.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e){closeModal();loadCombatEncounter(a,e);}}));
+    body.querySelectorAll("[data-lcscene]").forEach(b=>b.addEventListener("click",()=>{st.exp[b.dataset.lcscene]=!st.exp[b.dataset.lcscene];draw();}));
+    body.querySelectorAll("[data-lcnewenc]").forEach(b=>b.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===b.dataset.lcnewenc);a.encounters.push(blankEncounter());saveAdv();draw();toast("Encounter added.");}));
+    body.querySelectorAll("[data-lcnewscene]").forEach(b=>b.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===b.dataset.lcnewscene);a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});saveAdv();draw();toast("Scene added.");}));};
+  openModalRaw(`<h3 class="modal-h-row"><span>Load encounter</span></h3>
+    <div class="lc-ctrls">
+      <label class="lc-ctrl">Group <select id="lcGroup"><option value="adventure">Adventure</option><option value="status">Status</option></select></label>
+      <label class="lc-ctrl">Status <select id="lcStatus"><option value="all">All</option>${ENC_STATUSES.map(s=>`<option value="${s}">${ENC_STATUS_LABEL[s]}</option>`).join("")}</select></label>
+    </div>
+    <div class="load-combat picker-scroll" id="lcBody"></div>
+    <div class="mrow picker-foot"><button class="btn primary sm" id="lcClose" style="width:auto;margin-left:auto">Close</button></div>`);
+  $("#lcGroup").addEventListener("change",ev=>{st.group=ev.target.value;draw();});
+  $("#lcStatus").addEventListener("change",ev=>{st.status=ev.target.value;draw();});
   $("#lcClose").addEventListener("click",closeModal);
-  document.querySelectorAll("[data-lcpick]").forEach(b=>b.addEventListener("click",()=>{
-    const[advId,encId]=b.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);
-    if(e){closeModal();loadCombatEncounter(a,e);}}));
+  draw();
 }
 function cFac(f){return f==="PC"?"pc":facClass(f);}
 // HP for a monster instance per the Combat setting (rolled from Hit Dice, else average / book HP).
@@ -974,12 +1001,11 @@ function combatHeaderHTML(a,e,sc,cb){
       <button class="ghost-chev" id="scNext"${idx>=sibs.length-1?" disabled":""} title="Next encounter" aria-label="Next encounter">${CHEV_R}</button>
     </div>`:"";
   const top=`<div class="ct-top">
-      <button class="adv-back" id="combatBack" title="Back to adventure" aria-label="Back to adventure">${CHEV_L}</button>
-      <div class="ct-titleblock" style="border-color:${advc}">
+      <button class="ct-titleblock ct-titlebtn" id="combatLoadTitle" style="border-color:${advc}" title="Load a different encounter">
         <div class="ct-adv">${esc(advDName(a))}</div>
         <div class="ct-scene">${esc(sc?sceneDName(sc):encDName(e))}</div>
-      </div>
-      <div class="ct-top-ctrls">${sel}<button class="btn ghost sm" id="combatLoadBtn" style="width:auto">Load other</button></div>
+      </button>
+      ${sel?`<div class="ct-top-ctrls">${sel}</div>`:""}
     </div>`;
   const notes=(e.notesOn&&e.notes)?`<div class="ct-enc-notes">${esc(e.notes)}</div>`:"";
   const turn=cb?`<div class="ct-turn"><span class="ct-round">Round ${cb.round}</span>
@@ -1021,12 +1047,11 @@ function renderCombat(){
       <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}</div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
-  $("#combatBack").addEventListener("click",()=>{state.selAdv=a.id;switchView("adventures");});
+  const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   const scPrev=$("#scPrev"),scNext=$("#scNext");
   if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
     if(scPrev&&idx>0)scPrev.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx-1]));
     if(scNext&&idx<sibs.length-1)scNext.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx+1]));}
-  const loadBtn=$("#combatLoadBtn");if(loadBtn)loadBtn.addEventListener("click",openLoadCombat);
   $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));

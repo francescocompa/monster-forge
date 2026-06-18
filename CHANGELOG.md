@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 87 — Combat Tracker v2 (CT7 fixes): header + load popup + footer
+- **Combat header:** dropped the back button and "Load other"; the **adventure/scene title is now the
+  control** — click it to open the load popup. Title aligns left.
+- **Reworked load popup:** a **Group** (Adventure / Status) and **Status** filter; scenes are
+  collapsible folders (chevron, collapsed by default — the running encounter's scene auto-expands) and
+  read distinctly from encounter rows; the **currently-loaded** encounter/scene is highlighted; the
+  "× grp" text is gone; per-adventure **＋ Encounter / ＋ Scene** buttons let you create on the spot.
+- **Add-combatant footer:** the four add buttons now stretch to fill the row evenly.
+- **Softer active-row highlight** in the initiative list (less accent glow).
+
 ## Batch 86 — Combat Tracker v2 (CT7): tab chrome + add-combatant polish
 - **Cleaner combat-tab header.** The breadcrumb is just "Combat" now (it's a top-level tab). The title
   block shows the **adventure over the scene** with a vertical adventure-colour bar; the encounter
