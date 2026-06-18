@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 83 — Bestiary FAB icons + encounter XP-bar threshold markers
+- **New-creature menu icons.** In the Bestiary "New" menu (and the Forge actions menu), *From chassis*
+  now uses a file-import icon and *Paste 5etools* a clipboard icon.
+- **XP-bar threshold markers.** The encounter budget bar shows fixed **Low / Moderate / High** markers
+  (High at the right end, Low/Moderate scaled to the High cap); the draggable target marker **snaps** to
+  them. Hover a marker for its XP; hover the draggable marker for the spent / on-target read-out. The
+  old "Spent … / target …" text line below the bar is gone.
+
 ## Batch 82 — Chip-field scrolling, really fixed (form-column cap + scroll fade)
 - **Condition-immunity / gear chip fields now actually scroll.** The real cause wasn't the field — the
   Forge form column was sized to its widest child (a bare `1fr` = `minmax(auto,1fr)`), so the nowrap chip
