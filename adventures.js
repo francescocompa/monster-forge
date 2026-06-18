@@ -36,7 +36,7 @@ function renderAdvList(){
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
   // this is the only way to reach an adventure's actions in the collapsed colour-card mode (B63).
-  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;advListView=false;state.selAdv=el.dataset.adv;renderAdvList();}));
+  box.querySelectorAll(".ai").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-advcolor],.menu-wrap"))return;advListView=false;state.selAdv=el.dataset.adv;closeAdvDrawer();renderAdvList();}));
   box.querySelectorAll(".ai").forEach(el=>el.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();const a=state.adv.find(x=>x.id===el.dataset.adv);if(a)openAdvCardMenu(el,a);}));
   box.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   box.querySelectorAll("[data-aim-dup]").forEach(el=>el.addEventListener("click",()=>{const src=state.adv.find(x=>x.id===el.dataset.aimDup);if(!src)return;const c=normalizeAdv(JSON.parse(JSON.stringify(src)));c.id=uid();c.name=advDName(src)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(src)+1,0,c);advListView=false;state.selAdv=c.id;saveAdv();renderAdvList();}));
@@ -108,6 +108,8 @@ function bindAdvDrag(box){
   });
 }
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
+function closeAdvDrawer(){const lay=$(".adv-layout");if(lay)lay.classList.remove("adv-drawer");}
+{const sc=$("#advScrim");if(sc)sc.addEventListener("click",closeAdvDrawer);}
 $("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);advListView=false;state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
 function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
@@ -151,7 +153,8 @@ function renderAdvDetail(){
   const bud=baseBudget(partyOf(a,null));
   const infoColl=advInfoCollapsed();
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
-    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Back to adventures" aria-label="Back to adventures"><svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="adv-info-toggle" id="advInfoToggle" title="${infoColl?"Show":"Hide"} adventure info" aria-label="Toggle adventure info"><span class="st-chev${infoColl?" closed":""}">${FS_CHEVRON}</span></button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
+    <div class="adv-detail-body">
+    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2><button class="adv-info-toggle" id="advInfoToggle" title="${infoColl?"Show":"Hide"} adventure info" aria-label="Toggle adventure info"><span class="st-chev${infoColl?" closed":""}">${FS_CHEVRON}</span></button></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
@@ -194,8 +197,11 @@ function renderAdvDetail(){
         <button class="danger" id="encClearAll">Clear all encounters</button>
       </div>
     </div>
-    <div id="archWrap"></div>`;
-  $("#advBack").addEventListener("click",()=>{advListView=true;renderAdvList();});
+    <div id="archWrap"></div>
+    </div>`;
+  // Narrow widths: the adventure list is an off-canvas drawer; this button slides it in/out over the
+  // detail (the main app rail is already collapsed to the burger here, so there's no sidebar conflict).
+  $("#advBack").addEventListener("click",()=>{const lay=$(".adv-layout");if(lay)lay.classList.toggle("adv-drawer");});
   $("#advInfoToggle").addEventListener("click",()=>{setAdvInfoCollapsed(!advInfoCollapsed());renderAdvDetail();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
@@ -412,9 +418,8 @@ function updateEncMeta(a,e){
   const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
-  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
-  const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
+  const f=root.querySelector(".budget .fill");if(f)f.style.width=pct+"%";
   const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(encTargetActive(e)?(bud[2]?encTargetVal(e,bud)/bud[2]*100:0):0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
   const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
@@ -422,7 +427,6 @@ function updateEncMeta(a,e){
 function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
-  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -451,7 +455,7 @@ function encHTML(a,e){
     <div class="budget">
       <div class="budget-top">
         <div class="bartrack">
-          <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+          <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
           <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
         </div>
         <span class="pill ${cls}">${label}</span>
@@ -694,7 +698,8 @@ function bindEncTarget(a,q){
 }
 function openBestiaryPicker(a,e){
   if(!e)return;
-  if(!state.lib.length){toast("No saved creatures yet — Forge one, or use Quick / Forge from the ⋯ menu.");return;}
+  // An empty bestiary still opens the picker — the footer (Forge / From chassis / Event / Quick) can add
+  // a combatant without any saved creatures, and the body shows an empty-bestiary hint.
   const ctrl=blankCtrl();ctrl.sort.key="name";
   const pool=()=>state.lib.map(m=>({m}));
   const desc={search:true,group:true,
@@ -721,7 +726,8 @@ function openBestiaryPicker(a,e){
   const cardOf=o=>pickerCardHTML(o,"＋ Add",false);
   function draw(){
     renderCtrlChips($("#bpChips"),ctrl,desc,draw);
-    renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
+    const emptyMsg=state.lib.length?"No creatures match these controls.":"Your bestiary is empty. Use <b>From chassis</b> to load a ready-made statblock, <b>Forge new</b> to build one, or add a <b>Quick</b> / <b>Event</b> combatant below.";
+    renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg,cap:300});
     $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>state.lib.find(m=>m.id===b.dataset.cardprev)));
     $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);afterCombatantAdded(a,e);toast("Added.");}));
   }
@@ -1058,6 +1064,8 @@ function resourcePipsHTML(it){
 function encStatusChipHTML(e){const st=encStatus(e);return `<span class="enc-status sm st-${st}">${ENC_STATUS_LABEL[st]}</span>`;}
 const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// The Adventures sidebar-tab glyph — reused on the narrow-width "open the adventure list as a drawer" button.
+const ADV_TAB_SVG='<svg viewBox="0 0 640 640" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M539.3 64.1C549.2 63.3 558.9 67.1 565.9 74.1C572.9 81.1 576.7 90.8 575.9 100.7C571.9 150 558.5 226.9 529.6 300.4C527.8 304.9 524.1 308.3 519.4 309.7L438.5 334C434.6 335.2 432 338.7 432 342.8C432 347.9 436.1 352 441.2 352L479.8 352C491.8 352 499.5 364.8 493.3 375.1C489.3 381.8 485 388.3 480.6 394.7C478.6 397.6 475.6 399.7 472.2 400.8L374.5 430C370.6 431.2 368 434.7 368 438.8C368 443.9 372.1 448 377.2 448L393.2 448C407.8 448 414.2 465.4 402 473.4C334 518.4 264.3 516.7 219.6 504.7C206.9 501.3 195.6 494.8 185.2 486.8L112 560C103.2 568.8 88.8 568.8 80 560C71.2 551.2 71.2 536.8 80 528L160 448L160.5 448.5C161.2 447.2 162.1 446 163.2 444.9L320 288C328.8 279.2 328.8 264.8 320 256C311.2 247.2 296.8 247.2 288 256L153.7 390.2C144.8 399.1 129.7 394.6 128.7 382C124.4 328.8 138 258.9 201.3 195.6C292.4 104.5 455.5 70.9 539.2 64.1z"/></svg>';
 // Combat-tab header (CT7): a title block (adventure over scene, adv-colour bar) with the encounter
 // selector (ghost chevrons) in line; then an encounter bar carrying the budget pill, notes, and — when
 // combat is live — the round counter + turn chevrons (right). Start/End live in the tab FAB.

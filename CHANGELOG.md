@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 91 — Feedback round: local seed data, empty-bestiary picker, XP-bar colours, adventure header
+- **Pre-filled local test data.** On `localhost` only, the app now seeds a realistic sandbox — a bestiary
+  (goblin, dire wolf, bandit captain, ogre, cult fanatic, young green dragon), two adventures with party
+  rosters, scenes, and encounters wired to those creatures — so the app and the Combat Tracker can be
+  exercised without touching real data. It coexists with any real data, never writes to the cloud bin
+  (`seed.js` sets a flag that makes `jbinSet` a no-op), and is skipped on the live site and in tests.
+- **Add combatant with an empty bestiary.** The "Add combatant" picker no longer errors when you have no
+  saved creatures — it opens with an empty-bestiary hint so you can load a chassis, Forge one, or add a
+  Quick / Event combatant straight from the footer.
+- **XP budget bar restyled.** The spent bar is now a single subtle bronze that blends with the palette
+  (risk still reads from the difficulty pill), and the draggable target marker turns **blue with a focus
+  ring while you drag it** so it no longer reads as the "high/over" threshold colour.
+- **Adventure header polish.** The adventure-colour band now spans the **full width** of the column (the
+  scrollbar starts below it, not beside it), and the **collapse chevron moved to after the title**.
+- **Narrow-width adventure drawer.** On small screens the adventure list is now an off-canvas drawer: the
+  button by the title shows the **Adventures glyph** and slides the list in as an overlay over the detail
+  (tap a scrim or an adventure to close), instead of swapping the whole view.
+
 ## Batch 90 — Combat Tracker v2 (CT7b finish): add combatants from initiative + live-update
 - **Add combatants from the initiative tracker** — a "＋ Add combatant" button at the bottom of the
   order opens the usual picker (Bestiary / Quick / Chassis / Forge / Event) and injects the new

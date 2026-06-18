@@ -144,6 +144,8 @@ async function jbinGet(k){
 }
 // returns true on a confirmed write, false otherwise
 async function jbinSet(k,val){
+  // Dev seed sandbox (seed.js): never write the local test data to the real cloud bin.
+  if(typeof window!=="undefined"&&window.__MF_SEED)return true;
   const id=getBinId(k);
   // JSONBin rejects an empty bin ("Bin cannot be blank", HTTP 400), so an empty library/adventure
   // list can't be PUT. Treat "empty" as "delete the bin": loadAll reads a missing bin (noBin) as

@@ -6,6 +6,7 @@
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   --r:7px;
   --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
+  --budfill:#8a6a3e; /* muted bronze for the XP-spent bar — blends with the warm palette; risk reads from the pill */
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -644,6 +645,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .empty-state{text-align:center;color:var(--faint);padding:48px 20px;font-style:italic}
 
 .adv-layout{display:grid;grid-template-columns:var(--advw,236px) 1fr;height:100%;overflow:hidden;width:100%;position:relative}
+.adv-scrim{display:none}
 .adv-list{border-right:1px solid var(--line);overflow-y:auto;padding:14px 11px}
 .adv-list #newAdv{width:100%;margin-bottom:12px}
 .adv-list #newAdv .ico{display:inline-flex}
@@ -695,10 +697,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-list .ai .ai-kbtn{background:none;border:1px solid transparent;color:var(--faint);border-radius:5px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:15px;line-height:1;cursor:pointer}
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}
-.adv-detail{overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
+.adv-detail{display:flex;flex-direction:column;overflow:hidden;padding:0}
+/* The colour band lives ABOVE the scroller so it spans the full width (the scrollbar gutter starts
+   below it, not beside it); everything else scrolls inside .adv-detail-body. */
+.adv-detail-body{flex:1;min-height:0;overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
+.adv-detail>.empty-state{margin:24px}
 /* Adventure-colour topbar (B81): a thin bar spanning the column from the top, replacing the colour
    dot — click it to change the colour. Default accent gradient; per-adventure colour set inline. */
-.adv-topbar{height:4px;margin:-20px -24px 16px;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer}
+.adv-topbar{height:4px;margin:0;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer;flex:none}
 /* Chevron by the title collapses the whole adventure info block (party bar + notes + roster). */
 .adv-info-toggle{background:none;border:1px solid transparent;color:var(--faint);border-radius:6px;width:26px;height:26px;flex:none;display:grid;place-items:center;padding:0;cursor:pointer}
 .adv-info-toggle:hover{border-color:var(--line);color:var(--txt)}
@@ -1000,9 +1006,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget{margin:8px 0}
 .budget .bartrack{position:relative;padding:4px 0}
 .budget .bar{height:10px;background:var(--in);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.budget .fill{height:100%;transition:width .2s}
+.budget .fill{height:100%;transition:width .2s;background:var(--budfill)}
 .budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
-.budget .tgt:hover,.budget .tgt.drag{background:var(--accent);transform:scale(1.15)}
+.budget .tgt:hover{background:var(--accent);transform:scale(1.15)}
+.budget .tgt.drag{background:var(--info);transform:scale(1.2);box-shadow:0 0 0 4px color-mix(in srgb,var(--info) 30%,transparent),0 1px 3px rgba(0,0,0,.6)}
 /* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
 .budget .tgt.inactive{background:var(--faint);opacity:.45;box-shadow:none} /* same size as placed (B59) */
 .budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
@@ -1380,7 +1387,12 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
   .adv-list{display:flex;flex-direction:column}
   .adv-list #newAdv{order:10;margin-top:10px;margin-bottom:0}
   .adv-layout:not(.detail-open) .adv-detail{display:none}
-  .adv-layout.detail-open .adv-list{display:none}
+  /* With a detail open, the adventure list becomes an off-canvas drawer that the #advBack button
+     (now the Adventures glyph) slides in over the detail. The main rail is already a burger here. */
+  .adv-layout.detail-open .adv-list{position:absolute;left:0;top:0;bottom:0;width:min(300px,82%);z-index:46;
+    transform:translateX(-103%);transition:transform .22s ease;background:var(--panel);box-shadow:var(--shadow-pop)}
+  .adv-layout.detail-open.adv-drawer .adv-list{transform:none}
+  .adv-layout.detail-open.adv-drawer .adv-scrim{display:block;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:45}
   .adv-resizer{display:none}
   .adv-back{display:grid;flex:none}
   /* batch bar: anchor to the left edge and grow rightward instead of centering (which can overflow off-screen) */

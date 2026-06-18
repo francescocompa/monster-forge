@@ -285,6 +285,7 @@ function wrapStepper(input,step,min){
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
   await loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
+  if(typeof maybeApplySeed==="function")maybeApplySeed(); // dev-only local sandbox data (seed.js)
   buildMonsterDatalists();
   // Restore the creature that was being edited + the last open tab across reloads (B78).
   loadMonster(readForgeDraft()||blankMonster());
