@@ -381,7 +381,7 @@ select::-ms-expand{display:none}
 .modal-back{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;width:26px;height:26px;display:grid;place-items:center;padding:0;border-radius:5px;flex:none;transition:border-color .12s,color .12s}
 .modal-back:hover{border-color:var(--accent);color:var(--txt)}
 /* Last-edited encounter highlight. */
-.enc.focused{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 14px rgba(226,101,77,.18)}
+.enc.focused{box-shadow:0 0 0 1px rgba(226,101,77,.35);background:rgba(226,101,77,.04)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
@@ -915,7 +915,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT7-fixes — clickable title block, footer fill, reworked load popup */
 .ct-titlebtn{background:none;border:0;border-left:3px solid var(--accent);cursor:pointer;text-align:left;font:inherit;display:block;padding:2px 0 2px 12px}
 .ct-titlebtn:hover .ct-scene{color:var(--accent-soft)}
-.picker-foot .pf-btn{flex:1;justify-content:center}
+.picker-foot .pf-btn{flex:1;justify-content:center;white-space:nowrap}
+/* CT7c — load popup: clickable status chip, dimmed folder icon + empty caption next to scenes */
+.lc-enc .enc-status{cursor:pointer}
+.lc-enc .enc-status:hover{border-color:var(--accent);color:var(--txt)}
+.lc-scene-h .lc-folder{width:12px;height:12px;color:var(--faint);flex:none}
+.lc-scene-empty{font-size:10px;color:var(--faint);font-style:italic}
 .picker-foot .pf-done{flex:none}
 .lc-ctrls{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
 .lc-ctrl{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}

@@ -256,16 +256,16 @@ function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:
 // Effective lifecycle status: archived (the operative flag) wins, then a running combat reads "active",
 // else the stored status. (CT7)
 function encStatus(e){return e.archived?"archived":(e.combat&&e.combat.active?"active":(e.status||"draft"));}
-function setEncStatus(a,e,st){
-  if(st==="archived"){e.archived=true;}
-  else{e.archived=false;e.status=st;}
-  saveAdv();renderAdvDetail();
-}
-function openEncStatusMenu(a,e,anchor){
+function applyEncStatus(e,st){if(st==="archived"){e.archived=true;}else{e.archived=false;e.status=st;}}
+function setEncStatus(a,e,st){applyEncStatus(e,st);saveAdv();renderAdvDetail();}
+// `after` (optional) overrides the default re-render — the load popup passes its own redraw (CT7c).
+function openEncStatusMenu(a,e,anchor,after){
   if(!e)return;const cur=encStatus(e);
   const p=showPopover(anchor,ENC_STATUS_MENU.map(s=>`<button class="popitem${s===cur?" on":""}" data-es="${s}">${ENC_STATUS_LABEL[s]}</button>`).join(""));
-  p.querySelectorAll("[data-es]").forEach(b=>b.addEventListener("click",()=>{closePopover();setEncStatus(a,e,b.dataset.es);}));
+  p.querySelectorAll("[data-es]").forEach(b=>b.addEventListener("click",()=>{closePopover();if(after){applyEncStatus(e,b.dataset.es);saveAdv();after();}else setEncStatus(a,e,b.dataset.es);}));
 }
+// Small dimmed folder glyph next to scene names in the load popup (CT7c).
+const FOLDER_ICON='<svg class="lc-folder" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z"/></svg>';
 // Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
 function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}
 function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}
@@ -765,49 +765,62 @@ function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistComba
 // collapsible scenes (chevron, collapsed by default; the running encounter's scene auto-expands), the
 // currently-loaded line highlighted, and inline create buttons.
 function openLoadCombat(){
-  const st={group:"adventure",status:"all",exp:{}};
+  const ctrl=blankCtrl();ctrl.group="adventure";ctrl.sort={key:"name",dir:1};
+  const exp={}; // expanded scene ids (scenes collapsed by default)
   const isRunning=(a,e)=>combatCtx&&combatCtx.advId===a.id&&combatCtx.encId===e.id;
-  const matchStatus=e=>st.status==="all"||encStatus(e)===st.status;
-  // auto-expand the scene holding the currently-loaded encounter
-  if(combatCtx){const a=state.adv.find(x=>x.id===combatCtx.advId),e=a&&findEnc(a,combatCtx.encId);if(e&&e.sceneId)st.exp[e.sceneId]=true;}
-  const encRow=(a,e,withAdv)=>`<button class="lc-enc${isRunning(a,e)?" running":""}" data-lcpick="${a.id}:${e.id}">
+  if(combatCtx){const a=state.adv.find(x=>x.id===combatCtx.advId),e=a&&findEnc(a,combatCtx.encId);if(e&&e.sceneId)exp[e.sceneId]=true;}
+  const recOf=(a,e)=>({m:{name:encDName(e),type:""},a,e});
+  const allRecs=()=>{const out=[];state.adv.filter(a=>!a.archived).forEach(a=>a.encounters.filter(e=>!e.archived).forEach(e=>out.push(recOf(a,e))));return out;};
+  const desc={icons:["search","filter","sort","group"],defaultSortKey:"name",
+    params:[
+      {key:"status",label:"Status",fmt:v=>ENC_STATUS_LABEL[v]||v,get:r=>encStatus(r.e),values:()=>{const s=new Set();state.adv.forEach(a=>{if(a.archived)return;a.encounters.forEach(e=>{if(!e.archived)s.add(encStatus(e));});});return ENC_STATUSES.filter(x=>s.has(x));}},
+      {key:"adventure",label:"Adventure",get:r=>advDName(r.a),values:()=>state.adv.filter(a=>!a.archived&&a.encounters.some(e=>!e.archived)).map(a=>advDName(a))},
+    ],
+    sortKeys:[
+      {key:"name",label:"Name",cmp:(x,y)=>encDName(x.e).localeCompare(encDName(y.e))},
+      {key:"created",label:"Creation",cmp:(x,y)=>String(x.e.id).localeCompare(String(y.e.id))},
+    ]};
+  const encRow=(a,e,withAdv)=>`<div class="lc-enc${isRunning(a,e)?" running":""}" data-lcpick="${a.id}:${e.id}" role="button" tabindex="0">
       <span class="lc-enc-nm">${esc(encDName(e))}${withAdv?` <span class="lc-enc-adv">${esc(advDName(a))}</span>`:""}</span>
-      <span class="lc-enc-meta">${isRunning(a,e)?'<span class="lc-active">● loaded</span>':""}${encStatusChipHTML(e)}</span>
-    </button>`;
-  const sceneBlock=(a,s,encs)=>{const open=!!st.exp[s.id],hasRun=encs.some(e=>isRunning(a,e));
+      <span class="lc-enc-meta">${isRunning(a,e)?'<span class="lc-active">● loaded</span>':""}<span class="enc-status sm st-${encStatus(e)}" data-lcstatus="${a.id}:${e.id}" title="Change status">${ENC_STATUS_LABEL[encStatus(e)]}</span></span>
+    </div>`;
+  const sceneBlock=(a,s,sRecs,isEmpty)=>{const open=!!exp[s.id],hasRun=sRecs.some(r=>isRunning(a,r.e));
     return `<div class="lc-scene-wrap${hasRun?" running":""}">
-      <button class="lc-scene-h${open?" open":""}" data-lcscene="${s.id}"><span class="lc-chev">${CHEV_R}</span><span class="lc-scene-nm">${esc(sceneDName(s))}</span><span class="lc-scene-n">${encs.length}</span></button>
-      <div class="lc-scene-encs"${open?"":" hidden"}>${encs.map(e=>encRow(a,e)).join("")}</div></div>`;};
-  const advBlock=a=>{
-    const live=a.encounters.filter(e=>!e.archived&&matchStatus(e));
-    const liveScenes=(a.scenes||[]).filter(x=>!x.archived);
-    let inner="";
-    liveScenes.forEach(s=>{const encs=live.filter(e=>e.sceneId===s.id);if(encs.length)inner+=sceneBlock(a,s,encs);});
-    inner+=live.filter(e=>!liveScenes.some(s=>s.id===e.sceneId)).map(e=>encRow(a,e)).join("");
-    if(!inner&&st.status!=="all")return "";
+      <button class="lc-scene-h${open?" open":""}" data-lcscene="${s.id}"><span class="lc-chev">${CHEV_R}</span>${FOLDER_ICON}<span class="lc-scene-nm">${esc(sceneDName(s))}</span>${isEmpty?'<span class="lc-scene-empty">empty</span>':`<span class="lc-scene-n">${sRecs.length}</span>`}</button>
+      <div class="lc-scene-encs"${open?"":" hidden"}>${sRecs.map(r=>encRow(a,r.e)).join("")||'<div class="lc-empty">No encounters.</div>'}</div></div>`;};
+  const advBlock=(a,aRecs)=>{
+    const liveScenes=(a.scenes||[]).filter(x=>!x.archived);let inner="";
+    liveScenes.forEach(s=>{const sRecs=aRecs.filter(r=>r.e.sceneId===s.id),total=a.encounters.filter(e=>!e.archived&&e.sceneId===s.id).length;
+      if(!sRecs.length&&total>0)return; // has encounters but all filtered out → hide
+      inner+=sceneBlock(a,s,sRecs,total===0);});
+    inner+=aRecs.filter(r=>!liveScenes.some(s=>s.id===r.e.sceneId)).map(r=>encRow(a,r.e)).join("");
+    const filtering=ctrl.q||Object.keys(ctrl.filters).length;
+    if(!inner&&filtering)return "";
     return `<div class="lc-adv"><div class="lc-adv-h">${advDot(a.id,a.color)} ${esc(advDName(a))}</div>${inner||'<div class="lc-empty">No encounters.</div>'}
       <div class="lc-adds"><button class="lc-add" data-lcnewenc="${a.id}">＋ Encounter</button><button class="lc-add" data-lcnewscene="${a.id}">＋ Scene</button></div></div>`;};
-  const statusBlock=()=>{let html="";
-    ENC_STATUSES.forEach(stat=>{if(st.status!=="all"&&st.status!==stat)return;
-      const rows=[];state.adv.filter(a=>!a.archived).forEach(a=>a.encounters.filter(e=>!e.archived&&encStatus(e)===stat).forEach(e=>rows.push(encRow(a,e,true))));
-      if(rows.length)html+=`<div class="lc-statgrp"><div class="lc-stat-h">${ENC_STATUS_LABEL[stat]}</div>${rows.join("")}</div>`;});
-    return html||'<div class="empty-state">No encounters match.</div>';};
-  const draw=()=>{const body=$("#lcBody");
-    if(st.group==="status")body.innerHTML=statusBlock();
-    else{const advs=state.adv.filter(a=>!a.archived).map(advBlock).filter(Boolean).join("");body.innerHTML=advs||'<div class="empty-state">No encounters yet — add one below.</div>';}
-    body.querySelectorAll("[data-lcpick]").forEach(b=>b.addEventListener("click",()=>{const[advId,encId]=b.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e){closeModal();loadCombatEncounter(a,e);}}));
-    body.querySelectorAll("[data-lcscene]").forEach(b=>b.addEventListener("click",()=>{st.exp[b.dataset.lcscene]=!st.exp[b.dataset.lcscene];draw();}));
-    body.querySelectorAll("[data-lcnewenc]").forEach(b=>b.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===b.dataset.lcnewenc);a.encounters.push(blankEncounter());saveAdv();draw();toast("Encounter added.");}));
-    body.querySelectorAll("[data-lcnewscene]").forEach(b=>b.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===b.dataset.lcnewscene);a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});saveAdv();draw();toast("Scene added.");}));};
+  const draw=()=>{
+    renderCtrlChips($("#lcChips"),ctrl,desc,draw);
+    const recs=ctrlApply(allRecs(),ctrl,desc),body=$("#lcBody");
+    if(ctrl.group==="adventure"){
+      const byAdv=new Map();recs.forEach(r=>{(byAdv.get(r.a.id)||byAdv.set(r.a.id,[]).get(r.a.id)).push(r);});
+      let html="";state.adv.filter(a=>!a.archived).forEach(a=>{html+=advBlock(a,byAdv.get(a.id)||[]);});
+      body.innerHTML=html||'<div class="empty-state">No encounters yet — add one below.</div>';
+    }else if(ctrl.group==="status"){
+      let html="";ENC_STATUSES.forEach(stat=>{const rs=recs.filter(r=>encStatus(r.e)===stat);if(rs.length)html+=`<div class="lc-statgrp"><div class="lc-stat-h">${ENC_STATUS_LABEL[stat]}</div>${rs.map(r=>encRow(r.a,r.e,true)).join("")}</div>`;});
+      body.innerHTML=html||'<div class="empty-state">No encounters match.</div>';
+    }else body.innerHTML=recs.length?recs.map(r=>encRow(r.a,r.e,true)).join(""):'<div class="empty-state">No encounters match.</div>';
+    body.querySelectorAll("[data-lcpick]").forEach(el=>el.addEventListener("click",()=>{const[advId,encId]=el.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e){closeModal();loadCombatEncounter(a,e);}}));
+    body.querySelectorAll("[data-lcstatus]").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();const[advId,encId]=el.dataset.lcstatus.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e)openEncStatusMenu(a,e,el,draw);}));
+    body.querySelectorAll("[data-lcscene]").forEach(el=>el.addEventListener("click",()=>{exp[el.dataset.lcscene]=!exp[el.dataset.lcscene];draw();}));
+    body.querySelectorAll("[data-lcnewenc]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewenc);a.encounters.push(blankEncounter());saveAdv();draw();toast("Encounter added.");}));
+    body.querySelectorAll("[data-lcnewscene]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewscene);a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});saveAdv();draw();}));
+  };
   openModalRaw(`<h3 class="modal-h-row"><span>Load encounter</span></h3>
-    <div class="lc-ctrls">
-      <label class="lc-ctrl">Group <select id="lcGroup"><option value="adventure">Adventure</option><option value="status">Status</option></select></label>
-      <label class="lc-ctrl">Status <select id="lcStatus"><option value="all">All</option>${ENC_STATUSES.map(s=>`<option value="${s}">${ENC_STATUS_LABEL[s]}</option>`).join("")}</select></label>
-    </div>
+    <div class="ctrl-icons" id="lcCtrlIcons"></div>
+    <div class="ctrl-chips" id="lcChips"></div>
     <div class="load-combat picker-scroll" id="lcBody"></div>
     <div class="mrow picker-foot"><button class="btn primary sm" id="lcClose" style="width:auto;margin-left:auto">Close</button></div>`);
-  $("#lcGroup").addEventListener("change",ev=>{st.group=ev.target.value;draw();});
-  $("#lcStatus").addEventListener("change",ev=>{st.status=ev.target.value;draw();});
+  bindCtrlIcons($("#lcCtrlIcons"),ctrl,desc,draw);
   $("#lcClose").addEventListener("click",closeModal);
   draw();
 }
