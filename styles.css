@@ -787,7 +787,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget{margin:8px 0}
 .budget .bartrack{position:relative;padding:4px 0}
 .budget .bar{height:10px;background:var(--in);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.budget .fill{height:100%;transition:width .2s}
+.budget .fill{height:100%;transition:width .2s;background:#6f7783}
 .budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
 .budget .tgt:hover,.budget .tgt.drag{background:var(--accent);transform:scale(1.15)}
 /* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
@@ -799,11 +799,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget .read{font-size:11px;margin-top:4px;color:var(--faint);font-weight:400;letter-spacing:.01em}
 .budget .read b{color:var(--dim);font-weight:600}
 /* Fixed Low/Mod/High threshold markers on the XP bar (snap targets for the draggable marker). */
-.budget .bud-mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:3px;height:14px;border-radius:2px;background:var(--faint);z-index:1;cursor:help}
+.budget .bud-mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;border:1.5px solid var(--in);background:var(--faint);z-index:1;cursor:help}
 .budget .bud-mark.bm-low{background:#5fa873}
 .budget .bud-mark.bm-mod{background:var(--warn)}
 .budget .bud-mark.bm-high{background:var(--bad)}
-.budget .bud-mark:hover{width:5px}
+.budget .bud-mark:hover{width:12px;height:12px}
 .bud-pop{font-size:11px;color:var(--txt);white-space:nowrap;font-variant-numeric:tabular-nums}
 .bud-pop b{color:var(--txt)}
 /* Menu-item leading icon (chassis / paste / etc.) */

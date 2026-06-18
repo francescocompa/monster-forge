@@ -370,9 +370,8 @@ function updateEncMeta(a,e){
   const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
-  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
-  const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=fill;}
+  const f=root.querySelector(".budget .fill");if(f)f.style.width=pct+"%"; // fill is neutral now (CT7c) — the pill conveys risk
   const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(encTargetActive(e)?(bud[2]?encTargetVal(e,bud)/bud[2]*100:0):0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
   const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
@@ -380,7 +379,6 @@ function updateEncMeta(a,e){
 function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
-  const fill=cls==="over"?"var(--bad)":cls==="high"?"var(--accent)":cls==="moderate"?"var(--warn)":"var(--ok)";
   const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -408,7 +406,7 @@ function encHTML(a,e){
     ${head}
     <div class="budget">
       <div class="bartrack">
-        <div class="bar"><div class="fill" style="width:${pct}%;background:${fill}"></div></div>
+        <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
         ${budMarksHTML(bud)}
         <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
       </div>
@@ -649,11 +647,16 @@ function bindEncTarget(a,q){
   q("[data-enctgt]").forEach(handle=>{
     const enc=handle.closest(".enc"),e=findEnc(a,enc.dataset.enctgt||handle.dataset.enctgt);if(!e)return;
     const track=handle.parentElement,tip=handle.querySelector(".tgt-tip");let dragging=false;
+    // Ring the draggable marker in a threshold's colour when it sits exactly on that threshold (CT7c).
+    const ring=()=>{const bud=encBudget(a,e),THR=[["#5fa873",bud[0]],["var(--warn)",bud[1]],["var(--bad)",bud[2]]];
+      const hit=encTargetActive(e)&&THR.find(t=>encTargetVal(e,bud)===t[1]);
+      handle.style.boxShadow=hit?`0 0 0 2px ${hit[0]}, 0 1px 3px rgba(0,0,0,.6)`:"";};
     const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
       let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
       // Snap to a Low/Mod/High threshold when the marker is dragged within ~3% of it.
       [bud[0],bud[1],bud[2]].forEach(thr=>{if(bud[2]&&Math.abs(frac-thr/bud[2])<0.03)val=thr;});
-      e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";updateEncMeta(a,e);};
+      e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";ring();updateEncMeta(a,e);};
+    ring();
     handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;closePopover();handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
     handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
     handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});

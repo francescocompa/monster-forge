@@ -4,6 +4,11 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 84 — XP-bar markers as circles + neutral fill
+- The encounter XP-bar Low/Mod/High threshold markers are now small **circles** instead of lines, and
+  the draggable target marker gets a **coloured ring** in the threshold's colour when it sits on one.
+- The **filled portion of the bar is now neutral grey** — the difficulty pill already communicates risk.
+
 ## Batch 83 — Bestiary FAB icons + encounter XP-bar threshold markers
 - **New-creature menu icons.** In the Bestiary "New" menu (and the Forge actions menu), *From chassis*
   now uses a file-import icon and *Paste 5etools* a clipboard icon.
