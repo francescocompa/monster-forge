@@ -6,7 +6,7 @@
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   --r:7px;
   --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
-  --budfill:#8a6a3e; /* muted bronze for the XP-spent bar — blends with the warm palette; risk reads from the pill */
+  --budfill:#39495c; /* XP-spent bar — neutral bluish slate from the bg family, lighter than the bar track; risk reads from the pill */
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -1390,8 +1390,9 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
   /* With a detail open, the adventure list becomes an off-canvas drawer that the #advBack button
      (now the Adventures glyph) slides in over the detail. The main rail is already a burger here. */
   .adv-layout.detail-open .adv-list{position:absolute;left:0;top:0;bottom:0;width:min(300px,82%);z-index:46;
-    transform:translateX(-103%);transition:transform .22s ease;background:var(--panel);box-shadow:var(--shadow-pop)}
-  .adv-layout.detail-open.adv-drawer .adv-list{transform:none}
+    transform:translateX(-103%);transition:transform .22s ease;background:var(--panel)}
+  /* shadow only while the drawer is open, so it doesn't bleed past the edge when parked off-canvas */
+  .adv-layout.detail-open.adv-drawer .adv-list{transform:none;box-shadow:var(--shadow-pop)}
   .adv-layout.detail-open.adv-drawer .adv-scrim{display:block;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:45}
   .adv-resizer{display:none}
   .adv-back{display:grid;flex:none}

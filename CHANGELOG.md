@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 92 — Feedback follow-ups: drawer shadow + XP-bar fill colour
+- **Narrow-width adventure drawer** no longer casts a shadow onto the detail when it's parked off-canvas
+  (closed) — the drop shadow now appears only while the drawer is open.
+- **XP budget bar fill** is now a neutral bluish slate from the background family (lighter than the bar
+  track) instead of the bronze, so it reads as a calm fill rather than a coloured one.
+
 ## Batch 91 — Feedback round: local seed data, empty-bestiary picker, XP-bar colours, adventure header
 - **Pre-filled local test data.** On `localhost` only, the app now seeds a realistic sandbox — a bestiary
   (goblin, dire wolf, bandit captain, ogre, cult fanatic, young green dragon), two adventures with party
