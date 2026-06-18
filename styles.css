@@ -793,7 +793,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .combat-order{display:flex;flex-direction:column;gap:7px;padding-right:20px}
 .cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px}
 .cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
-.cbt-row.active{box-shadow:0 0 0 1px rgba(226,101,77,.4);background:rgba(226,101,77,.05)}
+.cbt-row.active{box-shadow:0 0 0 1px rgba(255,255,255,.22);background:rgba(255,255,255,.055)}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
 .cbt-row.waiting{opacity:.82}
@@ -901,7 +901,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lc-enc:hover{border-color:var(--accent);background:var(--panel2)}
 .lc-enc-nm{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-enc-meta{display:flex;align-items:center;gap:8px;flex:none}
-.lc-active{font-size:10px;font-weight:700;color:#8fce9a}
 .lc-cnt{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
 /* CT7 — menu-item icon, budget pill on bar line, combat-tab header restructure, FAB, picker footer */
 .menu button .mi-ico{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
@@ -943,20 +942,23 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT7c — load popup: clickable status chip, dimmed folder icon + empty caption next to scenes */
 .lc-enc .enc-status{cursor:pointer}
 .lc-enc .enc-status:hover{border-color:var(--accent);color:var(--txt)}
-.lc-scene-h .lc-folder{width:12px;height:12px;color:var(--faint);flex:none}
-.lc-scene-empty{font-size:10px;color:var(--faint);font-style:italic}
+.lc-enc-l{display:flex;align-items:center;gap:7px;min-width:0}
+.lc-empty-cap{font-size:10px;color:var(--faint);font-style:italic;flex:none}
 .picker-foot .pf-done{flex:none}
 .lc-ctrls{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
 .lc-ctrl{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}
 .lc-ctrl select{background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;padding:4px 6px;font-size:12px}
 .lc-scene-wrap{margin:4px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
 .lc-scene-wrap.running{border-color:var(--accent)}
-.lc-scene-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--panel2);border:none;color:var(--txt);padding:8px 11px;cursor:pointer;font-size:13px;font-weight:600}
-.lc-scene-h:hover{background:var(--in)}
+.lc-scene-h{display:flex;align-items:center;background:var(--panel2);color:var(--txt);font-size:13px;font-weight:600}
+.lc-scene-tog{flex:none;display:grid;place-items:center;background:none;border:none;color:var(--faint);cursor:pointer;padding:8px 4px 8px 10px}
+.lc-scene-tog:hover{color:var(--txt)}
+.lc-scene-load{flex:1;min-width:0;display:flex;align-items:center;gap:7px;background:none;border:none;color:var(--txt);cursor:pointer;text-align:left;padding:8px 11px 8px 4px;font:inherit}
+.lc-scene-load:hover{background:var(--in)}
 .lc-chev{display:inline-flex;color:var(--faint);transition:transform .15s}
 .lc-scene-h.open .lc-chev{transform:rotate(90deg)}
-.lc-scene-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lc-scene-n{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.lc-scene-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-scene-n{margin-left:auto;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
 .lc-scene-encs{padding:5px 8px 8px}
 .lc-scene-encs[hidden]{display:none}
 .lc-enc.running{border-color:var(--accent);background:rgba(226,101,77,.08)}
@@ -1244,15 +1246,33 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ctrl-ico:hover{color:var(--txt);background:var(--panel2)}
 .ctrl-ico svg{display:block}
 .head-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.ctrl-chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.ctrl-chips:empty{display:none}
-.ctrl-chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
+/* Active-filter chips: a single right-aligned row in line with the filter icons; when they overflow
+   they scroll horizontally and fade out behind a gradient on the side nearest the icons (ov-l/ov-r
+   toggled by observeChipFade). Spacing under the row separates it from the records below. */
+.ctrl-chips{display:flex;flex-wrap:nowrap;gap:7px;align-items:center;overflow-x:auto;margin:8px 0 12px;scrollbar-width:none}
+.ctrl-chips::-webkit-scrollbar{display:none}
+.ctrl-chips:empty{display:none;margin:0}
+/* margin-left:auto right-aligns the chips when they fit, but collapses to 0 when they overflow so the
+   row stays left-packed and fully scrollable (avoids the flex-end + overflow clip bug). */
+.ctrl-chips>:first-child{margin-left:auto}
+.ctrl-chips.ov-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
+.ctrl-chips.ov-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px);mask-image:linear-gradient(to right,transparent,#000 26px)}
+.ctrl-chips.ov-l.ov-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
+/* Preset-manager toolbar keeps chips inline with its icons (left), so restore wrap there. */
+.lib-toolbar .ctrl-chips{margin:0;overflow:visible;flex-wrap:wrap}
+.lib-toolbar .ctrl-chips>:first-child{margin-left:0}
+/* Popups (load encounter / add combatant) put the icons and chips on one row: icons left, chips fill
+   the rest and hug the right, scrolling + fading near the icons when they overflow. */
+.ctrl-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ctrl-bar .ctrl-icons{flex:none}
+.ctrl-bar .ctrl-chips{flex:1;min-width:0;margin:0}
+.ctrl-chip{display:inline-flex;flex:none;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
 .ctrl-chip:hover{border-color:var(--accent-soft);color:var(--txt)}
 .ctrl-chip .ci{display:inline-flex;color:var(--faint)}
 .ctrl-chip .ci svg{width:12px;height:12px}
 .ctrl-chip.s{border-color:#5c4d24}.ctrl-chip.s .ci{color:var(--amber)}
 .ctrl-chip.g{border-color:#6e3329}.ctrl-chip.g .ci{color:var(--accent-soft)}
-.ctrl-clear{background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;padding:3px 6px;text-decoration:underline}
+.ctrl-clear{flex:none;background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;padding:3px 6px;text-decoration:underline}
 .ctrl-clear:hover{color:var(--txt)}
 .grp{margin-bottom:18px}
 .grp-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line)}

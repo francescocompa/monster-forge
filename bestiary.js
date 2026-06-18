@@ -69,6 +69,7 @@ function renderCtrlChips(host,ctrl,desc,onChange){
   host.querySelectorAll("[data-cx]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();chips[+b.dataset.cx].clear();onChange();}));
   host.querySelectorAll("[data-ci]").forEach(el=>el.addEventListener("click",e=>{if(e.target.closest("[data-cx]"))return;const c=chips[+el.dataset.ci];if(c.open)openCtrlMenu(c.open,el,ctrl,desc,onChange);}));
   const ca=host.querySelector("[data-clearall]");if(ca)ca.addEventListener("click",e=>{e.stopPropagation();Object.assign(ctrl,{q:"",filters:{},sort:{key:"name",dir:1},group:null});onChange();});
+  observeChipFade(host); // fade the chip row's overflow edge when it scrolls (shared helper, core.js)
 }
 // Generic engine: filter (AND across params, OR within), then sort.
 function ctrlApply(records,ctrl,desc){

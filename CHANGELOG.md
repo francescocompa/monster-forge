@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 93 — Combat Tracker v2 (CT7d): load-popup polish, filter-chip alignment, init-row tidy
+- **Load encounter popup.** Dropped the folder icon and the "● loaded" tag (the running encounter keeps
+  its highlight). A scene's **chevron** now toggles its encounters while clicking the **rest of the row
+  loads the scene** (its running encounter, else its first). Empty scenes **and** empty encounters show a
+  dimmed "empty" caption next to their name.
+- **Active-filter chips.** Across every filterable list the chips now sit in a single row **right-aligned
+  in line with the filter icons**; when they overflow they scroll horizontally and fade out behind a
+  gradient, with clearer spacing below the row. In the Load / Add-combatant popups the icons and chips
+  share one row.
+- **Initiative card.** The active combatant's highlight is a softer neutral lift (no longer the accent
+  colour), and untracked HP shows blank instead of an em-dash.
+- *(Fix)* Seed bestiary skills used the wrong shape, which threw when a seed creature was the active
+  combatant; corrected to the `[name, prof]` form.
+
 ## Batch 92 — Feedback follow-ups: drawer shadow + XP-bar fill colour
 - **Narrow-width adventure drawer** no longer casts a shadow onto the detail when it's parked off-canvas
   (closed) — the drop shadow now appears only while the drawer is open.

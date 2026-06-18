@@ -271,7 +271,6 @@ function openEncStatusMenu(a,e,anchor,after){
   p.querySelectorAll("[data-es]").forEach(b=>b.addEventListener("click",()=>{closePopover();if(after){applyEncStatus(e,b.dataset.es);saveAdv();after();}else setEncStatus(a,e,b.dataset.es);}));
 }
 // Small dimmed folder glyph next to scene names in the load popup (CT7c).
-const FOLDER_ICON='<svg class="lc-folder" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z"/></svg>';
 // Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
 function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});afterCombatantAdded(a,e);}
 function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});afterCombatantAdded(a,e);}
@@ -712,8 +711,7 @@ function openBestiaryPicker(a,e){
       {key:"cr",label:"CR",cmp:(x,y)=>(CR_NUM[x.m.cr]??0)-(CR_NUM[y.m.cr]??0)},
     ]};
   openModalRaw(`<h3 class="modal-h-row"><span>Add combatant</span><button class="cr-help" id="bpHelp" aria-label="About this picker">?</button></h3>
-    <div class="ctrl-icons" id="bpCtrlIcons"></div>
-    <div class="ctrl-chips" id="bpChips"></div>
+    <div class="ctrl-bar"><div class="ctrl-icons" id="bpCtrlIcons"></div><div class="ctrl-chips" id="bpChips"></div></div>
     <div id="bpBody" class="picker-scroll"></div>
     <div class="mrow picker-foot">
       <button class="btn ghost sm pf-btn" id="bpForge">${FORGE_ICON}<span>Forge new</span></button>
@@ -786,13 +784,19 @@ function openLoadCombat(){
       {key:"name",label:"Name",cmp:(x,y)=>encDName(x.e).localeCompare(encDName(y.e))},
       {key:"created",label:"Creation",cmp:(x,y)=>String(x.e.id).localeCompare(String(y.e.id))},
     ]};
-  const encRow=(a,e,withAdv)=>`<div class="lc-enc${isRunning(a,e)?" running":""}" data-lcpick="${a.id}:${e.id}" role="button" tabindex="0">
-      <span class="lc-enc-nm">${esc(encDName(e))}${withAdv?` <span class="lc-enc-adv">${esc(advDName(a))}</span>`:""}</span>
-      <span class="lc-enc-meta">${isRunning(a,e)?'<span class="lc-active">● loaded</span>':""}<span class="enc-status sm st-${encStatus(e)}" data-lcstatus="${a.id}:${e.id}" title="Change status">${ENC_STATUS_LABEL[encStatus(e)]}</span></span>
-    </div>`;
+  const encRow=(a,e,withAdv)=>{const empty=!(e.combatants&&e.combatants.length);
+    return `<div class="lc-enc${isRunning(a,e)?" running":""}" data-lcpick="${a.id}:${e.id}" role="button" tabindex="0">
+      <span class="lc-enc-l"><span class="lc-enc-nm">${esc(encDName(e))}${withAdv?` <span class="lc-enc-adv">${esc(advDName(a))}</span>`:""}</span>${empty?'<span class="lc-empty-cap">empty</span>':""}</span>
+      <span class="lc-enc-meta"><span class="enc-status sm st-${encStatus(e)}" data-lcstatus="${a.id}:${e.id}" title="Change status">${ENC_STATUS_LABEL[encStatus(e)]}</span></span>
+    </div>`;};
+  // Scene row: the chevron toggles the encounter list; clicking the rest loads the scene (its running
+  // encounter, else its first) into the Combat tab. An empty scene's name just expands (nothing to load).
   const sceneBlock=(a,s,sRecs,isEmpty)=>{const open=!!exp[s.id],hasRun=sRecs.some(r=>isRunning(a,r.e));
     return `<div class="lc-scene-wrap${hasRun?" running":""}">
-      <button class="lc-scene-h${open?" open":""}" data-lcscene="${s.id}"><span class="lc-chev">${CHEV_R}</span>${FOLDER_ICON}<span class="lc-scene-nm">${esc(sceneDName(s))}</span>${isEmpty?'<span class="lc-scene-empty">empty</span>':`<span class="lc-scene-n">${sRecs.length}</span>`}</button>
+      <div class="lc-scene-h${open?" open":""}">
+        <button class="lc-scene-tog" data-lcscene="${s.id}" title="${open?"Collapse":"Expand"} encounters" aria-label="Toggle encounters"><span class="lc-chev">${CHEV_R}</span></button>
+        <button class="lc-scene-load" data-lcsceneload="${s.id}" title="Load this scene"><span class="lc-scene-nm">${esc(sceneDName(s))}</span>${isEmpty?'<span class="lc-empty-cap">empty</span>':`<span class="lc-scene-n">${sRecs.length}</span>`}</button>
+      </div>
       <div class="lc-scene-encs"${open?"":" hidden"}>${sRecs.map(r=>encRow(a,r.e)).join("")||'<div class="lc-empty">No encounters.</div>'}</div></div>`;};
   const advBlock=(a,aRecs)=>{
     const liveScenes=(a.scenes||[]).filter(x=>!x.archived);let inner="";
@@ -818,12 +822,12 @@ function openLoadCombat(){
     body.querySelectorAll("[data-lcpick]").forEach(el=>el.addEventListener("click",()=>{const[advId,encId]=el.dataset.lcpick.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e){closeModal();loadCombatEncounter(a,e);}}));
     body.querySelectorAll("[data-lcstatus]").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();const[advId,encId]=el.dataset.lcstatus.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e)openEncStatusMenu(a,e,el,draw);}));
     body.querySelectorAll("[data-lcscene]").forEach(el=>el.addEventListener("click",()=>{exp[el.dataset.lcscene]=!exp[el.dataset.lcscene];draw();}));
+    body.querySelectorAll("[data-lcsceneload]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.lcsceneload,a=state.adv.find(x=>(x.scenes||[]).some(sc=>sc.id===sid));if(!a)return;const encs=a.encounters.filter(e=>e.sceneId===sid&&!e.archived),run=encs.find(e=>isRunning(a,e))||encs[0];if(run){closeModal();loadCombatEncounter(a,run);}else{exp[sid]=!exp[sid];draw();}}));
     body.querySelectorAll("[data-lcnewenc]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewenc);a.encounters.push(blankEncounter());saveAdv();draw();toast("Encounter added.");}));
     body.querySelectorAll("[data-lcnewscene]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewscene);a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});saveAdv();draw();}));
   };
   openModalRaw(`<h3 class="modal-h-row"><span>Load encounter</span></h3>
-    <div class="ctrl-icons" id="lcCtrlIcons"></div>
-    <div class="ctrl-chips" id="lcChips"></div>
+    <div class="ctrl-bar"><div class="ctrl-icons" id="lcCtrlIcons"></div><div class="ctrl-chips" id="lcChips"></div></div>
     <div class="load-combat picker-scroll" id="lcBody"></div>
     <div class="mrow picker-foot"><button class="btn primary sm" id="lcClose" style="width:auto;margin-left:auto">Close</button></div>`);
   bindCtrlIcons($("#lcCtrlIcons"),ctrl,desc,draw);
@@ -1007,7 +1011,7 @@ function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this 
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
 function hpCellHTML(it){
-  if(!hpTracked(it))return `<span class="ci-noh">—</span>`;
+  if(!hpTracked(it))return `<span class="ci-noh"></span>`;
   const max=it.hpMax,cur=it.hpCur,tmp=it.hpTemp||0,ratio=max?cur/max:0;
   const col=ratio>.5?"#5fa873":ratio>.25?"var(--warn)":"var(--bad)";
   const curPct=clamp(max?cur/max*100:0,0,100),tmpPct=clamp(max?tmp/max*100:0,0,100-curPct);
