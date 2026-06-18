@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 94 — Combat Tracker v2 (CT8): initiative filtering / sorting / grouping + manual drag-sort
+- **Combat toolbar.** Above the initiative list: **Group** (none / status / faction / statblock),
+  **Sort** (initiative / manual / name / status / HP remaining), and **Filter** (by status and faction).
+  Grouping/sorting/filtering are **view-only** — turns always advance in initiative order regardless of
+  how you've arranged the list to scan it.
+- **Drag to reorder.** Grab a card's handle to set a manual turn order (e.g. to resolve a tie or a held
+  action). If that pulls a card out of its initiative slot, a soft **"N out of order"** warning appears;
+  click it to **restore initiative order**. (A Move up / Move down fallback lives in each card's ⋯ menu.)
+- **Re-roll initiative** for everyone from the toolbar, and a new Settings option to start combat with
+  **rolled (1d20 + mod)** or **average (10 + mod)** initiative.
+
 ## Batch 93 — Combat Tracker v2 (CT7d): load-popup polish, filter-chip alignment, init-row tidy
 - **Load encounter popup.** Dropped the folder icon and the "● loaded" tag (the running encounter keeps
   its highlight). A scene's **chevron** now toggles its encounters while clicking the **rest of the row

@@ -791,6 +791,28 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
 .combat-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(360px,1.55fr);gap:0;align-items:start}
 .combat-order{display:flex;flex-direction:column;gap:7px;padding-right:20px}
+.combat-rows{display:flex;flex-direction:column;gap:7px}
+/* CT8 combat toolbar */
+.combat-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
+.ct-tool{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:4px 9px;font-size:11.5px;cursor:pointer;line-height:1}
+.ct-tool svg{width:13px;height:13px}
+.ct-tool:hover{border-color:var(--accent-soft);color:var(--txt)}
+.ct-tool.on{border-color:var(--accent);color:var(--txt)}
+.ct-tool-n{background:var(--accent);color:#fff;border-radius:9px;min-width:15px;height:15px;display:inline-grid;place-items:center;font-size:10px;padding:0 4px;font-variant-numeric:tabular-nums}
+.ct-rollall{margin-left:auto}
+.ct-oop{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:var(--warn);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;line-height:1}
+.ct-oop:hover{background:color-mix(in srgb,var(--warn) 26%,transparent)}
+.cbt-group{display:flex;flex-direction:column;gap:7px}
+.cbt-group:not(:first-child){margin-top:8px}
+.cbt-group-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;display:flex;align-items:center;gap:6px;padding:0 2px}
+.cbt-group-n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
+.cbt-grip{flex:none;align-self:stretch;display:grid;place-items:center;width:15px;color:var(--faint);cursor:grab;border-radius:4px;margin:-8px 0 -8px -2px}
+.cbt-grip:hover{color:var(--dim)}
+.cbt-grip:active{cursor:grabbing}
+.cbt-row.dragging{opacity:.45}
+.cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
+.cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
+.popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
 .cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px}
 .cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
 .cbt-row.active{box-shadow:0 0 0 1px rgba(255,255,255,.22);background:rgba(255,255,255,.055)}

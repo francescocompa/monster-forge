@@ -841,6 +841,9 @@ function rollMonsterHP(m){
   return Math.max(1,Number(m.hp||exprAvg(m.hpf||"1")||1));
 }
 function rollInit(mod){return rollFormula("1d20"+(mod>0?"+"+mod:mod<0?String(mod):"")).total;}
+// Initiative when combat starts: roll 1d20+mod, or take a static "average" (10+mod) per the Settings
+// option (CT8). The DM can re-roll everyone from the combat toolbar afterwards.
+function rollOrAvgInit(mod){return (state.settings.combat&&state.settings.combat.initMode==="average")?10+mod:rollInit(mod);}
 function sortInitiative(order){const tie=state.settings.combat.dexTiebreak;order.sort((x,y)=>(y.init-x.init)||(tie?((y.dex||0)-(x.dex||0)):0));}
 // Run fn with the global working monster M temporarily set to `m` (so the statblock builders +
 // colorizer, which read M, render an arbitrary creature). Restores M synchronously (CT4).
@@ -869,7 +872,7 @@ function detectResources(m){
 function combatantInstances(c){
   if(c.type==="event")return [{id:uid(),kind:"event",srcId:null,name:c.name||"Event",init:Number(c.init)||0,initMod:0,dex:0,ac:null,hpMax:null,hpCur:null,hpTemp:0,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]}];
   const m=c.type==="monster"?monOf(c):null,base=c.nickname||(m?m.name:(c.type==="quick"?"Combatant":"?"));
-  const im=m?initOf(m):0,gi=rollInit(im),count=Math.max(1,Number(c.count||1)),arr=[];
+  const im=m?initOf(m):0,gi=rollOrAvgInit(im),count=Math.max(1,Number(c.count||1)),arr=[];
   for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
     arr.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
       name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
@@ -877,7 +880,7 @@ function combatantInstances(c){
   return arr;
 }
 function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init);
-  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollInit(im),initMod:im,dex:0,
+  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,dex:0,
     ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
@@ -893,7 +896,7 @@ function syncCombatOrder(a,e){const cb=e.combat;if(!cb)return false;
   const have=new Set(cb.order.map(o=>o.groupId));let added=false;
   e.combatants.forEach(c=>{if(!have.has(c.id)){cb.order.push(...combatantInstances(c));added=true;}});
   a.party.forEach(p=>{if(!have.has("pc:"+p.id)){cb.order.push(pcInstance(p));added=true;}});
-  if(added){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
+  if(added&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   return added;
 }
 // Refresh after a combatant is added to an encounter — updates the adventures list and, if that
@@ -988,9 +991,11 @@ function openCombatRowMenu(itId,anchor){
   if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add condition</button>`;
   if(it.hpMax!=null)html+=`<button class="popitem" data-act="temp">Set temp HP</button><button class="popitem" data-act="max">Adjust max HP</button>`;
   if(groupN>1)html+=`<button class="popitem" data-act="ungroup">Ungroup (separate initiative)</button>`;
-  html+=`<button class="popitem danger" data-act="remove">Remove from combat</button>`;
+  // Manual reorder fallback (drag needs a pointer): only when the displayed order == the turn order.
+  if(combatDragOK(cb)){const idx=cb.order.findIndex(x=>x.id===itId);html+=`<div class="popsep"></div><button class="popitem" data-act="up"${idx<=0?" disabled":""}>Move up</button><button class="popitem" data-act="down"${idx>=cb.order.length-1?" disabled":""}>Move down</button>`;}
+  html+=`<div class="popsep"></div><button class="popitem danger" data-act="remove">Remove from combat</button>`;
   const p=showPopover(anchor,html);
-  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="temp")openHPNumEdit(itId,anchor,"temp");else if(k==="max")openHPNumEdit(itId,anchor,"max");else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
+  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="temp")openHPNumEdit(itId,anchor,"temp");else if(k==="max")openHPNumEdit(itId,anchor,"max");else if(k==="up")moveCombatant(itId,-1);else if(k==="down")moveCombatant(itId,1);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
   p.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));
 }
 // Temp-HP set (absolute) / max-HP adjust (signed delta, e.g. +5 for Aid) via a small popover (CT7b).
@@ -1006,7 +1011,11 @@ function openHPNumEdit(itId,anchor,kind){
 function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
 function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
-  const cur=cb.order[cb.turnIndex];it.init=Number(v)||0;sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
+  it.init=Number(v)||0;
+  // Re-sort on an init edit only in Initiative mode; in Manual mode the hand-set order is preserved
+  // (the edit may change the "out of order" count instead).
+  if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
+  saveAdv();renderCombat();}
 function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;saveAdv();renderCombat();});}
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
@@ -1018,14 +1027,140 @@ function hpCellHTML(it){
   return `<div class="hpbar" title="${cur} / ${max} HP${tmp?` (+${tmp} temp)`:""}"><i class="hpbar-cur" style="width:${curPct}%;background:${col}"></i>${tmp?`<i class="hpbar-tmp" style="left:${curPct}%;width:${tmpPct}%"></i>`:""}</div>
     <div class="hpline"><input class="hp-dmg" type="number" data-hpdmg="${it.id}" placeholder="dmg" title="Apply damage (negative = heal); temp HP absorbs first"><span class="hp-nums"><input class="hp-cur" type="number" data-hpcur="${it.id}" value="${cur}" title="Current HP"><span class="hp-sl">/</span><span class="hp-max">${max}</span></span>${tmp?`<span class="hp-tmp" title="Temporary HP">+${tmp}</span>`:""}</div>`;
 }
-function combatRowHTML(it,active){
+// ── CT8: combat view (group / sort / filter) + manual drag-sort ──────────────────────────────────
+// cb.order stays the canonical TURN order (advance/turnIndex always follow it). The toolbar's group/
+// sort/filter are DISPLAY-only scanning aids — turns never change because of them. The ONE thing that
+// reorders the actual turn order is a manual drag (→ sort:"manual"); if that pulls a card out of its
+// initiative slot, a soft "out of order" warning offers a one-click restore.
+const CV_SORTS=[["init","Initiative"],["manual","Manual"],["name","Name"],["status","Status"],["hp","HP remaining"]];
+const CV_GROUPS=[["","None"],["status","Status"],["faction","Faction"],["statblock","Statblock"]];
+const CI_STATUS_ORDER={active:0,waiting:1,down:2,dead:3};
+const CI_STATUS_GLABEL={active:"Active",waiting:"Waiting",down:"Down",dead:"Dead"};
+const GRIP_SVG='<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><circle cx="6" cy="4" r="1.25"/><circle cx="10" cy="4" r="1.25"/><circle cx="6" cy="8" r="1.25"/><circle cx="10" cy="8" r="1.25"/><circle cx="6" cy="12" r="1.25"/><circle cx="10" cy="12" r="1.25"/></svg>';
+function combatView(cb){if(!cb.view)cb.view={group:null,sort:"init",filter:{}};if(!cb.view.filter)cb.view.filter={};return cb.view;}
+function ciStatusKey(it){return it.status==="dead"?"dead":isDown(it)?"down":(it.status||"active");}
+function ciFactionLabel(f){return f==="PC"?"Party":f;}
+function hpRemainPct(it){return it.hpMax?it.hpCur/it.hpMax:1;}
+function combatSortFn(sort){
+  if(sort==="name")return (a,b)=>a.it.name.localeCompare(b.it.name);
+  if(sort==="status")return (a,b)=>(CI_STATUS_ORDER[ciStatusKey(a.it)]-CI_STATUS_ORDER[ciStatusKey(b.it)])||(b.it.init-a.it.init);
+  if(sort==="hp")return (a,b)=>hpRemainPct(a.it)-hpRemainPct(b.it)||(b.it.init-a.it.init);
+  return null; // init / manual keep the cb.order sequence
+}
+// Display rows: {it, idx} where idx is the position in cb.order (for the active highlight + drag).
+function combatRows(cb){
+  const v=combatView(cb);let rows=cb.order.map((it,idx)=>({it,idx}));
+  const fS=v.filter.status||[],fF=v.filter.faction||[];
+  if(fS.length)rows=rows.filter(r=>fS.includes(ciStatusKey(r.it)));
+  if(fF.length)rows=rows.filter(r=>fF.includes(r.it.faction));
+  const fn=combatSortFn(v.sort);if(fn)rows.sort(fn);
+  return rows;
+}
+// Drag (reorder the real turn order) is only allowed when the displayed order maps 1:1 to cb.order:
+// init/manual sort, no grouping, no active filter.
+function combatDragOK(cb){const v=combatView(cb);return (v.sort==="init"||v.sort==="manual")&&!v.group&&!((v.filter.status||[]).length)&&!((v.filter.faction||[]).length);}
+function combatGroupKey(it,g){
+  if(g==="status")return ciStatusKey(it);
+  if(g==="faction")return it.faction||"Neutral";
+  if(g==="statblock"){if(it.kind==="monster"){const m=monById(it.srcId);return m?m.name:it.name.replace(/\s+\d+$/,"");}return it.kind==="pc"?"Party":it.kind==="event"?"Events":(it.name||"Other");}
+  return "";
+}
+function combatGroupLabel(g,key){if(g==="status")return CI_STATUS_GLABEL[key]||key;if(g==="faction")return ciFactionLabel(key);return key;}
+// How many cards would have to move to restore initiative order = n − (longest run already in
+// non-increasing-init order). Ties (equal init) count as in-place, so re-ordering tied cards isn't
+// flagged. This reads as "1 out of place" for a single misplaced card, not "everything shifted".
+function initOutOfPlace(cb){const a=cb.order,n=a.length;if(n<2)return 0;
+  const dp=new Array(n).fill(1);let best=1;
+  for(let i=0;i<n;i++){for(let j=0;j<i;j++)if(a[j].init>=a[i].init&&dp[j]+1>dp[i])dp[i]=dp[j]+1;if(dp[i]>best)best=dp[i];}
+  return n-best;}
+function combatToolbarHTML(cb){
+  const v=combatView(cb);
+  const gL=(CV_GROUPS.find(([k])=>k===(v.group||""))||["","None"])[1];
+  const sL=(CV_SORTS.find(([k])=>k===v.sort)||["init","Initiative"])[1];
+  const nF=((v.filter.status||[]).length)+((v.filter.faction||[]).length);
+  const oop=initOutOfPlace(cb);
+  return `<div class="combat-toolbar">
+    <button class="ct-tool" data-cvtool="group" title="Group the list">${ICO_GROUP}<span>${esc(gL)}</span></button>
+    <button class="ct-tool" data-cvtool="sort" title="Sort the list">${ICO_SORT}<span>${esc(sL)}</span></button>
+    <button class="ct-tool${nF?" on":""}" data-cvtool="filter" title="Filter the list">${ICO_FILTER}${nF?`<span class="ct-tool-n">${nF}</span>`:""}</button>
+    <button class="ct-tool ct-rollall" id="combatRollAll" title="Re-roll initiative for everyone">↻ Roll</button>
+    ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order has been changed by hand and no longer matches initiative — click to restore initiative order">⚠ ${oop} out of order</button>`:""}
+  </div>`;
+}
+function combatOrderBodyHTML(cb){
+  const v=combatView(cb),rows=combatRows(cb),ti=cb.turnIndex,drag=combatDragOK(cb);
+  const rowH=r=>combatRowHTML(r.it,r.idx===ti,drag);
+  if(!rows.length)return `<div class="hint" style="padding:6px 2px">No combatants match the filter.</div>`;
+  if(!v.group)return rows.map(rowH).join("");
+  const groups=new Map();rows.forEach(r=>{const k=combatGroupKey(r.it,v.group);(groups.get(k)||groups.set(k,[]).get(k)).push(r);});
+  let keys=[...groups.keys()];
+  if(v.group==="status")keys.sort((a,b)=>(CI_STATUS_ORDER[a]??9)-(CI_STATUS_ORDER[b]??9));
+  else keys.sort((a,b)=>a.localeCompare(b));
+  return keys.map(k=>`<div class="cbt-group"><div class="cbt-group-h">${esc(combatGroupLabel(v.group,k))} <span class="cbt-group-n">${groups.get(k).length}</span></div>${groups.get(k).map(rowH).join("")}</div>`).join("");
+}
+function openCombatViewMenu(tool,anchor){
+  const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,v=combatView(cb);
+  if(tool==="group"){
+    const p=showPopover(anchor,CV_GROUPS.map(([k,l])=>`<button class="popitem popcheck${(v.group||"")===k?" on":""}" data-g="${k}"><span class="ck">${(v.group||"")===k?"●":""}</span>${l}</button>`).join(""));
+    p.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();v.group=b.dataset.g||null;saveAdv();closePopover();renderCombat();}));
+    return;}
+  if(tool==="sort"){
+    const p=showPopover(anchor,CV_SORTS.map(([k,l])=>`<button class="popitem popcheck${v.sort===k?" on":""}" data-s="${k}"><span class="ck">${v.sort===k?"●":""}</span>${l}</button>`).join(""));
+    p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();closePopover();setCombatSort(b.dataset.s);}));
+    return;}
+  // filter: status + faction value toggles; re-render then reopen so several can be toggled in a row.
+  const stOpts=[["active","Active"],["waiting","Waiting"],["down","Down"],["dead","Dead"]];
+  const present=new Set(cb.order.map(it=>it.faction));
+  const facOpts=["PC","Enemy","Ally","Neutral"].filter(f=>present.has(f)).map(f=>[f,ciFactionLabel(f)]);
+  const fs=v.filter.status||[],ff=v.filter.faction||[];
+  const sec=(label,opts,sel,attr)=>`<div class="popgrp-h">${label}</div>`+opts.map(([k,l])=>`<button class="popitem popcheck${sel.includes(k)?" on":""}" data-${attr}="${k}"><span class="ck">${sel.includes(k)?"✓":""}</span>${l}</button>`).join("");
+  const clr=(fs.length||ff.length)?`<div class="popsep"></div><button class="popitem" data-fclear>Clear filters</button>`:"";
+  const p=showPopover(anchor,sec("Status",stOpts,fs,"fst")+`<div class="popsep"></div>`+sec("Faction",facOpts,ff,"ffac")+clr);
+  const reopen=()=>{const a2=document.querySelector('#combatBody [data-cvtool="filter"]');if(a2)openCombatViewMenu("filter",a2);};
+  p.querySelectorAll("[data-fst]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();toggleCombatFilter("status",b.dataset.fst);reopen();}));
+  p.querySelectorAll("[data-ffac]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();toggleCombatFilter("faction",b.dataset.ffac);reopen();}));
+  const c=p.querySelector("[data-fclear]");if(c)c.addEventListener("click",e=>{e.stopPropagation();v.filter={};saveAdv();closePopover();renderCombat();});
+}
+function setCombatSort(s){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,v=combatView(cb);v.sort=s;
+  if(s==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
+  saveAdv();renderCombat();}
+function toggleCombatFilter(kind,val){const ctx=combatOf();if(!ctx)return;const v=combatView(ctx.e.combat);const cur=v.filter[kind]||(v.filter[kind]=[]);const i=cur.indexOf(val);if(i>=0)cur.splice(i,1);else cur.push(val);if(!cur.length)delete v.filter[kind];saveAdv();renderCombat();}
+function restoreInitOrder(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative order restored.");}
+// Re-roll initiative for every combatant (identical-monster groups share one roll), then re-sort.
+function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
+  cb.order.forEach(it=>{const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollOrAvgInit(it.initMod||0));it.init=byGroup.get(g);});
+  sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative re-rolled.");}
+// Drag a card's grip to reorder the real turn order (→ manual sort); keeps whose turn it is.
+function reorderCombat(dragId,targetId,after){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
+  if(dragId===targetId)return;const cur=cb.order[cb.turnIndex];
+  const from=cb.order.findIndex(x=>x.id===dragId);if(from<0)return;const moved=cb.order.splice(from,1)[0];
+  let to=cb.order.findIndex(x=>x.id===targetId);if(to<0)cb.order.push(moved);else{if(after)to++;cb.order.splice(to,0,moved);}
+  combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
+function moveCombatant(itId,dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId),j=i+dir;
+  if(i<0||j<0||j>=cb.order.length)return;const cur=cb.order[cb.turnIndex];
+  const[m]=cb.order.splice(i,1);cb.order.splice(j,0,m);combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
+function bindCombatDrag(host){
+  if(!host)return;let dragId=null;
+  const clearMarks=()=>host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));
+  host.querySelectorAll('.cbt-grip[draggable="true"]').forEach(g=>{
+    g.addEventListener("dragstart",e=>{const row=g.closest(".cbt-row");dragId=row.dataset.ci;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId);}catch(_){}row.classList.add("dragging");});
+    g.addEventListener("dragend",()=>{dragId=null;clearMarks();});
+  });
+  host.querySelectorAll(".cbt-row").forEach(row=>{
+    row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
+    row.addEventListener("dragleave",()=>row.classList.remove("drop-before","drop-after"));
+    row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombat(dragId,row.dataset.ci,after);});
+  });
+}
+function combatRowHTML(it,active,drag){
   const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
     :`<input class="ci-init-in" type="number" data-initset="${it.id}" value="${it.init}" title="Initiative — edit to re-sort">`;
   const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
     :`<button class="ci-status st-${status}" data-cistatus="${it.id}" title="${CI_STATUS_LABEL[status]} — click to change">${status==="dead"?"☠":status==="waiting"?"⏸":"●"}</button>`;
   const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}" data-ci="${it.id}">
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${drag?" dragrow":""}" data-ci="${it.id}">
+    ${drag?`<span class="cbt-grip" draggable="true" title="Drag to reorder">${GRIP_SVG}</span>`:""}
     ${initEl}${statusEl}
     <div class="ci-body"><div class="ci-name">${esc(it.name)}${badge}</div>
       ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
@@ -1128,7 +1263,7 @@ function renderCombat(){
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
     <div class="combat-grid">
-      <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}<button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
+      <div class="combat-order">${combatToolbarHTML(cb)}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
@@ -1141,6 +1276,11 @@ function renderCombat(){
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
+  // CT8 toolbar: group / sort / filter popovers, roll-all, restore-order, and drag-to-reorder.
+  $$("#combatBody [data-cvtool]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openCombatViewMenu(b.dataset.cvtool,b);}));
+  {const ra=$("#combatRollAll");if(ra)ra.addEventListener("click",rollAllInit);}
+  {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
+  if(combatDragOK(cb))bindCombatDrag($("#combatRows"));
   // Current HP edited directly.
   body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpcur);if(!it||it.hpMax==null)return;it.hpCur=clamp(Number(el.value||0),0,it.hpMax);saveAdv();renderCombat();}));
   // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
