@@ -1089,10 +1089,20 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget .tgt.inactive{background:var(--faint);opacity:.45;box-shadow:none} /* same size as placed (B59) */
 .budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
 .budget .tgt .tgt-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--in);border:1px solid var(--line);color:var(--txt);font-size:10px;padding:2px 6px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-variant-numeric:tabular-nums}
-.budget .tgt:hover .tgt-tip,.budget .tgt.drag .tgt-tip{opacity:1}
+.budget .tgt.drag .tgt-tip{opacity:1}
 .budget .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px}
 .budget .read{font-size:11px;margin-top:4px;color:var(--faint);font-weight:400;letter-spacing:.01em}
 .budget .read b{color:var(--dim);font-weight:600}
+/* Fixed Low/Mod/High threshold markers on the XP bar (snap targets for the draggable marker). */
+.budget .bud-mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:3px;height:14px;border-radius:2px;background:var(--faint);z-index:1;cursor:help}
+.budget .bud-mark.bm-low{background:#5fa873}
+.budget .bud-mark.bm-mod{background:var(--warn)}
+.budget .bud-mark.bm-high{background:var(--bad)}
+.budget .bud-mark:hover{width:5px}
+.bud-pop{font-size:11px;color:var(--txt);white-space:nowrap;font-variant-numeric:tabular-nums}
+.bud-pop b{color:var(--txt)}
+/* Menu-item leading icon (chassis / paste / etc.) */
+.menu button .mi-ico{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
 .pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;flex:none}
 .pill.low{background:rgba(95,168,115,.18);color:#8fce9a;border:1px solid #2f5e3a}
 .pill.moderate{background:rgba(217,169,65,.18);color:var(--amber-soft);border:1px solid #5c4d24}

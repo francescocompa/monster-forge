@@ -400,6 +400,12 @@ function renderEncList(a){
 }
 // The XP target is OFF until the DM drags the marker. While inactive it parks at the low-end of the
 // budget, renders dimmed, and the target/delta read-out is hidden (e.target stays null).
+// Fixed Low/Moderate/High threshold markers on the XP bar (High pinned to the right end; Low/Mod scaled
+// to the High cap). Each carries its XP for a hover popover. The draggable target marker snaps to these.
+function budMarksHTML(bud){
+  const m=(cls,lbl,xp)=>{const pct=bud[2]?clamp(xp/bud[2]*100,0,100):0;return `<div class="bud-mark ${cls}" style="left:${pct}%" data-budtip="${lbl} · ${xp.toLocaleString()} XP"></div>`;};
+  return m("bm-low","Low",bud[0])+m("bm-mod","Moderate",bud[1])+m("bm-high","High",bud[2]);
+}
 function encTargetActive(e){return e.target!=null;}
 function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
 function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
@@ -455,12 +461,11 @@ function encHTML(a,e){
       <div class="budget-top">
         <div class="bartrack">
           <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+          ${budMarksHTML(bud)}
           <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
         </div>
         <span class="pill ${cls}">${label}</span>
       </div>
-      <div class="ticks"><span>Low ${bud[0].toLocaleString()}</span><span>Mod ${bud[1].toLocaleString()}</span><span>High ${bud[2].toLocaleString()}</span></div>
-      <div class="read">${encReadHTML(a,e,bud,spent)}</div>
     </div>
     <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
     ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
@@ -689,10 +694,19 @@ function bindEncTarget(a,q){
     const track=handle.parentElement,tip=handle.querySelector(".tgt-tip");let dragging=false;
     const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
       let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
+      // Snap to a Low/Mod/High threshold when the marker is dragged within ~3% of it.
+      [bud[0],bud[1],bud[2]].forEach(thr=>{if(bud[2]&&Math.abs(frac-thr/bud[2])<0.03)val=thr;});
       e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";updateEncMeta(a,e);};
-    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
+    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;closePopover();handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
     handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
     handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});
+    // Hover the draggable marker → spent / on-target comment (replaces the old text read-out).
+    handle.addEventListener("mouseenter",()=>{if(!dragging)tailPopover(handle,`<div class="bud-pop">${encReadHTML(a,e,encBudget(a,e),encSpent(e))}</div>`);});
+    handle.addEventListener("mouseleave",()=>{if(!dragging)closePopover();});
+    // Hover a fixed threshold marker → the XP it represents.
+    track.querySelectorAll("[data-budtip]").forEach(mk=>{
+      mk.addEventListener("mouseenter",()=>tailPopover(mk,`<div class="bud-pop">${esc(mk.dataset.budtip)}</div>`));
+      mk.addEventListener("mouseleave",()=>closePopover());});
   });
 }
 function openBestiaryPicker(a,e){
