@@ -267,8 +267,8 @@ function openEncStatusMenu(a,e,anchor,after){
 // Small dimmed folder glyph next to scene names in the load popup (CT7c).
 const FOLDER_ICON='<svg class="lc-folder" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z"/></svg>';
 // Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
-function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});saveAdv();renderAdvDetail();}
-function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});saveAdv();renderAdvDetail();}
+function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});afterCombatantAdded(a,e);}
+function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});afterCombatantAdded(a,e);}
 function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
 // Display name: an empty (untitled) item shows its default label everywhere except its own input,
 // which keeps the placeholder so there's nothing to clear (B66).
@@ -723,7 +723,7 @@ function openBestiaryPicker(a,e){
     renderCtrlChips($("#bpChips"),ctrl,desc,draw);
     renderRecords($("#bpBody"),ctrlApply(pool(),ctrl,desc),ctrl,desc,{cardOf,emptyMsg:"No creatures match these controls.",cap:300});
     $("#bpBody").querySelectorAll("[data-cardprev]").forEach(b=>bindPreviewHover(b,()=>state.lib.find(m=>m.id===b.dataset.cardprev)));
-    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);saveAdv();renderEncList(a);toast("Added.");}));
+    $("#bpBody").querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{a._focusEnc=e.id;addMonsterCombatant(e,b.dataset.pick);afterCombatantAdded(a,e);toast("Added.");}));
   }
   bindCtrlIcons($("#bpCtrlIcons"),ctrl,desc,draw);
   draw();
@@ -854,25 +854,41 @@ function detectResources(m){
 }
 // Build the ordered instances and roll initiative. count:N → N HP-separate rows sharing one rolled
 // initiative (groupId = the combatant entry). PCs roll d20 + their roster initiative modifier.
+// Build the order instance(s) for one encounter combatant entry (event = 1, monster/quick = its count;
+// identical monsters share one rolled initiative via groupId = the combatant entry id).
+function combatantInstances(c){
+  if(c.type==="event")return [{id:uid(),kind:"event",srcId:null,name:c.name||"Event",init:Number(c.init)||0,initMod:0,dex:0,ac:null,hpMax:null,hpCur:null,hpTemp:0,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]}];
+  const m=c.type==="monster"?monOf(c):null,base=c.nickname||(m?m.name:(c.type==="quick"?"Combatant":"?"));
+  const im=m?initOf(m):0,gi=rollInit(im),count=Math.max(1,Number(c.count||1)),arr=[];
+  for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
+    arr.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
+      name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
+      ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,hpTemp:0,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:m?detectResources(m):[]});}
+  return arr;
+}
+function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init);
+  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollInit(im),initMod:im,dex:0,
+    ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
+    hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
   const order=[];
-  e.combatants.forEach(c=>{
-    if(c.type==="event"){order.push({id:uid(),kind:"event",srcId:null,name:c.name||"Event",init:Number(c.init)||0,initMod:0,dex:0,ac:null,hpMax:null,hpCur:null,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]});return;}
-    const m=c.type==="monster"?monOf(c):null,base=c.nickname||(m?m.name:(c.type==="quick"?"Combatant":"?"));
-    const im=m?initOf(m):0,gi=rollInit(im),count=Math.max(1,Number(c.count||1));
-    for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
-      order.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
-        name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
-        ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:m?detectResources(m):[]});}
-  });
-  a.party.forEach(p=>{const im=p.init===""||p.init==null?0:Number(p.init);
-    order.push({id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollInit(im),initMod:im,dex:0,
-      ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
-      status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]});});
+  e.combatants.forEach(c=>order.push(...combatantInstances(c)));
+  a.party.forEach(p=>order.push(pcInstance(p)));
   sortInitiative(order);
-  order.forEach(o=>{o.hpTemp=0;}); // temp HP pool, depleted before current (CT7b)
   e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
 }
+// Live-update (CT7b note 4): pull any encounter combatant / party member not yet in the order into the
+// running combat (rolling init/HP), re-sorting while keeping whose turn it is. Returns true if changed.
+function syncCombatOrder(a,e){const cb=e.combat;if(!cb)return false;
+  const have=new Set(cb.order.map(o=>o.groupId));let added=false;
+  e.combatants.forEach(c=>{if(!have.has(c.id)){cb.order.push(...combatantInstances(c));added=true;}});
+  a.party.forEach(p=>{if(!have.has("pc:"+p.id)){cb.order.push(pcInstance(p));added=true;}});
+  if(added){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
+  return added;
+}
+// Refresh after a combatant is added to an encounter — updates the adventures list and, if that
+// encounter's combat is live, syncs the order + re-renders the tracker.
+function afterCombatantAdded(a,e){saveAdv();if(e.combat&&e.combat.active){syncCombatOrder(a,e);renderCombat();}renderEncList(a);}
 function partyHPOn(){return !state.settings.combat||state.settings.combat.partyHP!==false;}
 // Whether an instance's HP is tracked/shown (party HP can be disabled in Settings — CT7b).
 function hpTracked(it){return it.hpMax!=null&&!(it.kind==="pc"&&!partyHPOn());}
@@ -1090,7 +1106,9 @@ function renderCombat(){
       <button class="btn primary" id="combatLoad" style="width:auto">Load encounter</button>
     </div>`;
     $("#combatLoad").addEventListener("click",openLoadCombat);return;}
-  const {a,e}=ctx,cb=e.combat,cur=cb?cb.order[cb.turnIndex]:null,sc=sceneOf(a,e.sceneId);
+  const {a,e}=ctx,cb=e.combat,sc=sceneOf(a,e.sceneId);
+  if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
+  const cur=cb?cb.order[cb.turnIndex]:null;
   // Attribute rolls made from the active statblock to this combatant (CT4).
   combatRollSrc=(cb&&cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
   setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
@@ -1098,7 +1116,7 @@ function renderCombat(){
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
     <div class="combat-grid">
-      <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}</div>
+      <div class="combat-order">${cb.order.map((it,i)=>combatRowHTML(it,i===cb.turnIndex)).join("")||`<div class="hint">No combatants.</div>`}<button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
@@ -1107,6 +1125,7 @@ function renderCombat(){
     if(scPrev&&idx>0)scPrev.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx-1]));
     if(scNext&&idx<sibs.length-1)scNext.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx+1]));}
   $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
+  const addBtn=$("#combatAddBtn");if(addBtn)addBtn.addEventListener("click",()=>openBestiaryPicker(a,e));
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));

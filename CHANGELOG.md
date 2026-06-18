@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 90 — Combat Tracker v2 (CT7b finish): add combatants from initiative + live-update
+- **Add combatants from the initiative tracker** — a "＋ Add combatant" button at the bottom of the
+  order opens the usual picker (Bestiary / Quick / Chassis / Forge / Event) and injects the new
+  combatant straight into the running order (rolling its initiative + HP).
+- **Live-update.** Adding a combatant or party member to a running encounter (from anywhere) now flows
+  into the live initiative order automatically, re-sorted while keeping whose turn it is.
+
 ## Batch 89 — Combat Tracker v2 (CT7b core): initiative card + HP tracker redesign
 - **Rebalanced combat view** — the initiative list is narrower and the active statblock/trackers panel
   wider, separated by a Forge-style divider.

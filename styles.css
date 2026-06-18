@@ -819,6 +819,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hp-max{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
 .hp-tmp{font-size:10px;font-weight:700;color:#7fa8d4;background:rgba(90,139,192,.15);border-radius:4px;padding:1px 4px}
 .ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
+.cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
+.cbt-add:hover{border-color:var(--accent);color:var(--txt)}
 .combat-active{position:sticky;top:0;border-left:1px solid var(--line);padding-left:20px}
 .ca-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:9px;padding:16px}
 .ca-card.enemy{border-left-color:#9c4a3f}.ca-card.ally{border-left-color:#4a78b0}.ca-card.pc{border-left-color:#3f7a52}.ca-card.setting{border-left-color:#7a6a3f}
