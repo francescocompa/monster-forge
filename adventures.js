@@ -1073,20 +1073,6 @@ function initOutOfPlace(cb){const a=cb.order,n=a.length;if(n<2)return 0;
   const dp=new Array(n).fill(1);let best=1;
   for(let i=0;i<n;i++){for(let j=0;j<i;j++)if(a[j].init>=a[i].init&&dp[j]+1>dp[i])dp[i]=dp[j]+1;if(dp[i]>best)best=dp[i];}
   return n-best;}
-function combatToolbarHTML(cb){
-  const v=combatView(cb);
-  const gL=(CV_GROUPS.find(([k])=>k===(v.group||""))||["","None"])[1];
-  const sL=(CV_SORTS.find(([k])=>k===v.sort)||["init","Initiative"])[1];
-  const nF=((v.filter.status||[]).length)+((v.filter.faction||[]).length);
-  const oop=initOutOfPlace(cb);
-  return `<div class="combat-toolbar">
-    <button class="ct-tool" data-cvtool="group" title="Group the list">${ICO_GROUP}<span>${esc(gL)}</span></button>
-    <button class="ct-tool" data-cvtool="sort" title="Sort the list">${ICO_SORT}<span>${esc(sL)}</span></button>
-    <button class="ct-tool${nF?" on":""}" data-cvtool="filter" title="Filter the list">${ICO_FILTER}${nF?`<span class="ct-tool-n">${nF}</span>`:""}</button>
-    <button class="ct-tool ct-rollall" id="combatRollAll" title="Re-roll initiative for everyone">↻ Roll</button>
-    ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order has been changed by hand and no longer matches initiative — click to restore initiative order">⚠ ${oop} out of order</button>`:""}
-  </div>`;
-}
 function combatOrderBodyHTML(cb){
   const v=combatView(cb),rows=combatRows(cb),ti=cb.turnIndex,drag=combatDragOK(cb);
   const rowH=r=>combatRowHTML(r.it,r.idx===ti,drag);
@@ -1116,7 +1102,7 @@ function openCombatViewMenu(tool,anchor){
   const sec=(label,opts,sel,attr)=>`<div class="popgrp-h">${label}</div>`+opts.map(([k,l])=>`<button class="popitem popcheck${sel.includes(k)?" on":""}" data-${attr}="${k}"><span class="ck">${sel.includes(k)?"✓":""}</span>${l}</button>`).join("");
   const clr=(fs.length||ff.length)?`<div class="popsep"></div><button class="popitem" data-fclear>Clear filters</button>`:"";
   const p=showPopover(anchor,sec("Status",stOpts,fs,"fst")+`<div class="popsep"></div>`+sec("Faction",facOpts,ff,"ffac")+clr);
-  const reopen=()=>{const a2=document.querySelector('#combatBody [data-cvtool="filter"]');if(a2)openCombatViewMenu("filter",a2);};
+  const reopen=()=>{const a2=document.querySelector('#combatTools');if(a2)openCombatViewMenu("filter",a2);};
   p.querySelectorAll("[data-fst]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();toggleCombatFilter("status",b.dataset.fst);reopen();}));
   p.querySelectorAll("[data-ffac]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();toggleCombatFilter("faction",b.dataset.ffac);reopen();}));
   const c=p.querySelector("[data-fclear]");if(c)c.addEventListener("click",e=>{e.stopPropagation();v.filter={};saveAdv();closePopover();renderCombat();});
@@ -1170,27 +1156,45 @@ function combatRowHTML(it,active,drag){
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
+// Best attack-roll bonus for the quick-ref chip: use explicit attack-mode entries when present, else
+// fall back to PB + the better physical mod (the typical weapon attack). Approximate for spellcasters.
+function combatAtkBonus(m){const pb=pbForCR(m.cr);let best=null;
+  [].concat(m.actions||[],m.bonus||[],(m.legend&&m.legend.items)||[]).forEach(en=>{if(en&&en.mode==="attack"){const b=(en.atk!==""&&en.atk!=null)?Number(en.atk):pb+mod(m[en.ability||"str"]);if(best==null||b>best)best=b;}});
+  return best!=null?best:pb+Math.max(mod(m.str),mod(m.dex));}
+function combatMainSave(m){if(!m.saves||!m.saves.length)return null;const pb=pbForCR(m.cr);let best=null,ab=null;
+  m.saves.forEach(a=>{const b=mod(m[a])+pb;if(best==null||b>best){best=b;ab=a;}});return {ab,bonus:best};}
 function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
+  const m=it.kind==="monster"?monById(it.srcId):null;
   const hpline=hpTracked(it)?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP${it.hpTemp?` <span class="ca-tmp">+${it.hpTemp} temp</span>`:""}</div>`:"";
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
-  const hasSb=it.kind==="monster"&&monById(it.srcId);
-  const tail=hasSb
+  // Quick-ref stat chips — the numbers a DM glances at: AC, attack bonus, best save.
+  const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
+  const stats=[];
+  if(it.ac!=null)stats.push(chip("AC",it.ac));
+  if(m){stats.push(chip("ATK",sgn(combatAtkBonus(m)),"Best attack-roll bonus"));
+    const sv=combatMainSave(m);if(sv)stats.push(chip(sv.ab.toUpperCase()+" save",sgn(sv.bonus),"Best saving throw"));}
+  const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
+  const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :`<div class="ca-soon">${it.kind==="pc"?"Player character — no statblock to roll from.":it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
-  // CT9: one flat panel (faction-coloured left accent) — the combatant meta on top, then the statblock
-  // flowing directly below it. No nested card-in-a-card.
+  const note=it.comment
+    ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">Edit</button></div>`
+    :`<button class="ca-addnote" data-cinote="${it.id}">＋ Add note</button>`;
+  // CT9-fix: one flat panel with a faction-coloured top accent (no lateral line). Quick-ref stats up
+  // top, the statblock below, the note as an appended "Add section"-style block at the bottom.
   return `<div class="ca-panel ${cFac(it.faction)}">
     <div class="ca-head">
       <div class="ca-name">${esc(it.name)}</div>
-      <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
+      <div class="ca-meta">${esc(who)}</div>
+      ${statRow}
       ${hpline}
       ${conds}
       ${resourcePipsHTML(it)}
-      <div class="ca-note ca-noteline">${it.comment?esc(it.comment):'<span class="ca-noteph">No note</span>'} <button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">edit</button></div>
     </div>
-    ${tail}
+    ${sb}
+    ${note}
   </div>`;
 }
 // Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
@@ -1207,39 +1211,67 @@ function resourcePipsHTML(it){
 function encStatusChipHTML(e){const st=encStatus(e);return `<span class="enc-status sm st-${st}">${ENC_STATUS_LABEL[st]}</span>`;}
 const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const LOAD_ICON='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H6l1.4 1.5H12.5A1.5 1.5 0 0 1 14 6v5.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>';
+const TUNE_ICON='<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 5h6M11 5h3M2 11h3M8 11h6"/><circle cx="9.5" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="6.5" cy="11" r="1.7" fill="currentColor" stroke="none"/></svg>';
 // The Adventures sidebar-tab glyph — reused on the narrow-width "open the adventure list as a drawer" button.
 const ADV_TAB_SVG='<svg viewBox="0 0 640 640" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M539.3 64.1C549.2 63.3 558.9 67.1 565.9 74.1C572.9 81.1 576.7 90.8 575.9 100.7C571.9 150 558.5 226.9 529.6 300.4C527.8 304.9 524.1 308.3 519.4 309.7L438.5 334C434.6 335.2 432 338.7 432 342.8C432 347.9 436.1 352 441.2 352L479.8 352C491.8 352 499.5 364.8 493.3 375.1C489.3 381.8 485 388.3 480.6 394.7C478.6 397.6 475.6 399.7 472.2 400.8L374.5 430C370.6 431.2 368 434.7 368 438.8C368 443.9 372.1 448 377.2 448L393.2 448C407.8 448 414.2 465.4 402 473.4C334 518.4 264.3 516.7 219.6 504.7C206.9 501.3 195.6 494.8 185.2 486.8L112 560C103.2 568.8 88.8 568.8 80 560C71.2 551.2 71.2 536.8 80 528L160 448L160.5 448.5C161.2 447.2 162.1 446 163.2 444.9L320 288C328.8 279.2 328.8 264.8 320 256C311.2 247.2 296.8 247.2 288 256L153.7 390.2C144.8 399.1 129.7 394.6 128.7 382C124.4 328.8 138 258.9 201.3 195.6C292.4 104.5 455.5 70.9 539.2 64.1z"/></svg>';
 // Combat-tab header (CT9, Direction C): one slim context line — adventure-colour accent, the scene ·
 // encounter title (click to load another), the difficulty pill, and a non-prominent same-scene ‹n/m›
 // nav. The round counter + turn controls live on the initiative list (combatTurnBarHTML), not here.
 function combatHeaderHTML(a,e,sc,cb){
-  const sibs=sc?sceneEncs(a,e):[],idx=sibs.indexOf(e);
+  const sibs=sc?sceneEncs(a,e):[];
   const advc=a.color||"var(--accent)";
   const[cls,label]=diffOf(encSpent(e),encBudget(a,e));
-  const sceneNav=(sc&&sibs.length>1)?`<span class="ct-scenenav">
-      <button class="ghost-chev" id="scPrev"${idx<=0?" disabled":""} title="Previous encounter" aria-label="Previous encounter">${CHEV_L}</button>
-      <span class="ct-encpos">${idx+1}/${sibs.length}</span>
-      <button class="ghost-chev" id="scNext"${idx>=sibs.length-1?" disabled":""} title="Next encounter" aria-label="Next encounter">${CHEV_R}</button>
-    </span>`:"";
-  const titleInner=sc
-    ?`<span class="ct-scene">${esc(sceneDName(sc))}</span><span class="ct-dot">·</span><span class="ct-enc">${esc(encDName(e))}</span>`
-    :`<span class="ct-scene">${esc(encDName(e))}</span>`;
+  const drop=(sc&&sibs.length>1)?`<button class="ct-encdrop" id="combatEncDrop" title="Switch encounter in this scene" aria-label="Switch encounter">${FS_CHEVRON}</button>`:"";
+  const title=`<div class="ct-titleblock">
+      ${sc?`<div class="ct-scene-sm">${esc(sceneDName(sc))}</div>`:""}
+      <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ${cls}">${label}</span>${drop}</div>
+    </div>`;
   const notes=(e.notesOn&&e.notes)?`<div class="ct-notes">${esc(e.notes)}</div>`:"";
   return `<div class="ct-bar" style="--ct-accent:${advc}">
-    <button class="ct-title" id="combatLoadTitle" title="Load a different scene or encounter">${titleInner}<span class="pill sm ${cls}">${label}</span><span class="ct-loadico" aria-hidden="true">${FS_CHEVRON}</span></button>
-    ${sceneNav}
+    ${title}
+    <button class="btn ghost sm ct-loadbtn" id="combatLoadTitle" title="Load a different scene or encounter">${LOAD_ICON}<span>Load encounter</span></button>
   </div>${notes}`;
 }
-// Live round counter + turn controls — pinned to the top of the initiative list (CT9), where the turns
-// actually happen, rather than in the header.
-function combatTurnBarHTML(cb){
-  return `<div class="ct-turnbar">
+// Full-width round/turn bar above the grid (CT9-fix): round counter, borderless turn arrows, an
+// out-of-order chip, and a tools menu (group / sort / filter / roll / restore). The header divider is
+// this bar's bottom border. On stacked layouts it still sits above the initiative (the top pane).
+function combatRoundBarHTML(cb){
+  const v=combatView(cb),oop=initOutOfPlace(cb);
+  const active=(v.group||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
+  return `<div class="ct-roundbar">
     <span class="ct-round">Round ${cb.round}</span>
     <span class="ct-turnline"></span>
-    <button class="ghost-chev ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
-    <span class="ct-turnlbl">turn</span>
-    <button class="ghost-chev ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
+    <button class="ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
+    <button class="ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
+    ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
+    <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
+}
+// Tools menu opened from the round bar — routes to the existing group/sort/filter pickers + roll/restore.
+function openCombatToolsMenu(anchor){
+  const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,v=combatView(cb),oop=initOutOfPlace(cb);
+  const gL=(CV_GROUPS.find(([k])=>k===(v.group||""))||["","None"])[1];
+  const sL=(CV_SORTS.find(([k])=>k===v.sort)||["init","Initiative"])[1];
+  const nF=((v.filter.status||[]).length)+((v.filter.faction||[]).length);
+  const html=`<button class="popitem" data-ctool="group">Group <span class="pop-val">${esc(gL)}</span></button>
+    <button class="popitem" data-ctool="sort">Sort <span class="pop-val">${esc(sL)}</span></button>
+    <button class="popitem" data-ctool="filter">Filter${nF?` <span class="pop-val">${nF}</span>`:""}</button>
+    <div class="popsep"></div>
+    <button class="popitem" data-ctool="roll">↻ Re-roll initiative</button>
+    ${oop?`<button class="popitem" data-ctool="restore">Restore initiative order</button>`:""}`;
+  const p=showPopover(anchor,html);
+  p.querySelectorAll("[data-ctool]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const k=b.dataset.ctool;
+    if(k==="roll"){closePopover();rollAllInit();}
+    else if(k==="restore"){closePopover();restoreInitOrder();}
+    else openCombatViewMenu(k,anchor);}));
+}
+// Scene-encounter dropdown (CT9-fix): switch between encounters of the current scene.
+function openSceneEncMenu(anchor,a,e){
+  const sibs=sceneEncs(a,e);
+  const html=sibs.map(x=>`<button class="popitem popcheck${x.id===e.id?" on":""}" data-encpick="${x.id}"><span class="ck">${x.id===e.id?"●":""}</span>${esc(encDName(x))}<span class="enc-status sm st-${encStatus(x)}" style="margin-left:auto">${ENC_STATUS_LABEL[encStatus(x)]}</span></button>`).join("");
+  const p=showPopover(anchor,html);
+  p.querySelectorAll("[data-encpick]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();closePopover();const x=findEnc(a,b.dataset.encpick);if(x)loadCombatEncounter(a,x);}));
 }
 function combatNotStartedHTML(a,e){
   const n=e.combatants.filter(c=>c.type!=="event").length;
@@ -1285,26 +1317,23 @@ function renderCombat(){
   setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
   const fab=cb?`<button class="fab combat-fab end" id="combatFab" style="width:auto">End combat</button>`
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
-  body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
+  body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
+    combatRoundBarHTML(cb)+`
     <div class="combat-grid">
-      <div class="combat-order">${combatTurnBarHTML(cb)}${combatToolbarHTML(cb)}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
+      <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
-  const scPrev=$("#scPrev"),scNext=$("#scNext");
-  if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);
-    if(scPrev&&idx>0)scPrev.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx-1]));
-    if(scNext&&idx<sibs.length-1)scNext.addEventListener("click",()=>loadCombatEncounter(a,sibs[idx+1]));}
+  {const ed=$("#combatEncDrop");if(ed)ed.addEventListener("click",ev=>{ev.stopPropagation();openSceneEncMenu(ed,a,e);});}
   $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
   const addBtn=$("#combatAddBtn");if(addBtn)addBtn.addEventListener("click",()=>openBestiaryPicker(a,e));
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
-  // CT8 toolbar: group / sort / filter popovers, roll-all, restore-order, and drag-to-reorder.
-  $$("#combatBody [data-cvtool]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openCombatViewMenu(b.dataset.cvtool,b);}));
-  {const ra=$("#combatRollAll");if(ra)ra.addEventListener("click",rollAllInit);}
+  // CT9-fix: group / sort / filter / roll live in the round-bar tools menu; restore-order is its own chip.
+  {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
   if(combatDragOK(cb))bindCombatDrag($("#combatRows"));
   // Current HP edited directly.

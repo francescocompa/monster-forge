@@ -781,7 +781,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pc-field .pcf-l{width:78px;color:var(--faint);font-weight:600}
 .pc-field .pcf-v{width:96px;border-left:1px solid var(--line);padding-left:6px}
 /* ── Combat Tracker view (B80) ── */
-.combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:16px 20px 0}
+.combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0}
 .combat-wrap>.combat-notstarted,.combat-wrap>.combat-empty{flex:1;min-height:0}
 .combat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .combat-head .ch-title{flex:1;min-width:0}
@@ -792,19 +792,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
 /* CT9 — Forge-style two-pane split: each pane scrolls internally, a draggable divider between them. */
 .combat-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,1fr) var(--caw,500px);gap:0;overflow:hidden;position:relative}
-.combat-order{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:0;padding:0 18px 24px 0}
+.combat-order{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:0;padding:14px 18px 24px 20px}
 .combat-resizer{position:absolute;top:0;bottom:0;right:var(--caw,500px);width:10px;margin-right:-5px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center}
 .combat-resizer::before{content:"";width:3px;height:46px;border-radius:3px;background:var(--line);opacity:0;transition:opacity .12s,background .12s}
 .combat-resizer:hover::before,.combat-resizer.drag::before{opacity:1;background:var(--accent)}
 .combat-rows{display:flex;flex-direction:column;gap:7px}
 /* CT8 combat toolbar */
-.combat-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
-.ct-tool{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:4px 9px;font-size:11.5px;cursor:pointer;line-height:1}
-.ct-tool svg{width:13px;height:13px}
-.ct-tool:hover{border-color:var(--accent-soft);color:var(--txt)}
-.ct-tool.on{border-color:var(--accent);color:var(--txt)}
-.ct-tool-n{background:var(--accent);color:#fff;border-radius:9px;min-width:15px;height:15px;display:inline-grid;place-items:center;font-size:10px;padding:0 4px;font-variant-numeric:tabular-nums}
-.ct-rollall{margin-left:auto}
 .ct-oop{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:var(--warn);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;line-height:1}
 .ct-oop:hover{background:color-mix(in srgb,var(--warn) 26%,transparent)}
 .cbt-group{display:flex;flex-direction:column;gap:7px}
@@ -862,13 +855,22 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
 .cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
 .cbt-add:hover{border-color:var(--accent);color:var(--txt)}
-.combat-active{overflow-y:auto;min-height:0;border-left:1px solid var(--line);padding:0 2px 24px 20px}
-/* CT9 — one flat panel (left faction accent): meta on top, statblock flows below. No nested card. */
-.ca-panel{display:flex;flex-direction:column;gap:14px;border-left:3px solid var(--line);padding-left:14px}
-.ca-panel.enemy{border-left-color:#9c4a3f}.ca-panel.ally{border-left-color:#4a78b0}.ca-panel.pc{border-left-color:#3f7a52}.ca-panel.setting{border-left-color:#7a6a3f}
-.ca-head{display:flex;flex-direction:column}
-.ca-name{font-size:18px;font-weight:700}
-.ca-meta{font-size:11px;color:var(--faint);margin-top:3px;text-transform:capitalize}
+.combat-active{overflow-y:auto;min-height:0;border-left:1px solid var(--line);padding:14px 20px 24px 20px}
+/* CT9-fix — one flat panel with a faction-coloured TOP accent (no lateral line): quick-ref stats on
+   top, the statblock below, the note appended as an "Add section"-style block. */
+.ca-panel{display:flex;flex-direction:column;gap:14px;border-top:2px solid var(--line);padding-top:14px}
+.ca-panel.enemy{border-top-color:#9c4a3f}.ca-panel.ally{border-top-color:#4a78b0}.ca-panel.pc{border-top-color:#3f7a52}.ca-panel.setting{border-top-color:#7a6a3f}
+.ca-head{display:flex;flex-direction:column;gap:10px}
+.ca-name{font-size:18px;font-weight:700;line-height:1.1}
+.ca-meta{font-size:11px;color:var(--faint);text-transform:capitalize;margin-top:-7px}
+.ca-stats{display:flex;gap:8px;flex-wrap:wrap}
+.ca-stat{display:inline-flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 11px}
+.cas-k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint)}
+.cas-v{font-size:16px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1}
+.ca-addnote{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:9px;font-size:12px;cursor:pointer}
+.ca-addnote:hover{border-color:var(--accent);color:var(--txt)}
+.ca-noteblock{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.ca-note-txt{font-size:12px;color:var(--dim);white-space:pre-wrap;min-width:0}
 .ca-hp{font-size:15px;margin-top:10px}.ca-hp b{color:var(--txt)}
 .ca-note{font-size:12px;color:var(--dim);margin-top:8px;white-space:pre-wrap}
 .ca-soon{font-size:11px;color:var(--faint);font-style:italic;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
@@ -885,8 +887,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cc-x:hover{color:var(--bad)}
 .ci-addcond{flex:none;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:13px;font-size:11px;line-height:1;padding:3px 9px;cursor:pointer}
 .ci-addcond:hover{border-color:var(--accent);color:var(--txt)}
-.ca-noteline{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
-.ca-noteph{color:var(--faint);font-style:italic}
 .ca-noteedit{flex:none;border:none;background:none;color:var(--accent-soft);font-size:11px;cursor:pointer;padding:0;text-decoration:underline}
 .cond-add{display:flex;flex-direction:column;gap:8px;padding:4px;min-width:200px}
 .cond-add-row{display:flex;align-items:center;gap:10px;justify-content:space-between}
@@ -943,26 +943,33 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget-top{display:flex;align-items:center;gap:10px}
 .budget-top .bartrack{flex:1}
 /* CT9 — minimal context header (Direction C): one slim line, click the title to load another. */
-.ct-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-left:11px;border-left:3px solid var(--ct-accent,var(--accent));min-height:30px}
-.ct-title{display:flex;align-items:center;gap:8px;min-width:0;background:none;border:none;color:var(--txt);cursor:pointer;font:inherit;text-align:left;padding:3px 8px 3px 0;border-radius:7px}
-.ct-title:hover .ct-scene{color:var(--accent-soft)}
-.ct-title:hover .ct-loadico{color:var(--accent-soft)}
-.ct-scene{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:100%}
-.ct-dot{color:var(--faint);flex:none}
-.ct-enc{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.ct-loadico{display:inline-flex;width:12px;height:12px;color:var(--faint);flex:none}
-.ct-scenenav{display:inline-flex;align-items:center;gap:4px;flex:none;margin-left:auto}
+/* CT9-fix — header: scene (small) over encounter (large) + a scene-encounter dropdown; Load button right. */
+.ct-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:0 20px 0 17px;border-left:3px solid var(--ct-accent,var(--accent))}
+.ct-titleblock{flex:1;min-width:0}
+.ct-scene-sm{font-size:12px;font-weight:600;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct-encrow{display:flex;align-items:center;gap:9px;min-width:0}
+.ct-enc-lg{font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ct-encdrop{flex:none;width:24px;height:24px;display:grid;place-items:center;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;cursor:pointer;padding:0}
+.ct-encdrop:hover{border-color:var(--line);color:var(--txt)}
+.ct-encdrop svg{width:13px;height:13px}
+.ct-loadbtn{flex:none;width:auto;display:inline-flex;align-items:center;gap:6px}
+.ct-loadbtn svg{flex:none}
 .ct-encpos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
 .ghost-chev{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0}
 .ghost-chev:hover:not(:disabled){border-color:var(--accent);color:var(--txt)}
 .ghost-chev:disabled{opacity:.3;pointer-events:none}
-.ct-notes{font-size:12px;color:var(--faint);margin:-6px 0 12px;padding-left:14px;white-space:pre-wrap}
-/* round counter + turn controls, pinned to the top of the initiative list */
-.ct-turnbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:9px;background:var(--bg);padding:1px 0 9px}
-.ct-turnbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.ct-notes{font-size:12px;color:var(--faint);margin:-4px 0 10px;padding:0 20px 0 20px;white-space:pre-wrap}
+.pop-val{margin-left:auto;color:var(--faint);font-size:11px}
+/* Full-width round bar above the grid; its bottom border is the header divider. */
+.ct-roundbar{display:flex;align-items:center;gap:10px;padding:2px 20px 9px;border-bottom:1px solid var(--line)}
+.ct-roundbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
 .ct-turnline{flex:1;height:1px;background:var(--line)}
-.ct-turnlbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
-.ct-turnbar .ct-turnbtn{width:30px;height:26px}
+.ct-turnbtn{width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
+.ct-turnbtn:hover{color:var(--txt);background:var(--panel2)}
+.ct-toolsbtn{position:relative;flex:none;width:30px;height:26px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0;margin-left:2px}
+.ct-toolsbtn:hover{border-color:var(--accent);color:var(--txt)}
+.ct-toolsbtn.on{border-color:var(--accent);color:var(--txt)}
+.ct-toolsbtn.on::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(11px,-10px)}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
 .combat-fab svg{width:15px;height:15px;fill:currentColor;flex:none}
 .combat-fab.end{background:var(--bad)!important}
@@ -1011,8 +1018,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 }
 @media (max-width:980px){
   .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,46%)}
-  .combat-order{padding:0 0 16px}
-  .combat-active{border-left:none;border-top:1px solid var(--line);padding:14px 2px 24px}
+  .combat-order{padding:14px 20px 16px}
+  .combat-active{border-left:none;border-top:1px solid var(--line);padding:14px 20px 24px}
   .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,46%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
   .combat-resizer::before{width:46px;height:3px}
 }

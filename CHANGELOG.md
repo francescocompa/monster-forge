@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 96 — Combat Tracker v2 (CT9 follow-up): header, round bar, active-panel polish
+- **Header restructure.** The scene name is now a small label above the **encounter name** (the large
+  title). A chevron next to the encounter opens a **dropdown of the scene's encounters** to switch
+  between them (only shown when the encounter is in a scene with more than one). The encounter switcher
+  on the right is replaced by a **Load encounter** button that opens the picker.
+- **Round bar.** Now spans the **full width** above both panes (and stays above the initiative when the
+  layout stacks). The turn arrows are borderless and the "turn" label is gone; **group / sort / filter /
+  re-roll** moved into a **tools menu** at its right end. A full-width divider under it separates the
+  header, and that divider plus the list/preview divider now run edge-to-edge.
+- **Active panel.** The combatant's key numbers — **AC, attack bonus, and best save** — are surfaced as
+  prominent chips. The note moved to a full-width **＋ Add note** block at the bottom (Forge "Add
+  section" style). The lateral faction line became a **horizontal accent on top**.
+
 ## Batch 95 — Combat Tracker v2 (CT9): layout + header overhaul
 - **Resizable two-pane combat view.** The initiative list and the active-combatant panel are now a
   Forge-style split with a **draggable divider** (drag to resize, double-click to reset, persists);
