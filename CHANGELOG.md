@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 104 — Bug fix: multi-type attack damage now rolls (e.g. "Fire or Lightning damage")
+- The attack name only rolled the to-hit (no damage) when the damage line listed **multiple types joined by
+  "or"/"and"** — e.g. the Eldritch Eddy's "Hit: 13 (3d6 + 3) Fire or Lightning damage". The dice→damage
+  detector only allowed a single optional type word before "damage", so it missed the chain and never tagged
+  the damage span. Broadened it to permit the same type/connector chain the damage-type colouriser already
+  uses (a lone unknown type word still works). Verified: the name now carries `data-dmg`, so it rolls to-hit
+  + damage. (Pairs with the B103 CON-last ability tie-break.)
+
 ## Batch 103 — Bug fixes: bestiary selection across tabs + attack-ability tie-break (CON last)
 - **Bestiary multi-select no longer persists across tabs.** The batch action bar (`#libBatchBar`) is
   appended to `document.body`, so it survived a view switch. `switchView` now clears `libSel` (and the bar)

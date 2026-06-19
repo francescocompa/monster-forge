@@ -309,7 +309,11 @@ function buildColorCats(forCreature){
   cats.push({re:dmgRe,cls:m=>"cc-dmg cc-"+m[1].toLowerCase()});
   // Colour split (B58): yellow = static bonuses/targets you DON'T roll; blue (cc-dice) = dice you roll.
   cats.push({re:/(?:Melee or Ranged|Melee|Ranged)\s+Attack Roll:\s*[+\-−]\d+/gi,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[0].match(/[+\-−]\d+/)[0]),rtype:"attack"});
-  cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?(?=\)?\s+(?:([a-zA-Z]+)\s+)?damage)/gi,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:"damage",dmgtype:m=>m[1]||null});
+  // The damage dice are followed by an optional type phrase before "damage" — allow a CHAIN of type
+  // words + connectors (e.g. "Fire or Lightning damage", "piercing and slashing damage"), mirroring dmgRe
+  // above; a lone unknown type word still works. (Was a single optional word → multi-type attacks like the
+  // Eldritch Eddy's "(3d6+3) Fire or Lightning damage" tagged no damage, so the name rolled to-hit only.)
+  cats.push({re:new RegExp("\\b\\d+d\\d+(?:\\s*[+\\-−]\\s*\\d+)?(?=\\)?\\s+(?:([a-zA-Z]+)(?:[\\s,;/]+(?:or|and|nonmagical|magical|"+TY+"))*[\\s,;/]+)?damage\\b)","gi"),cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:"damage",dmgtype:m=>m[1]||null});
   cats.push({re:/\b\d+d\d+(?:\s*[+\-−]\s*\d+)?\b/g,cls:()=>"cc-dice",roll:m=>normRoll(m[0]),rtype:null});
   cats.push({re:/([+\-−]\d+)(?=\s+to hit)/g,cls:()=>"cc-roll",roll:m=>"1d20"+normRoll(m[1]),rtype:"attack"});
   cats.push({re:/\bDC\s*\d+\b/g,cls:()=>"cc-dc"});
