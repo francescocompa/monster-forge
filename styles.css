@@ -1,7 +1,7 @@
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
   --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
-  --accent:#e2654d; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
+  --accent:#e2654d; --brand:#e2654d; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   /* Radius scale (B1 design-system pass). --r = default control radius (kept at 7px, the dominant value);
@@ -391,8 +391,17 @@ select::-ms-expand{display:none}
 .modal-back:hover{border-color:var(--accent);color:var(--txt)}
 /* Last-edited encounter highlight. */
 .enc.focused{border-color:var(--sel-accent);background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel))}
-/* On a tinted selected card, lift the muted greys so they read against the colour (cool greys muddied on the tint). */
-.card.selected,.adv-list .ai.sel,.enc.focused,.cbt-row.active{--dim:#c6c2bd;--faint:#948f89}
+/* On a selected card the whole accent (hovers, focus rings) follows the card's local colour, and the muted
+   greys are tinted toward it too so they blend on the tint instead of clashing as cool grey-on-colour.
+   Solid CTAs keep --brand (see .start-combat below). Greys stay light enough to read on every ADV_COLOR. */
+.card.selected,.adv-list .ai.sel,.enc.focused,.cbt-row.active{
+  --accent:var(--sel-accent);
+  --accent-soft:color-mix(in srgb,var(--sel-accent) 72%,#fff);
+  --accent-hover:color-mix(in srgb,var(--sel-accent) 84%,#fff);
+  --dim:color-mix(in srgb,var(--sel-accent) 15%,#c4c7cd);
+  --faint:color-mix(in srgb,var(--sel-accent) 15%,#8c9099);
+}
+.enc.focused .start-combat{background:var(--brand)}.enc.focused .start-combat:hover{background:var(--brand);filter:brightness(1.1)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}

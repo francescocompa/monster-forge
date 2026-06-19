@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 105 — Design-system pass (4/n): selected cards fully adopt their local colour
+- Follow-up to the colour-aware selected state. On a selected/focused card the **entire** accent now follows
+  the card's local colour — not just the border/tint but **hovers and focus rings** too (was still flashing
+  the global orange). Done by remapping `--accent`/`--accent-soft`/`--accent-hover` to `--sel-accent` on the
+  selected card.
+- **Solid CTAs stay brand.** New `--brand` token (fixed orange); `.start-combat` uses it so the primary
+  action keeps the brand colour even inside a purple/teal/etc. selected card.
+- **Accent-tinted greyscale** (chosen over a darker bg / no-bg option): muted greys are mixed 15% toward the
+  card's colour (`color-mix(--sel-accent 15%, light-grey)`) so they blend with the tint instead of clashing
+  as cool grey-on-colour — and stay light enough to read on every ADV_COLOR (spot-checked red/teal/purple).
+
 ## Batch 104 — Bug fix: multi-type attack damage now rolls (e.g. "Fire or Lightning damage")
 - The attack name only rolled the to-hit (no damage) when the damage line listed **multiple types joined by
   "or"/"and"** — e.g. the Eldritch Eddy's "Hit: 13 (3d6 + 3) Fire or Lightning damage". The dice→damage
