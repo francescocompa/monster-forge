@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 108 — Effects (3/n): alarm-clock timing control (ends at start/end of whose turn)
+- The add-effect popover gains a FA-free **alarm-clock** toggle next to the rounds field. Clicking it reveals
+  a timing row: **"ends at [⧗ turn start | end turn] of [whose turn ▾]"**. The hourglass is a ghost toggle —
+  clicking it flips the filled half (180° ease-in-out) with a little scale pop and swaps the label
+  start↔end; the name selector defaults (dimmed) to the current creature.
+- **Model (per the design call): rounds = how many, clock = when.** An effect lasts N rounds (blank = until
+  removed) and ticks at the chosen moment. New per-effect fields `endWhen` ("start"|"end", default start) and
+  `endWho` (a combatant id, default = the effect's own owner). `tickConditions(cb, turnIt, edge)` now scans
+  every combatant and decrements effects that end on `turnIt`'s turn at that edge; `combatAdvance` fires an
+  "end" tick for the turn it leaves and a "start" tick for the new turn. Default (self/start) reproduces the
+  old behaviour. Verified: a self/1-round effect ends at the owner's next turn start, and a
+  "1 round, end of Goblin 1's turn" effect ends when Goblin 1's turn ends.
+
 ## Batch 107 — Effects (2/n): active-panel layout — effect chip below title, full-width stat boxes
 - Reordered the combat active panel: the **"+ effect" chip now sits directly below the title**, and the
   **AC/ATK/DC/save/HP boxes occupy the row full-width** (each `flex:1`, min 64px, wrapping on narrow panes)

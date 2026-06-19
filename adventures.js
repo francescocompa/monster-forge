@@ -961,25 +961,36 @@ function isOut(it){return isDown(it)||(it&&it.status==="dead");}
 // ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
 // tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
 function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,n=cb.order.length;if(!n)return;
+  const prev=cb.order[cb.turnIndex];
   let ti=cb.turnIndex,round=cb.round,steps=0;
   do{ti+=dir;
     if(ti>=n){ti=0;round++;}else if(ti<0){ti=n-1;round=Math.max(1,round-1);}
     steps++;
   }while(isOut(cb.order[ti])&&steps<=n);
   cb.turnIndex=ti;cb.round=round;
-  if(dir>0){tickConditions(cb.order[ti]);resetRoundResources(cb.order[ti]);}
+  if(dir>0){const cur=cb.order[ti];tickConditions(cb,prev,"end");tickConditions(cb,cur,"start");resetRoundResources(cur);}
   saveAdv();renderCombat();}
 function resetRoundResources(it){if(it&&it.resources)it.resources.forEach(r=>{if(r.perRound)r.used=0;});}
-// Start-of-turn duration tick: decrement timed conditions, drop those that reach 0 (untimed = ∞).
-function tickConditions(it){
-  if(!it||!it.conditions||!it.conditions.length)return;
-  const gone=[];
-  it.conditions=it.conditions.filter(c=>{if(c.rounds>0){c.rounds--;if(c.rounds<=0){gone.push(c.name);return false;}}return true;});
-  if(gone.length)toast(`${it.name}: ${gone.join(", ")} ended.`);
+// Duration tick: when `turnIt` reaches the given turn `edge` (start|end), decrement every effect (across all
+// combatants) that ends on that combatant's turn at that edge, dropping those that reach 0. An effect's
+// timing defaults to the start of its own owner's turn (endWhen "start", endWho = owner) — i.e. the
+// original behaviour. The add-effect popover can retarget it to any combatant's turn start/end.
+function tickConditions(cb,turnIt,edge){
+  if(!cb||!turnIt)return;const gone=[];
+  cb.order.forEach(owner=>{
+    if(!owner.conditions||!owner.conditions.length)return;
+    owner.conditions=owner.conditions.filter(c=>{
+      if((c.endWhen||"start")!==edge)return true;
+      if((c.endWho||owner.id)!==turnIt.id)return true;
+      if(c.rounds>0){c.rounds--;if(c.rounds<=0){gone.push(`${owner.name}: ${c.name}`);return false;}}
+      return true;
+    });
+  });
+  if(gone.length)toast(`${gone.join("; ")} ended.`);
 }
 // Per-combatant edits (CT3): conditions, note, ungroup, remove.
 function combatItem(id){const ctx=combatOf();return ctx?ctx.e.combat.order.find(x=>x.id===id):null;}
-function addCombatCond(itId,name,rounds){const it=combatItem(itId);if(!it||!name)return;(it.conditions=it.conditions||[]).push({name,rounds:Math.max(0,Number(rounds)||0)});saveAdv();renderCombat();}
+function addCombatCond(itId,name,rounds,timing){const it=combatItem(itId);if(!it||!name)return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
 function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;it.conditions.splice(i,1);saveAdv();renderCombat();}
 function setCombatNote(itId,text){const it=combatItem(itId);if(!it)return;it.comment=text;saveAdv();renderCombat();}
 // Split a count:N group into independent combatants — each re-rolls its own initiative.
@@ -1001,9 +1012,28 @@ function condsHTML(it){
   return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
 }
 function openCondAdd(itId,anchor){
-  const p=showPopover(anchor,`<div class="cond-add"><div class="cond-add-row"><input type="text" class="cond-input" list="condDatalist" placeholder="Effect…" autocomplete="off"><label class="cond-rl" title="Duration in rounds (blank = until removed)">${HOURGLASS_ICON}<input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
-  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds");inp.focus();
-  const commit=()=>{const name=(inp.value||"").trim();closePopover();if(name)addCombatCond(itId,name,rd.value);};
+  const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
+  const opts=order.map(o=>`<option value="${esc(o.id)}"${o.id===itId?" selected":""}>${esc(o.name)}</option>`).join("");
+  const p=showPopover(anchor,`<div class="cond-add">
+    <div class="cond-add-row">
+      <input type="text" class="cond-input" list="condDatalist" placeholder="Effect…" autocomplete="off">
+      <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
+      <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
+      <button class="btn primary sm cond-go" style="width:auto">Add</button>
+    </div>
+    <div class="cond-when" hidden>
+      <span class="cw-lbl">ends at</span>
+      <button class="cond-edge" type="button" data-edge="start" title="Toggle: ends at turn start / end"><span class="cw-hg">${HOURGLASS_ICON}</span><span class="cw-t">turn start</span></button>
+      <span class="cw-lbl">of</span>
+      <select class="cond-who" title="Whose turn ends it">${opts}</select>
+    </div></div>`);
+  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who");
+  inp.focus();
+  const dimWho=()=>who.classList.toggle("is-self",who.value===itId); // dimmed while it still means the current creature
+  dimWho();who.addEventListener("change",dimWho);
+  clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
+  edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
+  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(name)addCombatCond(itId,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.value===itId?null:who.value}:null);};
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
   rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
@@ -1250,6 +1280,8 @@ const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
 const LOAD_ICON='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H6l1.4 1.5H12.5A1.5 1.5 0 0 1 14 6v5.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>';
 const TUNE_ICON='<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 5h6M11 5h3M2 11h3M8 11h6"/><circle cx="9.5" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="6.5" cy="11" r="1.7" fill="currentColor" stroke="none"/></svg>';
 const HOURGLASS_ICON='<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M32 0C14.3 0 0 14.3 0 32S14.3 64 32 64V75c0 42.4 16.9 83.1 46.9 113.1L146.7 256 78.9 323.9C48.9 353.9 32 394.6 32 437v11c-17.7 0-32 14.3-32 32s14.3 32 32 32H64 320h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V437c0-42.4-16.9-83.1-46.9-113.1L237.3 256l67.9-67.9c30-30 46.9-70.7 46.9-113.1V64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320 64 32zM96 75V64H288V75c0 25.5-10.1 49.9-28.1 67.9L192 210.7l-67.9-67.9C106.1 124.9 96 100.4 96 75z"/></svg>';
+// FA Free 7 solid "alarm-clock" — toggles the effect-timing row in the add-effect popover.
+const ALARM_CLOCK_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M504.4 132.5c-4.5 10.5-18.4 9.8-24.9 .4-27.8-40-66.1-72.2-111-92.6-10.4-4.7-13.7-18.3-4.1-24.6 15-9.9 33-15.7 52.3-15.7 52.6 0 95.2 42.6 95.2 95.2 0 13.2-2.7 25.8-7.6 37.3zm-471.9 .4c-6.5 9.4-20.5 10.1-24.9-.4-4.9-11.5-7.6-24.1-7.6-37.3 0-52.6 42.6-95.2 95.2-95.2 19.3 0 37.3 5.8 52.3 15.7 9.6 6.3 6.3 19.9-4.1 24.6-44.8 20.4-83.1 52.6-111 92.6zM390.2 467.4C352.8 495.4 306.3 512 256 512s-96.8-16.6-134.1-44.6L86.6 502.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l35.2-35.2C48.6 384.8 32 338.3 32 288 32 164.3 132.3 64 256 64S480 164.3 480 288c0 50.3-16.6 96.8-44.6 134.2l35.2 35.2c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0l-35.2-35.2zM280 184c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 104c0 6.4 2.5 12.5 7 17l56 56c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-49-49 0-94.1z"/></svg>';
 const PEN_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"/></svg>';
 // The Adventures sidebar-tab glyph — reused on the narrow-width "open the adventure list as a drawer" button.
 const ADV_TAB_SVG='<svg viewBox="0 0 640 640" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M539.3 64.1C549.2 63.3 558.9 67.1 565.9 74.1C572.9 81.1 576.7 90.8 575.9 100.7C571.9 150 558.5 226.9 529.6 300.4C527.8 304.9 524.1 308.3 519.4 309.7L438.5 334C434.6 335.2 432 338.7 432 342.8C432 347.9 436.1 352 441.2 352L479.8 352C491.8 352 499.5 364.8 493.3 375.1C489.3 381.8 485 388.3 480.6 394.7C478.6 397.6 475.6 399.7 472.2 400.8L374.5 430C370.6 431.2 368 434.7 368 438.8C368 443.9 372.1 448 377.2 448L393.2 448C407.8 448 414.2 465.4 402 473.4C334 518.4 264.3 516.7 219.6 504.7C206.9 501.3 195.6 494.8 185.2 486.8L112 560C103.2 568.8 88.8 568.8 80 560C71.2 551.2 71.2 536.8 80 528L160 448L160.5 448.5C161.2 447.2 162.1 446 163.2 444.9L320 288C328.8 279.2 328.8 264.8 320 256C311.2 247.2 296.8 247.2 288 256L153.7 390.2C144.8 399.1 129.7 394.6 128.7 382C124.4 328.8 138 258.9 201.3 195.6C292.4 104.5 455.5 70.9 539.2 64.1z"/></svg>';
