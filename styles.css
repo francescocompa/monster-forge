@@ -936,9 +936,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cond-edge.is-end .cw-hg{transform:rotate(180deg)}
 .cond-edge.pop{animation:cwpop .34s ease-in-out}
 @keyframes cwpop{0%{transform:scale(1)}45%{transform:scale(1.13)}100%{transform:scale(1)}}
-.cond-who{flex:1;min-width:88px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 7px;color:var(--txt);color-scheme:dark;font-size:12px}
-.cond-who.is-self{color:var(--faint)}
-.cond-who:focus{outline:none;border-color:var(--accent)}
+.cond-who-wrap{position:relative;flex:1;min-width:90px}
+.cond-who{width:100%;display:inline-flex;align-items:center;justify-content:space-between;gap:6px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--txt);cursor:pointer;font-size:12px}
+.cond-who:hover,.cond-who.open{border-color:var(--accent)}
+.cond-who .cw-who-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cond-who.is-self .cw-who-t{color:var(--faint)}
+.cond-who svg{width:10px;height:10px;flex:none;color:var(--faint);transition:transform .15s}
+.cond-who.open svg{transform:rotate(180deg)}
+.cond-who-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;box-shadow:var(--shadow-pop);max-height:190px;overflow-y:auto}
+.cond-who-list .popitem{width:100%}
 .note-edit{display:flex;flex-direction:column;gap:8px;padding:4px;min-width:220px}
 .note-ta{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px;color:var(--txt);color-scheme:dark}
 /* CT4 — resource pips + embedded active-combatant statblock */

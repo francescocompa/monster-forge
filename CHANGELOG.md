@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 109 — Effects (4/n): whose-turn picker → custom dropdown
+- Replaced the native `<select>` in the effect-timing row with a **custom dropdown** matching the app's
+  others (the forge recharge/freq picker style): a trigger button (current creature, dimmed while it still
+  means "self") + an inline `.popitem` list with the standard popover surface. Built inline rather than via
+  `showPopover` because that's single-instance and would have closed the parent add-effect popover.
+
 ## Batch 108 — Effects (3/n): alarm-clock timing control (ends at start/end of whose turn)
 - The add-effect popover gains a FA-free **alarm-clock** toggle next to the rounds field. Clicking it reveals
   a timing row: **"ends at [⧗ turn start | end turn] of [whose turn ▾]"**. The hourglass is a ghost toggle —

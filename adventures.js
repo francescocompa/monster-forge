@@ -1013,7 +1013,8 @@ function condsHTML(it){
 }
 function openCondAdd(itId,anchor){
   const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
-  const opts=order.map(o=>`<option value="${esc(o.id)}"${o.id===itId?" selected":""}>${esc(o.name)}</option>`).join("");
+  const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
+  const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
     <div class="cond-add-row">
       <input type="text" class="cond-input" list="condDatalist" placeholder="Effect…" autocomplete="off">
@@ -1025,15 +1026,19 @@ function openCondAdd(itId,anchor){
       <span class="cw-lbl">ends at</span>
       <button class="cond-edge" type="button" data-edge="start" title="Toggle: ends at turn start / end"><span class="cw-hg">${HOURGLASS_ICON}</span><span class="cw-t">turn start</span></button>
       <span class="cw-lbl">of</span>
-      <select class="cond-who" title="Whose turn ends it">${opts}</select>
+      <div class="cond-who-wrap">
+        <button type="button" class="cond-who is-self" data-whoid="${esc(itId)}" title="Whose turn ends it"><span class="cw-who-t">${esc(selfName)}</span>${FS_CHEVRON}</button>
+        <div class="cond-who-list" hidden>${whoItems}</div>
+      </div>
     </div></div>`);
-  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who");
+  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
   inp.focus();
-  const dimWho=()=>who.classList.toggle("is-self",who.value===itId); // dimmed while it still means the current creature
-  dimWho();who.addEventListener("change",dimWho);
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
-  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(name)addCombatCond(itId,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.value===itId?null:who.value}:null);};
+  // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
+  who.addEventListener("click",e=>{e.stopPropagation();const open=list.hasAttribute("hidden");list.toggleAttribute("hidden",!open);who.classList.toggle("open",open);});
+  list.querySelectorAll("[data-whoid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();who.dataset.whoid=b.dataset.whoid;who.querySelector(".cw-who-t").textContent=b.textContent;who.classList.toggle("is-self",b.dataset.whoid===itId);list.setAttribute("hidden","");who.classList.remove("open");}));
+  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(name)addCombatCond(itId,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===itId?null:who.dataset.whoid}:null);};
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
   rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
