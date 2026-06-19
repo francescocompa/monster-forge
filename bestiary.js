@@ -539,54 +539,70 @@ function prUpdateSelUI(){
       tog.checked=keys.length>0&&on===keys.length;tog.indeterminate=on>0&&on<keys.length;}}
 }
 function splitLibKey(k){const i=k.indexOf(LIBSEP);return[k.slice(0,i),k.slice(i+LIBSEP.length)];}
-// Staging block (zip import): libraries parsed from a .zip but not yet committed. The user ticks which
-// to keep; Add commits them, Discard drops them. (stagedLibs / stagedSel / commit live in app.js.)
-function stagingHTML(){
-  if(!stagedLibs.length)return "";
-  const rows=stagedLibs.map(L=>{const key=libKey(L.kind,L.name),on=stagedSel.has(key);
-    const sub=[L.group?groupLabel(L.group):"",L.count.toLocaleString()+(L.count===1?" entry":" entries"),L.book?esc(L.name):""].filter(Boolean).join(" · ");
-    return `<div class="staged-row${on?" picked":""}" data-stagekey="${esc(key)}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span></div><div class="hint lib-sub">${sub}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="stage-sel"${on?" checked":""}></label></div>`;}).join("");
-  return `<div class="lib-staging"><div class="lib-staging-head"><span class="ls-title">Pending import</span><span class="grp-n">${stagedLibs.length}</span>
-      <label class="lib-check grp" title="Select all"><input type="checkbox" id="stageAll"></label>
-      <button class="btn primary sm" id="stageAdd" style="width:auto" disabled>Add</button>
-      <button class="btn ghost sm" id="stageDiscard" style="width:auto">Discard all</button></div>
-    <div class="staged-rows">${rows}</div>
-    <div class="hint staged-note">Imported from a .zip — tick the sources to keep and Add them, or Discard the rest. Nothing is saved until you Add.</div></div>`;
-}
-function stageKeys(){return stagedLibs.map(L=>libKey(L.kind,L.name));}
-function stageUpdateUI(){const modal=$("#modal");if(!modal)return;
-  const keys=stageKeys(),nSel=keys.filter(k=>stagedSel.has(k)).length;
-  modal.querySelectorAll(".staged-row").forEach(r=>{const on=stagedSel.has(r.dataset.stagekey);r.classList.toggle("picked",on);const cb=r.querySelector(".stage-sel");if(cb)cb.checked=on;});
-  const all=modal.querySelector("#stageAll");if(all){all.checked=keys.length>0&&nSel===keys.length;all.indeterminate=nSel>0&&nSel<keys.length;}
-  const add=modal.querySelector("#stageAdd");if(add){add.disabled=!nSel;add.textContent="Add"+(nSel?" "+nSel:"");}
-  const dis=modal.querySelector("#stageDiscard");if(dis)dis.textContent="Discard"+(nSel?" "+nSel:" all");
-}
-function presetModal(){
-  const libs=presetLibraries();
-  const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
-  const desc={search:true,group:true,
-    params:[
-      {key:"type",label:"Type",fmt:v=>KIND_LABEL[v]||v,get:r=>r.lib.kind,values:()=>[...new Set(libs.map(L=>L.kind))]},
-      {key:"group",label:"Category",fmt:v=>groupLabel(v),get:r=>r.lib.group||"",values:()=>[...new Set(libs.map(L=>L.group).filter(Boolean))].sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)))},
-    ],
-    sortKeys:[
-      {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
-      {key:"type",label:"Type",cmp:(a,b)=>(KIND_LABEL[a.lib.kind]||"").localeCompare(KIND_LABEL[b.lib.kind]||"")},
-      {key:"group",label:"Category",cmp:(a,b)=>groupLabel(a.lib.group).localeCompare(groupLabel(b.lib.group))},
-    ]};
-  let recs=libs.map(L=>({m:{name:(L.book||L.name),type:KIND_LABEL[L.kind]},lib:L}));
-  recs=ctrlApply(recs,presetCtrl,desc);
-  // group the filtered rows by the active group-by control (None / Type / Group)
-  const gk=presetCtrl.group,gmap=new Map();
+// ── Shared library list rendering (committed presets AND the zip staging tray use the same toolbar
+//    + grouped rows so they filter/sort/group identically). ──────────────────────────────────────
+function libCtrlDesc(libs){return {search:true,group:true,
+  params:[
+    {key:"type",label:"Type",fmt:v=>KIND_LABEL[v]||v,get:r=>r.lib.kind,values:()=>[...new Set(libs.map(L=>L.kind))]},
+    {key:"group",label:"Category",fmt:v=>groupLabel(v),get:r=>r.lib.group||"",values:()=>[...new Set(libs.map(L=>L.group).filter(Boolean))].sort((a,b)=>groupLabel(a).localeCompare(groupLabel(b)))},
+  ],
+  sortKeys:[
+    {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
+    {key:"type",label:"Type",cmp:(a,b)=>(KIND_LABEL[a.lib.kind]||"").localeCompare(KIND_LABEL[b.lib.kind]||"")},
+    {key:"group",label:"Category",cmp:(a,b)=>groupLabel(a.lib.group).localeCompare(groupLabel(b.lib.group))},
+  ]};}
+const LIB_GROUP_ORDER=["core","supplement","supplement-alt","setting","setting-alt","adventure","screen","organized-play","other",""];
+function libRecs(libs){return libs.map(L=>({m:{name:(L.book||L.name),type:KIND_LABEL[L.kind]},lib:L}));}
+// Group the filtered library records by the active group-by control and render each group (header with
+// a select-all checkbox + its rows). selSet decides the group checkbox state; rowHTML draws each row.
+function libGroupRowsHTML(recs,ctrl,selSet,rowHTML){
+  const gk=ctrl.group,gmap=new Map();
   recs.forEach(r=>{let key,label;
     if(gk==="type"){key="t:"+r.lib.kind;label=KIND_LABEL[r.lib.kind]||r.lib.kind;}
     else if(gk==="group"){key="g:"+(r.lib.group||"");label=groupLabel(r.lib.group);}
     else{key="__all";label="All libraries";}
     if(!gmap.has(key))gmap.set(key,{label,items:[]});gmap.get(key).items.push(r.lib);});
-  const order=["core","supplement","supplement-alt","setting","setting-alt","adventure","screen","organized-play","other",""];
-  let grpKeys=[...gmap.keys()];
-  if(gk==="group")grpKeys.sort((a,b)=>{const ga=a.slice(2),gb=b.slice(2),ia=order.indexOf(ga),ib=order.indexOf(gb);return (ia<0?99:ia)-(ib<0?99:ib)||gmap.get(a).label.localeCompare(gmap.get(b).label);});
-  else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
+  let keys=[...gmap.keys()];
+  if(gk==="group")keys.sort((a,b)=>{const ia=LIB_GROUP_ORDER.indexOf(a.slice(2)),ib=LIB_GROUP_ORDER.indexOf(b.slice(2));return (ia<0?99:ia)-(ib<0?99:ib)||gmap.get(a).label.localeCompare(gmap.get(b).label);});
+  else keys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
+  return keys.map(k=>{const g=gmap.get(k),sel=g.items.filter(L=>selSet.has(libKey(L.kind,L.name))).length,allOn=g.items.length>0&&sel===g.items.length;
+    return `<div class="lib-grp" data-grpkey="${esc(k)}"><div class="lib-grp-head"><span class="lib-grp-name">${esc(g.label)}</span><span class="grp-n">${g.items.length}</span><label class="lib-check grp" title="Select all in group"><input type="checkbox" class="grp-sel"${allOn?" checked":""}></label></div>${g.items.map(rowHTML).join("")}</div>`;}).join("");
+}
+function libSub(L){return [L.group?groupLabel(L.group):"",L.count.toLocaleString()+" "+(L.count===1?"entry":"entries"),(L.book?esc(L.name):"")].filter(Boolean).join(" · ");}
+function presetRowHTML(L){const isSel=presetSel.has(libKey(L.kind,L.name));
+  return `<div class="preset-row${L.enabled?"":" off"}${isSel?" picked":""}" data-kind="${esc(L.kind)}" data-name="${esc(L.name)}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span>${L.enabled?"":'<span class="off-badge">Off</span>'}</div><div class="hint lib-sub">${libSub(L)}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="lib-sel"${isSel?" checked":""}></label></div>`;}
+function stagedRowHTML(L){const isSel=stagedSel.has(libKey(L.kind,L.name));
+  return `<div class="staged-row${isSel?" picked":""}" data-stagekey="${esc(libKey(L.kind,L.name))}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span></div><div class="hint lib-sub">${libSub(L)}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="stage-sel"${isSel?" checked":""}></label></div>`;}
+// ── Zip staging tray ──────────────────────────────────────────────────────────────────────────────
+let stageCtrl=blankCtrl();      // its own search / filter / sort / group
+let stageCollapsed=false;
+function stagingHTML(){
+  if(!stagedLibs.length)return "";
+  const recs=ctrlApply(libRecs(stagedLibs),stageCtrl,libCtrlDesc(stagedLibs));
+  const body=stageCollapsed?"":`<div class="ctrl-chips" id="stageChips"></div>
+    <div class="staged-rows">${recs.length?libGroupRowsHTML(recs,stageCtrl,stagedSel,stagedRowHTML):'<div class="empty-state" style="padding:14px;font-size:12px">No pending libraries match these filters.</div>'}</div>
+    <div class="hint staged-note">Imported from a .zip — tick the sources to keep, then Add them. Nothing is saved until you do; sources you already have are skipped.</div>`;
+  return `<div class="lib-staging${stageCollapsed?" collapsed":""}">
+    <div class="lib-staging-head">
+      <button class="ls-chev" id="stageCollapse" title="${stageCollapsed?"Expand":"Collapse"}" aria-label="Toggle pending import"><span class="st-chev${stageCollapsed?" closed":""}">${FS_CHEVRON}</span></button>
+      <span class="ls-title">Pending import</span><span class="grp-n">${stagedLibs.length}</span>
+      <div class="ctrl-icons" id="stageCtrlIcons"></div>
+      <div class="lib-actions stage-actions" id="stageActions"><span class="sel-n"></span><button class="btn ghost sm" id="stageClear" style="width:auto" title="Clear selection">Clear</button><button class="btn ghost sm danger-ghost" id="stageDiscardSel" style="width:auto">Discard</button><button class="btn primary sm" id="stageAdd" style="width:auto">Add</button></div>
+    </div>
+    ${body}</div>`;
+}
+function stageKeys(){return stagedLibs.map(L=>libKey(L.kind,L.name));}
+function stageUpdateUI(){const modal=$("#modal");if(!modal)return;
+  const nSel=stageKeys().filter(k=>stagedSel.has(k)).length;
+  modal.querySelectorAll(".staged-row").forEach(r=>{const on=stagedSel.has(r.dataset.stagekey);r.classList.toggle("picked",on);const cb=r.querySelector(".stage-sel");if(cb)cb.checked=on;});
+  modal.querySelectorAll(".lib-staging .grp-sel").forEach(cb=>{const rows=[...cb.closest(".lib-grp").querySelectorAll(".staged-row")];const sel=rows.filter(r=>stagedSel.has(r.dataset.stagekey)).length;cb.checked=rows.length>0&&sel===rows.length;cb.indeterminate=sel>0&&sel<rows.length;});
+  const act=modal.querySelector("#stageActions");if(act){act.classList.toggle("show",nSel>0);const s=act.querySelector(".sel-n");if(s)s.textContent=nSel+" selected";}
+}
+function presetModal(){
+  const libs=presetLibraries();
+  const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
+  const desc=libCtrlDesc(libs);
+  const recs=ctrlApply(libRecs(libs),presetCtrl,desc);
   let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
   h+=stagingHTML();
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
@@ -594,13 +610,7 @@ function presetModal(){
   h+=`<div class="lib-scroll">`;
   if(!libs.length)h+=`<div class="empty-state" style="padding:26px">No preset libraries uploaded yet.</div>`;
   else if(!recs.length)h+=`<div class="empty-state" style="padding:26px">No libraries match these filters.</div>`;
-  else h+=grpKeys.map(k=>{const g=gmap.get(k);
-    const sel=g.items.filter(L=>presetSel.has(libKey(L.kind,L.name))).length,allOn=sel===g.items.length;
-    return `<div class="lib-grp" data-grpkey="${esc(k)}"><div class="lib-grp-head"><span class="lib-grp-name">${esc(g.label)}</span><span class="grp-n">${g.items.length}</span><label class="lib-check grp" title="Select all in group"><input type="checkbox" class="grp-sel"${allOn?" checked":""}></label></div>`
-      +g.items.map(L=>{const isSel=presetSel.has(libKey(L.kind,L.name));
-        const sub=[L.group?groupLabel(L.group):"",L.count.toLocaleString()+" entries",(L.book?esc(L.name):"")].filter(Boolean).join(" · ");
-        return `<div class="preset-row${L.enabled?"":" off"}${isSel?" picked":""}" data-kind="${esc(L.kind)}" data-name="${esc(L.name)}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span>${L.enabled?"":'<span class="off-badge">Off</span>'}</div><div class="hint lib-sub">${sub}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="lib-sel"${isSel?" checked":""}></label></div>`;}).join("")
-      +`</div>`;}).join("");
+  else h+=libGroupRowsHTML(recs,presetCtrl,presetSel,presetRowHTML);
   h+=`</div>`;
   // reference sheets — subdued, outside any grouping
   const refs=[];
@@ -624,7 +634,7 @@ function presetModal(){
     ph.addEventListener("mouseenter",openPh);ph.addEventListener("click",openPh);ph.addEventListener("mouseleave",()=>closePopover());}
   $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmStack(`Remove this reference sheet?`,()=>removeReference(k));}));
   $("#modal").querySelectorAll(".lib-sel").forEach(cb=>cb.addEventListener("change",()=>{const row=cb.closest(".preset-row"),key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);prUpdateSelUI();}));
-  $("#modal").querySelectorAll(".grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
+  $("#modal").querySelectorAll(".lib-scroll .grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
   // Toggle reflects the selection's combined state: on=all enabled, off=all disabled,
   // mid (indeterminate)=mixed. A click enables all unless they're already all enabled.
   $("#prClearSel").addEventListener("click",()=>{presetSel.clear();prUpdateSelUI();});
@@ -633,14 +643,21 @@ function presetModal(){
     keys.forEach(k=>{const p=splitLibKey(k);setLibEnabled(p[0],p[1],target);});refreshLibPools();presetModal();});
   $("#prRemove").addEventListener("click",()=>{const keys=[...presetSel],n=keys.length;if(!n)return;
     confirmStack(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>{keys.forEach(k=>{const p=splitLibKey(k);removeLib(p[0],p[1]);});refreshLibPools();presetModal();});});
-  $("#modal").querySelectorAll(".grp-sel").forEach(c=>{const grp=c.closest(".lib-grp"),rows=[...grp.querySelectorAll(".preset-row")],sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;c.indeterminate=sel>0&&sel<rows.length;});
+  $("#modal").querySelectorAll(".lib-scroll .grp-sel").forEach(c=>{const grp=c.closest(".lib-grp"),rows=[...grp.querySelectorAll(".preset-row")],sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;c.indeterminate=sel>0&&sel<rows.length;});
   prUpdateSelUI();
-  // Staging (zip import) controls.
-  $("#modal").querySelectorAll(".stage-sel").forEach(cb=>cb.addEventListener("change",()=>{const key=cb.closest(".staged-row").dataset.stagekey;if(cb.checked)stagedSel.add(key);else stagedSel.delete(key);stageUpdateUI();}));
-  {const all=$("#stageAll");if(all)all.addEventListener("change",()=>{const on=all.checked;stageKeys().forEach(k=>on?stagedSel.add(k):stagedSel.delete(k));stageUpdateUI();});}
-  {const add=$("#stageAdd");if(add)add.addEventListener("click",()=>{const keys=stageKeys().filter(k=>stagedSel.has(k));if(keys.length)commitStagedLibs(keys);});}
-  {const dis=$("#stageDiscard");if(dis)dis.addEventListener("click",()=>{const sel=stageKeys().filter(k=>stagedSel.has(k));const keys=sel.length?sel:stageKeys();if(keys.length)confirmStack(`Discard ${keys.length} pending ${keys.length===1?"library":"libraries"}? They won't be imported.`,()=>discardStaged(keys));});}
-  stageUpdateUI();
+  // ── Staging (zip import) controls ──
+  if(stagedLibs.length){
+    const sdesc=libCtrlDesc(stagedLibs);
+    {const ci=$("#stageCtrlIcons");if(ci)bindCtrlIcons(ci,stageCtrl,sdesc,presetModal);}
+    {const ch=$("#stageChips");if(ch)renderCtrlChips(ch,stageCtrl,sdesc,presetModal);}
+    {const col=$("#stageCollapse");if(col)col.addEventListener("click",()=>{stageCollapsed=!stageCollapsed;presetModal();});}
+    $("#modal").querySelectorAll(".stage-sel").forEach(cb=>cb.addEventListener("change",()=>{const key=cb.closest(".staged-row").dataset.stagekey;if(cb.checked)stagedSel.add(key);else stagedSel.delete(key);stageUpdateUI();}));
+    $("#modal").querySelectorAll(".lib-staging .grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".staged-row").forEach(row=>{const key=row.dataset.stagekey;if(cb.checked)stagedSel.add(key);else stagedSel.delete(key);});stageUpdateUI();}));
+    {const cl=$("#stageClear");if(cl)cl.addEventListener("click",()=>{stagedSel.clear();stageUpdateUI();});}
+    {const add=$("#stageAdd");if(add)add.addEventListener("click",()=>{const keys=stageKeys().filter(k=>stagedSel.has(k));if(keys.length)commitStagedLibs(keys);});}
+    {const dis=$("#stageDiscardSel");if(dis)dis.addEventListener("click",()=>{const keys=stageKeys().filter(k=>stagedSel.has(k));if(keys.length)confirmStack(`Discard ${keys.length} pending ${keys.length===1?"library":"libraries"}? They won't be imported.`,()=>discardStaged(keys));});}
+    stageUpdateUI();
+  }
 }
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}”: what should happen to your current edits?</p>
