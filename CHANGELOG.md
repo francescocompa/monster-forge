@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 98 — Branch reconcile: fold main's B82–B86 features onto combat-tracker
+- **Brought `main`'s isolated feature commits onto the `combat-tracker` branch** so the branch is now the
+  complete union of both lines (cherry-pick of B82–B86, skipping the B80 revert). The branch keeps all the
+  Combat Tracker work + `seed.js`; it now ALSO has, from `main`:
+  - **5etools `.zip` import** (B85–86): `unzipJsonFiles` (parsers.js, native `DecompressionStream`), zip
+    staging + Pending-import tray (app.js/bestiary.js), `#zipIn` (index.html).
+  - **Encounter XP-bar threshold markers** (B83–84): `budMarksHTML` circles — kept the branch's newer
+    `.budget-top` structure and neutral `--budfill` fill (B91/B92 decisions) and added the markers on top.
+  - **Bestiary/Forge new-creature menu icons** (B83): file-import glyph for "From chassis", clipboard for
+    "Paste 5etools".
+  - B82 (chip-field fix) was already effectively present on the branch (empty cherry-pick).
+- **Reconcile fixups:** restored the four branch-only `index.html` additions that the icon-conflict
+  resolution had to merge around — the Combat nav button, `#advScrim`, the `#view-combat` section, and
+  `seed.js` in the script loader. `main` is left untouched (promote it to the union when deploying).
+
 ## Batch 97 — Combat Tracker v2 (CT9 fixes): resize regression, active panel, popovers, load popup
 - **Fixed the two-pane resize regression.** Below ~1080px the view now stacks cleanly (it was clipping
   the statblock off the right and squeezing the layout in the 980–1080px band); the active column shrinks
