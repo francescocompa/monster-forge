@@ -928,6 +928,19 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 
 /* ── Preset libraries manager (Batch 28/29: filters, selection actions, refs) ── */
 .preset-mgr{display:flex;flex-direction:column;position:relative;max-height:74vh}
+/* Staging block — libraries imported from a .zip awaiting confirmation. */
+.lib-staging{border:1px solid var(--accent);border-radius:9px;background:color-mix(in srgb,var(--accent) 7%,var(--panel));padding:9px;margin:4px 0 10px;display:flex;flex-direction:column;gap:7px}
+.lib-staging-head{display:flex;align-items:center;gap:9px}
+.lib-staging-head .ls-title{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-soft);text-transform:uppercase}
+.lib-staging-head .grp-n{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.lib-staging-head #stageAll{margin-left:auto}
+.lib-staging-head .lib-check.grp{margin-left:auto}
+.lib-staging-head #stageAdd,.lib-staging-head #stageDiscard{flex:none}
+.staged-rows{display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow-y:auto}
+.staged-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+.staged-row.picked{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2))}
+.staged-row .hint{display:inline}
+.staged-note{font-size:11px;color:var(--faint)}
 .modal-title{display:flex;align-items:center;gap:8px}
 .help-btn{margin-left:auto;width:20px;height:20px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:grid;place-items:center}
 .help-btn:hover{border-color:var(--accent);color:var(--accent)}

@@ -526,7 +526,7 @@ function removeReference(k){
 }
 const GROUP_LABELS={core:"Core",supplement:"Supplements","supplement-alt":"Supplements (alt)",setting:"Settings","setting-alt":"Settings (alt)",adventure:"Adventures",screen:"Screens","organized-play":"Organized Play",other:"Other"};
 const groupLabel=g=>g?(GROUP_LABELS[g]||g.replace(/(^|[-\s])\w/g,c=>c.toUpperCase()).replace(/-/g," ")):"Ungrouped";
-const PRESET_HINT="Upload native 5etools <code>.json</code> files — <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles + groups), or <b>legendarygroups.json</b> (lair actions &amp; regional effects). The kind is auto-detected. Everything is parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
+const PRESET_HINT="Upload a whole 5etools data <b>.zip</b> (or individual <code>.json</code> files from the ▾ menu) — <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles + groups), or <b>legendarygroups.json</b> (lair actions &amp; regional effects). The kind is auto-detected. A zip lists every source it finds in a <b>Pending import</b> tray first — tick the ones you want and Add them; nothing is kept until you do, and sources you already have are skipped. Everything is parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
 let presetCtrl=blankCtrl();presetCtrl.group="group";
 const presetSel=new Set();
 function prUpdateSelUI(){
@@ -538,6 +538,28 @@ function prUpdateSelUI(){
       tog.checked=keys.length>0&&on===keys.length;tog.indeterminate=on>0&&on<keys.length;}}
 }
 function splitLibKey(k){const i=k.indexOf(LIBSEP);return[k.slice(0,i),k.slice(i+LIBSEP.length)];}
+// Staging block (zip import): libraries parsed from a .zip but not yet committed. The user ticks which
+// to keep; Add commits them, Discard drops them. (stagedLibs / stagedSel / commit live in app.js.)
+function stagingHTML(){
+  if(!stagedLibs.length)return "";
+  const rows=stagedLibs.map(L=>{const key=libKey(L.kind,L.name),on=stagedSel.has(key);
+    const sub=[L.group?groupLabel(L.group):"",L.count.toLocaleString()+(L.count===1?" entry":" entries"),L.book?esc(L.name):""].filter(Boolean).join(" · ");
+    return `<div class="staged-row${on?" picked":""}" data-stagekey="${esc(key)}"><div class="lib-meta"><div class="lib-title"><b>${esc(L.book||L.name)}</b><span class="kind-badge k-${esc(L.kind)}">${KIND_LABEL[L.kind]}</span></div><div class="hint lib-sub">${sub}</div></div><label class="lib-check" title="Select"><input type="checkbox" class="stage-sel"${on?" checked":""}></label></div>`;}).join("");
+  return `<div class="lib-staging"><div class="lib-staging-head"><span class="ls-title">Pending import</span><span class="grp-n">${stagedLibs.length}</span>
+      <label class="lib-check grp" title="Select all"><input type="checkbox" id="stageAll"></label>
+      <button class="btn primary sm" id="stageAdd" style="width:auto" disabled>Add</button>
+      <button class="btn ghost sm" id="stageDiscard" style="width:auto">Discard all</button></div>
+    <div class="staged-rows">${rows}</div>
+    <div class="hint staged-note">Imported from a .zip — tick the sources to keep and Add them, or Discard the rest. Nothing is saved until you Add.</div></div>`;
+}
+function stageKeys(){return stagedLibs.map(L=>libKey(L.kind,L.name));}
+function stageUpdateUI(){const modal=$("#modal");if(!modal)return;
+  const keys=stageKeys(),nSel=keys.filter(k=>stagedSel.has(k)).length;
+  modal.querySelectorAll(".staged-row").forEach(r=>{const on=stagedSel.has(r.dataset.stagekey);r.classList.toggle("picked",on);const cb=r.querySelector(".stage-sel");if(cb)cb.checked=on;});
+  const all=modal.querySelector("#stageAll");if(all){all.checked=keys.length>0&&nSel===keys.length;all.indeterminate=nSel>0&&nSel<keys.length;}
+  const add=modal.querySelector("#stageAdd");if(add){add.disabled=!nSel;add.textContent="Add"+(nSel?" "+nSel:"");}
+  const dis=modal.querySelector("#stageDiscard");if(dis)dis.textContent="Discard"+(nSel?" "+nSel:" all");
+}
 function presetModal(){
   const libs=presetLibraries();
   const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
@@ -565,6 +587,7 @@ function presetModal(){
   if(gk==="group")grpKeys.sort((a,b)=>{const ga=a.slice(2),gb=b.slice(2),ia=order.indexOf(ga),ib=order.indexOf(gb);return (ia<0?99:ia)-(ib<0?99:ib)||gmap.get(a).label.localeCompare(gmap.get(b).label);});
   else grpKeys.sort((a,b)=>gmap.get(a).label.localeCompare(gmap.get(b).label));
   let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
+  h+=stagingHTML();
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
   h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><button class="btn ghost sm" id="prClearSel" style="width:auto" title="Clear selection">Clear</button><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">${TRASH_SVG}</button></div>`;
   h+=`<div class="lib-scroll">`;
@@ -583,16 +606,17 @@ function presetModal(){
   if(state.refMeta.books&&Object.keys(state.books).length)refs.push({k:"books",label:"Book reference",file:state.refMeta.books.file,count:Object.keys(state.books).length,unit:"sources"});
   if(state.refMeta.legGroups&&Object.keys(state.legendaryGroups).length)refs.push({k:"leg",label:"Legendary groups",file:state.refMeta.legGroups.file,count:Object.keys(state.legendaryGroups).length,unit:"groups"});
   if(refs.length)h+=`<div class="lib-refs">`+refs.map(r=>`<div class="lib-ref"><span class="ref-meta">${esc(r.label)} · ${r.count.toLocaleString()} ${r.unit}<span class="hint"> · ${esc(r.file)}</span></span><button class="ref-x" data-refx="${esc(r.k)}" title="Remove reference">✕</button></div>`).join("")+`</div>`;
-  h+=`<div class="lib-foot"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><div class="split-btn"><button class="btn primary sm" id="prAdd" style="width:auto">＋ Upload .json files</button><button class="btn primary sm split-caret" id="prMore" style="width:auto" title="More options" aria-label="More options">▾</button></div></div>`;
+  h+=`<div class="lib-foot"><button class="btn ghost sm" id="prClose" style="width:auto">Close</button><div class="split-btn"><button class="btn primary sm" id="prAddZip" style="width:auto">＋ Upload .zip</button><button class="btn primary sm split-caret" id="prMore" style="width:auto" title="More options" aria-label="More options">▾</button></div></div>`;
   openModalRaw(`<div class="preset-mgr">${h}</div>`);
   bindCtrlIcons($("#prCtrlIcons"),presetCtrl,desc,presetModal);
   renderCtrlChips($("#prChips"),presetCtrl,desc,presetModal);
   $("#prClose").addEventListener("click",closeModal);
-  $("#prAdd").addEventListener("click",()=>$("#mdIn").click());
+  $("#prAddZip").addEventListener("click",()=>$("#zipIn").click());
   $("#prMore").addEventListener("click",e=>{e.stopPropagation();
-    const p=showPopover(e.currentTarget,`<button class="popitem" data-prm="reparse">↻ Re-parse libraries</button><button class="popitem" data-prm="enableall">Clear all disabled</button>`);
+    const p=showPopover(e.currentTarget,`<button class="popitem" data-prm="json">＋ Upload .json files</button><div class="popsep"></div><button class="popitem" data-prm="reparse">↻ Re-parse libraries</button><button class="popitem" data-prm="enableall">Clear all disabled</button>`);
     p.querySelectorAll("[data-prm]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const a=b.dataset.prm;closePopover();
-      if(a==="reparse")reparseLibraries();
+      if(a==="json")$("#mdIn").click();
+      else if(a==="reparse")reparseLibraries();
       else{state.disabledLibs=[];saveDisabled();refreshLibPools();presetModal();toast("All libraries enabled.");}
     }));});
   {const ph=$("#prHelp"),openPh=e=>{e.stopPropagation();showPopover(ph,`<div class="help-pop">${PRESET_HINT}</div>`);};
@@ -610,6 +634,12 @@ function presetModal(){
     confirmStack(`Remove ${n} selected ${n===1?"library":"libraries"}? Their presets are deleted from this device.`,()=>{keys.forEach(k=>{const p=splitLibKey(k);removeLib(p[0],p[1]);});refreshLibPools();presetModal();});});
   $("#modal").querySelectorAll(".grp-sel").forEach(c=>{const grp=c.closest(".lib-grp"),rows=[...grp.querySelectorAll(".preset-row")],sel=rows.filter(r=>presetSel.has(libKey(r.dataset.kind,r.dataset.name))).length;c.indeterminate=sel>0&&sel<rows.length;});
   prUpdateSelUI();
+  // Staging (zip import) controls.
+  $("#modal").querySelectorAll(".stage-sel").forEach(cb=>cb.addEventListener("change",()=>{const key=cb.closest(".staged-row").dataset.stagekey;if(cb.checked)stagedSel.add(key);else stagedSel.delete(key);stageUpdateUI();}));
+  {const all=$("#stageAll");if(all)all.addEventListener("change",()=>{const on=all.checked;stageKeys().forEach(k=>on?stagedSel.add(k):stagedSel.delete(k));stageUpdateUI();});}
+  {const add=$("#stageAdd");if(add)add.addEventListener("click",()=>{const keys=stageKeys().filter(k=>stagedSel.has(k));if(keys.length)commitStagedLibs(keys);});}
+  {const dis=$("#stageDiscard");if(dis)dis.addEventListener("click",()=>{const sel=stageKeys().filter(k=>stagedSel.has(k));const keys=sel.length?sel:stageKeys();if(keys.length)confirmStack(`Discard ${keys.length} pending ${keys.length===1?"library":"libraries"}? They won't be imported.`,()=>discardStaged(keys));});}
+  stageUpdateUI();
 }
 function chassisConflictModal(ch){
   openModalRaw(`<h3>You have unsaved edits</h3><p class="hint" style="margin:-4px 0 14px">Loading “${esc(ch.name)}”: what should happen to your current edits?</p>

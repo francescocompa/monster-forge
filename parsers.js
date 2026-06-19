@@ -452,3 +452,53 @@ function detectJsonKind(json){
   if(json.variantrule||json.action||json.sense||json.skill)return "rule";
   return null;
 }
+
+// ── 5etools .zip import (no dependency: native DecompressionStream) ───────────────────────────────
+// Read the recognised JSON files out of a 5etools data zip in the browser. Returns [{name, json}] for
+// every entry whose top-level keys detectJsonKind understands, skipping 5etools' fluff/foundry/prose
+// noise. Decompression uses the browser's native DecompressionStream('deflate-raw') — no JSZip, so the
+// site stays no-build. `onFile(name,index,total)` is an optional progress callback.
+async function inflateRaw(bytes){
+  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+// Which zip entries are worth opening: .json content files minus the obvious non-statblock noise.
+function zipWanted(path){
+  if(!/\.json$/i.test(path))return false;
+  const p=path.toLowerCase(),base=p.split("/").pop();
+  if(base.startsWith("fluff-")||base.startsWith("foundry-"))return false;        // images/foundry packs
+  if(/(^|\/)(generated|roll20|foundry|makebrew|partnered)\//.test(p))return false;
+  if(/(^|\/)(adventure|book)\//.test(p))return false;                            // long-form prose
+  return true;
+}
+async function unzipJsonFiles(buf,onFile){
+  if(typeof DecompressionStream==="undefined")throw new Error("This browser can't unzip files (no DecompressionStream). Upload the .json files individually instead.");
+  const dv=new DataView(buf),bytes=new Uint8Array(buf),n=buf.byteLength,td=new TextDecoder();
+  // End Of Central Directory record (sig PK\5\6) — scan back over the optional trailing comment.
+  let eocd=-1;for(let i=n-22;i>=0&&i>=n-22-0xffff;i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+  if(eocd<0)throw new Error("That doesn't look like a .zip file.");
+  const count=dv.getUint16(eocd+10,true),cdOff=dv.getUint32(eocd+16,true);
+  const entries=[];let p=cdOff;
+  for(let i=0;i<count;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break; // central-directory file header (PK\1\2)
+    const method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true);
+    const nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commLen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true),name=td.decode(bytes.subarray(p+46,p+46+nameLen));
+    entries.push({name,method,compSize,lho});
+    p+=46+nameLen+extraLen+commLen;
+  }
+  const wanted=entries.filter(e=>zipWanted(e.name)),out=[];
+  for(let i=0;i<wanted.length;i++){const e=wanted[i];
+    // Local file header (PK\3\4): the data begins after its own name+extra fields.
+    const lnameLen=dv.getUint16(e.lho+26,true),lextraLen=dv.getUint16(e.lho+28,true);
+    const start=e.lho+30+lnameLen+lextraLen,comp=bytes.subarray(start,start+e.compSize);
+    let raw;
+    if(e.method===0)raw=comp;            // stored
+    else if(e.method===8)raw=await inflateRaw(comp); // deflate
+    else continue;
+    let json=null;try{json=JSON.parse(td.decode(raw));}catch(_){json=null;}
+    if(onFile)onFile(e.name,i+1,wanted.length);
+    if(json&&detectJsonKind(json))out.push({name:e.name.split("/").pop(),json});
+  }
+  return out;
+}

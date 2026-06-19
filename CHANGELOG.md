@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 85 — Import a whole 5etools .zip (staged, confirm-to-keep)
+- **Upload a whole 5etools data `.zip`** instead of hunting for individual files. The main button in
+  Preset libraries is now **Upload .zip** (the old **Upload .json files** moved into the ▾ menu). The zip
+  is unpacked **in your browser with no new dependency** — it uses the native `DecompressionStream`, so
+  the site stays no-build.
+- **Pending-import tray.** A zip doesn't commit anything outright: every source it finds lands in a
+  **Pending import** tray at the top of the popup. Tick the ones you want (one by one or *Select all*) and
+  **Add** them; **Discard** drops the rest. Nothing is saved until you Add, and any source you've already
+  imported is **skipped automatically**. Reference sheets (`books.json`, `legendarygroups.json`) apply up
+  front so titles and lair actions resolve, and cross-file `_copy` statblocks resolve across the zip.
+- Files that aren't statblock/spell/condition/rule data (fluff, foundry packs, adventures, images) are
+  ignored. Confirmed libraries are stashed for **Re-parse** just like a manual upload.
+
 ## Batch 84 — XP-bar markers as circles + neutral fill
 - The encounter XP-bar Low/Mod/High threshold markers are now small **circles** instead of lines, and
   the draggable target marker gets a **coloured ring** in the threshold's colour when it sits on one.
