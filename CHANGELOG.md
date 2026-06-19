@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 116 — Initiative: merged numbering across same-name groups + group-init setting
+- **Continuous numbering for same-statblock groups.** Two separate "Goblin" entries of 5 now number
+  **Goblin 1–5 then 6–10** instead of each restarting at 1, while staying separate for initiative. startCombat
+  does a two-pass tally (`combatBaseName`, per-name totals + offsets); single instances stay unnumbered.
+- **Setting: "Group initiative for identical enemies"** (`combat.groupInit`, default on). On = all copies of
+  one enemy entry share a single roll; off = each instance rolls its own initiative (its own `groupId`, so it
+  sorts and re-rolls independently).
+- Decoupled entry-linkage from init-grouping: instances now carry `srcEntry` (the encounter entry id) so
+  `syncCombatOrder` still recognises an entry even when `groupId` is per-instance (ungrouped). Backward
+  compatible (`srcEntry || groupId`).
+
 ## Batch 115 — Fixes: caret position + number-flow reels clipped to the order pane
 - **Active caret** moved to the far left edge (`left:-18px`) so it hugs the left end with more gap from the
   init row (was `-13px`, too close to the row).

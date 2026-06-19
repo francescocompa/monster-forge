@@ -901,26 +901,40 @@ function detectResources(m){
 // initiative (groupId = the combatant entry). PCs roll d20 + their roster initiative modifier.
 // Build the order instance(s) for one encounter combatant entry (event = 1, monster/quick = its count;
 // identical monsters share one rolled initiative via groupId = the combatant entry id).
-function combatantInstances(c){
-  if(c.type==="event")return [{id:uid(),kind:"event",srcId:null,name:c.name||"Event",init:Number(c.init)||0,initMod:0,dex:0,ac:null,hpMax:null,hpCur:null,hpTemp:0,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]}];
-  const m=c.type==="monster"?monOf(c):null,base=c.nickname||(m?m.name:(c.type==="quick"?"Combatant":"?"));
-  const im=m?initOf(m):0,gi=rollOrAvgInit(im),count=Math.max(1,Number(c.count||1)),arr=[];
+// The display base name for an entry (nickname, else statblock name) — drives the merged numbering.
+function combatBaseName(c){if(c.type==="event")return c.name||"Event";if(c.nickname)return c.nickname;const m=c.type==="monster"?monOf(c):null;return m?m.name:(c.type==="quick"?"Combatant":"?");}
+// Group initiative for identical-monster groups? (Settings combat.groupInit) — on = one shared roll per
+// entry; off = each instance rolls its own initiative (kept separate in the order).
+function groupInitOn(){return !state.settings.combat||state.settings.combat.groupInit!==false;}
+// `nameTotal`/`nameOffset` come from startCombat: continuous numbering across same-name entries (two goblin
+// groups of 5 → Goblin 1–5 then 6–10), while each entry stays separate for initiative. `srcEntry` links an
+// instance back to its encounter entry (independent of groupId, which may be per-instance when ungrouped).
+function combatantInstances(c,nameTotal,nameOffset){
+  if(c.type==="event")return [{id:uid(),kind:"event",srcId:null,srcEntry:c.id,name:c.name||"Event",init:Number(c.init)||0,initMod:0,initRolled:true,dex:0,ac:null,hpMax:null,hpCur:null,hpTemp:0,status:"active",conditions:[],comment:c.text||"",faction:"Neutral",groupId:c.id,resources:[]}];
+  const m=c.type==="monster"?monOf(c):null,base=combatBaseName(c);
+  const im=m?initOf(m):0,count=Math.max(1,Number(c.count||1)),arr=[];
+  const grouped=groupInitOn(),gi=grouped?rollOrAvgInit(im):null;
+  const total=nameTotal||count,off=nameOffset||0;
   for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
-    arr.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
-      name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,initRolled:autoRollOn(),dex:m?Number(m.dex||10):10,
-      ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,hpTemp:0,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:m?detectResources(m):[]});}
+    arr.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,srcEntry:c.id,
+      name:total>1?`${base} ${off+i+1}`:base,init:grouped?gi:rollOrAvgInit(im),initMod:im,initRolled:autoRollOn(),dex:m?Number(m.dex||10):10,
+      ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,hpTemp:0,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:grouped?c.id:uid(),resources:m?detectResources(m):[]});}
   return arr;
 }
 // Auto-roll initiative? (Settings combat.initMode) — off = "average" mode: combatants start with a dimmed
 // average init (still counts for sorting) until the round-bar d20 is clicked to roll them.
 function autoRollOn(){return !(state.settings.combat&&state.settings.combat.initMode==="average");}
 function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init);
-  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,initRolled:autoRollOn(),dex:0,
+  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,initRolled:autoRollOn(),dex:0,
     ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
   const order=[];
-  e.combatants.forEach(c=>order.push(...combatantInstances(c)));
+  // Pass 1: total instances per base name → continuous numbering across same-name entries.
+  const totals={},offs={};
+  e.combatants.forEach(c=>{const n=combatBaseName(c);totals[n]=(totals[n]||0)+Math.max(1,Number(c.count||1));});
+  // Pass 2: create, advancing the per-name offset so each entry's numbers follow the previous one's.
+  e.combatants.forEach(c=>{const n=combatBaseName(c),cnt=Math.max(1,Number(c.count||1));order.push(...combatantInstances(c,totals[n],offs[n]||0));offs[n]=(offs[n]||0)+cnt;});
   a.party.forEach(p=>order.push(pcInstance(p)));
   sortInitiative(order);
   e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
@@ -928,8 +942,8 @@ function startCombat(a,e){
 // Live-update (CT7b note 4): pull any encounter combatant / party member not yet in the order into the
 // running combat (rolling init/HP), re-sorting while keeping whose turn it is. Returns true if changed.
 function syncCombatOrder(a,e){const cb=e.combat;if(!cb)return false;
-  const have=new Set(cb.order.map(o=>o.groupId));let added=false;
-  e.combatants.forEach(c=>{if(!have.has(c.id)){cb.order.push(...combatantInstances(c));added=true;}});
+  const have=new Set(cb.order.map(o=>o.srcEntry||o.groupId));let added=false;
+  e.combatants.forEach(c=>{if(!have.has(c.id)){const n=combatBaseName(c),existing=cb.order.filter(o=>(o.name||"").replace(/\s+\d+$/,"")===n).length,cnt=Math.max(1,Number(c.count||1));cb.order.push(...combatantInstances(c,existing+cnt,existing));added=true;}});
   a.party.forEach(p=>{if(!have.has("pc:"+p.id)){cb.order.push(pcInstance(p));added=true;}});
   if(added&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   return added;
