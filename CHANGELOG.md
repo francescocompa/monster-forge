@@ -4,6 +4,11 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 119 — Polish: reel border + manual init field
+- The number-flow reel no longer draws an accent highlight border while rolling (`--accent` → `--line`).
+- Blank party init field (party-roll off) toned down: **solid yellow border** (was dashed) with a **dimmed
+  grey em-dash** placeholder (was amber).
+
 ## Batch 118 — Status as icons (no faction-colour clash)
 - Combat status no longer relies on colour (which collided with the faction colours). The card status
   control now shows **FA-free icons by shape**: active = shield-heart, waiting = circle-pause, dead = skull

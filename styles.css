@@ -859,10 +859,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
 .cbt-row .ci-init-in.unrolled{border-style:dashed} /* auto-roll off: shows the dimmed average as a placeholder */
 .cbt-row .ci-init-in.unrolled::placeholder{color:var(--faint);opacity:1}
-.cbt-row .ci-init-in.manual{border-style:dashed;border-color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll */
-.cbt-row .ci-init-in.manual::placeholder{color:var(--amber-soft);opacity:1}
+.cbt-row .ci-init-in.manual{border-color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll (solid yellow border) */
+.cbt-row .ci-init-in.manual::placeholder{color:var(--faint);opacity:1} /* dimmed grey em-dash */
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
-.nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:var(--in);border:1px solid var(--accent);border-radius:6px;color:var(--txt);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
+.nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
 .nf-col{display:flex;flex-direction:column;transform:translateY(0);transition:transform 1.35s cubic-bezier(.16,.84,.3,1)}
 .nf-n{height:1em;line-height:1;display:flex;align-items:center;justify-content:center}
