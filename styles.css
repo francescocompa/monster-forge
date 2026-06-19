@@ -929,14 +929,20 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* ── Preset libraries manager (Batch 28/29: filters, selection actions, refs) ── */
 .preset-mgr{display:flex;flex-direction:column;position:relative;max-height:74vh}
 /* Staging block — libraries imported from a .zip awaiting confirmation. */
-.lib-staging{border:1px solid var(--accent);border-radius:9px;background:color-mix(in srgb,var(--accent) 7%,var(--panel));padding:9px;margin:4px 0 10px;display:flex;flex-direction:column;gap:7px}
-.lib-staging-head{display:flex;align-items:center;gap:9px}
-.lib-staging-head .ls-title{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-soft);text-transform:uppercase}
+.lib-staging{position:relative;border:1px solid var(--accent);border-radius:9px;background:color-mix(in srgb,var(--accent) 7%,var(--panel));padding:9px;margin:4px 0 10px;display:flex;flex-direction:column;gap:8px}
+.lib-staging-head{display:flex;align-items:center;gap:8px;min-height:28px}
+.ls-chev{flex:none;width:24px;height:24px;display:grid;place-items:center;background:none;border:1px solid transparent;border-radius:6px;color:var(--faint);cursor:pointer;padding:0}
+.ls-chev:hover{border-color:var(--line);color:var(--txt)}
+.ls-chev .st-chev{display:inline-flex;width:13px;height:13px;transition:transform .15s}
+.ls-chev .st-chev.closed{transform:rotate(-90deg)}
+.lib-staging-head .ls-title{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent-soft);text-transform:uppercase;margin-left:3px}
 .lib-staging-head .grp-n{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
-.lib-staging-head #stageAll{margin-left:auto}
-.lib-staging-head .lib-check.grp{margin-left:auto}
-.lib-staging-head #stageAdd,.lib-staging-head #stageDiscard{flex:none}
-.staged-rows{display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow-y:auto}
+.lib-staging-head .ctrl-icons{margin-left:auto}
+.lib-staging .ctrl-chips{margin:0}
+.lib-staging .stage-actions{position:absolute;top:6px;right:9px;left:auto;z-index:7}
+.lib-staging .stage-actions .danger-ghost{color:var(--bad)}
+.lib-staging .stage-actions .danger-ghost:hover{border-color:var(--bad)}
+.staged-rows{display:flex;flex-direction:column;gap:7px;max-height:34vh;overflow-y:auto;padding-top:1px}
 .staged-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
 .staged-row.picked{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2))}
 .staged-row .hint{display:inline}
@@ -969,8 +975,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lib-grp-head{display:flex;align-items:center;gap:8px;padding:0 2px}
 .lib-grp-name{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
 .lib-grp-head .grp-n{font-size:10px;color:var(--faint);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 7px;line-height:16px}
-.lib-grp-head .lib-check{margin-left:auto}
-.lib-check{display:inline-grid;place-items:center;flex:none;cursor:pointer}
+.lib-grp-head .lib-check{margin:0 0 0 auto} /* beats the generic .grp{margin-bottom:18px} the "grp" class otherwise picks up */
+.lib-check{display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;margin:0}
+.lib-check input{margin:0;display:block;vertical-align:middle}
 .preset-row{gap:12px}
 .preset-row .lib-meta{flex:1;min-width:0}
 .preset-row .lib-title{display:flex;align-items:center;gap:4px;flex-wrap:wrap}

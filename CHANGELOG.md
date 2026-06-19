@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 86 — Pending-import tray: same filter tools, collapse, selection popover, checkbox alignment
+- The **Pending import** tray now has the **same search / filter / sort / group** controls as the regular
+  library list (and groups its rows the same way), so a big zip's sources are easy to narrow down.
+- The always-on **Add / Discard all** buttons are gone; selecting one or more pending sources now reveals
+  a floating **Clear · Discard · Add** bar, mirroring the committed-library selection popover.
+- A **chevron collapses** the Pending-import section (with proper spacing from the title).
+- **Fixed checkbox alignment** — the group / select-all checkboxes (in both the pending tray and the
+  committed list) are now vertically centred with their titles instead of floating high (they were
+  picking up an unrelated `margin-bottom` from the generic `grp` class).
+
 ## Batch 85 — Import a whole 5etools .zip (staged, confirm-to-keep)
 - **Upload a whole 5etools data `.zip`** instead of hunting for individual files. The main button in
   Preset libraries is now **Upload .zip** (the old **Upload .json files** moved into the ▾ menu). The zip
