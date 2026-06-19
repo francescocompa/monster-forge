@@ -1179,13 +1179,17 @@ function combatActiveHTML(it){
   const tail=hasSb
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :`<div class="ca-soon">${it.kind==="pc"?"Player character — no statblock to roll from.":it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
-  return `<div class="ca-card ${cFac(it.faction)}">
-    <div class="ca-name">${esc(it.name)}</div>
-    <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
-    ${hpline}
-    ${conds}
-    ${resourcePipsHTML(it)}
-    <div class="ca-note ca-noteline">${it.comment?esc(it.comment):'<span class="ca-noteph">No note</span>'} <button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">edit</button></div>
+  // CT9: one flat panel (faction-coloured left accent) — the combatant meta on top, then the statblock
+  // flowing directly below it. No nested card-in-a-card.
+  return `<div class="ca-panel ${cFac(it.faction)}">
+    <div class="ca-head">
+      <div class="ca-name">${esc(it.name)}</div>
+      <div class="ca-meta">${esc(who)}${it.ac!=null?` · AC ${it.ac}`:""}</div>
+      ${hpline}
+      ${conds}
+      ${resourcePipsHTML(it)}
+      <div class="ca-note ca-noteline">${it.comment?esc(it.comment):'<span class="ca-noteph">No note</span>'} <button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">edit</button></div>
+    </div>
     ${tail}
   </div>`;
 }
@@ -1205,34 +1209,37 @@ const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
 const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // The Adventures sidebar-tab glyph — reused on the narrow-width "open the adventure list as a drawer" button.
 const ADV_TAB_SVG='<svg viewBox="0 0 640 640" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M539.3 64.1C549.2 63.3 558.9 67.1 565.9 74.1C572.9 81.1 576.7 90.8 575.9 100.7C571.9 150 558.5 226.9 529.6 300.4C527.8 304.9 524.1 308.3 519.4 309.7L438.5 334C434.6 335.2 432 338.7 432 342.8C432 347.9 436.1 352 441.2 352L479.8 352C491.8 352 499.5 364.8 493.3 375.1C489.3 381.8 485 388.3 480.6 394.7C478.6 397.6 475.6 399.7 472.2 400.8L374.5 430C370.6 431.2 368 434.7 368 438.8C368 443.9 372.1 448 377.2 448L393.2 448C407.8 448 414.2 465.4 402 473.4C334 518.4 264.3 516.7 219.6 504.7C206.9 501.3 195.6 494.8 185.2 486.8L112 560C103.2 568.8 88.8 568.8 80 560C71.2 551.2 71.2 536.8 80 528L160 448L160.5 448.5C161.2 447.2 162.1 446 163.2 444.9L320 288C328.8 279.2 328.8 264.8 320 256C311.2 247.2 296.8 247.2 288 256L153.7 390.2C144.8 399.1 129.7 394.6 128.7 382C124.4 328.8 138 258.9 201.3 195.6C292.4 104.5 455.5 70.9 539.2 64.1z"/></svg>';
-// Combat-tab header (CT7): a title block (adventure over scene, adv-colour bar) with the encounter
-// selector (ghost chevrons) in line; then an encounter bar carrying the budget pill, notes, and — when
-// combat is live — the round counter + turn chevrons (right). Start/End live in the tab FAB.
+// Combat-tab header (CT9, Direction C): one slim context line — adventure-colour accent, the scene ·
+// encounter title (click to load another), the difficulty pill, and a non-prominent same-scene ‹n/m›
+// nav. The round counter + turn controls live on the initiative list (combatTurnBarHTML), not here.
 function combatHeaderHTML(a,e,sc,cb){
   const sibs=sc?sceneEncs(a,e):[],idx=sibs.indexOf(e);
   const advc=a.color||"var(--accent)";
   const[cls,label]=diffOf(encSpent(e),encBudget(a,e));
-  const sel=(sc&&sibs.length>1)?`<div class="ct-encsel">
+  const sceneNav=(sc&&sibs.length>1)?`<span class="ct-scenenav">
       <button class="ghost-chev" id="scPrev"${idx<=0?" disabled":""} title="Previous encounter" aria-label="Previous encounter">${CHEV_L}</button>
       <span class="ct-encpos">${idx+1}/${sibs.length}</span>
       <button class="ghost-chev" id="scNext"${idx>=sibs.length-1?" disabled":""} title="Next encounter" aria-label="Next encounter">${CHEV_R}</button>
-    </div>`:"";
-  const top=`<div class="ct-top">
-      <button class="ct-titleblock ct-titlebtn" id="combatLoadTitle" style="border-color:${advc}" title="Load a different encounter">
-        <div class="ct-adv">${esc(advDName(a))}</div>
-        <div class="ct-scene">${esc(sc?sceneDName(sc):encDName(e))}</div>
-      </button>
-      ${sel?`<div class="ct-top-ctrls">${sel}</div>`:""}
-    </div>`;
-  const notes=(e.notesOn&&e.notes)?`<div class="ct-enc-notes">${esc(e.notes)}</div>`:"";
-  const turn=cb?`<div class="ct-turn"><span class="ct-round">Round ${cb.round}</span>
-      <button class="ghost-chev" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
-      <button class="ghost-chev" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button></div>`:"";
-  const strip=`<div class="ct-encbar${cb?"":" full"}">
-      <div class="ct-encinfo"><div class="ct-encline">${sc?`<span class="ct-encname">${esc(encDName(e))}</span>`:""}<span class="pill ${cls}">${label}</span></div>${notes}</div>
-      ${turn}
-    </div>`;
-  return top+strip;
+    </span>`:"";
+  const titleInner=sc
+    ?`<span class="ct-scene">${esc(sceneDName(sc))}</span><span class="ct-dot">·</span><span class="ct-enc">${esc(encDName(e))}</span>`
+    :`<span class="ct-scene">${esc(encDName(e))}</span>`;
+  const notes=(e.notesOn&&e.notes)?`<div class="ct-notes">${esc(e.notes)}</div>`:"";
+  return `<div class="ct-bar" style="--ct-accent:${advc}">
+    <button class="ct-title" id="combatLoadTitle" title="Load a different scene or encounter">${titleInner}<span class="pill sm ${cls}">${label}</span><span class="ct-loadico" aria-hidden="true">${FS_CHEVRON}</span></button>
+    ${sceneNav}
+  </div>${notes}`;
+}
+// Live round counter + turn controls — pinned to the top of the initiative list (CT9), where the turns
+// actually happen, rather than in the header.
+function combatTurnBarHTML(cb){
+  return `<div class="ct-turnbar">
+    <span class="ct-round">Round ${cb.round}</span>
+    <span class="ct-turnline"></span>
+    <button class="ghost-chev ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
+    <span class="ct-turnlbl">turn</span>
+    <button class="ghost-chev ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
+  </div>`;
 }
 function combatNotStartedHTML(a,e){
   const n=e.combatants.filter(c=>c.type!=="event").length;
@@ -1241,6 +1248,23 @@ function combatNotStartedHTML(a,e){
     <div class="ce-icon">${SWORDS_SVG}</div>
     <p class="hint">${done?"This encounter is marked completed — start it again from the button below.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet — add some from the Adventures tab."}</p>
   </div>`;
+}
+// Forge-style draggable split between the initiative list and the active-combatant panel (CT9). The
+// grid is rebuilt on every render, so re-apply the persisted size + rebind each time. Mirrors
+// initForgeResizer (engine.js): horizontal drag wide, vertical drag when stacked.
+function bindCombatResizer(){
+  const fg=document.querySelector(".combat-grid"),rz=$("#combatResizer");if(!fg||!rz)return;
+  try{const w=localStorage.getItem("mf_caw");if(w)fg.style.setProperty("--caw",w);const h=localStorage.getItem("mf_cah");if(h)fg.style.setProperty("--cah",h);}catch(e){}
+  const vertical=()=>window.matchMedia("(max-width:980px)").matches;
+  let drag=false;
+  rz.addEventListener("pointerdown",e=>{drag=true;rz.classList.add("drag");rz.setPointerCapture(e.pointerId);e.preventDefault();});
+  rz.addEventListener("pointermove",e=>{if(!drag)return;const r=fg.getBoundingClientRect();
+    if(vertical()){let hp=Math.round(r.bottom-e.clientY);hp=Math.max(150,Math.min(r.height-150,hp));fg.style.setProperty("--cah",hp+"px");}
+    else{let w=Math.round(r.right-e.clientX);w=Math.max(320,Math.min(r.width-360,w));fg.style.setProperty("--caw",w+"px");}});
+  const end=e=>{if(!drag)return;drag=false;rz.classList.remove("drag");try{rz.releasePointerCapture(e.pointerId);}catch(_){}
+    try{localStorage.setItem("mf_caw",fg.style.getPropertyValue("--caw"));localStorage.setItem("mf_cah",fg.style.getPropertyValue("--cah"));}catch(_){}};
+  rz.addEventListener("pointerup",end);rz.addEventListener("pointercancel",end);
+  rz.addEventListener("dblclick",()=>{fg.style.removeProperty("--caw");fg.style.removeProperty("--cah");try{localStorage.removeItem("mf_caw");localStorage.removeItem("mf_cah");}catch(_){}});
 }
 function renderCombat(){
   const body=$("#combatBody");if(!body)return;
@@ -1263,9 +1287,11 @@ function renderCombat(){
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?`
     <div class="combat-grid">
-      <div class="combat-order">${combatToolbarHTML(cb)}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
+      <div class="combat-order">${combatTurnBarHTML(cb)}${combatToolbarHTML(cb)}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
+      <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
+  bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   const scPrev=$("#scPrev"),scNext=$("#scNext");
   if(sc){const sibs=sceneEncs(a,e),idx=sibs.indexOf(e);

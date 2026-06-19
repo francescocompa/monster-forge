@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 95 — Combat Tracker v2 (CT9): layout + header overhaul
+- **Resizable two-pane combat view.** The initiative list and the active-combatant panel are now a
+  Forge-style split with a **draggable divider** (drag to resize, double-click to reset, persists);
+  each pane scrolls on its own. On narrow screens the split stacks with a horizontal handle.
+- **Minimal header.** One slim context line — adventure-colour accent, the scene · encounter title
+  (click it to load another), the difficulty pill, and a small same-scene **‹ n/m ›** nav. The
+  **round counter + turn controls moved onto the top of the initiative list**, where the turns happen.
+- **No more box-in-a-box.** The active combatant is one flat panel — its meta (name / HP / conditions /
+  note) on top, the statblock flowing directly below, instead of a card nested inside a card.
+- **Initiative cards reflow.** When the list pane is narrow, a card keeps its name + AC on one row and
+  drops the HP tracker to a second row, so names no longer get squeezed and wrapped.
+
 ## Batch 94 — Combat Tracker v2 (CT8): initiative filtering / sorting / grouping + manual drag-sort
 - **Combat toolbar.** Above the initiative list: **Group** (none / status / faction / statblock),
   **Sort** (initiative / manual / name / status / HP remaining), and **Filter** (by status and faction).

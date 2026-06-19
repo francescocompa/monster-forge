@@ -781,7 +781,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pc-field .pcf-l{width:78px;color:var(--faint);font-weight:600}
 .pc-field .pcf-v{width:96px;border-left:1px solid var(--line);padding-left:6px}
 /* ── Combat Tracker view (B80) ── */
-.combat-wrap{flex:1;min-width:0;padding:18px 20px 28px;height:100%;overflow-y:auto}
+.combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:16px 20px 0}
+.combat-wrap>.combat-notstarted,.combat-wrap>.combat-empty{flex:1;min-height:0}
 .combat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .combat-head .ch-title{flex:1;min-width:0}
 .combat-head .ch-title h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
@@ -789,8 +790,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .combat-ctrls{display:flex;gap:8px;flex-wrap:wrap}
 /* CT7b — rebalanced grid (more room for the statblock/trackers), Forge-style divider between the
    initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
-.combat-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(360px,1.55fr);gap:0;align-items:start}
-.combat-order{display:flex;flex-direction:column;gap:7px;padding-right:20px}
+/* CT9 — Forge-style two-pane split: each pane scrolls internally, a draggable divider between them. */
+.combat-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,1fr) var(--caw,500px);gap:0;overflow:hidden;position:relative}
+.combat-order{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:0;padding:0 18px 24px 0}
+.combat-resizer{position:absolute;top:0;bottom:0;right:var(--caw,500px);width:10px;margin-right:-5px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center}
+.combat-resizer::before{content:"";width:3px;height:46px;border-radius:3px;background:var(--line);opacity:0;transition:opacity .12s,background .12s}
+.combat-resizer:hover::before,.combat-resizer.drag::before{opacity:1;background:var(--accent)}
 .combat-rows{display:flex;flex-direction:column;gap:7px}
 /* CT8 combat toolbar */
 .combat-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
@@ -813,7 +818,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
 .popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
-.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px}
+.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+.ci-name{min-width:0}
+/* Narrow card (the list pane can be resized small): drop the HP tracker to its own second row so the
+   name + AC keep a full row instead of squeezing the name into a wrap. */
+@container (max-width:440px){
+  .cbt-row{row-gap:7px}
+  .cbt-row .ci-menu{order:8}
+  .cbt-row .ci-hp{order:9;flex-basis:100%;width:auto}
+}
 .cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
 .cbt-row.active{box-shadow:0 0 0 1px rgba(255,255,255,.22);background:rgba(255,255,255,.055)}
 .cbt-row.dead{opacity:.5}
@@ -849,9 +862,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
 .cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
 .cbt-add:hover{border-color:var(--accent);color:var(--txt)}
-.combat-active{position:sticky;top:0;border-left:1px solid var(--line);padding-left:20px}
-.ca-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:9px;padding:16px}
-.ca-card.enemy{border-left-color:#9c4a3f}.ca-card.ally{border-left-color:#4a78b0}.ca-card.pc{border-left-color:#3f7a52}.ca-card.setting{border-left-color:#7a6a3f}
+.combat-active{overflow-y:auto;min-height:0;border-left:1px solid var(--line);padding:0 2px 24px 20px}
+/* CT9 — one flat panel (left faction accent): meta on top, statblock flows below. No nested card. */
+.ca-panel{display:flex;flex-direction:column;gap:14px;border-left:3px solid var(--line);padding-left:14px}
+.ca-panel.enemy{border-left-color:#9c4a3f}.ca-panel.ally{border-left-color:#4a78b0}.ca-panel.pc{border-left-color:#3f7a52}.ca-panel.setting{border-left-color:#7a6a3f}
+.ca-head{display:flex;flex-direction:column}
 .ca-name{font-size:18px;font-weight:700}
 .ca-meta{font-size:11px;color:var(--faint);margin-top:3px;text-transform:capitalize}
 .ca-hp{font-size:15px;margin-top:10px}.ca-hp b{color:var(--txt)}
@@ -888,8 +903,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .res-pip{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0}
 .res-pip.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(226,101,77,.4)}
 .res-pip:hover{border-color:var(--accent)}
-.ca-sb{margin-top:14px}
-.combat-active .ca-sb{box-shadow:0 4px 18px rgba(0,0,0,.4)}
+.ca-sb{margin-top:0;border-top:1px solid var(--line);padding-top:14px}
 /* CT5/CT6 — encounter status chip, start-combat sword button, combat-tab empty/not-started + scene nav + load popup */
 .enc-status{flex:none;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer}
 .enc-status.sm{font-size:9px;padding:2px 7px;cursor:default}
@@ -928,26 +942,27 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .menu button .mi-ico{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
 .budget-top{display:flex;align-items:center;gap:10px}
 .budget-top .bartrack{flex:1}
-.ct-top{display:flex;align-items:flex-start;gap:11px;margin-bottom:14px}
-.ct-top .adv-back{flex:none;margin-top:5px;width:26px;height:26px;display:grid;place-items:center;border:1px solid transparent;background:none;color:var(--faint);border-radius:7px;cursor:pointer}
-.ct-top .adv-back:hover{border-color:var(--line);color:var(--txt)}
-.ct-titleblock{flex:1;min-width:0;border-left:3px solid var(--accent);padding-left:12px}
-.ct-adv{font-size:13px;font-weight:600;color:var(--dim);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ct-scene{font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.15;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ct-top-ctrls{flex:none;display:flex;align-items:center;gap:8px}
-.ct-encsel{display:inline-flex;align-items:center;gap:4px}
+/* CT9 — minimal context header (Direction C): one slim line, click the title to load another. */
+.ct-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-left:11px;border-left:3px solid var(--ct-accent,var(--accent));min-height:30px}
+.ct-title{display:flex;align-items:center;gap:8px;min-width:0;background:none;border:none;color:var(--txt);cursor:pointer;font:inherit;text-align:left;padding:3px 8px 3px 0;border-radius:7px}
+.ct-title:hover .ct-scene{color:var(--accent-soft)}
+.ct-title:hover .ct-loadico{color:var(--accent-soft)}
+.ct-scene{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:100%}
+.ct-dot{color:var(--faint);flex:none}
+.ct-enc{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ct-loadico{display:inline-flex;width:12px;height:12px;color:var(--faint);flex:none}
+.ct-scenenav{display:inline-flex;align-items:center;gap:4px;flex:none;margin-left:auto}
 .ct-encpos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
-.ghost-chev{width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0}
+.ghost-chev{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0}
 .ghost-chev:hover:not(:disabled){border-color:var(--accent);color:var(--txt)}
 .ghost-chev:disabled{opacity:.3;pointer-events:none}
-.ct-encbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:16px}
-.ct-encbar.full{width:100%}
-.ct-encinfo{min-width:0;flex:1}
-.ct-encline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.ct-encname{font-size:14px;font-weight:600}
-.ct-enc-notes{font-size:12px;color:var(--dim);margin-top:5px;white-space:pre-wrap}
-.ct-turn{flex:none;display:flex;align-items:center;gap:6px}
-.ct-round{font-size:12px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;margin-right:2px}
+.ct-notes{font-size:12px;color:var(--faint);margin:-6px 0 12px;padding-left:14px;white-space:pre-wrap}
+/* round counter + turn controls, pinned to the top of the initiative list */
+.ct-turnbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:9px;background:var(--bg);padding:1px 0 9px}
+.ct-turnbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.ct-turnline{flex:1;height:1px;background:var(--line)}
+.ct-turnlbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+.ct-turnbar .ct-turnbtn{width:30px;height:26px}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
 .combat-fab svg{width:15px;height:15px;fill:currentColor;flex:none}
 .combat-fab.end{background:var(--bad)!important}
@@ -957,9 +972,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .picker-foot .pf-btn{display:inline-flex;align-items:center;gap:6px}
 .picker-foot .pf-btn svg{width:13px;height:13px;flex:none}
 .picker-foot .pf-note{font-size:10px;color:var(--faint);font-weight:500}
-/* CT7-fixes — clickable title block, footer fill, reworked load popup */
-.ct-titlebtn{background:none;border:0;border-left:3px solid var(--accent);cursor:pointer;text-align:left;font:inherit;display:block;padding:2px 0 2px 12px}
-.ct-titlebtn:hover .ct-scene{color:var(--accent-soft)}
+/* CT7-fixes — footer fill, reworked load popup */
 .picker-foot .pf-btn{flex:1;justify-content:center;white-space:nowrap}
 /* CT7c — load popup: clickable status chip, dimmed folder icon + empty caption next to scenes */
 .lc-enc .enc-status{cursor:pointer}
@@ -996,7 +1009,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
   .modal .mrow.picker-foot .btn{width:auto;justify-content:center}
   .picker-foot .pf-done{grid-column:1 / -1;margin-left:0}
 }
-@media (max-width:980px){.combat-grid{grid-template-columns:1fr}.combat-order{padding-right:0}.combat-active{position:static;border-left:none;padding-left:0}}
+@media (max-width:980px){
+  .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,46%)}
+  .combat-order{padding:0 0 16px}
+  .combat-active{border-left:none;border-top:1px solid var(--line);padding:14px 2px 24px}
+  .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,46%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
+  .combat-resizer::before{width:46px;height:3px}
+}
 
 .scene-body{padding:0 12px 8px}
 .scene-body .enc{margin-bottom:12px;background:var(--panel)}
