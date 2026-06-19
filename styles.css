@@ -837,7 +837,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
 .popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
-.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+.cbt-row{position:relative;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+/* Active row: a faction-coloured caret in the left margin (next to the divider) so the current turn is
+   unmistakable on top of the faction tint. --sel-accent is the row's faction colour. */
+.cbt-row.active::before{content:"";position:absolute;left:-13px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--sel-accent)}
 .ci-name{min-width:0}
 /* Narrow card (the list pane can be resized small): drop the HP tracker to its own second row so the
    name + AC keep a full row instead of squeezing the name into a wrap. */

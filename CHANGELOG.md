@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 114 — Init-card interaction (1/n): active-row caret
+- Active row now shows a **faction-coloured caret (▶) in the left margin**, next to the divider — making the
+  current turn unmistakable on top of the faction tint (addresses "active highlight too subtle"). `.cbt-row`
+  is now `position:relative`; the caret is a `::before` using the row's faction `--sel-accent`.
+- Locked design decisions for the rest of this batch (from mockup + AskUserQuestion): **active = caret** (this);
+  **selected (multi-select) = accent ring + lift** (the standardized selected-card look). Still to build:
+  click-to-select / hold-to-drag / shift-cmd multi-select, the multi-select popover (status / effect-all /
+  damage-all), collapsing the active combatant to one row when a card is selected, and reactions tracking.
+
 ## Batch 113 — Fixes: auto-roll discoverability, hourglass orientation, collapsible combat notes
 - **Auto-roll wasn't visible.** The feature was gated (off by default, labelled "Initiative", and the
   dimmed-average/d20 only appeared on a *fresh* combat). Fixes: the setting is relabelled **"Auto-roll
