@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 111 — Effect-popover fixes: alarm toggle, effect-name combo, stray tools dot
+- **The timing row no longer shows by default / the alarm now works.** `.cond-when{display:flex}` was
+  overriding the `[hidden]` attribute, so the "ends at …" row was always visible and the alarm-clock toggle
+  appeared dead. Added `.cond-when[hidden]{display:none}` — the row is hidden until the alarm is clicked.
+- **Effect-name field → custom combo dropdown.** Replaced the native `<datalist>` on the effect-name input
+  with `attachCombo` (the same type-ahead suggestion dropdown the forge name fields use), so both dropdowns
+  in the popover are now the app's custom style.
+- **Stray notification dot on the round-bar tools button.** It lit whenever `view.group` was set — and
+  group-by-status is now the default, so it was always on. It now flags only a view that *differs* from the
+  default (non-status group, non-init sort, or any filter).
+
 ## Batch 110 — Initiative (1/2): group-by-status default + "rolling initiative" flourish
 - **Group by status is now the default** combat view (`combatView` default `group:"status"` instead of a flat
   list) — existing combats keep their chosen view; new ones group on load.

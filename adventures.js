@@ -1023,7 +1023,7 @@ function openCondAdd(itId,anchor){
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
     <div class="cond-add-row">
-      <input type="text" class="cond-input" list="condDatalist" placeholder="Effect…" autocomplete="off">
+      <input type="text" class="cond-input" placeholder="Effect…" autocomplete="off">
       <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
       <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
       <button class="btn primary sm cond-go" style="width:auto">Add</button>
@@ -1039,6 +1039,8 @@ function openCondAdd(itId,anchor){
     </div></div>`);
   const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
   inp.focus();
+  // Effect-name suggestions as the same custom dropdown as the forge name fields (not a native datalist).
+  attachCombo(inp,()=>[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b)),{});
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
@@ -1319,7 +1321,9 @@ function combatHeaderHTML(a,e,sc,cb){
 // this bar's bottom border. On stacked layouts it still sits above the initiative (the top pane).
 function combatRoundBarHTML(cb){
   const v=combatView(cb),oop=initOutOfPlace(cb);
-  const active=(v.group||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
+  // "on" = the view differs from the default (group-by-status, sort-by-init, no filters), so the dot only
+  // flags a deliberately-changed view — not the default grouping itself.
+  const active=(v.group!=="status"||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>

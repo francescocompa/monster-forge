@@ -936,6 +936,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cond-clock:hover{border-color:var(--accent);color:var(--txt)}
 .cond-clock.on{color:var(--accent-soft);border-color:#6e3329;background:rgba(226,101,77,.14)}
 .cond-when{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11.5px;color:var(--faint);flex-wrap:wrap}
+.cond-when[hidden]{display:none} /* the flex display above otherwise overrides the [hidden] attribute */
 .cond-when .cw-lbl{flex:none}
 .cond-edge{flex:none;display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--dim);cursor:pointer;font-size:11.5px}
 .cond-edge:hover{border-color:var(--accent);color:var(--txt)}
