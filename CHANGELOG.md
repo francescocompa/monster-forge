@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 118 — Status as icons (no faction-colour clash)
+- Combat status no longer relies on colour (which collided with the faction colours). The card status
+  control now shows **FA-free icons by shape**: active = shield-heart, waiting = circle-pause, dead = skull
+  (`CI_STATUS_ICON`). Rendered monochrome (`--dim`, dead dimmer) so it's unambiguous regardless of faction.
+- (Still clickable to cycle for now; per the plan, the per-card control is removed and status moves to the
+  multi-select popover / drag-into-status-section in the upcoming Batch 5 interaction work.)
+
 ## Batch 117 — Number-flow reels follow scroll/clip + party-roll setting
 - **Number-flow animation fixed properly.** The reels were `position:fixed`, so scrolling left them behind and
   a cell half-hidden under the statblock panel still drew its reel over the panel. They now render *inside*

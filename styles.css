@@ -866,9 +866,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
 .nf-col{display:flex;flex-direction:column;transform:translateY(0);transition:transform 1.35s cubic-bezier(.16,.84,.3,1)}
 .nf-n{height:1em;line-height:1;display:flex;align-items:center;justify-content:center}
-.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;font-size:12px;border-radius:50%}
-.ci-status.st-active{color:#5fa873}.ci-status.st-waiting{color:var(--warn)}.ci-status.st-dead{color:var(--faint)}
-.ci-status:hover{background:var(--panel2)}
+.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;border-radius:50%;color:var(--dim)}
+.ci-status svg{width:13px;height:13px}
+.ci-status.st-dead{color:var(--faint)} /* status now reads from the icon shape, not colour (was clashing with faction colours) */
+.ci-status:hover{background:var(--panel2);color:var(--txt)}
 .ci-status-sp{flex:none;width:20px}
 .ci-body{flex:1;min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
