@@ -771,6 +771,7 @@ function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistComba
 function openLoadCombat(){
   const ctrl=blankCtrl();ctrl.group="adventure";ctrl.sort={key:"name",dir:1};
   const exp={}; // expanded scene ids (scenes collapsed by default)
+  const advColl={}; // collapsed adventure ids (adventures expanded by default)
   const isRunning=(a,e)=>combatCtx&&combatCtx.advId===a.id&&combatCtx.encId===e.id;
   if(combatCtx){const a=state.adv.find(x=>x.id===combatCtx.advId),e=a&&findEnc(a,combatCtx.encId);if(e&&e.sceneId)exp[e.sceneId]=true;}
   const recOf=(a,e)=>({m:{name:encDName(e),type:""},a,e});
@@ -806,8 +807,15 @@ function openLoadCombat(){
     inner+=aRecs.filter(r=>!liveScenes.some(s=>s.id===r.e.sceneId)).map(r=>encRow(a,r.e)).join("");
     const filtering=ctrl.q||Object.keys(ctrl.filters).length;
     if(!inner&&filtering)return "";
-    return `<div class="lc-adv"><div class="lc-adv-h">${advDot(a.id,a.color)} ${esc(advDName(a))}</div>${inner||'<div class="lc-empty">No encounters.</div>'}
-      <div class="lc-adds"><button class="lc-add" data-lcnewenc="${a.id}">＋ Encounter</button><button class="lc-add" data-lcnewscene="${a.id}">＋ Scene</button></div></div>`;};
+    const collapsed=advColl[a.id];
+    return `<div class="lc-adv${collapsed?" collapsed":""}">
+      <div class="lc-adv-h">
+        <button class="lc-adv-tog" data-lcadvtog="${a.id}" title="${collapsed?"Expand":"Collapse"}" aria-label="Toggle adventure"><span class="lc-chev">${CHEV_R}</span></button>
+        ${advDot(a.id,a.color)}<span class="lc-adv-nm">${esc(advDName(a))}</span>
+        <button class="lc-adv-kebab" data-lcadvadd="${a.id}" title="Add encounter or scene" aria-label="Add encounter or scene">⋯</button>
+      </div>
+      <div class="lc-adv-body"${collapsed?" hidden":""}>${inner||'<div class="lc-empty">No encounters.</div>'}</div>
+    </div>`;};
   const draw=()=>{
     renderCtrlChips($("#lcChips"),ctrl,desc,draw);
     const recs=ctrlApply(allRecs(),ctrl,desc),body=$("#lcBody");
@@ -823,8 +831,13 @@ function openLoadCombat(){
     body.querySelectorAll("[data-lcstatus]").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();const[advId,encId]=el.dataset.lcstatus.split(":");const a=state.adv.find(x=>x.id===advId),e=a&&findEnc(a,encId);if(e)openEncStatusMenu(a,e,el,draw);}));
     body.querySelectorAll("[data-lcscene]").forEach(el=>el.addEventListener("click",()=>{exp[el.dataset.lcscene]=!exp[el.dataset.lcscene];draw();}));
     body.querySelectorAll("[data-lcsceneload]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.lcsceneload,a=state.adv.find(x=>(x.scenes||[]).some(sc=>sc.id===sid));if(!a)return;const encs=a.encounters.filter(e=>e.sceneId===sid&&!e.archived),run=encs.find(e=>isRunning(a,e))||encs[0];if(run){closeModal();loadCombatEncounter(a,run);}else{exp[sid]=!exp[sid];draw();}}));
-    body.querySelectorAll("[data-lcnewenc]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewenc);a.encounters.push(blankEncounter());saveAdv();draw();toast("Encounter added.");}));
-    body.querySelectorAll("[data-lcnewscene]").forEach(el=>el.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===el.dataset.lcnewscene);a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});saveAdv();draw();}));
+    body.querySelectorAll("[data-lcadvtog]").forEach(el=>el.addEventListener("click",()=>{advColl[el.dataset.lcadvtog]=!advColl[el.dataset.lcadvtog];draw();}));
+    body.querySelectorAll("[data-lcadvadd]").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();const aid=el.dataset.lcadvadd;
+      const p=showPopover(el,`<button class="popitem" data-add="enc">＋ Add encounter</button><button class="popitem" data-add="scene">＋ Add scene</button>`);
+      p.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",e2=>{e2.stopPropagation();const a=state.adv.find(x=>x.id===aid);closePopover();
+        if(b.dataset.add==="enc"){a.encounters.push(blankEncounter());toast("Encounter added.");}
+        else a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false,pinned:false});
+        saveAdv();draw();}));}));
   };
   openModalRaw(`<h3 class="modal-h-row"><span>Load encounter</span></h3>
     <div class="ctrl-bar"><div class="ctrl-icons" id="lcCtrlIcons"></div><div class="ctrl-chips" id="lcChips"></div></div>
@@ -969,8 +982,8 @@ function condsHTML(it){
   return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋</button></div>`;
 }
 function openCondAdd(itId,anchor){
-  const p=showPopover(anchor,`<div class="cond-add"><input type="text" class="popinput" list="condDatalist" placeholder="Condition…" autocomplete="off"><div class="cond-add-row"><label class="cond-rl">Rounds <input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
-  const inp=p.querySelector("input.popinput"),rd=p.querySelector(".cond-rounds");inp.focus();
+  const p=showPopover(anchor,`<div class="cond-add"><div class="cond-add-row"><input type="text" class="cond-input" list="condDatalist" placeholder="Condition…" autocomplete="off"><label class="cond-rl" title="Duration in rounds (blank = until removed)">${HOURGLASS_ICON}<input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
+  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds");inp.focus();
   const commit=()=>{const name=(inp.value||"").trim();closePopover();if(name)addCombatCond(itId,name,rd.value);};
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
@@ -978,7 +991,7 @@ function openCondAdd(itId,anchor){
 }
 function openNoteEdit(itId,anchor){
   const it=combatItem(itId);if(!it)return;
-  const p=showPopover(anchor,`<div class="note-edit"><textarea class="popinput note-ta" rows="3" placeholder="Note…">${esc(it.comment||"")}</textarea><button class="btn primary sm note-go" style="width:auto">Save</button></div>`);
+  const p=showPopover(anchor,`<div class="note-edit"><textarea class="popinput note-ta" rows="3" placeholder="Note…">${esc(it.comment||"")}</textarea><button class="btn primary sm note-go">Save</button></div>`);
   const ta=p.querySelector("textarea");ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
   const commit=()=>{const v=ta.value.trim();closePopover();setCombatNote(itId,v);};
   p.querySelector(".note-go").addEventListener("click",commit);
@@ -1163,39 +1176,43 @@ function combatAtkBonus(m){const pb=pbForCR(m.cr);let best=null;
   return best!=null?best:pb+Math.max(mod(m.str),mod(m.dex));}
 function combatMainSave(m){if(!m.saves||!m.saves.length)return null;const pb=pbForCR(m.cr);let best=null,ab=null;
   m.saves.forEach(a=>{const b=mod(m[a])+pb;if(best==null||b>best){best=b;ab=a;}});return {ab,bonus:best};}
+// Highest save DC the creature imposes (spellcasting etc.) — explicit when present, else 8+PB+ability.
+function combatMainDC(m){let best=null;
+  [].concat(m.actions||[],m.bonus||[],m.traits||[],(m.legend&&m.legend.items)||[]).forEach(en=>{if(en&&en.mode==="spell"){const pb=pbForCR(m.cr);const dc=(en.dc!==""&&en.dc!=null)?Number(en.dc):8+pb+mod(m[en.ability||"int"]);if(best==null||dc>best)best=dc;}});
+  return best;}
 function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
   const m=it.kind==="monster"?monById(it.srcId):null;
-  const hpline=hpTracked(it)?`<div class="ca-hp"><b>${it.hpCur}</b> / ${it.hpMax} HP${it.hpTemp?` <span class="ca-tmp">+${it.hpTemp} temp</span>`:""}</div>`:"";
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
-  // Quick-ref stat chips — the numbers a DM glances at: AC, attack bonus, best save.
+  // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
   const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
   const stats=[];
   if(it.ac!=null)stats.push(chip("AC",it.ac));
   if(m){stats.push(chip("ATK",sgn(combatAtkBonus(m)),"Best attack-roll bonus"));
-    const sv=combatMainSave(m);if(sv)stats.push(chip(sv.ab.toUpperCase()+" save",sgn(sv.bonus),"Best saving throw"));}
+    const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
+    const sv=combatMainSave(m);if(sv)stats.push(chip(sv.ab.toUpperCase(),sgn(sv.bonus),"Best saving throw"));}
+  if(hpTracked(it))stats.push(chip("HP",`${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}`));
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :`<div class="ca-soon">${it.kind==="pc"?"Player character — no statblock to roll from.":it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
   const note=it.comment
-    ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note">Edit</button></div>`
-    :`<button class="ca-addnote" data-cinote="${it.id}">＋ Add note</button>`;
-  // CT9-fix: one flat panel with a faction-coloured top accent (no lateral line). Quick-ref stats up
-  // top, the statblock below, the note as an appended "Add section"-style block at the bottom.
-  return `<div class="ca-panel ${cFac(it.faction)}">
-    <div class="ca-head">
-      <div class="ca-name">${esc(it.name)}</div>
-      <div class="ca-meta">${esc(who)}</div>
-      ${statRow}
-      ${hpline}
-      ${conds}
-      ${resourcePipsHTML(it)}
-    </div>
-    ${sb}
-    ${note}
-  </div>`;
+    ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note" aria-label="Edit note">${PEN_ICON}</button></div>`
+    :`<button class="ca-addnote" data-cinote="${it.id}">${PEN_ICON} Add note</button>`;
+  // CT9-fix2: a full-bleed faction colour bar pinned on top (like the adventure-page bar — outside the
+  // scroller so it spans edge-to-edge); the compact meta + statblock + note scroll below it.
+  return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+    <div class="ca-scroll"><div class="ca-panel">
+      <div class="ca-head">
+        <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span></div>
+        ${statRow}
+        ${conds}
+        ${resourcePipsHTML(it)}
+      </div>
+      ${sb}
+      ${note}
+    </div></div>`;
 }
 // Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
 function resourcePipsHTML(it){
@@ -1213,6 +1230,8 @@ const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
 const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const LOAD_ICON='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H6l1.4 1.5H12.5A1.5 1.5 0 0 1 14 6v5.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>';
 const TUNE_ICON='<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 5h6M11 5h3M2 11h3M8 11h6"/><circle cx="9.5" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="6.5" cy="11" r="1.7" fill="currentColor" stroke="none"/></svg>';
+const HOURGLASS_ICON='<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M32 0C14.3 0 0 14.3 0 32S14.3 64 32 64V75c0 42.4 16.9 83.1 46.9 113.1L146.7 256 78.9 323.9C48.9 353.9 32 394.6 32 437v11c-17.7 0-32 14.3-32 32s14.3 32 32 32H64 320h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V437c0-42.4-16.9-83.1-46.9-113.1L237.3 256l67.9-67.9c30-30 46.9-70.7 46.9-113.1V64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320 64 32zM96 75V64H288V75c0 25.5-10.1 49.9-28.1 67.9L192 210.7l-67.9-67.9C106.1 124.9 96 100.4 96 75z"/></svg>';
+const PEN_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"/></svg>';
 // The Adventures sidebar-tab glyph — reused on the narrow-width "open the adventure list as a drawer" button.
 const ADV_TAB_SVG='<svg viewBox="0 0 640 640" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M539.3 64.1C549.2 63.3 558.9 67.1 565.9 74.1C572.9 81.1 576.7 90.8 575.9 100.7C571.9 150 558.5 226.9 529.6 300.4C527.8 304.9 524.1 308.3 519.4 309.7L438.5 334C434.6 335.2 432 338.7 432 342.8C432 347.9 436.1 352 441.2 352L479.8 352C491.8 352 499.5 364.8 493.3 375.1C489.3 381.8 485 388.3 480.6 394.7C478.6 397.6 475.6 399.7 472.2 400.8L374.5 430C370.6 431.2 368 434.7 368 438.8C368 443.9 372.1 448 377.2 448L393.2 448C407.8 448 414.2 465.4 402 473.4C334 518.4 264.3 516.7 219.6 504.7C206.9 501.3 195.6 494.8 185.2 486.8L112 560C103.2 568.8 88.8 568.8 80 560C71.2 551.2 71.2 536.8 80 528L160 448L160.5 448.5C161.2 447.2 162.1 446 163.2 444.9L320 288C328.8 279.2 328.8 264.8 320 256C311.2 247.2 296.8 247.2 288 256L153.7 390.2C144.8 399.1 129.7 394.6 128.7 382C124.4 328.8 138 258.9 201.3 195.6C292.4 104.5 455.5 70.9 539.2 64.1z"/></svg>';
 // Combat-tab header (CT9, Direction C): one slim context line — adventure-colour accent, the scene ·
@@ -1240,13 +1259,21 @@ function combatRoundBarHTML(cb){
   const v=combatView(cb),oop=initOutOfPlace(cb);
   const active=(v.group||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
   return `<div class="ct-roundbar">
-    <span class="ct-round">Round ${cb.round}</span>
+    <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
     <button class="ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
     <button class="ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
     ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
+}
+function openRoundEdit(anchor){
+  const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
+  const p=showPopover(anchor,`<div class="round-edit">Round <input type="number" class="round-in" min="1" value="${cb.round}"><button class="btn primary sm" style="width:auto">Set</button></div>`);
+  const inp=p.querySelector(".round-in");inp.focus();inp.select();
+  const commit=()=>{const v=Math.max(1,Math.round(Number(inp.value)||1));closePopover();cb.round=v;saveAdv();renderCombat();};
+  p.querySelector("button").addEventListener("click",commit);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
 }
 // Tools menu opened from the round bar — routes to the existing group/sort/filter pickers + roll/restore.
 function openCombatToolsMenu(anchor){
@@ -1287,7 +1314,7 @@ function combatNotStartedHTML(a,e){
 function bindCombatResizer(){
   const fg=document.querySelector(".combat-grid"),rz=$("#combatResizer");if(!fg||!rz)return;
   try{const w=localStorage.getItem("mf_caw");if(w)fg.style.setProperty("--caw",w);const h=localStorage.getItem("mf_cah");if(h)fg.style.setProperty("--cah",h);}catch(e){}
-  const vertical=()=>window.matchMedia("(max-width:980px)").matches;
+  const vertical=()=>window.matchMedia("(max-width:1080px)").matches;
   let drag=false;
   rz.addEventListener("pointerdown",e=>{drag=true;rz.classList.add("drag");rz.setPointerCapture(e.pointerId);e.preventDefault();});
   rz.addEventListener("pointermove",e=>{if(!drag)return;const r=fg.getBoundingClientRect();
@@ -1332,6 +1359,7 @@ function renderCombat(){
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));
+  {const re=$("#combatRoundEdit");if(re)re.addEventListener("click",ev=>{ev.stopPropagation();openRoundEdit(re);});}
   // CT9-fix: group / sort / filter / roll live in the round-bar tools menu; restore-order is its own chip.
   {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}

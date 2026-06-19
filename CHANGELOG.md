@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 97 — Combat Tracker v2 (CT9 fixes): resize regression, active panel, popovers, load popup
+- **Fixed the two-pane resize regression.** Below ~1080px the view now stacks cleanly (it was clipping
+  the statblock off the right and squeezing the layout in the 980–1080px band); the active column shrinks
+  rather than overflowing, and the divider stays draggable.
+- **Active panel.** The faction accent is now a **full-bleed colour bar on top** (like the adventure
+  page — pinned above the scroll). The meta is more compact (name + faction on one line; AC, attack
+  bonus, **save DC**, best save, and HP all as chips on one line). The note moved to a bottom block with
+  a **pen icon**, and the panel keeps Forge-style bottom space so it never tucks under the FAB.
+- **Popovers.** The condition adder is one row — a dark dropdown-styled field with an **hourglass** +
+  small rounds input. The note editor's field and button are the same width. The round counter is now
+  **clickable to set the round**. The combat tools button lost its border.
+- **Load encounter popup.** Adventures **collapse** (chevron before the title) and gained a right-aligned
+  **⋯ menu** to add an encounter or scene (the inline +Encounter/+Scene buttons are gone). Scene rows
+  highlight as a whole on hover, and the **Active** status tag is now visually distinct from Draft.
+
 ## Batch 96 — Combat Tracker v2 (CT9 follow-up): header, round bar, active-panel polish
 - **Header restructure.** The scene name is now a small label above the **encounter name** (the large
   title). A chevron next to the encounter opens a **dropdown of the scene's encounters** to switch
