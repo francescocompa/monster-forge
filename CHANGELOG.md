@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 99 — Fix botched combat-tracker→main merge (empty Combat section)
+- The `Merge branch 'combat-tracker'` commit on `main` hit the old B80-revert and silently **dropped the
+  Combat view wiring** while keeping the combat *functions* — so the Combat tab opened an empty section.
+- Restored the three dropped bits from the verified union (`combat-tracker` @ d2fc8b3): the `#view-combat`
+  section (index.html), the `if(v==="combat")renderCombat()` case in `switchView` (bestiary.js), and
+  `combat:"Combat"` in `VIEW_LABELS` (engine.js). `main` now matches the complete union. Fix-forward
+  commit (no force-push); verified the initiative tracker renders end-to-end in the preview.
+
 ## Batch 98 — Branch reconcile: fold main's B82–B86 features onto combat-tracker
 - **Brought `main`'s isolated feature commits onto the `combat-tracker` branch** so the branch is now the
   complete union of both lines (cherry-pick of B82–B86, skipping the B80 revert). The branch keeps all the
