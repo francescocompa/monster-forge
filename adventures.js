@@ -945,14 +945,20 @@ function changeHP(it,amt){if(it.hpMax==null)return;
 function adjustMaxHP(it,delta){if(it.hpMax==null)return;it.hpMax=Math.max(1,it.hpMax+delta);if(delta>0)it.hpCur=Math.min(it.hpCur+delta,it.hpMax);else it.hpCur=Math.min(it.hpCur,it.hpMax);}
 const CI_STATUSES=["active","waiting","dead"];
 const CI_STATUS_LABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
+let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
-  if(!e.combat||!e.combat.active){
+  const fresh=!e.combat||!e.combat.active;
+  if(fresh){
     if(!e.combatants.some(c=>c.type!=="event")&&!a.party.length){toast("Add combatants or party members first.");return;}
     startCombat(a,e);
   }
   if(!e.archived)e.status="active"; // started (or restarted after completed) → Active (CT7)
-  saveAdv();switchView("combat");renderCombat();
+  saveAdv();switchView("combat");
+  // Fresh start: a brief "calculating" flourish so it's clear initiative was just rolled (the roll already
+  // happened in startCombat — this is purely presentational), then reveal the order.
+  if(fresh){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}
+  else renderCombat();
 }
 function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
 // "Out" of the turn order for skip purposes: downed (0 HP) or explicitly marked dead (CT7b).
@@ -1104,7 +1110,7 @@ const CV_GROUPS=[["","None"],["status","Status"],["faction","Faction"],["statblo
 const CI_STATUS_ORDER={active:0,waiting:1,down:2,dead:3};
 const CI_STATUS_GLABEL={active:"Active",waiting:"Waiting",down:"Down",dead:"Dead"};
 const GRIP_SVG='<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><circle cx="6" cy="4" r="1.25"/><circle cx="10" cy="4" r="1.25"/><circle cx="6" cy="8" r="1.25"/><circle cx="10" cy="8" r="1.25"/><circle cx="6" cy="12" r="1.25"/><circle cx="10" cy="12" r="1.25"/></svg>';
-function combatView(cb){if(!cb.view)cb.view={group:null,sort:"init",filter:{}};if(!cb.view.filter)cb.view.filter={};return cb.view;}
+function combatView(cb){if(!cb.view)cb.view={group:"status",sort:"init",filter:{}};if(!cb.view.filter)cb.view.filter={};return cb.view;}
 function ciStatusKey(it){return it.status==="dead"?"dead":isDown(it)?"down":(it.status||"active");}
 function ciFactionLabel(f){return f==="PC"?"Party":f;}
 function hpRemainPct(it){return it.hpMax?it.hpCur/it.hpMax:1;}
@@ -1403,7 +1409,7 @@ function renderCombat(){
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
     combatRoundBarHTML(cb)+`
     <div class="combat-grid">
-      <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button></div>
+      <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;

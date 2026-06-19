@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 110 — Initiative (1/2): group-by-status default + "rolling initiative" flourish
+- **Group by status is now the default** combat view (`combatView` default `group:"status"` instead of a flat
+  list) — existing combats keep their chosen view; new ones group on load.
+- **Fake "calculating" animation on Start.** Freshly starting combat shows a brief (1.2s) overlay over the
+  order — a spinning accent d20 + "Rolling initiative…" — then reveals the rolled order, so it's clear
+  initiative was just rolled (the roll itself still happens in `startCombat`; this is presentational).
+  `combatRolling` transient flag + `.combat-roll-overlay` (croSpin/croFade).
+
 ## Batch 109 — Effects (4/n): whose-turn picker → custom dropdown
 - Replaced the native `<select>` in the effect-timing row with a **custom dropdown** matching the app's
   others (the forge recharge/freq picker style): a trigger button (current creature, dimmed while it still
