@@ -166,6 +166,60 @@ $("#mdIn").addEventListener("change",e=>{
     });
   e.target.value="";
 });
+// ── 5etools .zip import → staging ────────────────────────────────────────────────────────────────
+// A whole 5etools data zip can carry thousands of statblocks across dozens of sources, so we DON'T
+// commit it wholesale: each content library lands in a temporary list (stagedLibs) shown in the
+// preset-libraries popup, where the user ticks which sources to keep. Reference sheets (books +
+// legendary groups) apply immediately since the bestiary parser needs them. A source already imported
+// (or already staged) is skipped.
+let stagedLibs=[]; // [{name, kind, count, book, group, json}] — parsed lightly, not yet committed
+const stagedSel=new Set();
+// Count + label a 5etools content file without the expensive full parse (mapMonster / _copy).
+function lightLibInfo(name,json){
+  const kind=detectJsonKind(json);if(!kind||kind==="book"||kind==="legendaryGroup")return null;
+  const list=kind==="statblock"?(json.monster||[]):kind==="spell"?(json.spell||[]):kind==="condition"
+    ?[].concat(json.condition||[],json.disease||[],json.status||[]):[].concat(json.variantrule||[],json.action||[],json.sense||[],json.skill||[]);
+  const sc={};list.forEach(x=>{const s=x.source;if(s)sc[s]=(sc[s]||0)+1;});
+  const src=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0]||"",b=src&&state.books[src];
+  return {name,kind,count:list.length,book:(b&&b.name)||"",group:(b&&b.group)||"",json};
+}
+async function handleZipArrayBuffer(buf){
+  let loaded;
+  try{loaded=await unzipJsonFiles(buf);}catch(err){hideLoadingOverlay();alertStack("Couldn't read that .zip",esc(err.message||String(err)));return;}
+  // Apply reference sheets (books + legendary groups) right away — the bestiary parser needs them.
+  const refs=loaded.filter(L=>{const k=detectJsonKind(L.json);return k==="book"||k==="legendaryGroup";});
+  if(refs.length)ingestLibraries(refs);
+  // Seed the cross-file _copy index from every statblock file so copies resolve at commit time.
+  loaded.forEach(L=>{if(L.json&&L.json.monster)L.json.monster.forEach(m=>{if(m&&m.name)sessionBestiaryIndex.set(((m.name||"")+"|"+(m.source||"")).toLowerCase(),m);});});
+  const committed=new Set(presetLibraries().map(L=>libKey(L.kind,L.name)));
+  const stagedKeys=new Set(stagedLibs.map(L=>libKey(L.kind,L.name)));
+  let added=0,skipped=0;
+  loaded.forEach(L=>{const info=lightLibInfo(L.name,L.json);if(!info)return;const key=libKey(info.kind,info.name);
+    if(committed.has(key)||stagedKeys.has(key)){skipped++;return;}
+    stagedLibs.push(info);stagedKeys.add(key);added++;});
+  hideLoadingOverlay();
+  if(!added){toast(skipped?`Nothing new — all ${skipped} source${skipped===1?" is":"s are"} already imported.`:"No 5etools libraries found in that zip.");if(stagedLibs.length)presetModal();return;}
+  presetModal();
+  toast(`${added} source${added===1?"":"s"} ready to review${skipped?` · ${skipped} already imported`:""}.`);
+}
+// Commit the ticked staged libraries: full-parse + persist + stash for re-parse, then drop from staging.
+async function commitStagedLibs(keys){
+  const set=new Set(keys),picked=stagedLibs.filter(L=>set.has(libKey(L.kind,L.name)));if(!picked.length)return;
+  showLoadingOverlay("Adding libraries…",`${picked.length} source${picked.length===1?"":"s"}`);
+  const loaded=picked.map(L=>({name:L.name,json:L.json}));
+  await new Promise(r=>setTimeout(r,30)); // yield so the loading overlay paints before the blocking parse
+  const summary=ingestLibraries(loaded);
+  await stashRawLibs(loaded);
+  stagedLibs=stagedLibs.filter(L=>!set.has(libKey(L.kind,L.name)));keys.forEach(k=>stagedSel.delete(k));
+  hideLoadingOverlay();refreshLibPools();
+  if(_storageFailed)alertStack("Device storage full","Some libraries couldn't be saved and won't persist after a reload. Remove libraries you don't need, then re-import.");
+  presetModal();
+  toast(`Added ${summary.length} source${summary.length===1?"":"s"}.`);
+}
+function discardStaged(keys){const set=new Set(keys);stagedLibs=stagedLibs.filter(L=>!set.has(libKey(L.kind,L.name)));keys.forEach(k=>stagedSel.delete(k));presetModal();}
+$("#zipIn").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  showLoadingOverlay("Reading zip…",esc(f.name));
+  f.arrayBuffer().then(handleZipArrayBuffer).catch(err=>{hideLoadingOverlay();alertStack("Couldn't read that .zip",esc(err&&err.message||String(err)));});});
 // Single sidebar toggle in the appbar. Wide screens dock/undock; narrow screens open the
 // floating drawer (no hover on touch).
 $("#navToggle").addEventListener("click",e=>{e.stopPropagation();const app=$("#app");
