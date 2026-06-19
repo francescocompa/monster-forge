@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 101 — Design-system pass (2/n): radius scale + structural-surface tokens
+- Added a **radius token scale** — `--r-sm:5px / --r:7px (default control) / --r-lg:9px / --r-xl:11px` — and
+  applied it to the component *families* users compare side-by-side, leaving deep-nested micro-radii alone
+  (churning all ~200 radius values for 1–2px deltas was high-risk, low-value):
+  - **Cards** → `--r-lg`: `.card`, `.enc`, `.scene`, `.cbt-row` (init card 8→9).
+  - **Primary CTAs** → `--r`: `.btn`, `.fab` (8→7), `.start-combat` (9→7) now share one radius.
+  - **Popups** → tokens + one shadow: `.menu`/`.popover` = `--r`; `.refpop` = `--r-lg` and its bespoke
+    `0 14px 36px` shadow now uses the shared `--shadow-pop`; `.modal` = `--r-xl`.
+  - **Small square chips** aligned to `--r-sm`: `.tag` (4→5), `.ctrl-chip` (6→5). Rounded `.pill`/`.chip`
+    keep their pill shape (semantic).
+- Left intentionally untouched (diminishing returns / regression risk): nested control micro-radii, and
+  chip/pill *font-size* hierarchy (10px status vs 11.5px interactive is deliberate). The note/save button
+  size mismatch is a separate polish item (B6).
+
 ## Batch 100 — Design-system pass (1/n): unified "selected" card state
 - Audited the recurring UI primitives; first fix lands the headline discrepancy. The "selected/active" card
   state was rendered four different ways (Bestiary = 2px hard outline, Encounter = soft accent *glow* + tint,

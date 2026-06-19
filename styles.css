@@ -4,7 +4,9 @@
   --accent:#e2654d; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
-  --r:7px;
+  /* Radius scale (B1 design-system pass). --r = default control radius (kept at 7px, the dominant value);
+     applied to the structural component families (cards, CTA buttons, popups). Nested micro-radii left as-is. */
+  --r-sm:5px; --r:7px; --r-lg:9px; --r-xl:11px;
   --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
   /* Unified "selected" card state (B1 design-system pass): 1px accent border + faint tint, no glow. */
   --sel-border:var(--accent); --sel-bg:color-mix(in srgb,var(--accent) 7%,var(--panel));
@@ -156,7 +158,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* Standard accent floating main-action button — bottom-right on every page.
    Single-action variant (.fab) for Forge Save and Adventures + Encounter;
    split variant (.fab-split) for the Bestiary New (keeps its caret menu). */
-.fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;height:32px;padding:0 16px;border-radius:8px;background:var(--accent)!important;color:#fff!important;border:none!important;box-shadow:0 6px 18px rgba(0,0,0,.5);display:inline-flex;align-items:center;gap:7px;font-size:12px}
+.fab{position:fixed;right:20px;bottom:20px;z-index:40;width:auto!important;height:32px;padding:0 16px;border-radius:var(--r);background:var(--accent)!important;color:#fff!important;border:none!important;box-shadow:0 6px 18px rgba(0,0,0,.5);display:inline-flex;align-items:center;gap:7px;font-size:12px}
 .fab .fab-ico{width:13px;height:13px;fill:currentColor;display:block;flex:none}
 .fab:hover{background:var(--accent-hover)!important}
 .fab-split.menu-wrap{position:fixed;right:20px;bottom:20px;z-index:40;height:32px;display:inline-flex;align-items:stretch;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
@@ -290,7 +292,7 @@ select::-ms-expand{display:none}
 .kebab:hover{border-color:var(--accent);color:var(--txt)}
 /* z-index above the floating sidebar drawer (.app.sidebar-open .rail = 48) so menus/popovers never
    sit behind / get clipped by the sidebar (B79). Popovers are 60. */
-.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:178px;z-index:52;box-shadow:var(--shadow-pop)}
+.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:5px;min-width:178px;z-index:52;box-shadow:var(--shadow-pop)}
 .menu.open{display:block}
 .menu.up{top:auto;bottom:calc(100% + 4px)}
 .menu button .sub{color:var(--faint);font-weight:400;font-size:11px}
@@ -617,7 +619,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sb i{color:var(--amber-soft);font-style:italic}
 
 .outs{display:flex;flex-direction:column;gap:8px}
-.btn{border:none;border-radius:7px;padding:11px 13px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn{border:none;border-radius:var(--r);padding:11px 13px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-hover)}
 .btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}.btn.ghost:hover{border-color:var(--accent);color:#fff}
 .btn.sm{padding:8px 11px;font-size:12px;font-weight:500}
@@ -628,13 +630,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 .toolbar input.search{max-width:280px}.toolbar .grow{flex:1}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;display:flex;flex-direction:column;gap:7px;position:relative;cursor:pointer}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px;display:flex;flex-direction:column;gap:7px;position:relative;cursor:pointer}
 .card:hover{border-color:var(--accent)}
 .cardmenu{position:absolute;top:9px;right:9px}
 .card h4{margin:0;font-size:16px;font-weight:600;padding-right:30px}
 .card .meta{font-size:11px;color:var(--faint);font-style:italic}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
-.tag{font-size:10px;background:var(--in);border:1px solid var(--line);color:var(--dim);border-radius:4px;padding:2px 7px}
+.tag{font-size:10px;background:var(--in);border:1px solid var(--line);color:var(--dim);border-radius:var(--r-sm);padding:2px 7px}
 .tag.cr{color:var(--amber);border-color:#5c4d24}
 .tag.origin{font-size:9.5px;letter-spacing:.02em;padding:2px 6px}
 .tag.origin.chassis{color:var(--info);border-color:#2c4a63;background:rgba(90,150,210,.08)}
@@ -718,7 +720,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .party-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:14px}
 .pcgrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.pcgrid input{width:52px;text-align:center}
 .advnotes{width:100%;margin-bottom:16px}
-.enc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:18px}
+.enc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:18px}
 .enc.arch{opacity:.62}
 .enc{position:relative}
 /* Collapsed: keep the SAME top padding as expanded so the header doesn't shift
@@ -746,7 +748,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .enc-collapse.closed svg{transform:rotate(-90deg)}
 /* Scenes — neutral named collapsible containers grouping an adventure's encounters. */
 .section-label .sl-acts{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0}
-.scene{position:relative;border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:9px;background:var(--panel2);margin-bottom:18px}
+.scene{position:relative;border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:var(--r-lg);background:var(--panel2);margin-bottom:18px}
 .scene.arch{opacity:.62}
 .scene.dragging{opacity:.4;cursor:grabbing}
 .scene.drop-before::before,.scene.drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--accent);border-radius:3px;box-shadow:0 0 7px var(--accent);z-index:3}
@@ -813,7 +815,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
 .popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
-.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
 .ci-name{min-width:0}
 /* Narrow card (the list pane can be resized small): drop the HP tracker to its own second row so the
    name + AC keep a full row instead of squeezing the name into a wrap. */
@@ -929,7 +931,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .enc-status.st-active{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft);border-color:#8a3a2c;font-weight:800}
 .enc-status.st-completed{background:rgba(74,120,176,.18);color:#7fa8d4;border-color:#35506e}
 .enc-status.st-archived{background:var(--panel2);color:var(--faint);border-color:var(--line)}
-.start-combat{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;border:none;background:var(--accent);color:#fff;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
+.start-combat{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;border:none;background:var(--accent);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600}
 .start-combat:hover{background:var(--accent-hover)}
 .start-combat svg{width:18px;height:18px;flex:none}
 /* Collapse to an icon-only square when the encounter card is narrow (container query on .enc). */
@@ -1147,7 +1149,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .modal-bg{position:fixed;inset:0;background:rgba(6,7,9,.72);display:none;place-items:center;z-index:50;padding:24px}
 .modal-bg.show{display:grid}
 .modal-bg.stack{z-index:60} /* stacked dialogs render above the modal that is still open */
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:11px;max-width:580px;width:100%;max-height:82vh;overflow:auto;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-xl);max-width:580px;width:100%;max-height:82vh;overflow:auto;padding:20px}
 .modal h3{margin:0 0 12px;font-size:17px}
 .modal textarea{min-height:210px;font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre}
 .modal .mrow{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
@@ -1313,7 +1315,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .card.preset .src-badge{margin-bottom:1px}
 
 /* Floating popover (status menu / tag add) */
-.popover{position:fixed;z-index:60;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:148px;box-shadow:var(--shadow-pop);display:flex;flex-direction:column;gap:2px}
+.popover{position:fixed;z-index:60;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:5px;min-width:148px;box-shadow:var(--shadow-pop);display:flex;flex-direction:column;gap:2px}
 .popover .popitem{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px;cursor:pointer}
 .popover .popitem:hover{background:var(--panel3)}
 .popover .popitem.on{color:var(--accent-soft)}
@@ -1371,7 +1373,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ctrl-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .ctrl-bar .ctrl-icons{flex:none}
 .ctrl-bar .ctrl-chips{flex:1;min-width:0;margin:0}
-.ctrl-chip{display:inline-flex;flex:none;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
+.ctrl-chip{display:inline-flex;flex:none;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
 .ctrl-chip:hover{border-color:var(--accent-soft);color:var(--txt)}
 .ctrl-chip .ci{display:inline-flex;color:var(--faint)}
 .ctrl-chip .ci svg{width:12px;height:12px}
@@ -1441,7 +1443,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Condition-immunity links: keep the dotted-underline popover affordance but no blue tint (B58). */
 .sb .reflink.reflink-plain{color:inherit}
 .sb .reflink.reflink-plain:hover{color:inherit}
-.refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;box-shadow:0 14px 36px rgba(0,0,0,.6);font-size:12.5px;line-height:1.5;display:none}
+.refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;box-shadow:var(--shadow-pop);font-size:12.5px;line-height:1.5;display:none}
 .refpop.show{display:block}
 /* Subtle ghost dismiss in the popover's top-right; sticks while the body scrolls (B68). */
 .refpop-x{position:sticky;top:-2px;float:right;margin:-4px -6px 0 6px;display:flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;border-radius:5px;background:none;color:var(--faint);opacity:.5;cursor:pointer;transition:opacity .12s,color .12s,background .12s;z-index:1}
