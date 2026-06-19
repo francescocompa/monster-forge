@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 117 — Number-flow reels follow scroll/clip + party-roll setting
+- **Number-flow animation fixed properly.** The reels were `position:fixed`, so scrolling left them behind and
+  a cell half-hidden under the statblock panel still drew its reel over the panel. They now render *inside*
+  the scrollable order pane (`position:absolute` in scroll coords) — so they scroll with the rows and the
+  pane's own overflow clips any half-hidden cell.
+- **Setting: "Roll party initiative"** (`combat.rollParty`, default on). Off = PC entries start **blank at the
+  top, flagged amber for manual entry** (`initManual`, `init:null`); blank inits sort to the top and the
+  round-bar d20 skips them. Typing a value commits it; clearing reverts to blank. `initOutOfPlace` treats
+  blank inits as top so they don't trip the "out of order" warning.
+
 ## Batch 116 — Initiative: merged numbering across same-name groups + group-init setting
 - **Continuous numbering for same-statblock groups.** Two separate "Goblin" entries of 5 now number
   **Goblin 1–5 then 6–10** instead of each restarting at 1, while staying separate for initiative. startCombat

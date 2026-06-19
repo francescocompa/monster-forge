@@ -876,7 +876,9 @@ function rollInit(mod){return rollFormula("1d20"+(mod>0?"+"+mod:mod<0?String(mod
 // Initiative when combat starts: roll 1d20+mod, or take a static "average" (10+mod) per the Settings
 // option (CT8). The DM can re-roll everyone from the combat toolbar afterwards.
 function rollOrAvgInit(mod){return (state.settings.combat&&state.settings.combat.initMode==="average")?10+mod:rollInit(mod);}
-function sortInitiative(order){const tie=state.settings.combat.dexTiebreak;order.sort((x,y)=>(y.init-x.init)||(tie?((y.dex||0)-(x.dex||0)):0));}
+function sortInitiative(order){const tie=state.settings.combat.dexTiebreak;order.sort((x,y)=>{
+  const xn=x.init==null,yn=y.init==null;if(xn!==yn)return xn?-1:1; // blank (manual, unset) inits float to the top
+  if(xn)return 0;return (y.init-x.init)||(tie?((y.dex||0)-(x.dex||0)):0);});}
 // Run fn with the global working monster M temporarily set to `m` (so the statblock builders +
 // colorizer, which read M, render an arbitrary creature). Restores M synchronously (CT4).
 function withM(m,fn){const prev=M;M=m;try{return fn();}finally{M=prev;}}
@@ -924,8 +926,11 @@ function combatantInstances(c,nameTotal,nameOffset){
 // Auto-roll initiative? (Settings combat.initMode) — off = "average" mode: combatants start with a dimmed
 // average init (still counts for sorting) until the round-bar d20 is clicked to roll them.
 function autoRollOn(){return !(state.settings.combat&&state.settings.combat.initMode==="average");}
-function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init);
-  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,initRolled:autoRollOn(),dex:0,
+// Roll party (PC) initiative on start? (Settings combat.rollParty) — off = PCs start blank at the top,
+// flagged for the DM to type each character's roll.
+function rollPartyOn(){return !(state.settings.combat&&state.settings.combat.rollParty===false);}
+function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init),man=!rollPartyOn();
+  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:p.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
     ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
@@ -1103,7 +1108,8 @@ function openHPNumEdit(itId,anchor,kind){
 function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
 function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
-  it.init=Number(v)||0;it.initRolled=true; // typing a value commits it (no longer a dimmed average placeholder)
+  if(v===""){it.init=null;it.initRolled=false;} // cleared → blank again
+  else{it.init=Number(v)||0;it.initRolled=true;it.initManual=false;} // typing commits it (not a placeholder / blank manual)
   // Re-sort on an init edit only in Initiative mode; in Manual mode the hand-set order is preserved
   // (the edit may change the "out of order" count instead).
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
@@ -1162,8 +1168,9 @@ function combatGroupLabel(g,key){if(g==="status")return CI_STATUS_GLABEL[key]||k
 // non-increasing-init order). Ties (equal init) count as in-place, so re-ordering tied cards isn't
 // flagged. This reads as "1 out of place" for a single misplaced card, not "everything shifted".
 function initOutOfPlace(cb){const a=cb.order,n=a.length;if(n<2)return 0;
+  const v=a.map(x=>x.init==null?Infinity:x.init); // blank (manual) inits belong at the top, not "out of order"
   const dp=new Array(n).fill(1);let best=1;
-  for(let i=0;i<n;i++){for(let j=0;j<i;j++)if(a[j].init>=a[i].init&&dp[j]+1>dp[i])dp[i]=dp[j]+1;if(dp[i]>best)best=dp[i];}
+  for(let i=0;i<n;i++){for(let j=0;j<i;j++)if(v[j]>=v[i]&&dp[j]+1>dp[i])dp[i]=dp[j]+1;if(dp[i]>best)best=dp[i];}
   return n-best;}
 function combatOrderBodyHTML(cb){
   const v=combatView(cb),rows=combatRows(cb),ti=cb.turnIndex,drag=combatDragOK(cb);
@@ -1212,7 +1219,7 @@ function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat
 // init cells number-flow style (vertical digit scroll), then commit the values + re-sort.
 function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
   // Roll (or re-roll) every group — works whether combatants are still unrolled averages or already rolled.
-  cb.order.forEach(it=>{const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));});
+  cb.order.forEach(it=>{if(it.initManual&&it.init==null)return;const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));});
   if(!byGroup.size)return;
   animateInitRoll(byGroup,()=>{
     cb.order.forEach(it=>{const g=it.groupId||it.id;if(byGroup.has(g)){it.init=byGroup.get(g);it.initRolled=true;}});
@@ -1227,15 +1234,16 @@ function nfReelHTML(target){
 }
 function animateInitRoll(byGroup,done){
   const d20=document.getElementById("combatRollInit");if(d20)d20.classList.add("rolling");
-  const overlays=[];
-  const pane=document.querySelector(".combat-order"),pb=pane?pane.getBoundingClientRect():null;
-  document.querySelectorAll(".ci-init-in").forEach(inp=>{
+  const pane=document.querySelector(".combat-order");if(!pane){done();return;}
+  const pr=pane.getBoundingClientRect(),overlays=[];
+  pane.querySelectorAll(".ci-init-in").forEach(inp=>{
     const it=combatItem(inp.dataset.initset);if(!it)return;const target=byGroup.get(it.groupId||it.id);if(target==null)return;
     const r=inp.getBoundingClientRect();
-    if(pb&&(r.bottom<=pb.top+2||r.top>=pb.bottom-2))return; // off-screen in the scrollable order — the fixed reel would float over everything
     const ov=document.createElement("div");ov.className="nf-roll";
-    ov.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-    ov.innerHTML=nfReelHTML(target);document.body.appendChild(ov);overlays.push(ov);
+    // Positioned inside the scrollable pane (in scroll coords) so the reel scrolls WITH the rows and the
+    // pane's own overflow clips any cell that's half-hidden under the statblock panel.
+    ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px`;
+    ov.innerHTML=nfReelHTML(target);pane.appendChild(ov);overlays.push(ov);
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   });
   setTimeout(()=>{overlays.forEach(o=>o.remove());if(d20)d20.classList.remove("rolling");done();},1450);
@@ -1264,9 +1272,9 @@ function bindCombatDrag(host){
 }
 function combatRowHTML(it,active,drag){
   const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
-  const unrolled=it.initRolled===false;
+  const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
-    :`<input class="ci-init-in${unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
+    :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
   const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
     :`<button class="ci-status st-${status}" data-cistatus="${it.id}" title="${CI_STATUS_LABEL[status]} — click to change">${status==="dead"?"☠":status==="waiting"?"⏸":"●"}</button>`;
   const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
