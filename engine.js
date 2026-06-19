@@ -373,7 +373,10 @@ function colorizeAttackLabels(root){
 // Arcane Burst (+9 = INT 20 mod +5 + PB +4) resolves to INT this way.
 function colorizeAttackNames(root){
   const pbCR=pbForCR(M.cr),spAbil=(M.actions.find(e=>e.mode==="spell")||{}).ability;
-  const inferAbil=bonus=>{const ms=ABILS.filter(a=>mod(M[a])+pbCR===bonus);if(!ms.length)return null;return (spAbil&&ms.includes(spAbil))?spAbil:ms[0];};
+  // In a tie (several abilities share the to-hit bonus) prefer the spellcasting ability, else fall back to
+  // ABILS order — but always push CON last: a creature almost never attacks with CON, so it's the least
+  // likely correct guess in a tie.
+  const inferAbil=bonus=>{const ms=ABILS.filter(a=>mod(M[a])+pbCR===bonus);if(!ms.length)return null;if(spAbil&&ms.includes(spAbil))return spAbil;return ms.slice().sort((a,b)=>(a==="con")-(b==="con"))[0];};
   root.querySelectorAll(".blk,.va").forEach(blk=>{
     const atk=blk.querySelector('[data-rolltype="attack"]'),dmg=blk.querySelector('[data-rolltype="damage"]'),nm=blk.querySelector(".nm");
     if(atk&&nm){

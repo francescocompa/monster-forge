@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 103 — Bug fixes: bestiary selection across tabs + attack-ability tie-break (CON last)
+- **Bestiary multi-select no longer persists across tabs.** The batch action bar (`#libBatchBar`) is
+  appended to `document.body`, so it survived a view switch. `switchView` now clears `libSel` (and the bar)
+  whenever you leave the Bestiary.
+- **Attack ability inference: CON is now lowest priority in a tie.** When several abilities share the same
+  to-hit bonus, `inferAbil` still prefers the spellcasting ability, then ABILS order — but always pushes
+  CON last (a creature almost never attacks with CON, so it's the least likely correct guess).
+
 ## Batch 102 — Design-system pass (3/n): colour-aware selected state + muted-text legibility
 - **Selected state now follows the card's own colour.** A coloured card (an adventure, a faction-tagged
   init row) tints its selected background AND border with its local colour instead of the global accent —
