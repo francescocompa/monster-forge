@@ -696,8 +696,8 @@ function contrastOn(hex){if(!hex)return "var(--txt)";let h=hex.replace("#","");i
   return (0.299*r+0.587*g+0.114*b)/255>0.62?"#1a1c21":"#fff";}
 // Combined inline style for an adventure card: selected border + the --ai-color/--ai-fg vars the
 // collapsed colour-square view reads.
-function aiStyle(a){const p=[];if(a.id===state.selAdv&&a.color)p.push(`border-color:${a.color}`);
-  if(a.color){p.push(`--ai-color:${a.color}`);p.push(`--ai-fg:${contrastOn(a.color)}`);}else{p.push("--ai-color:var(--panel3)");p.push("--ai-fg:var(--txt)");}
+function aiStyle(a){const p=[];
+  if(a.color){p.push(`--ai-color:${a.color}`);p.push(`--ai-fg:${contrastOn(a.color)}`);p.push(`--sel-accent:${a.color}`);}else{p.push("--ai-color:var(--panel3)");p.push("--ai-fg:var(--txt)");}
   return ` style="${p.join(";")}"`;}
 function openAdvColorMenu(anchor,advId){
   const a=state.adv.find(x=>x.id===advId);if(!a)return;

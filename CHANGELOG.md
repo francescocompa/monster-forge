@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 102 — Design-system pass (3/n): colour-aware selected state + muted-text legibility
+- **Selected state now follows the card's own colour.** A coloured card (an adventure, a faction-tagged
+  init row) tints its selected background AND border with its local colour instead of the global accent —
+  a purple adventure selects purple, a blue ally selects blue, etc. Mechanism: `--sel-accent` (defaults to
+  `--accent`) is overridden inline per card — `aiStyle` sets it from `a.color`, the adventure detail body
+  cascades it to its encounter cards, and the combat faction classes set it. The selected rules reference
+  `--sel-accent` directly (composing a derived token at `:root` baked in the root accent and never picked
+  up the per-card override).
+- **Fixed the grey-text clash on tinted cards.** Cool muted greys muddied against the (often warm) tint;
+  selected/focused/active cards now lift `--dim`/`--faint` to brighter neutrals, which cascades to all their
+  muted text (190 usages) automatically.
+- Combat active row: was a flat white lift; now a faction-coloured tint + inset ring (the richer
+  active-vs-selected treatment + edge marker stays in the init-card batch).
+
 ## Batch 101 — Design-system pass (2/n): radius scale + structural-surface tokens
 - Added a **radius token scale** — `--r-sm:5px / --r:7px (default control) / --r-lg:9px / --r-xl:11px` — and
   applied it to the component *families* users compare side-by-side, leaving deep-nested micro-radii alone

@@ -153,7 +153,7 @@ function renderAdvDetail(){
   const bud=baseBudget(partyOf(a,null));
   const infoColl=advInfoCollapsed();
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
-    <div class="adv-detail-body">
+    <div class="adv-detail-body"${a.color?` style="--sel-accent:${a.color}"`:""}>
     <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2><button class="adv-info-toggle" id="advInfoToggle" title="${infoColl?"Show":"Hide"} adventure info" aria-label="Toggle adventure info"><span class="st-chev${infoColl?" closed":""}">${FS_CHEVRON}</span></button></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
