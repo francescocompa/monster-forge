@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 100 — Design-system pass (1/n): unified "selected" card state
+- Audited the recurring UI primitives; first fix lands the headline discrepancy. The "selected/active" card
+  state was rendered four different ways (Bestiary = 2px hard outline, Encounter = soft accent *glow* + tint,
+  Adventure = accent border + lighter bg, Combat row = white lift). Standardized Bestiary/Encounter/Adventure
+  on **one glow-free treatment** (per the design call): 1px accent border + faint accent tint, no box-shadow.
+  New tokens `--sel-border` / `--sel-bg` (`color-mix(accent 7%, panel)`) drive `.card.selected`,
+  `.adv-list .ai.sel`, and `.enc.focused`. Also softened the collapsed mini-rail swatch ring (double → single).
+- Still pending in this design-system effort (next sub-batches): a radius scale (components hardcode
+  4/5/6/7/8/9/11/20px), chip/pill/tag alignment (5 overlapping types, inconsistent radius/size), primary-CTA
+  button unification (`.btn`/`.fab`/`.start-combat` differ), and a shared popup-surface base (`.refpop`/`.modal`
+  diverge from the consistent `.menu`/`.popover`).
+
 ## Batch 99 — Fix botched combat-tracker→main merge (empty Combat section)
 - The `Merge branch 'combat-tracker'` commit on `main` hit the old B80-revert and silently **dropped the
   Combat view wiring** while keeping the combat *functions* — so the Combat tab opened an empty section.

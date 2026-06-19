@@ -6,6 +6,8 @@
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   --r:7px;
   --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
+  /* Unified "selected" card state (B1 design-system pass): 1px accent border + faint tint, no glow. */
+  --sel-border:var(--accent); --sel-bg:color-mix(in srgb,var(--accent) 7%,var(--panel));
   --budfill:#39495c; /* XP-spent bar — neutral bluish slate from the bg family, lighter than the bar track; risk reads from the pill */
   color-scheme:dark;
 }
@@ -382,7 +384,7 @@ select::-ms-expand{display:none}
 .modal-back{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;width:26px;height:26px;display:grid;place-items:center;padding:0;border-radius:5px;flex:none;transition:border-color .12s,color .12s}
 .modal-back:hover{border-color:var(--accent);color:var(--txt)}
 /* Last-edited encounter highlight. */
-.enc.focused{box-shadow:0 0 0 1px rgba(226,101,77,.35);background:rgba(226,101,77,.04)}
+.enc.focused{border-color:var(--sel-border);background:var(--sel-bg)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
@@ -666,10 +668,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-layout.adv-mini .adv-list .ai:hover{background:var(--ai-color)}
 .adv-layout.adv-mini .adv-list .ai .ai-info,.adv-layout.adv-mini .adv-list .ai .adv-dot,.adv-layout.adv-mini .adv-list .ai .menu-wrap{display:none}
 .adv-layout.adv-mini .adv-list .ai .ai-ini{display:flex;align-items:center;justify-content:center;color:var(--ai-fg);font-weight:700;font-size:13px;letter-spacing:.02em}
-.adv-layout.adv-mini .adv-list .ai.sel{box-shadow:0 0 0 2px var(--accent),0 0 0 4px var(--panel)}
+.adv-layout.adv-mini .adv-list .ai.sel{box-shadow:0 0 0 2px var(--accent)}
 .adv-layout.adv-mini #advItems .hint{font-size:0;padding:4px 0}
 .adv-list .ai{padding:7px 8px 7px 11px;border-radius:7px;margin-bottom:4px;cursor:default;border:1px solid transparent;display:flex;align-items:center;gap:4px}
-.adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--panel2);border-color:var(--accent)}
+.adv-list .ai:hover{background:var(--panel2)}.adv-list .ai.sel{background:var(--sel-bg);border-color:var(--sel-border)}
 .adv-list .ai .ai-info{flex:1;min-width:0;cursor:pointer;padding:3px 0}
 .adv-list .ai .nm{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}.adv-list .ai .dt{font-size:11px;color:var(--faint);margin-left:19px}
 /* Pin marker + drag affordances for adventure cards / scenes / encounters (B78). */
@@ -1187,7 +1189,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .splitbtn .kebab.split-caret:hover{background:var(--accent-hover);color:#fff}
 .card.archived{opacity:.5}
 .card.archived:hover{opacity:.8}
-.card.selected{outline:2px solid var(--accent);outline-offset:1px}
+.card.selected{border-color:var(--sel-border);background:var(--sel-bg)}
 .card.dragging{opacity:.4}
 /* Pinned bestiary card: amber thumbtack + ring; a pinned card shown only because pins ignore the
    active filters reads as dimmed (filtered-out) (B78). */
