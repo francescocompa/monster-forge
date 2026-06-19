@@ -333,9 +333,10 @@ function walkColorize(container,cats){
 }
 // Colour-code + make rollable the statblock preview (gated by settings). Pill colours + the prose walk
 // run here; three follow-up DOM passes (attack labels / attack names / recharge tags) are split out (B75).
-function colorizeStatblock(){
+function colorizeStatblock(root){
+  root=root||$("#statblock");
   const s=state.settings&&state.settings.colorCode;if(!s||!s.on)return;
-  const root=$("#statblock");if(!root)return;
+  if(!root)return;
   // B60: colour-coding is now a single on/off — when on, every category is active.
   root.querySelectorAll(".ab td.lbl[data-ab] .abc").forEach(c=>c.classList.add("cc-ab","cc-ab-"+c.parentElement.dataset.ab));
   root.querySelectorAll(".cc-skill[data-ab]").forEach(sp=>sp.classList.add("cc-ab","cc-ab-"+sp.dataset.ab));
@@ -517,7 +518,10 @@ function gritOn(){return !!(state.settings&&state.settings.homebrew&&state.setti
 // a feature name so the roll log shows just the action name, not its usage note (B79).
 function cleanRollLabel(s){return (s||"").replace(/\s*\([^)]*\)/g,"").replace(/\.\s*$/,"").trim();}
 function rollLabelFor(span){if(span.dataset.rolllabel)return cleanRollLabel(span.dataset.rolllabel);const blk=span.closest(".blk,.va,.sb-note-b");const nm=blk&&blk.querySelector(".nm");return nm?cleanRollLabel(nm.textContent):"Roll";}
-function rollSource(){if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
+// Combatant-scoped roll source (CT4): while the Combat view is showing an active creature's statblock,
+// rolls are attributed to that combatant (e.g. "Archmage 2") instead of the Forge's working monster.
+let combatRollSrc=null;
+function rollSource(){if(_curView==="combat"&&combatRollSrc)return combatRollSrc;if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
 let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag

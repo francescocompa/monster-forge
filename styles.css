@@ -6,6 +6,7 @@
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   --r:7px;
   --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
+  --budfill:#39495c; /* XP-spent bar — neutral bluish slate from the bg family, lighter than the bar track; risk reads from the pill */
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -381,7 +382,7 @@ select::-ms-expand{display:none}
 .modal-back{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;width:26px;height:26px;display:grid;place-items:center;padding:0;border-radius:5px;flex:none;transition:border-color .12s,color .12s}
 .modal-back:hover{border-color:var(--accent);color:var(--txt)}
 /* Last-edited encounter highlight. */
-.enc.focused{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 14px rgba(226,101,77,.18)}
+.enc.focused{box-shadow:0 0 0 1px rgba(226,101,77,.35);background:rgba(226,101,77,.04)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
@@ -644,6 +645,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .empty-state{text-align:center;color:var(--faint);padding:48px 20px;font-style:italic}
 
 .adv-layout{display:grid;grid-template-columns:var(--advw,236px) 1fr;height:100%;overflow:hidden;width:100%;position:relative}
+.adv-scrim{display:none}
 .adv-list{border-right:1px solid var(--line);overflow-y:auto;padding:14px 11px}
 .adv-list #newAdv{width:100%;margin-bottom:12px}
 .adv-list #newAdv .ico{display:inline-flex}
@@ -695,10 +697,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .adv-list .ai .ai-kbtn{background:none;border:1px solid transparent;color:var(--faint);border-radius:5px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:15px;line-height:1;cursor:pointer}
 .adv-list .ai:hover .ai-kbtn,.adv-list .ai.sel .ai-kbtn{border-color:var(--line);color:var(--dim)}
 .adv-list .ai .ai-kbtn:hover{border-color:var(--accent)!important;color:var(--txt)!important}
-.adv-detail{overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
+.adv-detail{display:flex;flex-direction:column;overflow:hidden;padding:0}
+/* The colour band lives ABOVE the scroller so it spans the full width (the scrollbar gutter starts
+   below it, not beside it); everything else scrolls inside .adv-detail-body. */
+.adv-detail-body{flex:1;min-height:0;overflow-y:auto;padding:20px 24px 70px;scrollbar-gutter:stable}
+.adv-detail>.empty-state{margin:24px}
 /* Adventure-colour topbar (B81): a thin bar spanning the column from the top, replacing the colour
    dot — click it to change the colour. Default accent gradient; per-adventure colour set inline. */
-.adv-topbar{height:4px;margin:-20px -24px 16px;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer}
+.adv-topbar{height:4px;margin:0;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer;flex:none}
 /* Chevron by the title collapses the whole adventure info block (party bar + notes + roster). */
 .adv-info-toggle{background:none;border:1px solid transparent;color:var(--faint);border-radius:6px;width:26px;height:26px;flex:none;display:grid;place-items:center;padding:0;cursor:pointer}
 .adv-info-toggle:hover{border-color:var(--line);color:var(--txt)}
@@ -755,6 +761,294 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .scene-h input.scene-name:hover{border-color:var(--line)}
 .scene-h input.scene-name:focus{background:var(--in);border-color:var(--accent);outline:none}
 .scene-h .scene-count{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+/* ── Party roster (Combat Tracker, B80) ── */
+.section-label.section-toggle{cursor:pointer;user-select:none}
+.section-label .st-chev{display:inline-flex;width:14px;height:14px;color:var(--faint);transition:transform .15s}
+.section-label .st-chev.closed{transform:rotate(-90deg)}
+.section-label .party-count{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;font-weight:600;margin-left:auto}
+#partyWrap{margin-bottom:6px}
+.pc-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:8px;padding:8px 10px;margin-bottom:7px}
+.pc-main{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pc-main .pc-name{flex:1;min-width:120px;font-size:14px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 8px;color:var(--txt)}
+.pc-main .pc-name:focus{border-color:var(--accent);outline:none}
+.pc-stat{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.pc-stat input{width:58px;text-align:center;font-size:13px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 4px;color:var(--txt);color-scheme:dark}
+.pc-stat input:focus{border-color:var(--accent);outline:none}
+.pc-fields{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.pc-field{display:inline-flex;align-items:center;gap:3px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:2px 4px 2px 6px}
+.pc-field input{background:transparent;border:none;color:var(--txt);font-size:12px;padding:2px;color-scheme:dark}
+.pc-field input:focus{outline:none}
+.pc-field .pcf-l{width:78px;color:var(--faint);font-weight:600}
+.pc-field .pcf-v{width:96px;border-left:1px solid var(--line);padding-left:6px}
+/* ── Combat Tracker view (B80) ── */
+.combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0}
+.combat-wrap>.combat-notstarted,.combat-wrap>.combat-empty{flex:1;min-height:0}
+.combat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.combat-head .ch-title{flex:1;min-width:0}
+.combat-head .ch-title h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.combat-head .ch-sub{font-size:12px;color:var(--faint);margin-top:2px}
+.combat-ctrls{display:flex;gap:8px;flex-wrap:wrap}
+/* CT7b — rebalanced grid (more room for the statblock/trackers), Forge-style divider between the
+   initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
+/* CT9 — Forge-style two-pane split: each pane scrolls internally, a draggable divider between them. */
+.combat-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,var(--caw,500px));gap:0;overflow:hidden;position:relative}
+.combat-order{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:0;padding:14px 18px 24px 20px}
+.combat-resizer{position:absolute;top:0;bottom:0;right:var(--caw,500px);width:10px;margin-right:-5px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center}
+.combat-resizer::before{content:"";width:3px;height:46px;border-radius:3px;background:var(--line);opacity:0;transition:opacity .12s,background .12s}
+.combat-resizer:hover::before,.combat-resizer.drag::before{opacity:1;background:var(--accent)}
+.combat-rows{display:flex;flex-direction:column;gap:7px}
+/* CT8 combat toolbar */
+.ct-oop{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:var(--warn);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;line-height:1}
+.ct-oop:hover{background:color-mix(in srgb,var(--warn) 26%,transparent)}
+.cbt-group{display:flex;flex-direction:column;gap:7px}
+.cbt-group:not(:first-child){margin-top:8px}
+.cbt-group-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;display:flex;align-items:center;gap:6px;padding:0 2px}
+.cbt-group-n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
+.cbt-grip{flex:none;align-self:stretch;display:grid;place-items:center;width:15px;color:var(--faint);cursor:grab;border-radius:4px;margin:-8px 0 -8px -2px}
+.cbt-grip:hover{color:var(--dim)}
+.cbt-grip:active{cursor:grabbing}
+.cbt-row.dragging{opacity:.45}
+.cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
+.cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
+.popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
+.cbt-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+.ci-name{min-width:0}
+/* Narrow card (the list pane can be resized small): drop the HP tracker to its own second row so the
+   name + AC keep a full row instead of squeezing the name into a wrap. */
+@container (max-width:440px){
+  .cbt-row{row-gap:7px}
+  .cbt-row .ci-menu{order:8}
+  .cbt-row .ci-hp{order:9;flex-basis:100%;width:auto}
+}
+.cbt-row.enemy{border-left-color:#9c4a3f}.cbt-row.ally{border-left-color:#4a78b0}.cbt-row.pc{border-left-color:#3f7a52}.cbt-row.setting{border-left-color:#7a6a3f}
+.cbt-row.active{box-shadow:0 0 0 1px rgba(255,255,255,.22);background:rgba(255,255,255,.055)}
+.cbt-row.dead{opacity:.5}
+.cbt-row.dead .ci-name{text-decoration:line-through}
+.cbt-row.waiting{opacity:.82}
+.ci-init{flex:none;width:32px;height:30px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in{flex:none;width:38px;height:30px;text-align:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
+.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;font-size:12px;border-radius:50%}
+.ci-status.st-active{color:#5fa873}.ci-status.st-waiting{color:var(--warn)}.ci-status.st-dead{color:var(--faint)}
+.ci-status:hover{background:var(--panel2)}
+.ci-status-sp{flex:none;width:20px}
+.ci-body{flex:1;min-width:0}
+.ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
+.ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
+.ci-wait{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid #5c4d24;border-radius:4px;padding:1px 5px}
+.ci-note{font-size:11px;color:var(--faint);margin-top:2px}
+.ci-ac{flex:none;width:44px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.ci-hp{flex:none;width:150px;display:flex;flex-direction:column;gap:4px}
+.ci-noh{color:var(--faint);align-self:center}
+.hpbar{position:relative;height:6px;background:var(--in);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.hpbar-cur{position:absolute;left:0;top:0;height:100%;transition:width .15s}
+.hpbar-tmp{position:absolute;top:0;height:100%;background:#5a8bc0}
+.hpline{display:flex;align-items:center;gap:5px}
+.ci-hp .hp-dmg{width:48px;text-align:center;font-size:12px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark}
+.ci-hp .hp-dmg:focus{border-color:var(--accent);outline:none}
+.hp-nums{display:inline-flex;align-items:center;gap:2px}
+.ci-hp .hp-cur{width:42px;text-align:center;font-size:13px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+.ci-hp .hp-cur:focus{border-color:var(--accent);outline:none}
+.hp-sl{color:var(--faint);font-size:12px}
+.hp-max{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.hp-tmp{font-size:10px;font-weight:700;color:#7fa8d4;background:rgba(90,139,192,.15);border-radius:4px;padding:1px 4px}
+.ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
+.cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
+.cbt-add:hover{border-color:var(--accent);color:var(--txt)}
+.combat-active{display:flex;flex-direction:column;min-height:0;overflow:hidden;border-left:1px solid var(--line)}
+.ca-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 20px 84px}
+/* CT9-fix2 — flat panel; full-bleed faction colour bar on top (like the adventure-page bar); compact
+   one-line meta + stat chips; statblock below; note appended at the bottom. */
+.ca-panel{display:flex;flex-direction:column;gap:12px}
+.ca-topbar{height:4px;flex:none}
+.ca-topbar.enemy{background:linear-gradient(90deg,#b5564a,#5e2a23)}
+.ca-topbar.ally{background:linear-gradient(90deg,#5a8bc8,#2c4868)}
+.ca-topbar.pc{background:linear-gradient(90deg,#54a06d,#264a32)}
+.ca-topbar.setting{background:linear-gradient(90deg,#9a8854,#493f25)}
+.ca-head{display:flex;flex-direction:column;gap:9px}
+.ca-name{font-size:17px;font-weight:700;line-height:1.15;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.ca-faction{font-size:11px;font-weight:400;color:var(--faint);text-transform:capitalize}
+.ca-stats{display:flex;gap:7px;flex-wrap:wrap}
+.ca-stat{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px}
+.cas-k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint)}
+.cas-v{font-size:15px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1}
+.ca-addnote{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:9px;font-size:12px;cursor:pointer}
+.ca-addnote:hover{border-color:var(--accent);color:var(--txt)}
+.ca-addnote svg{flex:none}
+.ca-noteblock{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.ca-note-txt{font-size:12px;color:var(--dim);white-space:pre-wrap;min-width:0}
+.ca-hp{font-size:15px;margin-top:10px}.ca-hp b{color:var(--txt)}
+.ca-note{font-size:12px;color:var(--dim);margin-top:8px;white-space:pre-wrap}
+.ca-soon{font-size:11px;color:var(--faint);font-style:italic;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+/* CT3 — condition chips, per-combatant menu, inline note edit */
+.cbt-row .ci-menu{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.cbt-row .ci-menu:hover{border-color:var(--line);color:var(--txt);background:var(--panel2)}
+.ci-conds,.ca-conds{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
+.ca-conds{margin-top:12px}
+.cc-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(180,140,230,.1);border:1px solid rgba(180,140,230,.32);border-radius:13px;padding:2px 5px 2px 9px;font-size:11px;line-height:1.4;white-space:nowrap}
+.cc-chip .reflink{color:#b48ce6;font-weight:600;cursor:help}
+.cc-chip>span{color:#c9b3e6}
+.cc-dur{font-size:9.5px;font-weight:700;background:rgba(180,140,230,.22);color:#d6c2ef;border-radius:8px;padding:0 5px;font-variant-numeric:tabular-nums}
+.cc-x{background:none;border:none;color:var(--faint);font-size:13px;line-height:1;padding:0;cursor:pointer;display:inline-grid;place-items:center}
+.cc-x:hover{color:var(--bad)}
+.ci-addcond{flex:none;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:13px;font-size:11px;line-height:1;padding:3px 9px;cursor:pointer}
+.ci-addcond:hover{border-color:var(--accent);color:var(--txt)}
+.ca-noteedit{flex:none;border:none;background:none;color:var(--faint);cursor:pointer;padding:4px;display:grid;place-items:center;border-radius:5px}
+.ca-noteedit:hover{color:var(--accent-soft);background:var(--panel2)}
+.ca-noteedit svg{display:block}
+.note-edit .btn{width:100%}
+.round-edit{display:flex;align-items:center;gap:8px;padding:4px;font-size:12px;color:var(--dim)}
+.round-edit .round-in{width:60px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+.cond-add{padding:4px;min-width:280px}
+.cond-add-row{display:flex;align-items:center;gap:8px}
+.cond-input{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
+.cond-input:focus{outline:none;border-color:var(--accent)}
+.cond-rl{flex:none;color:var(--faint);display:flex;align-items:center;gap:5px}
+.cond-add .cond-rounds{width:40px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 3px;color:var(--txt);color-scheme:dark}
+.cond-rounds:focus{outline:none;border-color:var(--accent)}
+.note-edit{display:flex;flex-direction:column;gap:8px;padding:4px;min-width:220px}
+.note-ta{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px;color:var(--txt);color-scheme:dark}
+/* CT4 — resource pips + embedded active-combatant statblock */
+.ca-res{display:flex;flex-direction:column;gap:6px;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.res-row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.res-lbl{font-size:11.5px;color:var(--dim);display:flex;align-items:center;gap:6px;min-width:0}
+.res-tag{font-size:9px;font-weight:700;letter-spacing:.03em;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 4px;white-space:nowrap}
+.res-pips{display:inline-flex;gap:4px;flex:none}
+.res-pip{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0}
+.res-pip.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(226,101,77,.4)}
+.res-pip:hover{border-color:var(--accent)}
+.ca-sb{margin-top:0;border-top:1px solid var(--line);padding-top:14px}
+/* CT5/CT6 — encounter status chip, start-combat sword button, combat-tab empty/not-started + scene nav + load popup */
+.enc-status{flex:none;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer}
+.enc-status.sm{font-size:9px;padding:2px 7px;cursor:default}
+.enc-status:hover{border-color:var(--accent);color:var(--txt)}
+.enc-status.st-draft{color:var(--faint)}
+.enc-status.st-ready{background:rgba(95,168,115,.16);color:#8fce9a;border-color:#2f5e3a}
+.enc-status.st-active{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft);border-color:#8a3a2c;font-weight:800}
+.enc-status.st-completed{background:rgba(74,120,176,.18);color:#7fa8d4;border-color:#35506e}
+.enc-status.st-archived{background:var(--panel2);color:var(--faint);border-color:var(--line)}
+.start-combat{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;border:none;background:var(--accent);color:#fff;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
+.start-combat:hover{background:var(--accent-hover)}
+.start-combat svg{width:18px;height:18px;flex:none}
+/* Collapse to an icon-only square when the encounter card is narrow (container query on .enc). */
+.enc{container-type:inline-size}
+@container (max-width:360px){.enc .start-combat .sc-label{display:none}.enc .start-combat{width:38px;padding:0}}
+.combat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:60vh;text-align:center;color:var(--dim)}
+.combat-empty .ce-icon{width:54px;height:54px;color:var(--accent-soft);opacity:.55}
+.combat-empty .ce-icon svg{width:100%;height:100%}
+.combat-empty h2{margin:0;font-size:19px;font-weight:700;color:var(--txt)}
+.combat-empty p{max-width:360px;margin:0}
+.combat-notstarted{display:flex;flex-direction:column;align-items:center;gap:14px;padding:48px 20px;text-align:center}
+.combat-notstarted .btn{display:inline-flex;align-items:center;gap:8px}.combat-notstarted .btn svg{width:18px;height:18px}
+.scene-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-bottom:16px}
+.scene-enc-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0}
+.scene-nav{display:flex;align-items:center;gap:8px;flex:none}
+.scene-pos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.load-combat{max-height:60vh}
+.lc-adv{margin-bottom:14px}
+.lc-adv-h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--txt);margin-bottom:6px}
+.lc-adv-tog{flex:none;width:22px;height:22px;display:grid;place-items:center;border:none;background:none;color:var(--faint);border-radius:5px;cursor:pointer;padding:0}
+.lc-adv-tog:hover{color:var(--txt)}
+.lc-adv-tog .lc-chev{transition:transform .15s}
+.lc-adv:not(.collapsed) .lc-adv-tog .lc-chev{transform:rotate(90deg)}
+.lc-adv-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-adv-kebab{flex:none;margin-left:auto;width:26px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--faint);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;padding:0}
+.lc-adv-kebab:hover{color:var(--txt);background:var(--panel2)}
+.lc-adv-body[hidden]{display:none}
+.lc-scene{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;margin:8px 0 4px 2px}
+.lc-enc{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 11px;margin-bottom:5px;cursor:pointer;color:var(--txt)}
+.lc-enc:hover{border-color:var(--accent);background:var(--panel2)}
+.lc-enc-nm{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-enc-meta{display:flex;align-items:center;gap:8px;flex:none}
+.lc-cnt{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+/* CT7 — menu-item icon, budget pill on bar line, combat-tab header restructure, FAB, picker footer */
+.menu button .mi-ico{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
+.budget-top{display:flex;align-items:center;gap:10px}
+.budget-top .bartrack{flex:1}
+/* CT9 — minimal context header (Direction C): one slim line, click the title to load another. */
+/* CT9-fix — header: scene (small) over encounter (large) + a scene-encounter dropdown; Load button right. */
+.ct-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:0 20px 0 17px;border-left:3px solid var(--ct-accent,var(--accent))}
+.ct-titleblock{flex:1;min-width:0}
+.ct-scene-sm{font-size:12px;font-weight:600;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct-encrow{display:flex;align-items:center;gap:9px;min-width:0}
+.ct-enc-lg{font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ct-encdrop{flex:none;width:24px;height:24px;display:grid;place-items:center;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;cursor:pointer;padding:0}
+.ct-encdrop:hover{border-color:var(--line);color:var(--txt)}
+.ct-encdrop svg{width:13px;height:13px}
+.ct-loadbtn{flex:none;width:auto;display:inline-flex;align-items:center;gap:6px}
+.ct-loadbtn svg{flex:none}
+.ct-encpos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
+.ghost-chev{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0}
+.ghost-chev:hover:not(:disabled){border-color:var(--accent);color:var(--txt)}
+.ghost-chev:disabled{opacity:.3;pointer-events:none}
+.ct-notes{font-size:12px;color:var(--faint);margin:-4px 0 10px;padding:0 20px 0 20px;white-space:pre-wrap}
+.pop-val{margin-left:auto;color:var(--faint);font-size:11px}
+/* Full-width round bar above the grid; its bottom border is the header divider. */
+.ct-roundbar{display:flex;align-items:center;gap:10px;padding:2px 20px 9px;border-bottom:1px solid var(--line)}
+.ct-roundbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;border:none;background:none;cursor:pointer;padding:3px 7px;border-radius:6px}
+.ct-roundbar .ct-round:hover{background:var(--panel2)}
+.ct-turnline{flex:1;height:1px;background:var(--line)}
+.ct-turnbtn{width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
+.ct-turnbtn:hover{color:var(--txt);background:var(--panel2)}
+.ct-toolsbtn{position:relative;flex:none;width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0;margin-left:2px}
+.ct-toolsbtn:hover{color:var(--txt);background:var(--panel2)}
+.ct-toolsbtn.on{color:var(--txt)}
+.ct-toolsbtn.on::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(11px,-10px)}
+.combat-fab{display:inline-flex;align-items:center;gap:7px}
+.combat-fab svg{width:15px;height:15px;fill:currentColor;flex:none}
+.combat-fab.end{background:var(--bad)!important}
+.combat-fab.end:hover{background:#a4392f!important}
+.picker-scroll{min-height:240px}
+.modal .mrow.picker-foot .btn{width:auto}
+.picker-foot .pf-btn{display:inline-flex;align-items:center;gap:6px}
+.picker-foot .pf-btn svg{width:13px;height:13px;flex:none}
+.picker-foot .pf-note{font-size:10px;color:var(--faint);font-weight:500}
+/* CT7-fixes — footer fill, reworked load popup */
+.picker-foot .pf-btn{flex:1;justify-content:center;white-space:nowrap}
+/* CT7c — load popup: clickable status chip, dimmed folder icon + empty caption next to scenes */
+.lc-enc .enc-status{cursor:pointer}
+.lc-enc .enc-status:hover{border-color:var(--accent);color:var(--txt)}
+.lc-enc-l{display:flex;align-items:center;gap:7px;min-width:0}
+.lc-empty-cap{font-size:10px;color:var(--faint);font-style:italic;flex:none}
+.picker-foot .pf-done{flex:none}
+.lc-ctrls{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.lc-ctrl{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.lc-ctrl select{background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;padding:4px 6px;font-size:12px}
+.lc-scene-wrap{margin:4px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.lc-scene-wrap.running{border-color:var(--accent)}
+.lc-scene-h{display:flex;align-items:center;background:var(--panel2);color:var(--txt);font-size:13px;font-weight:600}
+.lc-scene-tog{flex:none;display:grid;place-items:center;background:none;border:none;color:var(--faint);cursor:pointer;padding:8px 4px 8px 10px}
+.lc-scene-tog:hover{color:var(--txt)}
+.lc-scene-load{flex:1;min-width:0;display:flex;align-items:center;gap:7px;background:none;border:none;color:var(--txt);cursor:pointer;text-align:left;padding:8px 11px 8px 4px;font:inherit}
+.lc-scene-h:hover{background:var(--in)}
+.lc-scene-tog:hover,.lc-scene-load:hover{color:var(--txt)}
+.lc-chev{display:inline-flex;color:var(--faint);transition:transform .15s}
+.lc-scene-h.open .lc-chev{transform:rotate(90deg)}
+.lc-scene-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-scene-n{margin-left:auto;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.lc-scene-encs{padding:5px 8px 8px}
+.lc-scene-encs[hidden]{display:none}
+.lc-enc.running{border-color:var(--accent);background:rgba(226,101,77,.08)}
+.lc-enc-adv{font-size:10.5px;color:var(--faint);font-weight:400;margin-left:4px}
+.lc-adds{display:flex;gap:6px;margin-top:6px}
+.lc-add{flex:1;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:7px;padding:6px;font-size:11.5px;cursor:pointer}
+.lc-add:hover{border-color:var(--accent);color:var(--txt)}
+.lc-statgrp{margin-bottom:12px}
+.lc-stat-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;margin:6px 0 5px 2px}
+.lc-empty{font-size:11px;color:var(--faint);padding:4px 2px}
+@media (max-width:600px){
+  .modal .mrow.picker-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .modal .mrow.picker-foot .btn{width:auto;justify-content:center}
+  .picker-foot .pf-done{grid-column:1 / -1;margin-left:0}
+}
+@media (max-width:1080px){
+  .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,46%)}
+  .combat-order{padding:14px 20px 24px}
+  .combat-active{border-left:none;border-top:1px solid var(--line)}
+  .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,46%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
+  .combat-resizer::before{width:46px;height:3px}
+}
+
 .scene-body{padding:0 12px 8px}
 .scene-body .enc{margin-bottom:12px;background:var(--panel)}
 .scene-body .scenenotes{margin-bottom:10px}
@@ -787,9 +1081,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget{margin:8px 0}
 .budget .bartrack{position:relative;padding:4px 0}
 .budget .bar{height:10px;background:var(--in);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.budget .fill{height:100%;transition:width .2s;background:#6f7783}
+.budget .fill{height:100%;transition:width .2s;background:var(--budfill)}
 .budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
-.budget .tgt:hover,.budget .tgt.drag{background:var(--accent);transform:scale(1.15)}
+.budget .tgt:hover{background:var(--accent);transform:scale(1.15)}
+.budget .tgt.drag{background:var(--info);transform:scale(1.2);box-shadow:0 0 0 4px color-mix(in srgb,var(--info) 30%,transparent),0 1px 3px rgba(0,0,0,.6)}
 /* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
 .budget .tgt.inactive{background:var(--faint);opacity:.45;box-shadow:none} /* same size as placed (B59) */
 .budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
@@ -821,10 +1116,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt{border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-bottom:7px;background:#15171b}
 .cbt.ev{border-left:3px solid var(--info)}
 .cbt.enemy{border-left:3px solid var(--bad)}
-.cbt.ally{border-left:3px solid var(--ok)}
+.cbt.ally{border-left:3px solid #4a78b0}
 .cbt.setting{border-left:3px solid var(--faint)}
 .cbt .top select.fac.enemy{color:var(--accent-soft)}
-.cbt .top select.fac.ally{color:#8fce9a}
+.cbt .top select.fac.ally{color:#7fa8d4}
 .cbt .top select.fac.setting{color:var(--dim)}
 .cbt .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cbt .top input.nick{min-width:130px}
@@ -1054,15 +1349,33 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ctrl-ico:hover{color:var(--txt);background:var(--panel2)}
 .ctrl-ico svg{display:block}
 .head-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.ctrl-chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.ctrl-chips:empty{display:none}
-.ctrl-chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
+/* Active-filter chips: a single right-aligned row in line with the filter icons; when they overflow
+   they scroll horizontally and fade out behind a gradient on the side nearest the icons (ov-l/ov-r
+   toggled by observeChipFade). Spacing under the row separates it from the records below. */
+.ctrl-chips{display:flex;flex-wrap:nowrap;gap:7px;align-items:center;overflow-x:auto;margin:8px 0 12px;scrollbar-width:none}
+.ctrl-chips::-webkit-scrollbar{display:none}
+.ctrl-chips:empty{display:none;margin:0}
+/* margin-left:auto right-aligns the chips when they fit, but collapses to 0 when they overflow so the
+   row stays left-packed and fully scrollable (avoids the flex-end + overflow clip bug). */
+.ctrl-chips>:first-child{margin-left:auto}
+.ctrl-chips.ov-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
+.ctrl-chips.ov-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px);mask-image:linear-gradient(to right,transparent,#000 26px)}
+.ctrl-chips.ov-l.ov-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
+/* Preset-manager toolbar keeps chips inline with its icons (left), so restore wrap there. */
+.lib-toolbar .ctrl-chips{margin:0;overflow:visible;flex-wrap:wrap}
+.lib-toolbar .ctrl-chips>:first-child{margin-left:0}
+/* Popups (load encounter / add combatant) put the icons and chips on one row: icons left, chips fill
+   the rest and hug the right, scrolling + fading near the icons when they overflow. */
+.ctrl-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ctrl-bar .ctrl-icons{flex:none}
+.ctrl-bar .ctrl-chips{flex:1;min-width:0;margin:0}
+.ctrl-chip{display:inline-flex;flex:none;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px 3px 8px;font-size:11.5px;color:var(--dim);cursor:pointer}
 .ctrl-chip:hover{border-color:var(--accent-soft);color:var(--txt)}
 .ctrl-chip .ci{display:inline-flex;color:var(--faint)}
 .ctrl-chip .ci svg{width:12px;height:12px}
 .ctrl-chip.s{border-color:#5c4d24}.ctrl-chip.s .ci{color:var(--amber)}
 .ctrl-chip.g{border-color:#6e3329}.ctrl-chip.g .ci{color:var(--accent-soft)}
-.ctrl-clear{background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;padding:3px 6px;text-decoration:underline}
+.ctrl-clear{flex:none;background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;padding:3px 6px;text-decoration:underline}
 .ctrl-clear:hover{color:var(--txt)}
 .grp{margin-bottom:18px}
 .grp-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line)}
@@ -1197,7 +1510,13 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
   .adv-list{display:flex;flex-direction:column}
   .adv-list #newAdv{order:10;margin-top:10px;margin-bottom:0}
   .adv-layout:not(.detail-open) .adv-detail{display:none}
-  .adv-layout.detail-open .adv-list{display:none}
+  /* With a detail open, the adventure list becomes an off-canvas drawer that the #advBack button
+     (now the Adventures glyph) slides in over the detail. The main rail is already a burger here. */
+  .adv-layout.detail-open .adv-list{position:absolute;left:0;top:0;bottom:0;width:min(300px,82%);z-index:46;
+    transform:translateX(-103%);transition:transform .22s ease;background:var(--panel)}
+  /* shadow only while the drawer is open, so it doesn't bleed past the edge when parked off-canvas */
+  .adv-layout.detail-open.adv-drawer .adv-list{transform:none;box-shadow:var(--shadow-pop)}
+  .adv-layout.detail-open.adv-drawer .adv-scrim{display:block;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:45}
   .adv-resizer{display:none}
   .adv-back{display:grid;flex:none}
   /* batch bar: anchor to the left edge and grow rightward instead of centering (which can overflow off-screen) */

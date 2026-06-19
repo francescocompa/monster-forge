@@ -4,41 +4,201 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
-## Batch 86 — Pending-import tray: same filter tools, collapse, selection popover, checkbox alignment
-- The **Pending import** tray now has the **same search / filter / sort / group** controls as the regular
-  library list (and groups its rows the same way), so a big zip's sources are easy to narrow down.
-- The always-on **Add / Discard all** buttons are gone; selecting one or more pending sources now reveals
-  a floating **Clear · Discard · Add** bar, mirroring the committed-library selection popover.
-- A **chevron collapses** the Pending-import section (with proper spacing from the title).
-- **Fixed checkbox alignment** — the group / select-all checkboxes (in both the pending tray and the
-  committed list) are now vertically centred with their titles instead of floating high (they were
-  picking up an unrelated `margin-bottom` from the generic `grp` class).
+## Batch 98 — Branch reconcile: fold main's B82–B86 features onto combat-tracker
+- **Brought `main`'s isolated feature commits onto the `combat-tracker` branch** so the branch is now the
+  complete union of both lines (cherry-pick of B82–B86, skipping the B80 revert). The branch keeps all the
+  Combat Tracker work + `seed.js`; it now ALSO has, from `main`:
+  - **5etools `.zip` import** (B85–86): `unzipJsonFiles` (parsers.js, native `DecompressionStream`), zip
+    staging + Pending-import tray (app.js/bestiary.js), `#zipIn` (index.html).
+  - **Encounter XP-bar threshold markers** (B83–84): `budMarksHTML` circles — kept the branch's newer
+    `.budget-top` structure and neutral `--budfill` fill (B91/B92 decisions) and added the markers on top.
+  - **Bestiary/Forge new-creature menu icons** (B83): file-import glyph for "From chassis", clipboard for
+    "Paste 5etools".
+  - B82 (chip-field fix) was already effectively present on the branch (empty cherry-pick).
+- **Reconcile fixups:** restored the four branch-only `index.html` additions that the icon-conflict
+  resolution had to merge around — the Combat nav button, `#advScrim`, the `#view-combat` section, and
+  `seed.js` in the script loader. `main` is left untouched (promote it to the union when deploying).
 
-## Batch 85 — Import a whole 5etools .zip (staged, confirm-to-keep)
-- **Upload a whole 5etools data `.zip`** instead of hunting for individual files. The main button in
-  Preset libraries is now **Upload .zip** (the old **Upload .json files** moved into the ▾ menu). The zip
-  is unpacked **in your browser with no new dependency** — it uses the native `DecompressionStream`, so
-  the site stays no-build.
-- **Pending-import tray.** A zip doesn't commit anything outright: every source it finds lands in a
-  **Pending import** tray at the top of the popup. Tick the ones you want (one by one or *Select all*) and
-  **Add** them; **Discard** drops the rest. Nothing is saved until you Add, and any source you've already
-  imported is **skipped automatically**. Reference sheets (`books.json`, `legendarygroups.json`) apply up
-  front so titles and lair actions resolve, and cross-file `_copy` statblocks resolve across the zip.
-- Files that aren't statblock/spell/condition/rule data (fluff, foundry packs, adventures, images) are
-  ignored. Confirmed libraries are stashed for **Re-parse** just like a manual upload.
+## Batch 97 — Combat Tracker v2 (CT9 fixes): resize regression, active panel, popovers, load popup
+- **Fixed the two-pane resize regression.** Below ~1080px the view now stacks cleanly (it was clipping
+  the statblock off the right and squeezing the layout in the 980–1080px band); the active column shrinks
+  rather than overflowing, and the divider stays draggable.
+- **Active panel.** The faction accent is now a **full-bleed colour bar on top** (like the adventure
+  page — pinned above the scroll). The meta is more compact (name + faction on one line; AC, attack
+  bonus, **save DC**, best save, and HP all as chips on one line). The note moved to a bottom block with
+  a **pen icon**, and the panel keeps Forge-style bottom space so it never tucks under the FAB.
+- **Popovers.** The condition adder is one row — a dark dropdown-styled field with an **hourglass** +
+  small rounds input. The note editor's field and button are the same width. The round counter is now
+  **clickable to set the round**. The combat tools button lost its border.
+- **Load encounter popup.** Adventures **collapse** (chevron before the title) and gained a right-aligned
+  **⋯ menu** to add an encounter or scene (the inline +Encounter/+Scene buttons are gone). Scene rows
+  highlight as a whole on hover, and the **Active** status tag is now visually distinct from Draft.
 
-## Batch 84 — XP-bar markers as circles + neutral fill
-- The encounter XP-bar Low/Mod/High threshold markers are now small **circles** instead of lines, and
-  the draggable target marker gets a **coloured ring** in the threshold's colour when it sits on one.
-- The **filled portion of the bar is now neutral grey** — the difficulty pill already communicates risk.
+## Batch 96 — Combat Tracker v2 (CT9 follow-up): header, round bar, active-panel polish
+- **Header restructure.** The scene name is now a small label above the **encounter name** (the large
+  title). A chevron next to the encounter opens a **dropdown of the scene's encounters** to switch
+  between them (only shown when the encounter is in a scene with more than one). The encounter switcher
+  on the right is replaced by a **Load encounter** button that opens the picker.
+- **Round bar.** Now spans the **full width** above both panes (and stays above the initiative when the
+  layout stacks). The turn arrows are borderless and the "turn" label is gone; **group / sort / filter /
+  re-roll** moved into a **tools menu** at its right end. A full-width divider under it separates the
+  header, and that divider plus the list/preview divider now run edge-to-edge.
+- **Active panel.** The combatant's key numbers — **AC, attack bonus, and best save** — are surfaced as
+  prominent chips. The note moved to a full-width **＋ Add note** block at the bottom (Forge "Add
+  section" style). The lateral faction line became a **horizontal accent on top**.
 
-## Batch 83 — Bestiary FAB icons + encounter XP-bar threshold markers
-- **New-creature menu icons.** In the Bestiary "New" menu (and the Forge actions menu), *From chassis*
-  now uses a file-import icon and *Paste 5etools* a clipboard icon.
-- **XP-bar threshold markers.** The encounter budget bar shows fixed **Low / Moderate / High** markers
-  (High at the right end, Low/Moderate scaled to the High cap); the draggable target marker **snaps** to
-  them. Hover a marker for its XP; hover the draggable marker for the spent / on-target read-out. The
-  old "Spent … / target …" text line below the bar is gone.
+## Batch 95 — Combat Tracker v2 (CT9): layout + header overhaul
+- **Resizable two-pane combat view.** The initiative list and the active-combatant panel are now a
+  Forge-style split with a **draggable divider** (drag to resize, double-click to reset, persists);
+  each pane scrolls on its own. On narrow screens the split stacks with a horizontal handle.
+- **Minimal header.** One slim context line — adventure-colour accent, the scene · encounter title
+  (click it to load another), the difficulty pill, and a small same-scene **‹ n/m ›** nav. The
+  **round counter + turn controls moved onto the top of the initiative list**, where the turns happen.
+- **No more box-in-a-box.** The active combatant is one flat panel — its meta (name / HP / conditions /
+  note) on top, the statblock flowing directly below, instead of a card nested inside a card.
+- **Initiative cards reflow.** When the list pane is narrow, a card keeps its name + AC on one row and
+  drops the HP tracker to a second row, so names no longer get squeezed and wrapped.
+
+## Batch 94 — Combat Tracker v2 (CT8): initiative filtering / sorting / grouping + manual drag-sort
+- **Combat toolbar.** Above the initiative list: **Group** (none / status / faction / statblock),
+  **Sort** (initiative / manual / name / status / HP remaining), and **Filter** (by status and faction).
+  Grouping/sorting/filtering are **view-only** — turns always advance in initiative order regardless of
+  how you've arranged the list to scan it.
+- **Drag to reorder.** Grab a card's handle to set a manual turn order (e.g. to resolve a tie or a held
+  action). If that pulls a card out of its initiative slot, a soft **"N out of order"** warning appears;
+  click it to **restore initiative order**. (A Move up / Move down fallback lives in each card's ⋯ menu.)
+- **Re-roll initiative** for everyone from the toolbar, and a new Settings option to start combat with
+  **rolled (1d20 + mod)** or **average (10 + mod)** initiative.
+
+## Batch 93 — Combat Tracker v2 (CT7d): load-popup polish, filter-chip alignment, init-row tidy
+- **Load encounter popup.** Dropped the folder icon and the "● loaded" tag (the running encounter keeps
+  its highlight). A scene's **chevron** now toggles its encounters while clicking the **rest of the row
+  loads the scene** (its running encounter, else its first). Empty scenes **and** empty encounters show a
+  dimmed "empty" caption next to their name.
+- **Active-filter chips.** Across every filterable list the chips now sit in a single row **right-aligned
+  in line with the filter icons**; when they overflow they scroll horizontally and fade out behind a
+  gradient, with clearer spacing below the row. In the Load / Add-combatant popups the icons and chips
+  share one row.
+- **Initiative card.** The active combatant's highlight is a softer neutral lift (no longer the accent
+  colour), and untracked HP shows blank instead of an em-dash.
+- *(Fix)* Seed bestiary skills used the wrong shape, which threw when a seed creature was the active
+  combatant; corrected to the `[name, prof]` form.
+
+## Batch 92 — Feedback follow-ups: drawer shadow + XP-bar fill colour
+- **Narrow-width adventure drawer** no longer casts a shadow onto the detail when it's parked off-canvas
+  (closed) — the drop shadow now appears only while the drawer is open.
+- **XP budget bar fill** is now a neutral bluish slate from the background family (lighter than the bar
+  track) instead of the bronze, so it reads as a calm fill rather than a coloured one.
+
+## Batch 91 — Feedback round: local seed data, empty-bestiary picker, XP-bar colours, adventure header
+- **Pre-filled local test data.** On `localhost` only, the app now seeds a realistic sandbox — a bestiary
+  (goblin, dire wolf, bandit captain, ogre, cult fanatic, young green dragon), two adventures with party
+  rosters, scenes, and encounters wired to those creatures — so the app and the Combat Tracker can be
+  exercised without touching real data. It coexists with any real data, never writes to the cloud bin
+  (`seed.js` sets a flag that makes `jbinSet` a no-op), and is skipped on the live site and in tests.
+- **Add combatant with an empty bestiary.** The "Add combatant" picker no longer errors when you have no
+  saved creatures — it opens with an empty-bestiary hint so you can load a chassis, Forge one, or add a
+  Quick / Event combatant straight from the footer.
+- **XP budget bar restyled.** The spent bar is now a single subtle bronze that blends with the palette
+  (risk still reads from the difficulty pill), and the draggable target marker turns **blue with a focus
+  ring while you drag it** so it no longer reads as the "high/over" threshold colour.
+- **Adventure header polish.** The adventure-colour band now spans the **full width** of the column (the
+  scrollbar starts below it, not beside it), and the **collapse chevron moved to after the title**.
+- **Narrow-width adventure drawer.** On small screens the adventure list is now an off-canvas drawer: the
+  button by the title shows the **Adventures glyph** and slides the list in as an overlay over the detail
+  (tap a scrim or an adventure to close), instead of swapping the whole view.
+
+## Batch 90 — Combat Tracker v2 (CT7b finish): add combatants from initiative + live-update
+- **Add combatants from the initiative tracker** — a "＋ Add combatant" button at the bottom of the
+  order opens the usual picker (Bestiary / Quick / Chassis / Forge / Event) and injects the new
+  combatant straight into the running order (rolling its initiative + HP).
+- **Live-update.** Adding a combatant or party member to a running encounter (from anywhere) now flows
+  into the live initiative order automatically, re-sorted while keeping whose turn it is.
+
+## Batch 89 — Combat Tracker v2 (CT7b core): initiative card + HP tracker redesign
+- **Rebalanced combat view** — the initiative list is narrower and the active statblock/trackers panel
+  wider, separated by a Forge-style divider.
+- **Redesigned initiative card.** Initiative is an editable field (changing it re-sorts the order); a
+  status control cycles **active / waiting / dead** (dead and downed combatants are skipped on advance,
+  waiting is dimmed); the old mystery 0± field is gone.
+- **New HP tracker.** A compact ratio-coloured bar (with a temp-HP segment), an **add-dmg** field
+  (Enter applies; negative heals; temp HP absorbs first), an editable **current**, and the **max**.
+  Temp HP and a signed **max-HP adjust** (e.g. Aid +5 raises max and current) live in the ⋯ menu.
+- **Settings: Track party HP** toggle — turn it off to hide the HP tracker for player characters.
+
+## Batch 88 — Combat Tracker v2 (CT7c, branch): load popup standardised + polish
+- **Load popup uses the standard toolbar** (like Add combatant): search, **sort** (name / creation),
+  **group** (None / Status / Adventure — disable grouping is "None"), and **filter** by status + adventure,
+  with active-filter chips.
+- **Click a status chip** in the load popup to change that encounter's status inline.
+- **Scenes** show a small dimmed **folder icon** and a dimmed **"empty"** caption when they have no
+  encounters.
+- **Add-combatant** footer buttons no longer wrap their text.
+- **Focused encounter block** in Adventures uses a softer highlight (less accent).
+
+## Batch 87 — Combat Tracker v2 (CT7 fixes): header + load popup + footer
+- **Combat header:** dropped the back button and "Load other"; the **adventure/scene title is now the
+  control** — click it to open the load popup. Title aligns left.
+- **Reworked load popup:** a **Group** (Adventure / Status) and **Status** filter; scenes are
+  collapsible folders (chevron, collapsed by default — the running encounter's scene auto-expands) and
+  read distinctly from encounter rows; the **currently-loaded** encounter/scene is highlighted; the
+  "× grp" text is gone; per-adventure **＋ Encounter / ＋ Scene** buttons let you create on the spot.
+- **Add-combatant footer:** the four add buttons now stretch to fill the row evenly.
+- **Softer active-row highlight** in the initiative list (less accent glow).
+
+## Batch 86 — Combat Tracker v2 (CT7): tab chrome + add-combatant polish
+- **Cleaner combat-tab header.** The breadcrumb is just "Combat" now (it's a top-level tab). The title
+  block shows the **adventure over the scene** with a vertical adventure-colour bar; the encounter
+  selector (‹ › ghost chevrons) sits in line with it. The current encounter, its **budget rating**, and
+  its notes show in a strip below, with the **round counter + turn chevrons** right-aligned.
+- **Start/End combat moved to a tab FAB** (bottom-right). When an encounter hasn't started, the header
+  expands full width and the FAB reads "Start combat".
+- **Encounters get an Active status** while a combat is running (and again if you restart a completed one).
+- **Encounter card (Adventures):** the start-combat button now shows a "Start combat" label (collapsing
+  to just the sword icon when the card is narrow) in solid orange; the budget rating moved onto the
+  budget-bar line, right-aligned.
+- **Add-combatant popup:** taller minimum height so cards don't crowd the footer; footer reordered to
+  Forge new · From chassis · Event · Quick · Done, with icons on Forge and From chassis and a dimmed
+  "CR only" note on Quick; at narrow widths the footer wraps cleanly into three full-width rows. The
+  "load chassis" menu items (Forge toolbar + Bestiary) now use a clipboard icon.
+
+## Batch 85 — Combat Tracker v2 (CT5 + CT6): standalone tab, load popup, launch UX
+- **Combat is now its own sidebar tab** (below Adventures), always reachable. Its empty state has a
+  **Load encounter** popup that lets you pick any adventure → scene → encounter (shows status, group
+  count, and whether a combat is already running).
+- **Scene as header with prev/next.** When the loaded encounter belongs to a scene, the scene is the
+  title and a strip shows the current encounter with ‹ Prev / Next › to move between the scene's
+  encounters. Ending a combat keeps you on the tab so you can roll straight into the next fight.
+- **Encounter status.** Each encounter now carries a lifecycle status — Draft → Ready → Completed
+  (auto-set when you end its combat) — with Archived folded into the same status chip (and still the
+  operative archive flag). Click the chip on the encounter card to change it.
+- **Sword button starts combat.** The little "＋" next to Add combatant is replaced by a rounded accent
+  **⚔ button** that starts (or resumes) combat for that encounter; the old "Run combat" menu item is gone.
+- **One "Add combatant" popup.** The extra add options (Quick / From chassis / Forge new / Event) now
+  live in the picker's footer instead of a separate menu.
+- **Party is green, allies are blue** across the tracker, the active card, the encounter combatant rows,
+  and the party roster.
+
+## Batch 84 — Combat Tracker part 3 (CT4): active statblock, click-to-roll, resources
+- **The active combatant's full statblock** now renders right in the combat view, colour-coded just like
+  the Forge preview.
+- **Click-to-roll, tagged to the combatant.** Click an attack, save DC, or any dice in that statblock to
+  roll it — and the roll log attributes it to the combatant by name (e.g. "Archmage 2"), not the Forge's
+  working creature.
+- **Auto-detected resource trackers.** Starting combat scans each monster for "(N/Day)" features,
+  recharge abilities, and the legendary-action pool, and turns them into clickable pips you spend and
+  restore. Legendary-action pools refresh at the start of that creature's turn.
+
+## Batch 83 — Combat Tracker part 2 (CT3): conditions, notes, skip-defeated, ungroup
+- **Condition chips per combatant.** Add conditions from your conditions library (autocomplete) with an
+  optional duration in rounds. Known conditions show their definition on hover, and timed conditions tick
+  down — and drop off — at the start of that combatant's turn.
+- **Per-combatant notes.** Jot a note on any combatant (e.g. "Concentrating on Haste"); it shows under
+  their name in the order and on the active card.
+- **Defeated combatants are skipped.** Advancing turns steps over anyone at 0 HP (in either direction),
+  so you no longer click past downed creatures.
+- **Ungroup.** A stacked group of identical monsters can be split so each rolls its own initiative.
+- **Per-row ⋯ menu** for add note / add condition / ungroup / remove from combat.
 
 ## Batch 82 — Chip-field scrolling, really fixed (form-column cap + scroll fade)
 - **Condition-immunity / gear chip fields now actually scroll.** The real cause wasn't the field — the
@@ -58,12 +218,27 @@ Newest batches first.
   colour (Acrobatics = DEX blue, Arcana = INT purple, …); text stays white.
 - **Adventure header redo.** The colour dot by the title is replaced with a thin adventure-coloured
   bar across the top of the column (click it to recolour). A chevron beside the title collapses the
-  adventure info block (party size/level, budget, notes) so you can focus on the scene list.
+  whole adventure info block (party, budget, notes, roster) so you can focus on the scene list.
 - **Move submenu no longer clipped.** When a card's Move submenu would open under the sidebar, it now
   flips open to the right instead.
 - **Chip fields really stay put now.** Condition-immunity and gear chip fields keep a fixed size and
   scroll their chips horizontally within the box (the field no longer stretches to fit them).
 - **Collapsed New-adventure button** has its “+” properly centred.
+
+## Batch 80 — Combat Tracker, part 1 (party roster + live initiative tracker)
+- **Party roster.** Each adventure has a collapsible Party section: add player characters with
+  AC / HP / initiative modifier plus free-form custom fields (passive perception, save bonuses, …).
+- **Run combat.** An encounter's ⋯ menu has **Run combat** (▶). It snapshots the encounter's
+  combatants and the party, expands `count:N` monsters into N HP-separate rows (identical monsters
+  share one rolled initiative), rolls everyone's initiative (DEX tie-break), and opens a dedicated
+  full-screen **Combat** view.
+- **Live tracker.** Initiative order with the active combatant highlighted, round counter, Next/Prev
+  turn, per-combatant HP with quick damage/heal (and a defeated state at 0 HP), AC, and a panel for the
+  active combatant. The combat is resumable and survives a reload; **End combat** clears it.
+- **Combat setting.** A new Settings → Combat card: roll monster HP from Hit Dice or use average HP, and
+  toggle DEX initiative tie-breaking.
+- *(Coming next: condition chips, status/comment, and the active creature's full statblock with
+  click-to-roll tagged to that combatant.)*
 
 ## Batch 79 — Ability colours, cleaner roll labels, back-button fix, menu polish
 - **Ability boxes are colour-coded.** Each ability/save box in the Forge is tinted with its ability

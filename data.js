@@ -39,6 +39,17 @@ const FACTIONS=["Enemy","Ally","Neutral"];
 function migrateFaction(f){return f==="Party"?"Ally":f==="Setting"?"Neutral":(FACTIONS.includes(f)?f:"Enemy");}
 function facClass(f){return f==="Ally"?"ally":(f==="Neutral"||f==="Setting")?"setting":"enemy";}
 const STATUSES=["Draft","Ready","Archived"]; // bestiary workflow status (Batch 13)
+// Encounter lifecycle status (CT6). "completed" is auto-set when a combat ends; "archived" is folded in
+// here as a status but still mirrors the existing e.archived flag (so all prior archive behavior holds).
+// "active" (CT7) is auto-set while a combat is running; it isn't a manual menu pick (ENC_STATUS_MENU).
+const ENC_STATUSES=["draft","ready","active","completed","archived"];
+const ENC_STATUS_MENU=["draft","ready","completed","archived"];
+const ENC_STATUS_LABEL={draft:"Draft",ready:"Ready",active:"Active",completed:"Completed",archived:"Archived"};
+// Crossed-swords icon (user-supplied) — combat nav tab + per-encounter "start combat" button.
+const SWORDS_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="nonzero" d="M7.05 13.406l3.534 3.536-1.413 1.414 1.415 1.415-1.414 1.414-2.475-2.475-2.829 2.829-1.414-1.414 2.829-2.83-2.475-2.474 1.414-1.414 1.414 1.413 1.413-1.414zM3 3l3.546.003 11.817 11.818 1.415-1.414 1.414 1.414-2.474 2.475 2.828 2.829-1.414 1.414-2.829-2.829-2.475 2.475-1.414-1.414 1.414-1.415L3.003 6.531 3 3zm14.457 0L21 3.003l.002 3.523-4.053 4.052-3.536-3.535L17.457 3z"/></svg>';
+// Load-from-chassis = clipboard (FA6 solid); Forge new = the hammer (matches the Forge nav tab). CT7.
+const CHASSIS_ICON='<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M192 0c-41.8 0-77.4 26.7-90.5 64L64 64C28.7 64 0 92.7 0 128L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64l-37.5 0C269.4 26.7 233.8 0 192 0zm0 64a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM112 192l160 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-160 0c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/></svg>';
+const FORGE_ICON='<svg viewBox="0 0 640 640" aria-hidden="true"><path fill="currentColor" d="M246.9 82.3L271 67.8C292.6 54.8 317.3 48 342.5 48C379.3 48 414.7 62.6 440.7 88.7L504.6 152.6C519.6 167.6 528 188 528 209.2L528 240.1L547.7 259.8C563.3 244.2 588.6 244.2 604.3 259.8C620 275.4 619.9 300.7 604.3 316.4L540.3 380.4C524.7 396 499.4 396 483.7 380.4C468 364.8 468.1 339.5 483.7 323.8L464 304L433.1 304C411.9 304 391.5 295.6 376.5 280.6L327.4 231.5C312.4 216.5 304 196.1 304 174.9L304 162.2C304 151 298.1 140.5 288.5 134.8L246.9 109.8C236.5 103.6 236.5 88.6 246.9 82.4zM50.7 466.7L272.8 244.6L363.3 335.1L141.2 557.2C116.2 582.2 75.7 582.2 50.7 557.2C25.7 532.2 25.7 491.7 50.7 466.7z"/></svg>';
 const LEGEND_INTRO="Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, [c] can expend a use to take one of the following options. [C] regains all expended uses at the start of each of its turns.";
 const LAIR_INTRO="On initiative count 20 (losing initiative ties), [c] takes a lair action to cause one of the following effects; [c] can't use the same effect two rounds in a row:";
 const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once per encounter, immediately after another creature's turn, and must use them in order (Action 1, then 2, then 3).";
