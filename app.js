@@ -40,7 +40,7 @@ function renderSettings(){
       <div class="set-head">Combat tracker</div>
       <div class="set-grid">
         <label class="f">Monster HP<select data-set="combat.hpMode"><option value="rolled" ${s.combat.hpMode==="rolled"?"selected":""}>Roll from Hit Dice</option><option value="average" ${s.combat.hpMode==="average"?"selected":""}>Average (book HP)</option></select></label>
-        <label class="f">Initiative<select data-set="combat.initMode"><option value="roll" ${s.combat.initMode!=="average"?"selected":""}>Roll (1d20 + mod)</option><option value="average" ${s.combat.initMode==="average"?"selected":""}>Average (10 + mod)</option></select></label>
+        <label class="f">Auto-roll initiative<select data-set="combat.initMode"><option value="roll" ${s.combat.initMode!=="average"?"selected":""}>On — roll 1d20 + mod</option><option value="average" ${s.combat.initMode==="average"?"selected":""}>Off — average, roll manually</option></select></label>
       </div>
       ${SW("combat.dexTiebreak","Break initiative ties by DEX")}
       ${SW("combat.partyHP","Track party HP")}

@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 113 — Fixes: auto-roll discoverability, hourglass orientation, collapsible combat notes
+- **Auto-roll wasn't visible.** The feature was gated (off by default, labelled "Initiative", and the
+  dimmed-average/d20 only appeared on a *fresh* combat). Fixes: the setting is relabelled **"Auto-roll
+  initiative" (On / Off)**; the **d20 ghost button** (now `--dim`, per request) shows in the round bar
+  **whenever auto-roll is off** — not only when combatants are unrolled — and rolls/re-rolls *every* group
+  with the number-flow animation, so it works on an already-running combat too.
+- **Hourglass orientation** in the effect-timing toggle was inverted: added a 180° base rotation so "turn
+  start" shows the filled half up and "end turn" flips it down.
+- **Combat notes collapse.** Encounter notes in the combat header now clamp to **2 rows** with a more/less
+  toggle (shown only when the text actually overflows). `.ct-notes.clamped` + an overflow check.
+
 ## Batch 112 — Initiative (2/2): auto-roll toggle + number-flow manual roll
 - **Auto-roll on/off** is the existing `combat.initMode` (Roll vs Average) setting. When **off** (Average),
   combatants start with their **dimmed average** initiative shown as a dashed placeholder (`initRolled:false`

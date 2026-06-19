@@ -1197,7 +1197,8 @@ function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat
 // The round-bar d20 (auto-roll-off mode): roll ACTUAL dice for the still-unrolled combatants, animate the
 // init cells number-flow style (vertical digit scroll), then commit the values + re-sort.
 function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
-  cb.order.forEach(it=>{if(it.initRolled===false){const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));}});
+  // Roll (or re-roll) every group — works whether combatants are still unrolled averages or already rolled.
+  cb.order.forEach(it=>{const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));});
   if(!byGroup.size)return;
   animateInitRoll(byGroup,()=>{
     cb.order.forEach(it=>{const g=it.groupId||it.id;if(byGroup.has(g)){it.init=byGroup.get(g);it.initRolled=true;}});
@@ -1213,7 +1214,7 @@ function nfReelHTML(target){
 function animateInitRoll(byGroup,done){
   const d20=document.getElementById("combatRollInit");if(d20)d20.classList.add("rolling");
   const overlays=[];
-  document.querySelectorAll(".ci-init-in.unrolled").forEach(inp=>{
+  document.querySelectorAll(".ci-init-in").forEach(inp=>{
     const it=combatItem(inp.dataset.initset);if(!it)return;const target=byGroup.get(it.groupId||it.id);if(target==null)return;
     const r=inp.getBoundingClientRect();const ov=document.createElement("div");ov.className="nf-roll";
     ov.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
@@ -1342,7 +1343,7 @@ function combatHeaderHTML(a,e,sc,cb){
       ${sc?`<div class="ct-scene-sm">${esc(sceneDName(sc))}</div>`:""}
       <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ${cls}">${label}</span>${drop}</div>
     </div>`;
-  const notes=(e.notesOn&&e.notes)?`<div class="ct-notes">${esc(e.notes)}</div>`:"";
+  const notes=(e.notesOn&&e.notes)?`<div class="ct-notes-wrap"><div class="ct-notes clamped">${esc(e.notes)}</div><button class="ct-notes-more" hidden>more</button></div>`:"";
   return `<div class="ct-bar" style="--ct-accent:${advc}">
     ${title}
     <button class="btn ghost sm ct-loadbtn" id="combatLoadTitle" title="Load a different scene or encounter">${LOAD_ICON}<span>Load encounter</span></button>
@@ -1356,7 +1357,7 @@ function combatRoundBarHTML(cb){
   // "on" = the view differs from the default (group-by-status, sort-by-init, no filters), so the dot only
   // flags a deliberately-changed view — not the default grouping itself.
   const active=(v.group!=="status"||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
-  const canRoll=!autoRollOn()&&cb.order.some(it=>it.initRolled===false); // auto-roll off + still-unrolled averages
+  const canRoll=!autoRollOn(); // auto-roll off: a manual d20 to roll (or re-roll) initiative is always offered
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
@@ -1453,6 +1454,8 @@ function renderCombat(){
     </div>`:combatNotStartedHTML(a,e))+fab;
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
+  // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
+  {const nt=$(".ct-notes"),mb=$(".ct-notes-more");if(nt&&mb&&nt.scrollHeight>nt.clientHeight+2){mb.hidden=false;mb.addEventListener("click",()=>{mb.textContent=nt.classList.toggle("clamped")?"more":"less";});}}
   {const ed=$("#combatEncDrop");if(ed)ed.addEventListener("click",ev=>{ev.stopPropagation();openSceneEncMenu(ed,a,e);});}
   $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
   const addBtn=$("#combatAddBtn");if(addBtn)addBtn.addEventListener("click",()=>openBestiaryPicker(a,e));
