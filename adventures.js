@@ -1225,8 +1225,8 @@ function combatActiveHTML(it){
     <div class="ca-scroll"><div class="ca-panel">
       <div class="ca-head">
         <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span></div>
-        ${statRow}
         ${conds}
+        ${statRow}
         ${resourcePipsHTML(it)}
       </div>
       ${sb}

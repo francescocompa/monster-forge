@@ -4,6 +4,11 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 107 — Effects (2/n): active-panel layout — effect chip below title, full-width stat boxes
+- Reordered the combat active panel: the **"+ effect" chip now sits directly below the title**, and the
+  **AC/ATK/DC/save/HP boxes occupy the row full-width** (each `flex:1`, min 64px, wrapping on narrow panes)
+  instead of compact left-aligned pills. Verified with a PC (AC/HP) and a monster (AC/ATK/HP).
+
 ## Batch 106 — Effects (1/n): rename conditions→effects + keep semantic colour sets fixed
 - **Accent-set fix (folded in).** The B105 local-accent remap was too broad: status chips and faction
   indicators (which are members of a *colour set*) wrongly adopted the card's local colour — the "active"
