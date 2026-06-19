@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 112 — Initiative (2/2): auto-roll toggle + number-flow manual roll
+- **Auto-roll on/off** is the existing `combat.initMode` (Roll vs Average) setting. When **off** (Average),
+  combatants start with their **dimmed average** initiative shown as a dashed placeholder (`initRolled:false`
+  via `autoRollOn()`) — it still counts for sorting, and typing a value commits it. The "Rolling initiative…"
+  flourish is suppressed in this mode (nothing was auto-rolled).
+- **Round-bar d20.** When auto-roll is off and combatants are still unrolled, a **d20 button appears before
+  the filter-tools icon**. Clicking it rolls actual dice (`rollInit`, grouped) for the unrolled combatants
+  and plays a **number-flow** animation: a vertical digit reel (`nfReelHTML`/`animateInitRoll`) overlays each
+  init cell and scrolls to the rolled value over ~1.35s, then the values commit and the order re-sorts.
+  Hand-rolled CSS reel (`.nf-roll`/`.nf-col`), no library — stays no-build.
+
 ## Batch 111 — Effect-popover fixes: alarm toggle, effect-name combo, stray tools dot
 - **The timing row no longer shows by default / the alarm now works.** `.cond-when{display:flex}` was
   overriding the `[hidden]` attribute, so the "ends at …" row was always visible and the alarm-clock toggle

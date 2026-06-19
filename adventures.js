@@ -907,12 +907,15 @@ function combatantInstances(c){
   const im=m?initOf(m):0,gi=rollOrAvgInit(im),count=Math.max(1,Number(c.count||1)),arr=[];
   for(let i=0;i<count;i++){const hp=m?rollMonsterHP(m):null;
     arr.push({id:uid(),kind:c.type,srcId:c.type==="monster"?c.monsterId:null,
-      name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,dex:m?Number(m.dex||10):10,
+      name:count>1?`${base} ${i+1}`:base,init:gi,initMod:im,initRolled:autoRollOn(),dex:m?Number(m.dex||10):10,
       ac:m?(m.ac??null):null,hpMax:hp,hpCur:hp,hpTemp:0,status:"active",conditions:[],comment:"",faction:c.faction||"Enemy",groupId:c.id,resources:m?detectResources(m):[]});}
   return arr;
 }
+// Auto-roll initiative? (Settings combat.initMode) — off = "average" mode: combatants start with a dimmed
+// average init (still counts for sorting) until the round-bar d20 is clicked to roll them.
+function autoRollOn(){return !(state.settings.combat&&state.settings.combat.initMode==="average");}
 function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init);
-  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,dex:0,
+  return {id:uid(),kind:"pc",srcId:p.id,name:p.name||"PC",init:rollOrAvgInit(im),initMod:im,initRolled:autoRollOn(),dex:0,
     ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
@@ -957,8 +960,8 @@ function runCombat(a,e){
   saveAdv();switchView("combat");
   // Fresh start: a brief "calculating" flourish so it's clear initiative was just rolled (the roll already
   // happened in startCombat — this is purely presentational), then reveal the order.
-  if(fresh){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}
-  else renderCombat();
+  if(fresh&&autoRollOn()){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}
+  else renderCombat(); // average mode shows the dimmed averages immediately — roll via the round-bar d20
 }
 function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
 // "Out" of the turn order for skip purposes: downed (0 HP) or explicitly marked dead (CT7b).
@@ -1086,7 +1089,7 @@ function openHPNumEdit(itId,anchor,kind){
 function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
 function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
-  it.init=Number(v)||0;
+  it.init=Number(v)||0;it.initRolled=true; // typing a value commits it (no longer a dimmed average placeholder)
   // Re-sort on an init edit only in Initiative mode; in Manual mode the hand-set order is preserved
   // (the edit may change the "out of order" count instead).
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
@@ -1191,6 +1194,34 @@ function restoreInitOrder(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.c
 function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
   cb.order.forEach(it=>{const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollOrAvgInit(it.initMod||0));it.init=byGroup.get(g);});
   sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative re-rolled.");}
+// The round-bar d20 (auto-roll-off mode): roll ACTUAL dice for the still-unrolled combatants, animate the
+// init cells number-flow style (vertical digit scroll), then commit the values + re-sort.
+function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
+  cb.order.forEach(it=>{if(it.initRolled===false){const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));}});
+  if(!byGroup.size)return;
+  animateInitRoll(byGroup,()=>{
+    cb.order.forEach(it=>{const g=it.groupId||it.id;if(byGroup.has(g)){it.init=byGroup.get(g);it.initRolled=true;}});
+    sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();
+  });
+}
+// Build a vertical digit reel per digit of `target` — a 0–9 column (×2 cycles) ending on the digit, so a
+// translateY to the end scrolls through the numbers and lands on it (number-flow style).
+function nfReelHTML(target){
+  return String(target).split("").map(d=>{const seq=[];for(let c=0;c<2;c++)for(let n=0;n<=9;n++)seq.push(n);seq.push(Number(d));
+    return `<span class="nf-digit"><span class="nf-col" style="--nf-len:${seq.length}">${seq.map(n=>`<span class="nf-n">${n}</span>`).join("")}</span></span>`;}).join("");
+}
+function animateInitRoll(byGroup,done){
+  const d20=document.getElementById("combatRollInit");if(d20)d20.classList.add("rolling");
+  const overlays=[];
+  document.querySelectorAll(".ci-init-in.unrolled").forEach(inp=>{
+    const it=combatItem(inp.dataset.initset);if(!it)return;const target=byGroup.get(it.groupId||it.id);if(target==null)return;
+    const r=inp.getBoundingClientRect();const ov=document.createElement("div");ov.className="nf-roll";
+    ov.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+    ov.innerHTML=nfReelHTML(target);document.body.appendChild(ov);overlays.push(ov);
+    requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
+  });
+  setTimeout(()=>{overlays.forEach(o=>o.remove());if(d20)d20.classList.remove("rolling");done();},1450);
+}
 // Drag a card's grip to reorder the real turn order (→ manual sort); keeps whose turn it is.
 function reorderCombat(dragId,targetId,after){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
   if(dragId===targetId)return;const cur=cb.order[cb.turnIndex];
@@ -1215,8 +1246,9 @@ function bindCombatDrag(host){
 }
 function combatRowHTML(it,active,drag){
   const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
+  const unrolled=it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
-    :`<input class="ci-init-in" type="number" data-initset="${it.id}" value="${it.init}" title="Initiative — edit to re-sort">`;
+    :`<input class="ci-init-in${unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
   const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
     :`<button class="ci-status st-${status}" data-cistatus="${it.id}" title="${CI_STATUS_LABEL[status]} — click to change">${status==="dead"?"☠":status==="waiting"?"⏸":"●"}</button>`;
   const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
@@ -1324,12 +1356,14 @@ function combatRoundBarHTML(cb){
   // "on" = the view differs from the default (group-by-status, sort-by-init, no filters), so the dot only
   // flags a deliberately-changed view — not the default grouping itself.
   const active=(v.group!=="status"||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
+  const canRoll=!autoRollOn()&&cb.order.some(it=>it.initRolled===false); // auto-roll off + still-unrolled averages
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
     <button class="ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
     <button class="ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
     ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
+    ${canRoll?`<button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}</button>`:""}
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
@@ -1428,6 +1462,7 @@ function renderCombat(){
   {const re=$("#combatRoundEdit");if(re)re.addEventListener("click",ev=>{ev.stopPropagation();openRoundEdit(re);});}
   // CT9-fix: group / sort / filter / roll live in the round-bar tools menu; restore-order is its own chip.
   {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
+  {const ri=$("#combatRollInit");if(ri)ri.addEventListener("click",rollInitNow);}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
   if(combatDragOK(cb))bindCombatDrag($("#combatRows"));
   // Current HP edited directly.

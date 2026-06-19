@@ -854,6 +854,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-init{flex:none;width:32px;height:30px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums}
 .cbt-row .ci-init-in{flex:none;width:38px;height:30px;text-align:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
 .cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
+.cbt-row .ci-init-in.unrolled{border-style:dashed} /* auto-roll off: shows the dimmed average as a placeholder */
+.cbt-row .ci-init-in.unrolled::placeholder{color:var(--faint);opacity:1}
+/* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
+.nf-roll{position:fixed;z-index:30;display:flex;align-items:center;justify-content:center;background:var(--in);border:1px solid var(--accent);border-radius:6px;color:var(--txt);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
+.nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
+.nf-col{display:flex;flex-direction:column;transform:translateY(0);transition:transform 1.35s cubic-bezier(.16,.84,.3,1)}
+.nf-n{height:1em;line-height:1;display:flex;align-items:center;justify-content:center}
 .ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;font-size:12px;border-radius:50%}
 .ci-status.st-active{color:#5fa873}.ci-status.st-waiting{color:var(--warn)}.ci-status.st-dead{color:var(--faint)}
 .ci-status:hover{background:var(--panel2)}
@@ -1041,6 +1048,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-toolsbtn:hover{color:var(--txt);background:var(--panel2)}
 .ct-toolsbtn.on{color:var(--txt)}
 .ct-toolsbtn.on::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(11px,-10px)}
+.ct-d20{flex:none;width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--accent-soft);border-radius:6px;cursor:pointer;padding:0;margin-left:2px}
+.ct-d20:hover{background:var(--panel2);color:var(--accent)}
+.ct-d20 svg{width:17px;height:17px}
+.ct-d20.rolling svg{animation:croSpin .55s linear infinite}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
 .combat-fab svg{width:15px;height:15px;fill:currentColor;flex:none}
 .combat-fab.end{background:var(--bad)!important}
