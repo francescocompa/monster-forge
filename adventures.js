@@ -998,10 +998,10 @@ function condChipHTML(itId,c,i){
 }
 function condsHTML(it){
   if(it.kind==="event")return "";
-  return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋</button></div>`;
+  return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
 }
 function openCondAdd(itId,anchor){
-  const p=showPopover(anchor,`<div class="cond-add"><div class="cond-add-row"><input type="text" class="cond-input" list="condDatalist" placeholder="Condition…" autocomplete="off"><label class="cond-rl" title="Duration in rounds (blank = until removed)">${HOURGLASS_ICON}<input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
+  const p=showPopover(anchor,`<div class="cond-add"><div class="cond-add-row"><input type="text" class="cond-input" list="condDatalist" placeholder="Effect…" autocomplete="off"><label class="cond-rl" title="Duration in rounds (blank = until removed)">${HOURGLASS_ICON}<input type="number" class="cond-rounds" min="0" placeholder="∞"></label><button class="btn primary sm cond-go" style="width:auto">Add</button></div></div>`);
   const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds");inp.focus();
   const commit=()=>{const name=(inp.value||"").trim();closePopover();if(name)addCombatCond(itId,name,rd.value);};
   p.querySelector(".cond-go").addEventListener("click",commit);
@@ -1020,7 +1020,7 @@ function openCombatRowMenu(itId,anchor){
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
   const groupN=cb.order.filter(x=>x.groupId===it.groupId).length;
   let html=`<button class="popitem" data-act="note">${it.comment?"Edit note":"Add note"}</button>`;
-  if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add condition</button>`;
+  if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add effect</button>`;
   if(it.hpMax!=null)html+=`<button class="popitem" data-act="temp">Set temp HP</button><button class="popitem" data-act="max">Adjust max HP</button>`;
   if(groupN>1)html+=`<button class="popitem" data-act="ungroup">Ungroup (separate initiative)</button>`;
   // Manual reorder fallback (drag needs a pointer): only when the displayed order == the turn order.
@@ -1203,7 +1203,7 @@ function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
   const m=it.kind==="monster"?monById(it.srcId):null;
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
-  const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add condition">＋ condition</button></div>`;
+  const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
   const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
   const stats=[];

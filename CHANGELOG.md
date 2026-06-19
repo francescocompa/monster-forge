@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 106 — Effects (1/n): rename conditions→effects + keep semantic colour sets fixed
+- **Accent-set fix (folded in).** The B105 local-accent remap was too broad: status chips and faction
+  indicators (which are members of a *colour set*) wrongly adopted the card's local colour — the "active"
+  status chip went purple on a purple adventure, the enemy faction stopped being reddish. Rule: where accent
+  is one member of a semantic set, it must stay fixed. New `--brand-soft` token; `.enc-status.st-active`,
+  `.fac.enemy`, the minion tag and the mini-chip "on" state now use `--brand`/`--brand-soft` (immune to the
+  per-card `--accent` remap). Hovers/focus still follow the local colour as intended.
+- **Conditions → "effects".** The combatant chips we add are now "effects" (an umbrella over conditions,
+  concentration, spell effects — any are free-text; known D&D conditions still link to the library). Label-only
+  rename (the internal `conditions[]` field is unchanged, so no data migration): the row/active-panel add
+  buttons ("＋ effect" / "Add effect"), the add popover placeholder ("Effect…"), and the row-menu item.
+
 ## Batch 105 — Design-system pass (4/n): selected cards fully adopt their local colour
 - Follow-up to the colour-aware selected state. On a selected/focused card the **entire** accent now follows
   the card's local colour — not just the border/tint but **hovers and focus rings** too (was still flashing

@@ -1,7 +1,7 @@
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
   --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
-  --accent:#e2654d; --brand:#e2654d; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
+  --accent:#e2654d; --brand:#e2654d; --brand-soft:#ef8470; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   /* Radius scale (B1 design-system pass). --r = default control radius (kept at 7px, the dominant value);
@@ -943,7 +943,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .enc-status:hover{border-color:var(--accent);color:var(--txt)}
 .enc-status.st-draft{color:var(--faint)}
 .enc-status.st-ready{background:rgba(95,168,115,.16);color:#8fce9a;border-color:#2f5e3a}
-.enc-status.st-active{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft);border-color:#8a3a2c;font-weight:800}
+.enc-status.st-active{background:color-mix(in srgb,var(--brand) 20%,transparent);color:var(--brand-soft);border-color:#8a3a2c;font-weight:800}
 .enc-status.st-completed{background:rgba(74,120,176,.18);color:#7fa8d4;border-color:#35506e}
 .enc-status.st-archived{background:var(--panel2);color:var(--faint);border-color:var(--line)}
 .start-combat{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;border:none;background:var(--accent);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600}
@@ -1137,7 +1137,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt.enemy{border-left:3px solid var(--bad)}
 .cbt.ally{border-left:3px solid #4a78b0}
 .cbt.setting{border-left:3px solid var(--faint)}
-.cbt .top select.fac.enemy{color:var(--accent-soft)}
+.cbt .top select.fac.enemy{color:var(--brand-soft)}
 .cbt .top select.fac.ally{color:#7fa8d4}
 .cbt .top select.fac.setting{color:var(--dim)}
 .cbt .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -1150,10 +1150,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt .sec{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:11px;color:var(--faint)}
 .cbt .sec select{flex:1;font-size:12px}
 .cbt .sec .lab{flex:none}
-.cbt .sec .minion-tag{flex:none;margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
+.cbt .sec .minion-tag{flex:none;margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
 .cbt .top .mini-chip{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:4px 8px;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
 .cbt .top .mini-chip:hover{border-color:var(--accent);color:var(--txt)}
-.cbt .top .mini-chip.on{color:var(--accent-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
+.cbt .top .mini-chip.on{color:var(--brand-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
 .cbt .top .mini-chip.on:hover{border-color:var(--accent)}
 .cbt textarea{margin-top:6px;min-height:42px;font-size:12px}
 
