@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 115 — Fixes: caret position + number-flow reels clipped to the order pane
+- **Active caret** moved to the far left edge (`left:-18px`) so it hugs the left end with more gap from the
+  init row (was `-13px`, too close to the row).
+- **Number-flow reel bug.** The reels are `position:fixed` at each cell's coordinates, so cells scrolled
+  *below the fold* spawned reels that floated over the active panel and everything below. `animateInitRoll`
+  now skips cells outside the visible order-pane bounds (their values still commit) — reels only render over
+  visible cells.
+
 ## Batch 114 — Init-card interaction (1/n): active-row caret
 - Active row now shows a **faction-coloured caret (▶) in the left margin**, next to the divider — making the
   current turn unmistakable on top of the faction tint (addresses "active highlight too subtle"). `.cbt-row`

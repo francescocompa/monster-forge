@@ -1214,9 +1214,12 @@ function nfReelHTML(target){
 function animateInitRoll(byGroup,done){
   const d20=document.getElementById("combatRollInit");if(d20)d20.classList.add("rolling");
   const overlays=[];
+  const pane=document.querySelector(".combat-order"),pb=pane?pane.getBoundingClientRect():null;
   document.querySelectorAll(".ci-init-in").forEach(inp=>{
     const it=combatItem(inp.dataset.initset);if(!it)return;const target=byGroup.get(it.groupId||it.id);if(target==null)return;
-    const r=inp.getBoundingClientRect();const ov=document.createElement("div");ov.className="nf-roll";
+    const r=inp.getBoundingClientRect();
+    if(pb&&(r.bottom<=pb.top+2||r.top>=pb.bottom-2))return; // off-screen in the scrollable order — the fixed reel would float over everything
+    const ov=document.createElement("div");ov.className="nf-roll";
     ov.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
     ov.innerHTML=nfReelHTML(target);document.body.appendChild(ov);overlays.push(ov);
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
