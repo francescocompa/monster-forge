@@ -152,8 +152,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .cr-lbl{display:inline-flex;align-items:center;gap:5px}
 .cr-help{width:15px;height:15px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--faint);font-size:10px;line-height:1;cursor:pointer;display:inline-grid;place-items:center;padding:0}
 .cr-help:hover{border-color:var(--accent);color:var(--txt)}
-.cr-pop{font-size:11.5px;line-height:1.55;color:var(--amber-soft);max-width:230px}
-.cr-pop b{color:var(--amber)}
+.cr-pop{font-size:11.5px;line-height:1.55;color:var(--dim);max-width:230px} /* custom tooltips / (?) bodies: neutral, not yellow (B125) */
+.cr-pop b{color:var(--txt)}
 /* Preview-pane header: creature name + ghost kebab (Claude / Notion exports). */
 .sb-wrap .sb-copy{position:absolute;top:15px;right:14px;z-index:5}
 .sb-copy-btn{background:transparent;border-color:transparent;width:26px;height:26px;color:var(--faint)}
@@ -850,11 +850,21 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row>.ci-meta{order:3}
 .cbt-row>.ci-hp{order:4}
 .cbt-row>.ci-menu{order:5}
-/* Narrow pane (resized small): the fixed-chip cluster drops to its own line below; init · name · HP ·
-   kebab stay on the first line, with HP pinned to the right end. */
+/* Wide single row: +add leads the cluster; effect chips next; AC · reaction · concentration sit fixed at
+   the end, right next to HP (B125). Narrow restores the natural DOM order (AC · reaction · conc · effects · +add). */
+.ci-meta .ci-addcond{order:-2}
+.ci-meta .cc-chip{order:-1}
+.ci-meta .ci-ac-chip{order:1}
+.ci-meta .ci-react-chip{order:2}
+.ci-meta .ci-conc-chip{order:3}
+/* Narrow pane (resized small): two-row card — initiative becomes a vertically-centred rail on the left,
+   the name/HP/kebab sit on the first line, and the chip cluster drops to a second line left-aligned to the
+   name (not under the init). Tighter title→chips gap. (B125) */
 @container (max-width:470px){
-  .cbt-row{row-gap:8px}
+  .cbt-row{row-gap:5px;padding-left:46px}
+  .cbt-row>.ci-init,.cbt-row>.ci-init-in{position:absolute;left:8px;top:50%;transform:translateY(-50%)}
   .cbt-row>.ci-meta{order:6;flex-basis:100%}
+  .ci-meta .ci-addcond,.ci-meta .cc-chip,.ci-meta .ci-ac-chip,.ci-meta .ci-react-chip,.ci-meta .ci-conc-chip{order:0}
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
 .cbt-row.active{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent)}
@@ -873,12 +883,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hpm-head .hpm-nm{font-weight:600;color:var(--txt);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hpm-head .hpm-cur-disp{font-size:13px;color:var(--txt);white-space:nowrap}
 .hpm-tmp{color:#7fa8d4}
+.hpm-bar{height:6px;background:var(--in);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:9px}
+.hpm-bar i{display:block;height:100%;transition:width .15s}
 .hpm-row{display:flex;gap:6px;align-items:center}
 .hpm-row .hpm-dmg{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .hpm-row .hpm-dmg:focus{outline:none;border-color:var(--accent)}
-.hpm-quick{display:flex;gap:6px;margin-top:8px}
-.hpm-quick button{flex:1;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:12px;padding:6px 0;cursor:pointer;font-variant-numeric:tabular-nums}
-.hpm-quick button:hover{border-color:var(--accent);color:var(--txt)}
 .hpm-fields{display:flex;gap:8px;margin-top:10px}
 .hpm-fields label{flex:1;font-size:10px;color:var(--faint);display:flex;flex-direction:column;gap:3px;text-transform:uppercase;letter-spacing:.04em}
 .hpm-fields input{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;font-size:13px;font-variant-numeric:tabular-nums}
@@ -896,9 +905,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Waiting (delaying/holding) reads from the row variant — no icon/chip — reinforced by the grouped header. */
 .cbt-row.waiting{opacity:.72}
 .cbt-row.waiting .ci-name{font-style:italic;color:var(--dim)}
-/* Initiative as a plain faction-coloured number (no field box) — a box only appears on hover/focus to edit (B124). */
-.ci-init{flex:none;width:30px;text-align:center;font-size:17px;font-weight:700;color:var(--sel-accent,var(--txt));font-variant-numeric:tabular-nums}
-.cbt-row .ci-init-in{flex:none;width:32px;height:30px;text-align:center;font-size:17px;font-weight:700;background:none;border:1px solid transparent;border-radius:6px;color:var(--sel-accent,var(--txt));color-scheme:dark;font-variant-numeric:tabular-nums}
+/* Initiative as a plain neutral number (no field box, no faction colour) — a box only appears on hover/focus to edit (B124/B125). */
+.ci-init{flex:none;width:30px;text-align:center;font-size:17px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in{flex:none;width:32px;height:30px;text-align:center;font-size:17px;font-weight:700;background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
 .cbt-row .ci-init-in:hover{background:var(--in);border-color:var(--line)}
 .cbt-row .ci-init-in:focus{background:var(--in);border-color:var(--accent);outline:none}
 .cbt-row .ci-init-in.unrolled{color:var(--faint)} /* auto-roll off: dimmed average placeholder */
@@ -906,7 +915,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-init-in.manual{color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll */
 .cbt-row .ci-init-in.manual::placeholder{color:var(--amber);opacity:.8}
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
-.nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
+.nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--txt);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
 .nf-col{display:flex;flex-direction:column;transform:translateY(0);transition:transform 1.35s cubic-bezier(.16,.84,.3,1)}
 .nf-n{height:1em;line-height:1;display:flex;align-items:center;justify-content:center}
@@ -923,14 +932,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
 .ci-ac-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ci-ac-chip svg{width:11px;height:11px;color:var(--faint)}
-.ci-react-chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:22px;border:1px solid var(--line);background:var(--in);border-radius:6px;color:var(--dim);cursor:pointer;padding:0;flex:none}
-.ci-react-chip svg{width:12px;height:12px}
-.ci-react-chip:hover{border-color:var(--accent);color:var(--txt)}
+.ci-react-chip,.ci-conc-chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:22px;border:1px solid var(--line);background:var(--in);border-radius:6px;color:var(--dim);cursor:pointer;padding:0;flex:none}
+.ci-react-chip svg,.ci-conc-chip svg{width:12px;height:12px}
+.ci-react-chip:hover,.ci-conc-chip:hover{border-color:var(--accent);color:var(--txt)}
 .ci-react-chip.used{color:var(--faint);opacity:.5;border-style:dashed}
-/* Compact HP control (H6): bold current/max number + thin health underbar; opens the manage popover. */
+.ci-conc-chip.on{color:var(--accent-soft);border-color:var(--accent)} /* concentrating */
+/* Compact HP control (H6): bold current/max number + thin health underbar, centred; the whole section is a
+   button with a subtle bg on hover; opens the manage popover (B124/B125). */
 .ci-hp{flex:none}
-.ci-hpbtn{display:flex;flex-direction:column;align-items:flex-end;gap:3px;background:none;border:none;cursor:pointer;padding:2px}
-.ci-hpbtn:hover .ci-hpnum{color:var(--accent-soft)}
+.ci-hpbtn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+.ci-hpbtn:hover{background:var(--panel2)}
 .ci-hpnum{font-size:14px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
 .ci-hpmax{font-size:11px;font-weight:500;color:var(--faint)}
 .ci-hptmp{font-size:10px;font-weight:700;color:#7fa8d4;margin-left:4px}

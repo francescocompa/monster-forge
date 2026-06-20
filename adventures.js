@@ -986,6 +986,10 @@ const REACT_ICON='<svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="tr
 // FA-free "shield-blank" — the AC chip glyph on combat rows (B124).
 const SHIELD_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
 function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();renderCombat();}
+// Concentration toggle (B125): a bullseye chip beside reaction — "on" = the creature is concentrating on a
+// spell. Manual (broken by failed CON saves, which the DM adjudicates); unlike reaction it doesn't auto-reset.
+const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>';
+function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;it.concentration=!it.concentration;saveAdv();renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
@@ -1146,14 +1150,15 @@ function openHPNumEdit(itId,anchor,kind){
 function openHPManage(itId,anchor){
   const it=combatItem(itId);if(!it||it.hpMax==null)return;
   const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
+  const barFill=t=>{const r=t.hpMax?t.hpCur/t.hpMax:0;return `width:${clamp(r*100,0,100)}%;background:${r>.5?"var(--ok)":r>.25?"var(--warn)":"var(--bad)"}`;};
   const p=showPopover(anchor,`<div class="hp-manage">
     <div class="hpm-head"><span class="hpm-nm">${esc(it.name)}</span><span class="ini hpm-cur-disp">${headHP(it)}</span></div>
+    <div class="hpm-bar"><i style="${barFill(it)}"></i></div>
     <div class="hpm-row"><input type="number" class="hpm-dmg" placeholder="damage / heal" autocomplete="off"><button class="btn primary sm hpm-apply" style="width:auto">Apply</button></div>
-    <div class="hpm-quick"><button data-hpd="-5">−5</button><button data-hpd="-1">−1</button><button data-hpd="1">+1</button><button data-hpd="5">+5</button></div>
     <div class="hpm-fields"><label>Current<input type="number" class="hpm-cur" value="${it.hpCur}" min="0" max="${it.hpMax}"></label><label>Temp<input type="number" class="hpm-temp" value="${it.hpTemp||0}" min="0"></label></div>
   </div>`);
   const dmg=p.querySelector(".hpm-dmg");dmg.focus();
-  const refresh=()=>{const t=combatItem(itId);if(!t)return;p.querySelector(".hpm-cur-disp").innerHTML=headHP(t);p.querySelector(".hpm-cur").value=t.hpCur;p.querySelector(".hpm-temp").value=t.hpTemp||0;
+  const refresh=()=>{const t=combatItem(itId);if(!t)return;p.querySelector(".hpm-cur-disp").innerHTML=headHP(t);p.querySelector(".hpm-bar").firstElementChild.style.cssText=barFill(t);p.querySelector(".hpm-cur").value=t.hpCur;p.querySelector(".hpm-temp").value=t.hpTemp||0;
     // Keep the row's compact HP control in sync without a disruptive full re-render (which would detach this
     // popover); rebind the swapped node so it can reopen the popover afterwards.
     const host=document.querySelector(`[data-hpmanage="${itId}"]`);
@@ -1162,7 +1167,6 @@ function openHPManage(itId,anchor){
   const applyDmg=()=>{const v=Number(dmg.value||0);if(v){changeHP(it,v);dmg.value="";refresh();}};
   p.querySelector(".hpm-apply").addEventListener("click",applyDmg);
   dmg.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}else if(e.key==="Escape")closePopover();});
-  p.querySelectorAll("[data-hpd]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();changeHP(it,-Number(b.dataset.hpd));refresh();})); // button shows the HP delta; changeHP takes damage-positive
   p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);refresh();});
   p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));refresh();});
 }
@@ -1389,10 +1393,13 @@ function combatRowHTML(it,active,drag){
   const badge=dead?'<span class="ci-down">down</span>':"";
   // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
   // pane is wide and wraps to its own line below the name when narrow (container query). Events have none.
+  // DOM order is the narrow two-row order (AC · reaction · concentration · effect chips · +add). The wide
+  // single-row layout flips it via flex `order` so +add leads and AC/reaction/conc sit fixed next to HP (B125).
   const acChip=it.ac!=null?`<span class="ci-ac-chip" title="Armor Class">${SHIELD_ICON}${it.ac}</span>`:"";
   const reactChip=it.kind!=="event"?`<button class="ci-react-chip${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:"";
+  const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
-  const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
+  const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
     <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
@@ -1647,6 +1654,12 @@ function renderCombat(){
     // Hover tooltip (the app's established tail-popover style) explaining the reaction toggle (B122).
     el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.cireact);if(!it)return;
       tailPopover(el,`<div class="cr-pop"><b>Reaction — ${it.reaction===false?"used":"available"}</b><br>Each creature gets one reaction per round. Click to toggle; it resets at the start of its turn.</div>`);});
+    el.addEventListener("mouseleave",()=>closePopover());
+  });
+  body.querySelectorAll("[data-ciconc]").forEach(el=>{
+    el.addEventListener("click",e=>{e.stopPropagation();toggleConcentration(el.dataset.ciconc);});
+    el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.ciconc);if(!it)return;
+      tailPopover(el,`<div class="cr-pop"><b>Concentration — ${it.concentration?"on":"off"}</b><br>Marks that this creature is concentrating on a spell. Click to toggle; broken by a failed save.</div>`);});
     el.addEventListener("mouseleave",()=>closePopover());
   });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));

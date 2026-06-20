@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 125 — Initiative row iteration (neutral init, concentration, HP polish, tooltips)
+- **Initiative numbers are neutral** (no faction colour); the roll-animation reel lost its box (matches the
+  boxless number).
+- **Concentration toggle** — a bullseye chip beside reaction (`toggleConcentration`, `CONC_ICON`); accent when on.
+- **Chip order:** wide single row now leads with +add-effect and pins AC · reaction · concentration next to HP
+  (flex `order`); the narrow two-row version keeps the natural order (AC · reaction · conc · effects · +add).
+- **Narrow two-row card:** initiative is a vertically-centred left rail, the chip cluster is left-aligned to the
+  name (not under the init), and the title→chips gap is tighter.
+- **HP control:** number/bar centred; the whole section gets a subtle bg on hover (button-like) and no longer
+  tints the number on hover. **HP popover:** dropped the ±1/±5 quick buttons; added a full-width health bar
+  under the title.
+- **Global:** custom tooltips / `(?)` bodies (`.cr-pop`) are now neutral grey, not yellow — everywhere.
+
 ## Batch 124 — Initiative row redesign (plain init, radial-less H6 HP, responsive chips)
 - **Initiative is a plain faction-coloured number** — no field box; a box only appears on hover/focus to edit
   (`.ci-init` / `.ci-init-in`).
