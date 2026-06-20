@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 131 — Audit (2/3): split combat.js out of adventures.js
+- **The live combat tracker moved to its own file `combat.js`** (~1,040 lines: the `── Combat Tracker ──`
+  banner through `bindCombatStatblockRolls`). `adventures.js` drops from ~1,900 to ~860 lines and now owns
+  just the adventure / encounter / party / scene building; `combat.js` owns running the fight (start/advance,
+  the order grid + rows, HP popover, death saves, drag/regroup, round bar, tools, active panel).
+- Loaded as a classic `<script>` **after adventures.js, before seed.js**, sharing the one global scope (no
+  imports) — every cross-file reference here is a runtime call, so nothing is load-order-sensitive. Registered
+  in all four manifests: `index.html`, `test/harness.js`, `eslint.config.js`, `package.json` (check + lint).
+- No behaviour change; `npm run verify` green (smoke test boots all scripts in one realm — zero init errors,
+  every top-level binding survived) and combat re-checked in the live preview.
+
 ## Batch 130 — Audit (1/3): dead-code sweep
 - Removed unreferenced combat code: `cycleCombatStatus()` and `condsHTML()` (the row condition cluster —
   superseded by the active-panel / row chip rendering) and the unused `GRIP_SVG` const.
