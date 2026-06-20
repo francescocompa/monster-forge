@@ -980,6 +980,10 @@ const SHIELD_HEART_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hid
 const CIRCLE_PAUSE_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512a256 256 0 1 0 0-512 256 256 0 1 0 0 512zM224 192l0 128c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-128c0-17.7 14.3-32 32-32s32 14.3 32 32zm128 0l0 128c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-128c0-17.7 14.3-32 32-32s32 14.3 32 32z"/></svg>';
 const SKULL_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M416 427.4c58.5-44 96-111.6 96-187.4 0-132.5-114.6-240-256-240S0 107.5 0 240c0 75.8 37.5 143.4 96 187.4L96 464c0 26.5 21.5 48 48 48l32 0 0-40c0-13.3 10.7-24 24-24s24 10.7 24 24l0 40 64 0 0-40c0-13.3 10.7-24 24-24s24 10.7 24 24l0 40 32 0c26.5 0 48-21.5 48-48l0-36.6zM96 256a64 64 0 1 1 128 0 64 64 0 1 1 -128 0zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg>';
 const CI_STATUS_ICON={active:SHIELD_HEART_ICON,waiting:CIRCLE_PAUSE_ICON,dead:SKULL_ICON};
+// Reaction tracker (B120): a per-combatant toggle (FA Free arrow-turn-up) that resets at the start of each
+// of its turns. Reaction is "available" unless explicitly set false (so existing combats default to available).
+const REACT_ICON='<svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c53 0 96-43 96-96l0-306.7 73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 109.3 160 416c0 17.7-14.3 32-32 32l-96 0z"/></svg>';
+function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
@@ -1009,7 +1013,7 @@ function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.c
     steps++;
   }while(isOut(cb.order[ti])&&steps<=n);
   cb.turnIndex=ti;cb.round=round;
-  if(dir>0){const cur=cb.order[ti];tickConditions(cb,prev,"end");tickConditions(cb,cur,"start");resetRoundResources(cur);}
+  if(dir>0){const cur=cb.order[ti];tickConditions(cb,prev,"end");tickConditions(cb,cur,"start");resetRoundResources(cur);if(cur)cur.reaction=true;} // regain reaction at the start of its turn
   saveAdv();renderCombat();}
 function resetRoundResources(it){if(it&&it.resources)it.resources.forEach(r=>{if(r.perRound)r.used=0;});}
 // Duration tick: when `turnIt` reaches the given turn `edge` (start|end), decrement every effect (across all
@@ -1332,6 +1336,7 @@ function combatRowHTML(it,active,drag){
       ${condsHTML(it)}</div>
     ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
     <div class="ci-hp">${hpCellHTML(it)}</div>
+    ${it.kind!=="event"?`<button class="ci-react${it.reaction===false?" used":""}" data-cireact="${it.id}" title="Reaction — ${it.reaction===false?"used":"available"} (resets at the start of its turn)" aria-label="Toggle reaction">${REACT_ICON}</button>`:""}
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
@@ -1348,8 +1353,13 @@ function combatMainDC(m){let best=null;
   return best;}
 function combatActiveHTML(it){
   if(!it)return `<div class="empty-state">No active combatant.</div>`;
+  const who0=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  // While a selection is active, collapse the active combatant's info+statblock to a single "active" row so
+  // the panel doesn't compete with the selection you're working on (B120).
+  if(combatSel.size)return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+    <div class="ca-collapsed"><span class="cac-lbl">Active turn</span><span class="cac-name">${esc(it.name)}</span><span class="ca-faction">${esc(who0)}</span></div>`;
   const m=it.kind==="monster"?monById(it.srcId):null;
-  const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  const who=who0;
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
   const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
@@ -1554,6 +1564,7 @@ function renderCombat(){
   // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
   body.querySelectorAll("[data-hpdmg]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpdmg),amt=Number(el.value||0);if(!it||!amt){el.value="";return;}changeHP(it,amt);saveAdv();renderCombat();}));
   body.querySelectorAll("[data-initset]").forEach(el=>el.addEventListener("change",()=>setCombatInit(el.dataset.initset,el.value)));
+  body.querySelectorAll("[data-cireact]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();toggleReaction(el.dataset.cireact);}));
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));

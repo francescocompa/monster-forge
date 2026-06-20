@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 121 — Collapse active when selecting + reaction tracker
+- **Collapse the active panel while selecting.** When ≥1 card is selected, the active combatant's full
+  info+statblock collapses to a single "Active turn — [name]" row (`.ca-collapsed`) so it doesn't compete
+  with the selection you're working on.
+- **Reaction tracker.** Each combatant row gets a reaction toggle (FA-free arrow icon): accent when
+  available, dimmed when used; click to toggle. It **regains at the start of its turn** (reset in
+  `combatAdvance`'s forward step). Defaults to available for existing combats.
+
 ## Batch 120 — Init-card selection model + multi-select action bar
 - **Click selects, shift/cmd toggles a multi-selection** (`combatSel`); the drag handle is gone — the whole
   row drags to reorder (a multi-selection drags as a block via `reorderCombatMulti`), and editable/interactive
