@@ -794,6 +794,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .section-label .party-count{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;font-weight:600;margin-left:auto}
 #partyWrap{margin-bottom:6px}
 .pc-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:8px;padding:8px 10px;margin-bottom:7px}
+/* A member linked to the shared cross-adventure roster (CT13) — the link button lights up. */
+.pc-link{color:var(--faint)}
+.pc-link.on{color:var(--accent-soft);border-color:#6e3329;background:rgba(226,101,77,.12)}
+.pc-link svg{pointer-events:none}
+.pc-addrow{display:flex;gap:7px}
+.pop-note{font-size:11px;color:var(--faint);padding:3px 9px 6px;max-width:230px;line-height:1.4}
 .pc-main{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pc-main .pc-name{flex:1;min-width:120px;font-size:14px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 8px;color:var(--txt)}
 .pc-main .pc-name:focus{border-color:var(--accent);outline:none}

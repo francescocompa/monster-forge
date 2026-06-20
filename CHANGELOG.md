@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 134 — CT13 (1/n): shared party roster + cross-adventure sync (foundation)
+- **New shared character store** `state.roster`, persisted to its own JSONBin bin `library:party` (cached +
+  debounced-synced exactly like monsters/adventures — `saveRoster`, `_pend.roster`, hydrate + reconcile in
+  `loadAll`).
+- A party member is now either **local** (its own data, as before) or **linked** to a shared roster character
+  by `sharedId` — a **live reference**, so editing a linked member changes that character in *every* adventure
+  that uses it. `pcData(p)` resolves the effective data; `pcInstance` (combat) and `renderParty` both read it.
+- Member actions (link button → menu): **Save to shared roster** (promote a local member + link it), **Link
+  to a shared character**, and **Unsync** (freeze the shared data onto a local copy and detach). A **＋ From
+  roster** button adds an existing shared character to the party. Linked members show an accent link icon.
+- `normalizeAdv` preserves `{id,sharedId}` for linked members across reloads. Per-adventure tags and richer
+  sync states are the next CT13 pass.
+
 ## Batch 133 — Combat & statblock fixes
 - **Cursor can finally reach the add-effect popover.** The `＋` chip's hover tooltip and the click-popover
   share one `_pop`, so the chip's `mouseleave` was slamming the popover shut the instant the cursor moved

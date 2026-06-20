@@ -4,7 +4,7 @@
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
 "use strict";
-let state={lib:[],adv:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
 // ── User settings (Batch 52) ─ persisted on-device only (mf_settings). Feature toggles gate the
 // statblock colour-coding (B53) and click-to-roll dice (B54); defaults seed new adventures/combatants.
 const SETTINGS_KEY="mf_settings";
@@ -168,21 +168,24 @@ function isBlankVal(val){return val==null||(Array.isArray(val)?val.length===0:(t
 
 async function loadAll(){
   // 1. instant hydrate from the local mirror so the UI is never empty while the cloud loads
-  const cl=cacheGet("library:monsters"),ca=cacheGet("library:adventures");
+  const cl=cacheGet("library:monsters"),ca=cacheGet("library:adventures"),cr=cacheGet("library:party");
   if(cl)state.lib=cl.map(normalizeMonster);
   if(ca)state.adv=ca.map(normalizeAdv);
+  if(cr)state.roster=cr.map(normalizeRosterPC);
   // 2. reconcile with the cloud
-  const a=await jbinGet("library:monsters"),b=await jbinGet("library:adventures");
+  const a=await jbinGet("library:monsters"),b=await jbinGet("library:adventures"),c=await jbinGet("library:party");
   if(a.ok&&b.ok){
     cloudReady=true;
     if(isDirty()){
       // we have unsynced local edits — push them up rather than letting the cloud overwrite them
       const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);
+      if(state.roster.length||getBinId("library:party"))await jbinSet("library:party",state.roster);
       if(ok1&&ok2)setDirty(false);
     } else {
       // cloud is authoritative; only adopt it when a bin actually exists (else keep cache)
       if(!a.noBin){state.lib=(a.record||[]).map(normalizeMonster);cacheSet("library:monsters",state.lib);}
       if(!b.noBin){state.adv=(b.record||[]).map(normalizeAdv);cacheSet("library:adventures",state.adv);}
+      if(c&&c.ok&&!c.noBin){state.roster=(c.record||[]).map(normalizeRosterPC);cacheSet("library:party",state.roster);}
     }
   } else {
     // cloud unreachable: keep the local mirror and pause nothing — _flush still caches every edit
@@ -191,17 +194,20 @@ async function loadAll(){
   }
 }
 // debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
-let _saveTimer=null,_pend={lib:false,adv:false};
+let _saveTimer=null,_pend={lib:false,adv:false,roster:false};
 function saveLib(){_pend.lib=true;_schedule();}
 function saveAdv(){_pend.adv=true;_schedule();}
+function saveRoster(){_pend.roster=true;_schedule();}
 function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
 async function _flush(){
   // local mirror first — this write cannot fail to a network, so work is never lost
   cacheSet("library:monsters",state.lib);
   cacheSet("library:adventures",state.adv);
+  cacheSet("library:party",state.roster);
   let okAll=true;
   if(_pend.lib){_pend.lib=false;if(!await jbinSet("library:monsters",state.lib))okAll=false;}
   if(_pend.adv){_pend.adv=false;if(!await jbinSet("library:adventures",state.adv))okAll=false;}
+  if(_pend.roster){_pend.roster=false;if(!await jbinSet("library:party",state.roster))okAll=false;}
   if(okAll){setDirty(false);_cloudWarned=false;hideBanner();}
   else{setDirty(true);if(!_cloudWarned){_cloudWarned=true;showBanner("Cloud save failed — your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}}
 }
@@ -300,9 +306,11 @@ function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
   a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
   a.pinned=!!a.pinned; // pinned adventures float to the top of the column (B78)
-  // Party roster for the Combat Tracker (B80): named PCs with AC/HP/initiative + DM custom fields.
-  a.party=(Array.isArray(a.party)?a.party:[]).map(p=>({id:p.id||uid(),name:p.name||"",ac:p.ac??"",hp:p.hp??"",init:p.init??"",
-    fields:(Array.isArray(p.fields)?p.fields:[]).map(f=>({label:f.label||"",value:f.value||""}))}));
+  // Party roster for the Combat Tracker (B80): named PCs with AC/HP/initiative + DM custom fields. A member
+  // LINKED to the shared cross-adventure roster keeps just {id,sharedId} — its data lives on the roster (CT13).
+  a.party=(Array.isArray(a.party)?a.party:[]).map(p=>p&&p.sharedId?{id:p.id||uid(),sharedId:p.sharedId}
+    :({id:(p&&p.id)||uid(),name:(p&&p.name)||"",ac:(p&&p.ac)??"",hp:(p&&p.hp)??"",init:(p&&p.init)??"",
+    fields:(Array.isArray(p&&p.fields)?p.fields:[]).map(f=>({label:f.label||"",value:f.value||""}))}));
   a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived,pinned:!!s.pinned}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;

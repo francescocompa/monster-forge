@@ -170,9 +170,9 @@ function autoRollOn(){return !(state.settings.combat&&state.settings.combat.init
 // Roll party (PC) initiative on start? (Settings combat.rollParty) — off = PCs start blank at the top,
 // flagged for the DM to type each character's roll.
 function rollPartyOn(){return !(state.settings.combat&&state.settings.combat.rollParty===false);}
-function pcInstance(p){const im=p.init===""||p.init==null?0:Number(p.init),man=!rollPartyOn();
-  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:p.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
-    ac:p.ac===""?null:Number(p.ac),hpMax:p.hp===""?null:Number(p.hp),hpCur:p.hp===""?null:Number(p.hp),
+function pcInstance(p){const d=pcData(p),im=d.init===""||d.init==null?0:Number(d.init),man=!rollPartyOn();
+  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:d.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
+    ac:d.ac===""?null:Number(d.ac),hpMax:d.hp===""?null:Number(d.hp),hpCur:d.hp===""?null:Number(d.hp),
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
 function startCombat(a,e){
   const order=[];

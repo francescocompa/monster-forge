@@ -231,30 +231,82 @@ function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0")
 function advInfoCollapsed(){try{return localStorage.getItem("mf_advinfocoll")==="1";}catch(e){return false;}}
 function setAdvInfoCollapsed(v){try{localStorage.setItem("mf_advinfocoll",v?"1":"0");}catch(e){}}
 function blankPC(){return {id:uid(),name:"",ac:"",hp:"",init:"",fields:[]};}
+// FA Free solid "link" — marks a party member linked to the shared cross-adventure roster (CT13/B134).
+const LINK_ICON='<svg viewBox="0 0 640 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M579.8 267.7c56.5-56.5 56.5-148 0-204.5-50-50-128.8-56.5-186.3-15.4l-1.6 1.1c-14.4 10.3-17.7 30.3-7.4 44.6s30.3 17.7 44.6 7.4l1.6-1.1c32.1-22.9 76-19.3 103.8 8.6 31.5 31.5 31.5 82.5 0 114l-101.5 101.5c-31.5 31.5-82.5 31.5-114 0-27.9-27.9-31.5-71.8-8.6-103.8l1.1-1.6c10.3-14.4 6.9-34.4-7.4-44.6s-34.4-6.9-44.6 7.4l-1.1 1.6C210.9 235 217.4 313.8 267.4 363.8c56.5 56.5 148 56.5 204.5 0L573.8 262.3l6-6zM60.2 244.3c-56.5 56.5-56.5 148 0 204.5 50 50 128.8 56.5 186.3 15.4l1.6-1.1c14.4-10.3 17.7-30.3 7.4-44.6s-30.3-17.7-44.6-7.4l-1.6 1.1c-32.1 22.9-76 19.3-103.8-8.6C81.9 372 81.9 321 113.4 289.5L214.9 188c31.5-31.5 82.5-31.5 114 0 27.9 27.9 31.5 71.8 8.6 103.9l-1.1 1.6c-10.3 14.4-6.9 34.4 7.4 44.6s34.4 6.9 44.6-7.4l1.1-1.6C429.1 277 422.6 198.2 372.6 148.2c-56.5-56.5-148-56.5-204.5 0L66.2 250.3l-6 6z"/></svg>';
+function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",ac:p.ac??"",hp:p.hp??"",init:p.init??"",fields:Array.isArray(p.fields)?p.fields:[]};}
+function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
+// A party member is either LOCAL (carries its own name/ac/hp/init/fields) or LINKED to a shared roster
+// character by `sharedId` — a live reference, so editing it changes the character in every adventure (CT13).
+function pcLinked(p){return !!(p&&p.sharedId&&rosterById(p.sharedId));}
+function pcData(p){return (p&&p.sharedId&&rosterById(p.sharedId))||p;}
+// Promote a local member to the shared roster, then link the member to it (its data moves onto the char).
+function promotePC(p){const r=normalizeRosterPC({name:p.name,ac:p.ac,hp:p.hp,init:p.init,fields:p.fields});
+  state.roster.push(r);["name","ac","hp","init","fields"].forEach(k=>delete p[k]);p.sharedId=r.id;
+  saveRoster();saveAdv();renderAdvDetail();toast("Saved to the shared roster — edits now sync across adventures.");}
+// Detach a linked member into an independent local copy (its current shared data is frozen onto it).
+function unsyncPC(p){const d=pcData(p);Object.assign(p,{name:d.name,ac:d.ac,hp:d.hp,init:d.init,fields:JSON.parse(JSON.stringify(d.fields||[]))});delete p.sharedId;saveAdv();renderAdvDetail();toast("Unsynced — this is now a local copy.");}
+// Add a shared roster character to this adventure's party as a linked member.
+function addRosterPC(a,rid){if(a.party.some(p=>p.sharedId===rid)){toast("Already in this party.");return;}a.party.push({id:uid(),sharedId:rid});saveAdv();renderAdvDetail();}
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
-  const rows=a.party.map(p=>`<div class="pc-row" data-pc="${p.id}">
-    <div class="pc-main">
-      <input class="pc-name" placeholder="Character name" data-pcf="${p.id}:name" value="${esc(p.name)}">
-      <label class="pc-stat">AC<input type="number" min="0" data-pcf="${p.id}:ac" value="${p.ac??""}"></label>
-      <label class="pc-stat">HP<input type="number" min="0" data-pcf="${p.id}:hp" value="${p.hp??""}"></label>
-      <label class="pc-stat">Init<input type="number" data-pcf="${p.id}:init" value="${p.init??""}" placeholder="—" title="Initiative modifier (left blank = rolled flat when combat starts)"></label>
-      <button class="iconbtn" data-pcfield="${p.id}" title="Add custom field">＋</button>
-      <button class="iconbtn" data-pcdel="${p.id}" title="Remove">✕</button>
-    </div>
-    ${p.fields.length?`<div class="pc-fields">${p.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-pcfl="${p.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-pcfv="${p.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-pcfdel="${p.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
-  </div>`).join("");
-  box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <button class="addbtn" id="addPC" style="width:100%">＋ Add player character</button>`;
-  $("#addPC").addEventListener("click",()=>{a.party.push(blankPC());saveAdv();renderAdvDetail();});
+  // Save targets: a LINKED member's edits go to the shared roster char (saveRoster, syncs everywhere); a LOCAL
+  // member's go to the adventure (saveAdv). Either way the edited data object is pcData(p).
   const findPC=id=>a.party.find(p=>p.id===id);
+  const savePC=p=>pcLinked(p)?saveRoster():saveAdv();
+  const rows=a.party.map(p=>{const d=pcData(p),linked=pcLinked(p);
+    return `<div class="pc-row${linked?" linked":""}" data-pc="${p.id}">
+    <div class="pc-main">
+      <button class="iconbtn pc-link${linked?" on":""}" data-pclink="${p.id}" title="${linked?"Shared character — edits sync across adventures. Click for options":"Local to this adventure. Click to share or link"}">${LINK_ICON}</button>
+      <input class="pc-name" placeholder="Character name" data-pcf="${p.id}:name" value="${esc(d.name)}">
+      <label class="pc-stat">AC<input type="number" min="0" data-pcf="${p.id}:ac" value="${d.ac??""}"></label>
+      <label class="pc-stat">HP<input type="number" min="0" data-pcf="${p.id}:hp" value="${d.hp??""}"></label>
+      <label class="pc-stat">Init<input type="number" data-pcf="${p.id}:init" value="${d.init??""}" placeholder="—" title="Initiative modifier (left blank = rolled flat when combat starts)"></label>
+      <button class="iconbtn" data-pcfield="${p.id}" title="Add custom field">＋</button>
+      <button class="iconbtn" data-pcdel="${p.id}" title="${linked?"Remove from this adventure (the shared character is kept)":"Remove"}">✕</button>
+    </div>
+    ${d.fields.length?`<div class="pc-fields">${d.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-pcfl="${p.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-pcfv="${p.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-pcfdel="${p.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
+  </div>`;}).join("");
+  const fromRoster=state.roster.length?`<button class="addbtn" id="fromRoster" style="width:auto;flex:none">＋ From roster</button>`:"";
+  box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
+    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>${fromRoster}</div>`;
+  $("#addPC").addEventListener("click",()=>{a.party.push(blankPC());saveAdv();renderAdvDetail();});
+  {const fr=$("#fromRoster");if(fr)fr.addEventListener("click",()=>openRosterPicker(a,fr));}
+  box.querySelectorAll("[data-pclink]").forEach(el=>el.addEventListener("click",()=>openPCSyncMenu(a,findPC(el.dataset.pclink),el)));
   box.querySelectorAll("[data-pcf]").forEach(el=>{const[id,f]=el.dataset.pcf.split(":");
-    el.addEventListener("input",()=>{const p=findPC(id);if(!p)return;p[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;saveAdv();});});
-  box.querySelectorAll("[data-pcfield]").forEach(el=>el.addEventListener("click",()=>{const p=findPC(el.dataset.pcfield);if(p){p.fields.push({label:"",value:""});saveAdv();renderParty(a);}}));
+    el.addEventListener("input",()=>{const p=findPC(id);if(!p)return;const d=pcData(p);d[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;savePC(p);});});
+  box.querySelectorAll("[data-pcfield]").forEach(el=>el.addEventListener("click",()=>{const p=findPC(el.dataset.pcfield);if(p){pcData(p).fields.push({label:"",value:""});savePC(p);renderParty(a);}}));
   box.querySelectorAll("[data-pcdel]").forEach(el=>el.addEventListener("click",()=>{a.party=a.party.filter(p=>p.id!==el.dataset.pcdel);saveAdv();renderAdvDetail();}));
-  box.querySelectorAll("[data-pcfl]").forEach(el=>{const[id,i]=el.dataset.pcfl.split(":");el.addEventListener("input",()=>{const p=findPC(id);if(p&&p.fields[i]){p.fields[i].label=el.value;saveAdv();}});});
-  box.querySelectorAll("[data-pcfv]").forEach(el=>{const[id,i]=el.dataset.pcfv.split(":");el.addEventListener("input",()=>{const p=findPC(id);if(p&&p.fields[i]){p.fields[i].value=el.value;saveAdv();}});});
-  box.querySelectorAll("[data-pcfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.pcfdel.split(":");const p=findPC(id);if(p){p.fields.splice(i,1);saveAdv();renderParty(a);}}));
+  box.querySelectorAll("[data-pcfl]").forEach(el=>{const[id,i]=el.dataset.pcfl.split(":");el.addEventListener("input",()=>{const p=findPC(id),d=p&&pcData(p);if(d&&d.fields[i]){d.fields[i].label=el.value;savePC(p);}});});
+  box.querySelectorAll("[data-pcfv]").forEach(el=>{const[id,i]=el.dataset.pcfv.split(":");el.addEventListener("input",()=>{const p=findPC(id),d=p&&pcData(p);if(d&&d.fields[i]){d.fields[i].value=el.value;savePC(p);}});});
+  box.querySelectorAll("[data-pcfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.pcfdel.split(":");const p=findPC(id),d=p&&pcData(p);if(d){d.fields.splice(i,1);savePC(p);renderParty(a);}}));
+}
+// Per-member sync menu: promote a local member to the shared roster, link it to an existing shared
+// character, or unsync a linked member into a local copy (CT13).
+function openPCSyncMenu(a,p,anchor){
+  if(!p)return;const linked=pcLinked(p);let html="";
+  if(linked){
+    html=`<div class="popgrp-h">Shared character</div><div class="pop-note">Edits sync to every adventure using this character.</div>
+      <button class="popitem" data-pcm="unsync">Unsync — make a local copy</button>`;
+  }else{
+    html=`<button class="popitem" data-pcm="promote">Save to shared roster</button>`;
+    if(state.roster.length)html+=`<button class="popitem" data-pcm="link">Link to a shared character…</button>`;
+  }
+  const pop=showPopover(anchor,html);
+  pop.querySelectorAll("[data-pcm]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.pcm;closePopover();
+    if(k==="promote")promotePC(p);else if(k==="unsync")unsyncPC(p);else if(k==="link")openRosterPicker(a,anchor,p);}));
+}
+// Pick a shared roster character — either to ADD as a new linked member, or (when `link` is given) to link
+// an existing local member to (replacing its data with the shared one) (CT13).
+function openRosterPicker(a,anchor,link){
+  if(!state.roster.length){toast("No shared characters yet — Save one to the roster first.");return;}
+  const inUse=new Set(a.party.map(p=>p.sharedId).filter(Boolean));
+  const items=state.roster.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")).map(r=>{
+    const dis=!link&&inUse.has(r.id);
+    return `<button class="popitem${dis?" disabled":""}" data-rid="${r.id}"${dis?" disabled":""}>${esc(r.name||"Unnamed")}${r.ac!==""?` <span class="pop-val">AC ${esc(String(r.ac))}</span>`:""}</button>`;});
+  const pop=showPopover(anchor,`<div class="popgrp-h">${link?"Link to":"Add from roster"}</div>${items.join("")}`);
+  pop.querySelectorAll("[data-rid]").forEach(b=>b.addEventListener("click",()=>{const rid=b.dataset.rid;closePopover();
+    if(link){["name","ac","hp","init","fields"].forEach(k=>delete link[k]);link.sharedId=rid;saveAdv();renderAdvDetail();}
+    else addRosterPC(a,rid);}));
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
