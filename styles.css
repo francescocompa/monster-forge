@@ -962,14 +962,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-id{min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
-.ci-wait{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid #5c4d24;border-radius:4px;padding:1px 5px}
-/* Death saves (B126): three success + three failure pips by a dying combatant's name; "stable" once saved. */
-.ci-ds{display:inline-flex;align-items:center;gap:6px}
-.ds-grp{display:inline-flex;gap:3px}
-.ds-sep{width:1px;height:11px;background:var(--line)}
-.ds-pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0}
-.ds-pip.ds-success.on{background:var(--ok);border-color:var(--ok)}
-.ds-pip.ds-fail.on{background:var(--bad);border-color:var(--bad)}
+/* Death saves now live in the HP-management popover (.hpm-ds-*, B127); the row just flags down/stable. */
 .ci-stable{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--info);border:1px solid #355370;border-radius:4px;padding:1px 5px}
 /* Dying row keeps the normal active-card background (a bg tint would clash with the faction tints) — the
    "down" chip carries the state instead (B127). */

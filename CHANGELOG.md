@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 130 — Audit (1/3): dead-code sweep
+- Removed unreferenced combat code: `cycleCombatStatus()` and `condsHTML()` (the row condition cluster —
+  superseded by the active-panel / row chip rendering) and the unused `GRIP_SVG` const.
+- Removed orphaned CSS for the old in-row death-save pips (`.ci-ds`, `.ds-grp`, `.ds-sep`, `.ds-pip`) — death
+  saves moved into the HP-management popover (`.hpm-ds-*`, B127) — plus the unused `.ci-wait` badge.
+- No behaviour change. First of three audit batches (next: split `combat.js` out of `adventures.js`).
+
 ## Batch 129 — Combat tracker polish: effect list, roll reel, narrow card, responsive header
 - **Add-effect popover reverted to one grouped list.** The Conditions / Masteries / Spells **tabs are gone**;
   the popover now shows a single scrollable list with those three as headed sections, filtered by the search

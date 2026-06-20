@@ -1093,10 +1093,6 @@ function condChipHTML(itId,c,i){
   const label=known?`<span class="reflink reflink-plain" data-ref="condition" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
   return `<span class="cc-chip cc-cond${known?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
 }
-function condsHTML(it){
-  if(it.kind==="event")return "";
-  return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
-}
 function openCondAdd(itId,anchor,targets){
   const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
@@ -1228,8 +1224,6 @@ function openHPManage(itId,anchor,concPrompt){
     toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc} — ${pass?"held":"broken"}`);
     if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
 }
-// Cycle the combatant status active → waiting → dead → active (CT7b).
-function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
 function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
   if(v===""){it.init=null;it.initRolled=false;} // cleared → blank again
@@ -1269,7 +1263,6 @@ const CV_SORTS=[["init","Initiative"],["manual","Manual"],["name","Name"],["stat
 const CV_GROUPS=[["","None"],["status","Status"],["faction","Faction"],["statblock","Statblock"]];
 const CI_STATUS_ORDER={active:0,waiting:1,dead:2};
 const CI_STATUS_GLABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
-const GRIP_SVG='<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><circle cx="6" cy="4" r="1.25"/><circle cx="10" cy="4" r="1.25"/><circle cx="6" cy="8" r="1.25"/><circle cx="10" cy="8" r="1.25"/><circle cx="6" cy="12" r="1.25"/><circle cx="10" cy="12" r="1.25"/></svg>';
 function combatView(cb){if(!cb.view)cb.view={group:"status",sort:"init",filter:{}};if(!cb.view.filter)cb.view.filter={};return cb.view;}
 // "Down" is no longer a group of its own (B126) — a dying combatant stays under Active; only explicit dead splits out.
 function ciStatusKey(it){return it.status==="dead"?"dead":(it.status||"active");}
