@@ -969,9 +969,12 @@ function hpTracked(it){return it.hpMax!=null&&!(it.kind==="pc"&&!partyHPOn());}
 // Apply a signed HP change: positive = damage (depletes temp HP first), negative = heal (current only).
 function changeHP(it,amt){if(it.hpMax==null)return;
   if(amt>0){let d=amt;const t=it.hpTemp||0;if(t>0){const u=Math.min(t,d);it.hpTemp=t-u;d-=u;}it.hpCur=clamp(it.hpCur-d,0,it.hpMax);}
-  else it.hpCur=clamp(it.hpCur-amt,0,it.hpMax);}
+  else it.hpCur=clamp(it.hpCur-amt,0,it.hpMax);
+  applyDownState(it);}
 // Adjust max HP by a signed delta (e.g. Aid: +5 raises max AND current); reductions clamp current.
 function adjustMaxHP(it,delta){if(it.hpMax==null)return;it.hpMax=Math.max(1,it.hpMax+delta);if(delta>0)it.hpCur=Math.min(it.hpCur+delta,it.hpMax);else it.hpCur=Math.min(it.hpCur,it.hpMax);}
+// 2024 weapon masteries that leave a tracked effect on the struck enemy (offered in the add-effect dropdown).
+const WEAPON_MASTERIES=["Sap","Slow","Vex"];
 const CI_STATUSES=["active","waiting","dead"];
 const CI_STATUS_LABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
 // FA Free solid status icons (B118) — shapes convey status so it no longer relies on colour (which clashed
@@ -1008,6 +1011,29 @@ function runCombat(a,e){
 function isDown(it){return !!it&&it.hpMax!=null&&it.hpCur<=0;}
 // "Out" of the turn order for skip purposes: downed (0 HP) or explicitly marked dead (CT7b).
 function isOut(it){return isDown(it)||(it&&it.status==="dead");}
+// Death-saves / "down" (B126). At 0 HP a combatant either drops to "down" (rolls death saves, a hidden
+// subset of Active) or is marked dead outright — governed by the downMode setting (players|anyone|nobody).
+function downMode(){return (state.settings.combat&&state.settings.combat.downMode)||"players";}
+function downEligible(it){if(!it||it.kind==="event"||it.hpMax==null)return false;const m=downMode();return m==="anyone"?true:m==="players"?it.kind==="pc":false;}
+function dsOf(it){return it&&it.deathSaves?it.deathSaves:{success:0,fail:0};}
+// Dying = down, eligible, not yet dead, and neither three failures (dead) nor three successes (stable).
+function isDying(it){if(!(isDown(it)&&downEligible(it))||it.status==="dead")return false;const d=dsOf(it);return d.fail<3&&d.success<3;}
+function isStable(it){if(!(isDown(it)&&downEligible(it))||it.status==="dead")return false;return dsOf(it).success>=3;}
+// Reconcile a combatant's state with its HP after any change: at 0 HP start death saves (eligible) or mark
+// dead (not eligible); above 0 clear any death-save tracking. Called from changeHP + direct HP edits.
+function applyDownState(it){
+  if(!it||it.hpMax==null||it.kind==="event")return;
+  if(it.hpCur<=0){
+    if(it.status==="dead")return;
+    if(downEligible(it)){if(!it.deathSaves)it.deathSaves={success:0,fail:0};}
+    else it.status="dead";
+  }else if(it.deathSaves){it.deathSaves=null;}
+}
+// Mark a death save (success|fail) to count n (click a filled pip again to step it back). 3 failures = dead.
+function setDeathSave(itId,kind,n){const it=combatItem(itId);if(!it)return;if(!it.deathSaves)it.deathSaves={success:0,fail:0};
+  it.deathSaves[kind]=clamp(it.deathSaves[kind]===n?n-1:n,0,3);
+  if((it.deathSaves.fail||0)>=3){it.status="dead";}
+  saveAdv();renderCombat();}
 // Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
 // ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
 // tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
@@ -1088,7 +1114,10 @@ function openCondAdd(itId,anchor,targets){
   const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
   inp.focus();
   // Effect-name suggestions as the same custom dropdown as the forge name fields (not a native datalist).
-  const condNames=()=>[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b));
+  // Only true conditions (the conditions library also holds diseases/status entries) + the 2024 weapon
+  // masteries that leave a tracked effect on the enemy (B126).
+  const condNames=()=>{const conds=enConditions().filter(c=>(c.category||"Conditions")==="Conditions").map(c=>c.name);
+    return [...new Set(conds.concat(WEAPON_MASTERIES))].sort((a,b)=>a.localeCompare(b));};
   attachCombo(inp,condNames,{});
   // The chevron opens the full suggestion list (filtered by whatever's already typed), like a combo box.
   {const chev=p.querySelector(".cond-combo-chev");if(chev)chev.addEventListener("mousedown",ev=>{ev.preventDefault();
@@ -1147,28 +1176,39 @@ function openHPNumEdit(itId,anchor,kind){
 }
 // HP management popover (B124): opened from the row's compact HP control. Primary field is damage/heal
 // (positive damages — temp absorbs first; negative heals), with quick ±1/±5 chips and editable current/temp.
-function openHPManage(itId,anchor){
+// CON save bonus from the statblock (proficient → + PB), for the concentration prompt. Null when unknown (PCs).
+function combatConSave(it){if(!it||it.kind!=="monster")return null;const m=monById(it.srcId);if(!m)return null;const pb=pbForCR(m.cr);return mod(m.con)+((m.saves||[]).includes("con")?pb:0);}
+// Concentration save prompt for `lost` HP taken: DC = max(10, ⌊damage/2⌋), with the CON save bonus if known.
+function concCheckPrompt(it,lost){return {dc:Math.max(10,Math.floor(lost/2)),bonus:combatConSave(it)};}
+function openHPManage(itId,anchor,concPrompt){
   const it=combatItem(itId);if(!it||it.hpMax==null)return;
   const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
   const barFill=t=>{const r=t.hpMax?t.hpCur/t.hpMax:0;return `width:${clamp(r*100,0,100)}%;background:${r>.5?"var(--ok)":r>.25?"var(--warn)":"var(--bad)"}`;};
+  const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b> — DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
   const p=showPopover(anchor,`<div class="hp-manage">
     <div class="hpm-head"><span class="hpm-nm">${esc(it.name)}</span><span class="ini hpm-cur-disp">${headHP(it)}</span></div>
     <div class="hpm-bar"><i style="${barFill(it)}"></i></div>
     <div class="hpm-row"><input type="number" class="hpm-dmg" placeholder="damage / heal" autocomplete="off"><button class="btn primary sm hpm-apply" style="width:auto">Apply</button></div>
     <div class="hpm-fields"><label>Current<input type="number" class="hpm-cur" value="${it.hpCur}" min="0" max="${it.hpMax}"></label><label>Temp<input type="number" class="hpm-temp" value="${it.hpTemp||0}" min="0"></label></div>
+    ${concHTML}
   </div>`);
   const dmg=p.querySelector(".hpm-dmg");dmg.focus();
-  const refresh=()=>{const t=combatItem(itId);if(!t)return;p.querySelector(".hpm-cur-disp").innerHTML=headHP(t);p.querySelector(".hpm-bar").firstElementChild.style.cssText=barFill(t);p.querySelector(".hpm-cur").value=t.hpCur;p.querySelector(".hpm-temp").value=t.hpTemp||0;
-    // Keep the row's compact HP control in sync without a disruptive full re-render (which would detach this
-    // popover); rebind the swapped node so it can reopen the popover afterwards.
-    const host=document.querySelector(`[data-hpmanage="${itId}"]`);
-    if(host){host.outerHTML=hpCellHTML(t);const nh=document.querySelector(`[data-hpmanage="${itId}"]`);if(nh)nh.addEventListener("click",ev=>{ev.stopPropagation();openHPManage(itId,nh);});}
-    saveAdv();};
-  const applyDmg=()=>{const v=Number(dmg.value||0);if(v){changeHP(it,v);dmg.value="";refresh();}};
+  // A full re-render keeps the row (death saves, dying/dead variant, HP control) correct; then we reopen the
+  // popover anchored to the fresh HP control, carrying any concentration prompt and pulsing its marker.
+  const reopen=prompt=>{saveAdv();renderCombat();
+    if(prompt){const chip=document.querySelector(`[data-ciconc="${itId}"]`);if(chip){chip.classList.remove("pulse");void chip.offsetWidth;chip.classList.add("pulse");}}
+    const a2=document.querySelector(`[data-hpmanage="${itId}"]`);if(a2)openHPManage(itId,a2,prompt);};
+  const applyDmg=()=>{const v=Number(dmg.value||0);if(!v)return;
+    const before=(it.hpCur||0)+(it.hpTemp||0);changeHP(it,v);
+    const lost=Math.max(0,before-((it.hpCur||0)+(it.hpTemp||0)));
+    reopen((v>0&&it.concentration&&lost>0)?concCheckPrompt(it,lost):null);};
   p.querySelector(".hpm-apply").addEventListener("click",applyDmg);
   dmg.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}else if(e.key==="Escape")closePopover();});
-  p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);refresh();});
-  p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));refresh();});
+  p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);applyDownState(it);reopen(null);});
+  p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));reopen(null);});
+  const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{const b=concPrompt.bonus||0,r=rollFormula("1d20"+(b>=0?"+"+b:String(b))),pass=r.total>=concPrompt.dc;
+    toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc} — ${pass?"held":"broken"}`);
+    if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
 }
 // Cycle the combatant status active → waiting → dead → active (CT7b).
 function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
@@ -1202,11 +1242,12 @@ function hpCellHTML(it){
 // initiative slot, a soft "out of order" warning offers a one-click restore.
 const CV_SORTS=[["init","Initiative"],["manual","Manual"],["name","Name"],["status","Status"],["hp","HP remaining"]];
 const CV_GROUPS=[["","None"],["status","Status"],["faction","Faction"],["statblock","Statblock"]];
-const CI_STATUS_ORDER={active:0,waiting:1,down:2,dead:3};
-const CI_STATUS_GLABEL={active:"Active",waiting:"Waiting",down:"Down",dead:"Dead"};
+const CI_STATUS_ORDER={active:0,waiting:1,dead:2};
+const CI_STATUS_GLABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
 const GRIP_SVG='<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><circle cx="6" cy="4" r="1.25"/><circle cx="10" cy="4" r="1.25"/><circle cx="6" cy="8" r="1.25"/><circle cx="10" cy="8" r="1.25"/><circle cx="6" cy="12" r="1.25"/><circle cx="10" cy="12" r="1.25"/></svg>';
 function combatView(cb){if(!cb.view)cb.view={group:"status",sort:"init",filter:{}};if(!cb.view.filter)cb.view.filter={};return cb.view;}
-function ciStatusKey(it){return it.status==="dead"?"dead":isDown(it)?"down":(it.status||"active");}
+// "Down" is no longer a group of its own (B126) — a dying combatant stays under Active; only explicit dead splits out.
+function ciStatusKey(it){return it.status==="dead"?"dead":(it.status||"active");}
 function ciFactionLabel(f){return f==="PC"?"Party":f;}
 function hpRemainPct(it){return it.hpMax?it.hpCur/it.hpMax:1;}
 function combatSortFn(sort){
@@ -1265,7 +1306,7 @@ function openCombatViewMenu(tool,anchor){
     p.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();closePopover();setCombatSort(b.dataset.s);}));
     return;}
   // filter: status + faction value toggles; re-render then reopen so several can be toggled in a row.
-  const stOpts=[["active","Active"],["waiting","Waiting"],["down","Down"],["dead","Dead"]];
+  const stOpts=[["active","Active"],["waiting","Waiting"],["dead","Dead"]];
   const present=new Set(cb.order.map(it=>it.faction));
   const facOpts=["PC","Enemy","Ally","Neutral"].filter(f=>present.has(f)).map(f=>[f,ciFactionLabel(f)]);
   const fs=v.filter.status||[],ff=v.filter.faction||[];
@@ -1282,15 +1323,23 @@ function setCombatSort(s){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.com
   saveAdv();renderCombat();}
 function toggleCombatFilter(kind,val){const ctx=combatOf();if(!ctx)return;const v=combatView(ctx.e.combat);const cur=v.filter[kind]||(v.filter[kind]=[]);const i=cur.indexOf(val);if(i>=0)cur.splice(i,1);else cur.push(val);if(!cur.length)delete v.filter[kind];saveAdv();renderCombat();}
 function restoreInitOrder(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative order restored.");}
-// Re-roll initiative for every combatant (identical-monster groups share one roll), then re-sort.
-function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
-  cb.order.forEach(it=>{const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollOrAvgInit(it.initMod||0));it.init=byGroup.get(g);});
+// Re-roll initiative for every combatant (identical-monster groups share one roll), then re-sort. With
+// "Roll party initiative" off, the party is left alone (their manual inits are preserved) (B126).
+function rollAllInit(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map(),skipParty=!rollPartyOn();
+  cb.order.forEach(it=>{if(skipParty&&it.kind==="pc")return;const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollOrAvgInit(it.initMod||0));it.init=byGroup.get(g);});
   sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative re-rolled.");}
+// Clear initiative back to the default pre-roll state for EVERYONE (party included): party → blank manual
+// (when party-roll is off) else unrolled average; others → unrolled average placeholder (B126).
+function clearInitiative(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex];
+  cb.order.forEach(it=>{if(it.kind==="event")return;const man=(it.kind==="pc"&&!rollPartyOn());
+    it.init=man?null:(10+(it.initMod||0));it.initRolled=false;it.initManual=man;});
+  sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();toast("Initiative cleared.");}
 // The round-bar d20 (auto-roll-off mode): roll ACTUAL dice for the still-unrolled combatants, animate the
 // init cells number-flow style (vertical digit scroll), then commit the values + re-sort.
 function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex],byGroup=new Map();
   // Roll (or re-roll) every group — works whether combatants are still unrolled averages or already rolled.
-  cb.order.forEach(it=>{if(it.initManual&&it.init==null)return;const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));});
+  const skipParty=!rollPartyOn();
+  cb.order.forEach(it=>{if(skipParty&&it.kind==="pc")return;if(it.initManual&&it.init==null)return;const g=it.groupId||it.id;if(!byGroup.has(g))byGroup.set(g,rollInit(it.initMod||0));});
   if(!byGroup.size)return;
   animateInitRoll(byGroup,()=>{
     cb.order.forEach(it=>{const g=it.groupId||it.id;if(byGroup.has(g)){it.init=byGroup.get(g);it.initRolled=true;}});
@@ -1364,33 +1413,39 @@ function bindCombatRows(host,dragOK){
 // Selection action bar — a floating bar pinned to the centre-bottom of the page (the same .batch-bar
 // style as the bestiary/preset multi-select), so it doesn't displace the initiative entries (B122).
 function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n)return "";
-  const one=n===1?`<button class="btn ghost sm" id="csbTurn">Set current turn</button>`:"";
+  const one=n===1?`<button class="btn primary sm" id="csbTurn">Set current turn</button>`:"";
   return `<div class="batch-bar combat-selbar" id="combatSelBar">
     <span class="bb-n">${n} selected</span>
     <button class="btn primary sm" id="csbStatus">Status ▾</button>
-    <button class="btn ghost sm" id="csbEffect">＋ Effect</button>
-    <button class="btn ghost sm" id="csbDmg">Damage</button>
+    <button class="btn primary sm" id="csbEffect">＋ Effect</button>
+    <button class="btn primary sm" id="csbDmg">Damage / heal</button>
     ${one}
     <button class="btn ghost sm" id="csbClear">Clear</button>
   </div>`;}
 // Jump the current turn to a combatant (selection-bar "Set current turn" + double-click a row) (B122).
 function setCurrentTurn(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId);if(i<0)return;cb.turnIndex=i;saveAdv();renderCombat();}
 function setCombatStatusSel(status){combatSelInOrder().forEach(it=>{it.status=status;});saveAdv();renderCombat();}
-function applyDmgSel(amt){amt=Math.abs(Number(amt)||0);if(!amt)return;combatSelInOrder().forEach(it=>{if(hpTracked(it))changeHP(it,amt);});saveAdv();renderCombat();}
+// Positive = damage (temp absorbs first), negative = heal — applied to every selected HP-tracked combatant.
+function applyDmgSel(amt){amt=Number(amt)||0;if(!amt)return;combatSelInOrder().forEach(it=>{if(hpTracked(it)){changeHP(it,amt);applyDownState(it);}});saveAdv();renderCombat();}
 function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=>`<button class="popitem has-ico" data-selst="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}</button>`).join(""));
   p.querySelectorAll("[data-selst]").forEach(b=>b.addEventListener("click",()=>{closePopover();setCombatStatusSel(b.dataset.selst);}));}
-function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" min="0" placeholder="dmg" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
+function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" placeholder="dmg / heal" title="Positive damages; negative heals" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
   const inp=p.querySelector(".seldmg-in");inp.focus();const go=()=>{const v=inp.value;closePopover();applyDmgSel(v);};
   p.querySelector(".seldmg-go").addEventListener("click",go);inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
+// Death-save tracker shown on a dying combatant's row (B126): three success + three failure pips, clickable.
+function deathSavesHTML(it){
+  const d=dsOf(it);
+  const grp=(kind,n)=>[0,1,2].map(i=>`<button class="ds-pip ds-${kind}${i<n?" on":""}" data-ds="${it.id}:${kind}:${i+1}" aria-label="${kind==="success"?"Success":"Failure"} ${i+1}"></button>`).join("");
+  return `<span class="ci-ds" title="Death saving throws — successes / failures (click to mark)"><span class="ds-grp">${grp("success",d.success)}</span><span class="ds-sep"></span><span class="ds-grp">${grp("fail",d.fail)}</span></span>`;
+}
 function combatRowHTML(it,active,drag){
-  const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
+  const status=it.status||"active",isDead=status==="dead",dying=isDying(it),stable=isStable(it);
   const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
     :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
-  // Status no longer shows an icon on the row (B122): it reads from the row variant instead — .dead =
-  // strikethrough/dim, .waiting = muted + italic, reinforced by the grouped "Waiting"/"Dead" headers.
-  // Down (0 HP, not yet marked dead) keeps its own chip.
-  const badge=dead?'<span class="ci-down">down</span>':"";
+  // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic,
+  // .dying = down + rolling death saves. Dying combatants show a death-save tracker by the name (B126).
+  const badge=dying?deathSavesHTML(it):stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
   // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
   // pane is wide and wraps to its own line below the name when narrow (container query). Events have none.
   // DOM order is the narrow two-row order (AC · reaction · concentration · effect chips · +add). The wide
@@ -1400,7 +1455,7 @@ function combatRowHTML(it,active,drag){
   const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
     <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
@@ -1432,7 +1487,7 @@ function combatPanelInnerHTML(it){
   if(m){stats.push(chip("ATK",sgn(combatAtkBonus(m)),"Best attack-roll bonus"));
     const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
     const sv=combatMainSave(m);if(sv)stats.push(chip(sv.ab.toUpperCase(),sgn(sv.bonus),"Best saving throw"));}
-  if(hpTracked(it))stats.push(chip("HP",`${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}`));
+  if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
@@ -1549,10 +1604,12 @@ function openCombatToolsMenu(anchor){
     <button class="popitem" data-ctool="filter">Filter${nF?` <span class="pop-val">${nF}</span>`:""}</button>
     <div class="popsep"></div>
     <button class="popitem" data-ctool="roll">↻ Re-roll initiative</button>
+    <button class="popitem" data-ctool="clear">Clear initiative</button>
     ${oop?`<button class="popitem" data-ctool="restore">Restore initiative order</button>`:""}`;
   const p=showPopover(anchor,html);
   p.querySelectorAll("[data-ctool]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const k=b.dataset.ctool;
     if(k==="roll"){closePopover();rollAllInit();}
+    else if(k==="clear"){closePopover();clearInitiative();}
     else if(k==="restore"){closePopover();restoreInitOrder();}
     else openCombatViewMenu(k,anchor);}));
 }
@@ -1662,6 +1719,7 @@ function renderCombat(){
       tailPopover(el,`<div class="cr-pop"><b>Concentration — ${it.concentration?"on":"off"}</b><br>Marks that this creature is concentrating on a spell. Click to toggle; broken by a failed save.</div>`);});
     el.addEventListener("mouseleave",()=>closePopover());
   });
+  body.querySelectorAll("[data-ds]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,kind,n]=el.dataset.ds.split(":");setDeathSave(id,kind,+n);}));
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));

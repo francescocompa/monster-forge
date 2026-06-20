@@ -15,7 +15,7 @@ const SETTINGS_DEFAULT={
   homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
   notes:{adventure:true,scene:true,encounter:true}, // include a notes field on newly-created items (B65)
   refPopovers:{on:true}, // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
-  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true} // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117)
+  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true,downMode:"players"} // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117); who drops to "down"/death-saves at 0 HP vs straight to dead — players|anyone|nobody (B126)
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
 function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}

@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 126 — Death saves, concentration checks, init-roll & multi-select fixes
+- **Death saves / "down".** At 0 HP a combatant drops to "down" (rolls death saves) or is marked dead outright,
+  per a new **Settings → Drop to "down" at 0 HP** (players only / anyone / nobody; default players). Monsters are
+  otherwise dead immediately. Dying rows show a 3-success / 3-failure **death-save tracker** by the name
+  (`deathSavesHTML`, `setDeathSave`); 3 failures = dead, 3 successes = stable; healing clears it. `applyDownState`
+  reconciles state on every HP change; "Down" removed as a status group/filter (it's a hidden subset of Active).
+- **Concentration checks.** Damaging a concentrating combatant in the HP popover pulses its marker and shows a
+  **Concentration check** prompt — DC = max(10, ⌊damage/2⌋) with the statblock CON save (and a Roll button that
+  breaks concentration on a fail).
+- **Initiative rolls respect party setting.** "Re-roll initiative" (and the d20) no longer roll the party when
+  *Roll party initiative* is off. Added **Clear initiative** to the tools menu (resets everyone, party included).
+- **Effect dropdown = conditions only** (the library's diseases/status entries are filtered out) **plus the 2024
+  weapon masteries** Sap · Slow · Vex.
+- **Multi-select menu:** Damage now also heals (negative = heal); all buttons except Clear are accent; Clear
+  standardised to the ghost/last style shared with the preset-library bar.
+- **HP popover** opens from the **statblock-preview HP chip** too. Empty party initiative is neutral-dimmed (not yellow).
+- (Initiative RNG checked — d20 is uniform over 100k rolls; group-init sharing kept as-is.)
+
 ## Batch 125 — Initiative row iteration (neutral init, concentration, HP polish, tooltips)
 - **Initiative numbers are neutral** (no faction colour); the roll-animation reel lost its box (matches the
   boxless number).

@@ -41,12 +41,13 @@ function renderSettings(){
       <div class="set-grid">
         <label class="f">Monster HP<select data-set="combat.hpMode"><option value="rolled" ${s.combat.hpMode==="rolled"?"selected":""}>Roll from Hit Dice</option><option value="average" ${s.combat.hpMode==="average"?"selected":""}>Average (book HP)</option></select></label>
         <label class="f">Auto-roll initiative<select data-set="combat.initMode"><option value="roll" ${s.combat.initMode!=="average"?"selected":""}>On — roll 1d20 + mod</option><option value="average" ${s.combat.initMode==="average"?"selected":""}>Off — average, roll manually</option></select></label>
+        <label class="f">Drop to "down" at 0 HP<select data-set="combat.downMode"><option value="players" ${(s.combat.downMode||"players")==="players"?"selected":""}>Players only</option><option value="anyone" ${s.combat.downMode==="anyone"?"selected":""}>Anyone</option><option value="nobody" ${s.combat.downMode==="nobody"?"selected":""}>Nobody</option></select></label>
       </div>
       ${SW("combat.groupInit","Group initiative for identical enemies")}
       ${SW("combat.rollParty","Roll party initiative")}
       ${SW("combat.dexTiebreak","Break initiative ties by DEX")}
       ${SW("combat.partyHP","Track party HP")}
-      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average, and initiative is rolled (1d20 + mod) or taken as a static average (10 + mod) — you can re-roll everyone from the combat toolbar. With grouped initiative on, all copies of one enemy entry share a single roll; turn it off to roll each separately. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters.</div>
+      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average, and initiative is rolled (1d20 + mod) or taken as a static average (10 + mod) — you can re-roll everyone from the combat toolbar. With grouped initiative on, all copies of one enemy entry share a single roll; turn it off to roll each separately. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters. At 0 HP, "down" combatants roll death saves (tracked on the initiative entry) instead of being marked dead outright — choose whether that applies to players only, anyone, or nobody (monsters are otherwise marked dead).</div>
     </div>
     <div class="set-card">
       <div class="set-head set-head-row">Notes fields<span class="switch" title="Toggle all"><input type="checkbox" id="setNotesAll"><span class="sl"></span></span></div>

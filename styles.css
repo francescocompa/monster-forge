@@ -888,6 +888,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hpm-row{display:flex;gap:6px;align-items:center}
 .hpm-row .hpm-dmg{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .hpm-row .hpm-dmg:focus{outline:none;border-color:var(--accent)}
+.hpm-conc{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 9px;background:color-mix(in srgb,var(--accent) 12%,var(--in));border:1px solid var(--accent);border-radius:6px;font-size:11.5px;color:var(--txt)}
+.hpm-conc .hpm-conc-t{flex:1;line-height:1.4}
+.hpm-conc .hpm-conc-roll{flex:none}
 .hpm-fields{display:flex;gap:8px;margin-top:10px}
 .hpm-fields label{flex:1;font-size:10px;color:var(--faint);display:flex;flex-direction:column;gap:3px;text-transform:uppercase;letter-spacing:.04em}
 .hpm-fields input{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;font-size:13px;font-variant-numeric:tabular-nums}
@@ -912,8 +915,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-init-in:focus{background:var(--in);border-color:var(--accent);outline:none}
 .cbt-row .ci-init-in.unrolled{color:var(--faint)} /* auto-roll off: dimmed average placeholder */
 .cbt-row .ci-init-in.unrolled::placeholder{color:var(--faint);opacity:1}
-.cbt-row .ci-init-in.manual{color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll */
-.cbt-row .ci-init-in.manual::placeholder{color:var(--amber);opacity:.8}
+.cbt-row .ci-init-in.manual{color:var(--faint)} /* party-roll off: blank, awaiting the DM's roll — neutral dimmed (B126) */
+.cbt-row .ci-init-in.manual::placeholder{color:var(--faint);opacity:1}
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
 .nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--txt);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
@@ -927,6 +930,19 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
 .ci-wait{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid #5c4d24;border-radius:4px;padding:1px 5px}
+/* Death saves (B126): three success + three failure pips by a dying combatant's name; "stable" once saved. */
+.ci-ds{display:inline-flex;align-items:center;gap:6px}
+.ds-grp{display:inline-flex;gap:3px}
+.ds-sep{width:1px;height:11px;background:var(--line)}
+.ds-pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0}
+.ds-pip.ds-success.on{background:var(--ok);border-color:var(--ok)}
+.ds-pip.ds-fail.on{background:var(--bad);border-color:var(--bad)}
+.ci-stable{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--info);border:1px solid #355370;border-radius:4px;padding:1px 5px}
+/* Dying row: a subtle bad-colour tint, but NOT the strikethrough/dim of an actually-dead combatant. */
+.cbt-row.dying{background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+.cbt-row.dying .ci-name{color:var(--txt)}
+.ci-conc-chip.pulse{animation:concPulse .85s ease 2}
+@keyframes concPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.28);color:var(--accent);border-color:var(--accent)}}
 .ci-note{font-size:11px;color:var(--faint);margin-top:2px}
 /* Fixed-chip cluster — AC · reaction toggle · effect chips · add-effect (B124). */
 .ci-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
@@ -966,6 +982,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-faction{font-size:11px;font-weight:400;color:var(--faint);text-transform:capitalize}
 .ca-stats{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .ca-stat{flex:1 1 0;min-width:64px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 10px}
+.ca-stat-btn{cursor:pointer;color:var(--txt)}
+.ca-stat-btn:hover{border-color:var(--accent);background:var(--panel3)}
 .cas-k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint)}
 .cas-v{font-size:15px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1}
 .ca-addnote{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:9px;font-size:12px;cursor:pointer}
