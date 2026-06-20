@@ -1107,10 +1107,18 @@ function openNoteEdit(itId,anchor){
   p.querySelector(".note-go").addEventListener("click",commit);
   ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
 }
+// Set one combatant's status directly (kebab menu / selection bar) (B123).
+function setCombatStatus(itId,status){const it=combatItem(itId);if(!it)return;it.status=status;saveAdv();renderCombat();}
 function openCombatRowMenu(itId,anchor){
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
   const groupN=cb.order.filter(x=>x.groupId===it.groupId).length;
-  let html=`<button class="popitem" data-act="note">${it.comment?"Edit note":"Add note"}</button>`;
+  const isCur=cb.order[cb.turnIndex]&&cb.order[cb.turnIndex].id===itId;
+  let html=`<button class="popitem" data-act="turn"${isCur?" disabled":""}>Make current turn</button>`;
+  if(it.kind!=="event"){
+    html+=`<div class="popgrp-h">Status</div>`;
+    html+=CI_STATUSES.map(s=>{const on=(it.status||"active")===s;return `<button class="popitem has-ico${on?" on":""}" data-st="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}${on?'<span class="pop-tick">●</span>':""}</button>`;}).join("");
+  }
+  html+=`<div class="popsep"></div><button class="popitem" data-act="note">${it.comment?"Edit note":"Add note"}</button>`;
   if(it.kind!=="event")html+=`<button class="popitem" data-act="cond">Add effect</button>`;
   if(it.hpMax!=null)html+=`<button class="popitem" data-act="temp">Set temp HP</button><button class="popitem" data-act="max">Adjust max HP</button>`;
   if(groupN>1)html+=`<button class="popitem" data-act="ungroup">Ungroup (separate initiative)</button>`;
@@ -1118,8 +1126,9 @@ function openCombatRowMenu(itId,anchor){
   if(combatDragOK(cb)){const idx=cb.order.findIndex(x=>x.id===itId);html+=`<div class="popsep"></div><button class="popitem" data-act="up"${idx<=0?" disabled":""}>Move up</button><button class="popitem" data-act="down"${idx>=cb.order.length-1?" disabled":""}>Move down</button>`;}
   html+=`<div class="popsep"></div><button class="popitem danger" data-act="remove">Remove from combat</button>`;
   const p=showPopover(anchor,html);
-  const act=k=>{closePopover();if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="temp")openHPNumEdit(itId,anchor,"temp");else if(k==="max")openHPNumEdit(itId,anchor,"max");else if(k==="up")moveCombatant(itId,-1);else if(k==="down")moveCombatant(itId,1);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
+  const act=k=>{closePopover();if(k==="turn")setCurrentTurn(itId);else if(k==="note")openNoteEdit(itId,anchor);else if(k==="cond")openCondAdd(itId,anchor);else if(k==="temp")openHPNumEdit(itId,anchor,"temp");else if(k==="max")openHPNumEdit(itId,anchor,"max");else if(k==="up")moveCombatant(itId,-1);else if(k==="down")moveCombatant(itId,1);else if(k==="ungroup")ungroupCombatant(itId);else if(k==="remove")removeCombatant(itId);};
   p.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));
+  p.querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click",()=>{closePopover();setCombatStatus(itId,b.dataset.st);}));
 }
 // Temp-HP set (absolute) / max-HP adjust (signed delta, e.g. +5 for Aid) via a small popover (CT7b).
 function openHPNumEdit(itId,anchor,kind){
@@ -1557,6 +1566,10 @@ function renderCombat(){
   setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
   const fab=cb?`<button class="fab combat-fab end" id="combatFab" style="width:auto">End combat</button>`
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
+  // Preserve the scroll position of the order list (and active panel) across the full re-render — selecting
+  // or editing a row rebuilds the DOM and would otherwise jump back to the top (B123).
+  const _pOrd=body.querySelector(".combat-order"),_pAct=body.querySelector(".ca-scroll");
+  const _ordTop=_pOrd?_pOrd.scrollTop:0,_actTop=_pAct?_pAct.scrollTop:0;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
     combatRoundBarHTML(cb)+`
     <div class="combat-grid">
@@ -1564,6 +1577,7 @@ function renderCombat(){
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>${combatSelBarHTML()}`:combatNotStartedHTML(a,e))+fab;
+  {const o=body.querySelector(".combat-order");if(o&&_ordTop)o.scrollTop=_ordTop;const ac=body.querySelector(".ca-scroll");if(ac&&_actTop)ac.scrollTop=_actTop;}
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).

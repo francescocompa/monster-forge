@@ -865,6 +865,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Selection "peek" (B122): the active combatant's identity stays up top with an "Active turn" flag pushed
    right, a full-width divider, then the selected card's header + statblock animate in below. */
 .ca-peekhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ca-peekhead .ca-name{color:var(--dim)}
 .ca-activeflag{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
 .ca-divider{height:1px;background:var(--line)}
 .ca-peek{display:flex;flex-direction:column;gap:12px;animation:caPeekIn .18s ease}
@@ -942,7 +943,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-menu{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .cbt-row .ci-menu:hover{border-color:var(--line);color:var(--txt);background:var(--panel2)}
 /* Reaction toggle (B120): available = visible, used = dimmed. Resets at the start of each combatant's turn. */
-.cbt-row .ci-react{flex:none;width:24px;height:24px;display:grid;place-items:center;border:none;background:none;cursor:pointer;color:var(--accent-soft);border-radius:6px}
+.cbt-row .ci-react{flex:none;width:24px;height:24px;display:grid;place-items:center;border:none;background:none;cursor:pointer;color:var(--dim);border-radius:6px}
 .cbt-row .ci-react svg{width:13px;height:13px}
 .cbt-row .ci-react.used{color:var(--faint);opacity:.5}
 .cbt-row .ci-react:hover{background:var(--panel2)}
@@ -1411,6 +1412,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .popover{position:fixed;z-index:60;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:5px;min-width:148px;box-shadow:var(--shadow-pop);display:flex;flex-direction:column;gap:2px}
 .popover .popitem{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px;cursor:pointer}
 .popover .popitem.has-ico{display:flex;align-items:center;gap:8px}
+.popover .popitem .pop-tick{margin-left:auto;color:var(--accent-soft);font-size:10px}
 .popover .popitem:hover{background:var(--panel3)}
 .popover .popitem.on{color:var(--accent-soft)}
 .popover .popitem.danger{color:var(--bad)}

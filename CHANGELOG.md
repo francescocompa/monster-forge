@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 123 — Combat tracker follow-ups (selection scroll, kebab, reaction colour)
+- **Selecting a row keeps the scroll position.** `renderCombat` now preserves the `.combat-order` (and
+  `.ca-scroll`) scroll offsets across the full re-render, so selecting/editing a row no longer jumps to top.
+- **Reaction icon is neutral** (`--dim`) instead of the accent colour.
+- **Kebab menu gains status + current turn.** Each card's ⋯ menu now has **Make current turn** and a
+  **Status** group (Active / Waiting / Dead, current marked) via `setCombatStatus` / `setCurrentTurn`.
+- **Peek active-turn name dimmed.** In the selection statblock peek, the active combatant's name up top is
+  muted (`--dim`) so the previewed card reads as the focus.
+
 ## Batch 122 — Combat selection polish: faction accent, floating bar, statblock peek
 - **Status reads from the row, not an icon.** The per-row status glyph is gone; status now shows via the
   row variant — `.dead` (strikethrough/dim) and a new `.waiting` (muted + italic) — reinforced by a status
