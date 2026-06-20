@@ -988,15 +988,20 @@ const CI_STATUS_ICON={active:SHIELD_HEART_ICON,waiting:CIRCLE_PAUSE_ICON,dead:SK
 const REACT_ICON='<svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c53 0 96-43 96-96l0-306.7 73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 109.3 160 416c0 17.7-14.3 32-32 32l-96 0z"/></svg>';
 // FA-free "shield-blank" — the AC chip glyph on combat rows (B124).
 const SHIELD_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
-function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();renderCombat();}
+// Toggle in place (just flip the chip class) rather than re-rendering — a full render would refresh the
+// selected statblock preview, which is jarring (B128).
+function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();
+  const el=document.querySelector(`[data-cireact="${itId}"]`);if(el)el.classList.toggle("used",it.reaction===false);else renderCombat();}
 // Concentration toggle (B125): a bullseye chip beside reaction — "on" = the creature is concentrating on a
 // spell. Manual (broken by failed CON saves, which the DM adjudicates); unlike reaction it doesn't auto-reset.
 const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>';
 // FA-free solid circle-check / circle-xmark — death-save success / failure pips in the HP popover (B127).
 const CIRCLE_CHECK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
 const CIRCLE_XMARK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
-function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;it.concentration=!it.concentration;saveAdv();renderCombat();}
+function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;it.concentration=!it.concentration;saveAdv();
+  const el=document.querySelector(`[data-ciconc="${itId}"]`);if(el)el.classList.toggle("on",it.concentration);else renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
+let _caPeekId=null; // last previewed (peeked) combatant id — the peek only animates when this changes (B128)
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
   const fresh=!e.combat||!e.combat.active;
@@ -1197,7 +1202,7 @@ function openHPManage(itId,anchor,concPrompt){
   const it=combatItem(itId);if(!it||it.hpMax==null)return;
   const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
   const barFill=t=>{const r=t.hpMax?t.hpCur/t.hpMax:0;return `width:${clamp(r*100,0,100)}%;background:${r>.5?"var(--ok)":r>.25?"var(--warn)":"var(--bad)"}`;};
-  const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b> — DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
+  const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b> — DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn primary sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
   const p=showPopover(anchor,`<div class="hp-manage">
     <div class="hpm-head"><span class="hpm-nm">${esc(it.name)}</span><span class="ini hpm-cur-disp">${headHP(it)}</span></div>
     <div class="hpm-bar"><i style="${barFill(it)}"></i></div>
@@ -1237,6 +1242,13 @@ function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   saveAdv();renderCombat();}
 function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;clearCombatSel();saveAdv();renderCombat();});}
+// Reset the encounter to a fresh start: rebuild the order from the encounter combatants + party — full HP,
+// fresh initiative, round 1, cleared conditions / death saves / statuses (B128).
+function resetCombat(){const ctx=combatOf();if(!ctx)return;const a=ctx.a,e=ctx.e;
+  confirmModal("Reset the encounter? HP, conditions, death saves, initiative and the round all reset to the start.",()=>{
+    clearCombatSel();startCombat(a,e);
+    if(autoRollOn()){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}else renderCombat();
+    toast("Encounter reset.");});}
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
 // Compact HP control (B124): a bold current/max number with a thin health-coloured underbar (the "H6"
@@ -1284,6 +1296,11 @@ function combatRows(cb){
 // Drag (reorder the real turn order) is only allowed when the displayed order maps 1:1 to cb.order:
 // init/manual sort, no grouping, no active filter.
 function combatDragOK(cb){const v=combatView(cb);return (v.sort==="init"||v.sort==="manual")&&!v.group&&!((v.filter.status||[]).length)&&!((v.filter.faction||[]).length);}
+// Drag mode (B128): "reorder" = ungrouped init/manual → drag reorders the turn order; "regroup" = grouped by
+// status/faction (no filter) → drag a card onto another group to change its status/faction. Else no drag.
+function combatDragMode(cb){if(combatDragOK(cb))return "reorder";const v=combatView(cb);
+  if((v.group==="status"||v.group==="faction")&&!((v.filter.status||[]).length)&&!((v.filter.faction||[]).length))return "regroup";return null;}
+function setCombatFaction(itId,fac){const it=combatItem(itId);if(!it)return;it.faction=fac;saveAdv();renderCombat();}
 function combatGroupKey(it,g){
   if(g==="status")return ciStatusKey(it);
   if(g==="faction")return it.faction||"Neutral";
@@ -1300,7 +1317,7 @@ function initOutOfPlace(cb){const a=cb.order,n=a.length;if(n<2)return 0;
   for(let i=0;i<n;i++){for(let j=0;j<i;j++)if(v[j]>=v[i]&&dp[j]+1>dp[i])dp[i]=dp[j]+1;if(dp[i]>best)best=dp[i];}
   return n-best;}
 function combatOrderBodyHTML(cb){
-  const v=combatView(cb),rows=combatRows(cb),ti=cb.turnIndex,drag=combatDragOK(cb);
+  const v=combatView(cb),rows=combatRows(cb),ti=cb.turnIndex,drag=!!combatDragMode(cb);
   const rowH=r=>combatRowHTML(r.it,r.idx===ti,drag);
   if(!rows.length)return `<div class="hint" style="padding:6px 2px">No combatants match the filter.</div>`;
   if(!v.group)return rows.map(rowH).join("");
@@ -1308,8 +1325,9 @@ function combatOrderBodyHTML(cb){
   let keys=[...groups.keys()];
   if(v.group==="status")keys.sort((a,b)=>(CI_STATUS_ORDER[a]??9)-(CI_STATUS_ORDER[b]??9));
   else keys.sort((a,b)=>a.localeCompare(b));
+  const regroup=combatDragMode(cb)==="regroup";
   return keys.map(k=>{const gico=(v.group==="status"&&CI_STATUS_ICON[k])?`<span class="cbt-grp-ico st-${k}">${CI_STATUS_ICON[k]}</span>`:"";
-    return `<div class="cbt-group"><div class="cbt-group-h">${gico}${esc(combatGroupLabel(v.group,k))} <span class="cbt-group-n">${groups.get(k).length}</span></div>${groups.get(k).map(rowH).join("")}</div>`;}).join("");
+    return `<div class="cbt-group"${regroup?` data-grpkey="${esc(k)}"`:""}><div class="cbt-group-h">${gico}${esc(combatGroupLabel(v.group,k))} <span class="cbt-group-n">${groups.get(k).length}</span></div>${groups.get(k).map(rowH).join("")}</div>`;}).join("");
 }
 function openCombatViewMenu(tool,anchor){
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,v=combatView(cb);
@@ -1380,6 +1398,7 @@ function animateInitRoll(byGroup,done){
     // pane's own overflow clips any cell that's half-hidden under the statblock panel.
     ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px`;
     ov.innerHTML=nfReelHTML(target);pane.appendChild(ov);overlays.push(ov);
+    inp.classList.add("nf-hide"); // hide the old number behind the (transparent) reel while it scrolls (B128)
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   });
   setTimeout(()=>{overlays.forEach(o=>o.remove());if(d20)d20.classList.remove("rolling");done();},1450);
@@ -1404,7 +1423,7 @@ function reorderCombatSel(dragId,targetId,after){
 // Click selects (shift/cmd toggles into a multi-selection); editable/interactive areas are excluded. When
 // drag is allowed, the whole row drags to reorder (a multi-selection drags together).
 const CI_NOSELECT="input,select,textarea,button,a,.ci-status,.cc-chip,.reflink,[data-addcond]";
-function bindCombatRows(host,dragOK){
+function bindCombatRows(host,mode,cb){
   if(!host)return;
   host.querySelectorAll(".cbt-row").forEach(row=>{
     // Suppress the text selection a modifier-click would otherwise drag across rows (B122).
@@ -1414,15 +1433,29 @@ function bindCombatRows(host,dragOK){
     // Double-click a row → make it the current turn (B122).
     row.addEventListener("dblclick",e=>{if(e.target.closest(CI_NOSELECT))return;clearCombatSel();setCurrentTurn(row.dataset.ci);});
   });
-  if(!dragOK)return;
-  let dragId=null;const clearMarks=()=>host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));
+  if(!mode)return;
+  let dragId=null;const clearMarks=()=>{host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));host.querySelectorAll(".cbt-group").forEach(g=>g.classList.remove("drop-into"));};
   host.querySelectorAll('.cbt-row[draggable="true"]').forEach(row=>{
     row.addEventListener("dragstart",e=>{if(e.target.closest(CI_NOSELECT)){e.preventDefault();return;}dragId=row.dataset.ci;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId);}catch(_){}row.classList.add("dragging");});
     row.addEventListener("dragend",()=>{dragId=null;clearMarks();});
-    row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
-    row.addEventListener("dragleave",()=>row.classList.remove("drop-before","drop-after"));
-    row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombatSel(dragId,row.dataset.ci,after);});
   });
+  if(mode==="reorder"){
+    host.querySelectorAll('.cbt-row[draggable="true"]').forEach(row=>{
+      row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
+      row.addEventListener("dragleave",()=>row.classList.remove("drop-before","drop-after"));
+      row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombatSel(dragId,row.dataset.ci,after);});
+    });
+  }else{ // regroup: drop a card onto a group to change its status / faction (B128)
+    const grp=combatView(cb).group;
+    host.querySelectorAll(".cbt-group[data-grpkey]").forEach(g=>{
+      g.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();g.classList.add("drop-into");});
+      g.addEventListener("dragleave",e=>{if(!g.contains(e.relatedTarget))g.classList.remove("drop-into");});
+      g.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();g.classList.remove("drop-into");
+        const key=g.dataset.grpkey,ids=(combatSel.has(dragId)&&combatSel.size>1)?[...combatSel]:[dragId];
+        ids.forEach(id=>{const it=combatItem(id);if(!it)return;if(grp==="status")it.status=key;else it.faction=key;});
+        if(combatSel.size>1)clearCombatSel();saveAdv();renderCombat();});
+    });
+  }
 }
 // Selection action bar — appears above the order when ≥1 card is selected: set status / add an effect /
 // apply damage to all selected at once, plus a clear.
@@ -1453,7 +1486,7 @@ function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><inp
 function deathSavesRowHTML(it){
   const d=dsOf(it);
   const grp=(kind,n,ico)=>[0,1,2].map(i=>`<button class="hpm-ds-pip ds-${kind}${i<n?" on":""}" data-ds="${kind}:${i+1}" aria-label="${kind==="success"?"Success":"Failure"} ${i+1}">${i<n?ico:""}</button>`).join("");
-  return `<div class="hpm-ds"><span class="hpm-ds-lbl">Death saves</span><span class="hpm-ds-grp succ">${grp("success",d.success,CIRCLE_CHECK_ICON)}</span><span class="hpm-ds-grp fail">${grp("fail",d.fail,CIRCLE_XMARK_ICON)}</span></div>`;
+  return `<div class="hpm-ds"><span class="hpm-ds-grp succ">${grp("success",d.success,CIRCLE_CHECK_ICON)}</span><span class="hpm-ds-lbl">Death saves</span><span class="hpm-ds-grp fail">${grp("fail",d.fail,CIRCLE_XMARK_ICON)}</span></div>`;
 }
 function combatRowHTML(it,active,drag){
   const status=it.status||"active",isDead=status==="dead",dying=isDying(it),stable=isStable(it);
@@ -1624,12 +1657,15 @@ function openCombatToolsMenu(anchor){
     <div class="popsep"></div>
     <button class="popitem" data-ctool="roll">↻ Re-roll initiative</button>
     <button class="popitem" data-ctool="clear">Clear initiative</button>
-    ${oop?`<button class="popitem" data-ctool="restore">Restore initiative order</button>`:""}`;
+    ${oop?`<button class="popitem" data-ctool="restore">Restore initiative order</button>`:""}
+    <div class="popsep"></div>
+    <button class="popitem danger" data-ctool="reset">Reset encounter</button>`;
   const p=showPopover(anchor,html);
   p.querySelectorAll("[data-ctool]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const k=b.dataset.ctool;
     if(k==="roll"){closePopover();rollAllInit();}
     else if(k==="clear"){closePopover();clearInitiative();}
     else if(k==="restore"){closePopover();restoreInitOrder();}
+    else if(k==="reset"){closePopover();resetCombat();}
     else openCombatViewMenu(k,anchor);}));
 }
 // Scene-encounter dropdown (CT9-fix): switch between encounters of the current scene.
@@ -1695,6 +1731,9 @@ function renderCombat(){
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>${combatSelBarHTML()}`:combatNotStartedHTML(a,e))+fab;
   {const o=body.querySelector(".combat-order");if(o&&_ordTop)o.scrollTop=_ordTop;const ac=body.querySelector(".ca-scroll");if(ac&&_actTop)ac.scrollTop=_actTop;}
+  // Animate the statblock peek only when the previewed combatant actually changes — not on every re-render
+  // (toggling reaction, marking a death save, etc. shouldn't visibly refresh the preview) (B128).
+  {const pk=body.querySelector(".ca-peek"),pid=pk?pk.dataset.peek:null;if(pk&&pid!==_caPeekId)pk.classList.add("ca-anim");_caPeekId=pid;}
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
@@ -1710,7 +1749,7 @@ function renderCombat(){
   {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
   {const ri=$("#combatRollInit");if(ri)ri.addEventListener("click",rollInitNow);}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
-  bindCombatRows($("#combatRows"),combatDragOK(cb));
+  bindCombatRows($("#combatRows"),combatDragMode(cb),cb);
   // Selection action bar (B120): set status / add effect / damage for all selected.
   {const sb=$("#combatSelBar");if(sb){
     const sel=()=>[...combatSel];

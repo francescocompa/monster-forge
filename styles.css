@@ -826,7 +826,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT8 combat toolbar */
 .ct-oop{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid var(--warn);color:var(--warn);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;line-height:1}
 .ct-oop:hover{background:color-mix(in srgb,var(--warn) 26%,transparent)}
-.cbt-group{display:flex;flex-direction:column;gap:7px}
+.cbt-group{display:flex;flex-direction:column;gap:7px;border-radius:9px}
+.cbt-group.drop-into{box-shadow:0 0 0 1.5px var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)} /* drag a card here to restatus/refaction (B128) */
 .cbt-group:not(:first-child){margin-top:8px}
 .cbt-group-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;display:flex;align-items:center;gap:6px;padding:0 2px}
 .cbt-group-n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
@@ -888,14 +889,19 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hpm-row{display:flex;gap:6px;align-items:center}
 .hpm-row .hpm-dmg{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .hpm-row .hpm-dmg:focus{outline:none;border-color:var(--accent)}
-/* Death-save tracker inside the HP popover (B127): empty circles fill green/red on click. */
-.hpm-ds{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
-.hpm-ds-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);flex:1}
+/* Death-save tracker inside the HP popover (B127): successes (green) left of the centred title, failures
+   (red) right. Coloured borders make each group's meaning clear even before the circles are filled. */
+.hpm-ds{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.hpm-ds-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);text-align:center}
 .hpm-ds-grp{display:inline-flex;gap:4px}
-.hpm-ds-pip{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0;display:grid;place-items:center;color:var(--faint)}
+.hpm-ds-grp.succ{justify-self:end}
+.hpm-ds-grp.fail{justify-self:start}
+.hpm-ds-pip{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--in);cursor:pointer;padding:0;display:grid;place-items:center;color:var(--faint)}
 .hpm-ds-pip svg{width:18px;height:18px}
-.hpm-ds-pip.ds-success.on{border-color:transparent;color:var(--ok)}
-.hpm-ds-pip.ds-fail.on{border-color:transparent;color:var(--bad)}
+.hpm-ds-pip.ds-success{border-color:var(--ok)}
+.hpm-ds-pip.ds-fail{border-color:var(--bad)}
+.hpm-ds-pip.ds-success.on{color:var(--ok)}
+.hpm-ds-pip.ds-fail.on{color:var(--bad)}
 .hpm-conc{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 9px;background:color-mix(in srgb,var(--accent) 12%,var(--in));border:1px solid var(--accent);border-radius:6px;font-size:11.5px;color:var(--txt)}
 .hpm-conc .hpm-conc-t{flex:1;line-height:1.4}
 .hpm-conc .hpm-conc-roll{flex:none}
@@ -909,7 +915,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-peekhead .ca-name{color:var(--dim)}
 .ca-activeflag{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
 .ca-divider{height:1px;background:var(--line)}
-.ca-peek{display:flex;flex-direction:column;gap:12px;animation:caPeekIn .18s ease}
+.ca-peek{display:flex;flex-direction:column;gap:12px}
+.ca-peek.ca-anim{animation:caPeekIn .18s ease} /* only on selection change, not every re-render (B128) */
 @keyframes caPeekIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
@@ -924,6 +931,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-init-in:focus{background:var(--in);border-color:var(--accent);outline:none}
 .cbt-row .ci-init-in.unrolled{color:var(--faint)} /* auto-roll off: dimmed average placeholder */
 .cbt-row .ci-init-in.unrolled::placeholder{color:var(--faint);opacity:1}
+.cbt-row .ci-init-in.nf-hide{color:transparent} /* hidden behind the roll reel while it scrolls (B128) */
 .cbt-row .ci-init-in.manual{color:var(--faint)} /* party-roll off: blank, awaiting the DM's roll — neutral dimmed (B126) */
 .cbt-row .ci-init-in.manual::placeholder{color:var(--faint);opacity:1}
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
@@ -947,9 +955,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ds-pip.ds-success.on{background:var(--ok);border-color:var(--ok)}
 .ds-pip.ds-fail.on{background:var(--bad);border-color:var(--bad)}
 .ci-stable{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--info);border:1px solid #355370;border-radius:4px;padding:1px 5px}
-/* Dying row: a subtle bad-colour tint, but NOT the strikethrough/dim of an actually-dead combatant. */
-.cbt-row.dying{background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
-.cbt-row.dying .ci-name{color:var(--txt)}
+/* Dying row keeps the normal active-card background (a bg tint would clash with the faction tints) — the
+   "down" chip carries the state instead (B127). */
 .ci-conc-chip.pulse{animation:concPulse .85s ease 2}
 @keyframes concPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.28);color:var(--accent);border-color:var(--accent)}}
 .ci-note{font-size:11px;color:var(--faint);margin-top:2px}

@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 128 — Drag between groups, reset encounter, death-save clarity, render polish
+- **Drag cards between groups.** Grouped by status/faction, dragging a card onto another group now changes
+  its status/faction (`combatDragMode` "regroup" + `.cbt-group` drop zones); ungrouped init/manual still
+  reorders the turn order. Multi-selection moves together.
+- **Reset encounter** added to the round tools menu — rebuilds the order from the encounter (full HP, fresh
+  initiative, round 1, cleared conditions/death saves/statuses).
+- **Roll animation:** the old initiative number is hidden behind the reel while it scrolls (`.nf-hide`).
+- **Death-save tracker** reads clearly now: successes (green) left of the centred title, failures (red)
+  right, with coloured borders on the empty circles so each group's meaning is obvious.
+- **Down rows keep the normal background** (the bad-colour tint clashed with faction tints) — the "down"
+  chip carries the state.
+- **Selected statblock preview no longer refreshes** on unrelated interactions: reaction/concentration
+  toggles update in place, and the peek only animates when the previewed combatant actually changes.
+- Concentration-alert **Roll** button is now accent.
+
 ## Batch 127 — Init clipping fix + death-save UX, effect tabs, rollable chips, click-only popovers
 - **Fixed the initiative "drops a digit" bug:** the value was always stored correctly, but the 32px init box
   visually clipped two-digit numbers (centred) — widened to 40px (committed as 127a).
