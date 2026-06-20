@@ -1102,20 +1102,15 @@ function openCondAdd(itId,anchor,targets){
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
-    <div class="cond-tabs">
-      <button type="button" class="cond-tab on" data-tab="conditions">Conditions</button>
-      <button type="button" class="cond-tab" data-tab="masteries">Masteries</button>
-      <button type="button" class="cond-tab" data-tab="spells">Spells</button>
-    </div>
     <div class="cond-add-row">
       <div class="cond-combo">
-        <input type="text" class="cond-input" placeholder="Effect…" autocomplete="off">
-        <button class="cond-combo-chev" type="button" tabindex="-1" aria-label="Show effects">${FS_CHEVRON}</button>
+        <input type="text" class="cond-input" placeholder="Search or type an effect…" autocomplete="off">
       </div>
       <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
       <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
       <button class="btn primary sm cond-go" style="width:auto">Add</button>
     </div>
+    <div class="cond-list"></div>
     <div class="cond-when" hidden>
       <span class="cw-lbl">ends at</span>
       <button class="cond-edge" type="button" data-edge="start" title="Toggle: ends at turn start / end"><span class="cw-hg">${HOURGLASS_ICON}</span><span class="cw-t">turn start</span></button>
@@ -1125,29 +1120,31 @@ function openCondAdd(itId,anchor,targets){
         <div class="cond-who-list" hidden>${whoItems}</div>
       </div>
     </div></div>`);
-  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
+  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list"),clist=p.querySelector(".cond-list");
   inp.focus();
-  // Effect-name suggestions as the same custom dropdown as the forge name fields (not a native datalist).
-  // Three tabs (B127): Conditions (the library's true conditions, not diseases/status), Masteries (the 2024
-  // weapon masteries), and Spells (those with a continuous — non-instantaneous — effect). Tabs swap the list.
+  // One inline grouped list inside the popover (B129 — reverted from the B127 tabs): Conditions (the library's
+  // true conditions, not diseases/status), Masteries (the 2024 weapon masteries) and Spells (continuous —
+  // non-instantaneous — effects) as headed sections in a single scrollable list, filtered by the search field.
+  // The list lives in the popover (not a separate floating dropdown), so the cursor can move onto it freely.
   const condNames=()=>enConditions().filter(c=>(c.category||"Conditions")==="Conditions").map(c=>c.name).sort((a,b)=>a.localeCompare(b));
   const masteryNames=()=>WEAPON_MASTERIES.slice();
   const spellNames=()=>[...new Set(enSpells().filter(s=>{const d=s.duration||"";return /concentration/i.test(d)||(/\d/.test(d)&&!/instant/i.test(d));}).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
-  const tabList={conditions:condNames,masteries:masteryNames,spells:spellNames};
-  let tab="conditions";
-  const curList=()=>tabList[tab]();
-  attachCombo(inp,curList,{});
-  // Show the active tab's list (filtered by any typed text), like a combo box.
-  const showTab=()=>{const q=inp.value.trim().toLowerCase(),items=curList().filter(v=>{const l=v.toLowerCase();return l!==q&&(!q||l.includes(q));}).slice(0,60);showComboSuggest(inp,items,v=>{inp.value=v;inp.focus();});inp.focus();};
-  p.querySelectorAll(".cond-tab").forEach(b=>b.addEventListener("mousedown",ev=>{ev.preventDefault();tab=b.dataset.tab;p.querySelectorAll(".cond-tab").forEach(x=>x.classList.toggle("on",x===b));showTab();}));
-  {const chev=p.querySelector(".cond-combo-chev");if(chev)chev.addEventListener("mousedown",ev=>{ev.preventDefault();showTab();});}
+  const GROUPS=[["Conditions",condNames],["Masteries",masteryNames],["Spells",spellNames]];
+  const renderList=()=>{const q=inp.value.trim().toLowerCase();
+    const html=GROUPS.map(([label,fn])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));
+      return items.length?`<div class="cl-grp">${label}</div>`+items.map(v=>`<button type="button" class="cl-item" data-v="${esc(v)}">${esc(v)}</button>`).join(""):"";}).join("");
+    clist.innerHTML=html||`<div class="cl-empty">No match — press Add to use this name.</div>`;};
+  renderList();
+  inp.addEventListener("input",renderList);
+  clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;commitName(b.dataset.v);});
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
   who.addEventListener("click",e=>{e.stopPropagation();const open=list.hasAttribute("hidden");list.toggleAttribute("hidden",!open);who.classList.toggle("open",open);});
   list.querySelectorAll("[data-whoid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();who.dataset.whoid=b.dataset.whoid;who.querySelector(".cw-who-t").textContent=b.textContent;who.classList.toggle("is-self",b.dataset.whoid===itId);list.setAttribute("hidden","");who.classList.remove("open");}));
-  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
+  const commitName=name=>{name=(name||"").trim();const timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
     (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null));};
+  const commit=()=>commitName(inp.value);
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
   rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
@@ -1395,8 +1392,9 @@ function animateInitRoll(byGroup,done){
     const r=inp.getBoundingClientRect();
     const ov=document.createElement("div");ov.className="nf-roll";
     // Positioned inside the scrollable pane (in scroll coords) so the reel scrolls WITH the rows and the
-    // pane's own overflow clips any cell that's half-hidden under the statblock panel.
-    ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px`;
+    // pane's own overflow clips any cell that's half-hidden under the statblock panel. The reel inherits the
+    // cell's own font-size so it matches whether the init is full-size (wide) or the small narrow-card number.
+    ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px;font-size:${getComputedStyle(inp).fontSize}`;
     ov.innerHTML=nfReelHTML(target);pane.appendChild(ov);overlays.push(ov);
     inp.classList.add("nf-hide"); // hide the old number behind the (transparent) reel while it scrolls (B128)
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
@@ -1610,7 +1608,7 @@ function combatHeaderHTML(a,e,sc,cb){
   const drop=(sc&&sibs.length>1)?`<button class="ct-encdrop" id="combatEncDrop" title="Switch encounter in this scene" aria-label="Switch encounter">${FS_CHEVRON}</button>`:"";
   const title=`<div class="ct-titleblock">
       ${sc?`<div class="ct-scene-sm">${esc(sceneDName(sc))}</div>`:""}
-      <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ${cls}">${label}</span>${drop}</div>
+      <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ct-diff ${cls}" title="Difficulty — ${esc(label)}">${label}</span>${drop}</div>
     </div>`;
   const notes=(e.notesOn&&e.notes)?`<div class="ct-notes-wrap"><div class="ct-notes clamped">${esc(e.notes)}</div><button class="ct-notes-more" hidden>more</button></div>`:"";
   return `<div class="ct-bar" style="--ct-accent:${advc}">

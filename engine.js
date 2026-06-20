@@ -563,8 +563,11 @@ function doRoll(formula,opts,meta){
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
+  const newId=rollLog[0].id;
   rollLogOpen=true;renderRollLog(true);
-  if(!meta.silent)toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true);
+  // Spin the new total like the initiative reel, then fire the notification as the digits land (B129).
+  animateRollTotal(document.querySelector(`#rollLog [data-rollid="${newId}"] .rl-total`),r.total);
+  if(!meta.silent)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);
   return r;
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
@@ -579,7 +582,7 @@ function rollAttackSequence(nameEl){
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
     msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
   if(atk.nat20)msg+=" — crit!";
-  toast(msg,3600,true);
+  setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
 }
 // Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals
 // damage, its damage too — as one group in the log + one combined notification (B77).
@@ -591,7 +594,7 @@ function rollRechargeSequence(nameEl){
   let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" — ready":" — not yet"):""}`;
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{},{label,type:"damage",dmgType,silent:true});
     msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
-  toast(msg,3600,true);
+  setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>Alt/Option-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
@@ -599,6 +602,17 @@ function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div 
 let rollMode=null; // null | "adv" | "dis"
 function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
 function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
+// The roll-log total spins through a vertical digit reel to its value — the same number-flow effect the
+// initiative roll uses (nfReelHTML lives in adventures.js, shared scope). Notifications are delayed by
+// ROLL_REEL_MS so the alert appears exactly as the reel settles (B129).
+const ROLL_REEL_MS=1000;
+function animateRollTotal(el,value){
+  if(!el||typeof nfReelHTML!=="function")return;
+  const reel=document.createElement("span");reel.className="rl-reel";reel.innerHTML=nfReelHTML(value);
+  el.textContent="";el.appendChild(reel);
+  requestAnimationFrame(()=>reel.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
+  setTimeout(()=>{if(reel.isConnected)el.textContent=value;},ROLL_REEL_MS);
+}
 function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");
   // With dice rolling disabled, suppress the roll log entirely (B127).

@@ -568,6 +568,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .roll-log .rl-group-abil[data-abil="wis"]::after{background:#5fa873}
 .roll-log .rl-group-abil[data-abil="cha"]::after{background:#e878b4}
 .roll-log .rl-total{flex:none;min-width:30px;text-align:center;font-weight:700;font-size:16px;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1.3}
+/* Number-flow reel for a freshly recorded total (B129) — reuses the init-roll .nf-* parts at a 1s scroll. */
+.roll-log .rl-reel{display:inline-flex;height:1em;overflow:hidden;vertical-align:-.12em;line-height:1}
+.roll-log .rl-reel .nf-col{transition:transform 1s cubic-bezier(.16,.84,.3,1)}
+@media (prefers-reduced-motion:reduce){.roll-log .rl-reel .nf-col{transition:none}}
 /* Crit (B64): no background gradient — just a yellow number with a few white twinkling stars. */
 .roll-log .rl-row.crit .rl-total{color:var(--amber);position:relative}
 .roll-log .rl-row.crit .rl-total::before,
@@ -858,13 +862,18 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-meta .ci-ac-chip{order:1}
 .ci-meta .ci-react-chip{order:2}
 .ci-meta .ci-conc-chip{order:3}
-/* Narrow pane (resized small): two-row card — initiative becomes a vertically-centred rail on the left,
-   the name/HP/kebab sit on the first line, and the chip cluster drops to a second line left-aligned to the
-   name (not under the init). Tighter title→chips gap. (B125) */
+/* Narrow pane (resized small): two-row card. Line 1 = name (grows) · HP · kebab. Line 2 = a small
+   initiative number leading the chip cluster, in line with AC and the effects (B129). A zero-height
+   full-width pseudo forces the clean break between the two lines; the name grows to fill line 1. The
+   tighter row-gap pulls the chips up under the title for a more compact card. */
 @container (max-width:470px){
-  .cbt-row{row-gap:5px;padding-left:46px}
-  .cbt-row>.ci-init,.cbt-row>.ci-init-in{position:absolute;left:8px;top:50%;transform:translateY(-50%)}
-  .cbt-row>.ci-meta{order:6;flex-basis:100%}
+  .cbt-row{row-gap:2px;padding-top:6px;padding-bottom:6px}
+  .cbt-row::after{content:"";flex-basis:100%;height:0;order:4}
+  .cbt-row>.ci-id{order:1}
+  .cbt-row>.ci-hp{order:2}
+  .cbt-row>.ci-menu{order:3}
+  .cbt-row>.ci-init,.cbt-row>.ci-init-in{order:5;position:static;transform:none}
+  .cbt-row>.ci-meta{order:6}
   .ci-meta .ci-addcond,.ci-meta .cc-chip,.ci-meta .ci-ac-chip,.ci-meta .ci-react-chip,.ci-meta .ci-conc-chip{order:0}
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
@@ -896,8 +905,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hpm-ds-grp{display:inline-flex;gap:4px}
 .hpm-ds-grp.succ{justify-self:end}
 .hpm-ds-grp.fail{justify-self:start}
-.hpm-ds-pip{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--in);cursor:pointer;padding:0;display:grid;place-items:center;color:var(--faint)}
-.hpm-ds-pip svg{width:18px;height:18px}
+.hpm-ds-pip{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--in);cursor:pointer;padding:0;display:grid;place-items:center;color:var(--faint);line-height:0}
+.hpm-ds-pip svg{display:block;width:12px;height:12px}
 .hpm-ds-pip.ds-success{border-color:var(--ok)}
 .hpm-ds-pip.ds-fail{border-color:var(--bad)}
 .hpm-ds-pip.ds-success.on{color:var(--ok)}
@@ -936,6 +945,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row .ci-init-in.nf-hide{color:transparent} /* hidden behind the roll reel while it scrolls (B128) */
 .cbt-row .ci-init-in.manual{color:var(--faint)} /* party-roll off: blank, awaiting the DM's roll — neutral dimmed (B126) */
 .cbt-row .ci-init-in.manual::placeholder{color:var(--faint);opacity:1}
+/* Narrow card: a small init that leads the chip line (placed after the full-size rules above so it wins the
+   specificity tie). The roll reel reads the cell's font-size, so the animation scales down to match (B129). */
+@container (max-width:470px){
+  .cbt-row .ci-init,.cbt-row .ci-init-in{flex:none;width:30px;min-width:30px;height:24px;font-size:13px;padding:0}
+}
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
 .nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--txt);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
@@ -1035,18 +1049,20 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .note-edit .btn{width:100%}
 .round-edit{display:flex;align-items:center;gap:8px;padding:4px;font-size:12px;color:var(--dim)}
 .round-edit .round-in{width:60px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
-.cond-add{padding:4px;min-width:300px}
+.cond-add{padding:4px;min-width:320px}
 .cond-add-row{display:flex;align-items:center;gap:8px}
+/* Inline grouped effect list inside the popover (B129): headed Conditions / Masteries / Spells sections,
+   filtered by the search field. Lives in the popover so the cursor can travel onto it without it closing. */
+.cond-list{margin-top:8px;max-height:230px;overflow-y:auto;border-top:1px solid var(--line);padding-top:5px;display:flex;flex-direction:column}
+.cl-grp{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:7px 7px 3px}
+.cl-grp:first-child{padding-top:2px}
+.cl-item{text-align:left;background:none;border:none;color:var(--txt);padding:5px 9px;border-radius:5px;font-size:12.5px;cursor:pointer}
+.cl-item:hover{background:var(--panel3)}
+.cl-empty{font-size:11.5px;color:var(--faint);padding:8px 9px}
 /* Effect field combo: chevron affordance for the suggestion list, like the forge name fields (B122). */
 .cond-combo{flex:1;min-width:0;position:relative;display:flex;align-items:center}
-.cond-combo .cond-input{flex:1;padding-right:26px}
-.cond-combo-chev{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:18px;height:18px;border:none;background:none;color:var(--faint);cursor:pointer;border-radius:4px}
-.cond-combo-chev:hover{color:var(--dim)}
+.cond-combo .cond-input{flex:1}
 /* Effect-dropdown category tabs (B127): Conditions · Masteries · Spells. */
-.cond-tabs{display:flex;gap:4px;margin-bottom:8px}
-.cond-tab{flex:1;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:11.5px;padding:5px 0;cursor:pointer}
-.cond-tab:hover{border-color:var(--accent);color:var(--txt)}
-.cond-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .cond-input{min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .cond-input:focus{outline:none;border-color:var(--accent)}
 .cond-add .cond-rounds{width:40px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 3px;color:var(--txt);color-scheme:dark}
@@ -1134,7 +1150,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget-top .bartrack{flex:1}
 /* CT9 — minimal context header (Direction C): one slim line, click the title to load another. */
 /* CT9-fix — header: scene (small) over encounter (large) + a scene-encounter dropdown; Load button right. */
-.ct-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:0 20px 0 17px;border-left:3px solid var(--ct-accent,var(--accent))}
+.ct-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:0 20px 0 17px;border-left:3px solid var(--ct-accent,var(--accent));container-type:inline-size}
+/* Narrow combat header (B129): the Load button collapses to an icon, the difficulty pill to a colour dot
+   (its full label moves to the hover title). */
+@container (max-width:500px){
+  .ct-loadbtn{width:34px;padding:0;justify-content:center}
+  .ct-loadbtn span{display:none}
+  .pill.ct-diff{display:inline-block;width:13px;height:13px;min-width:13px;padding:0;border-radius:50%;font-size:0;line-height:0;overflow:hidden;box-sizing:border-box}
+}
 .ct-titleblock{flex:1;min-width:0}
 .ct-scene-sm{font-size:12px;font-weight:600;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ct-encrow{display:flex;align-items:center;gap:9px;min-width:0}
@@ -1155,17 +1178,18 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-notes-more:hover{text-decoration:underline}
 .pop-val{margin-left:auto;color:var(--faint);font-size:11px}
 /* Full-width round bar above the grid; its bottom border is the header divider. */
-.ct-roundbar{display:flex;align-items:center;gap:10px;padding:2px 20px 9px;border-bottom:1px solid var(--line)}
+.ct-roundbar{display:flex;align-items:center;gap:3px;padding:2px 20px 9px;border-bottom:1px solid var(--line)}
+.ct-roundbar .ct-turnline{margin:0 7px}
 .ct-roundbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;border:none;background:none;cursor:pointer;padding:3px 7px;border-radius:6px}
 .ct-roundbar .ct-round:hover{background:var(--panel2)}
 .ct-turnline{flex:1;height:1px;background:var(--line)}
-.ct-turnbtn{width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
+.ct-turnbtn{width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
 .ct-turnbtn:hover{color:var(--txt);background:var(--panel2)}
-.ct-toolsbtn{position:relative;flex:none;width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0;margin-left:2px}
+.ct-toolsbtn{position:relative;flex:none;width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
 .ct-toolsbtn:hover{color:var(--txt);background:var(--panel2)}
 .ct-toolsbtn.on{color:var(--txt)}
 .ct-toolsbtn.on::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(11px,-10px)}
-.ct-d20{flex:none;width:30px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0;margin-left:2px}
+.ct-d20{flex:none;width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
 .ct-d20:hover{background:var(--panel2);color:var(--accent)}
 .ct-d20 svg{width:17px;height:17px}
 .ct-d20.rolling svg{animation:croSpin .55s linear infinite}

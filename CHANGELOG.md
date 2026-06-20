@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 129 — Combat tracker polish: effect list, roll reel, narrow card, responsive header
+- **Add-effect popover reverted to one grouped list.** The Conditions / Masteries / Spells **tabs are gone**;
+  the popover now shows a single scrollable list with those three as headed sections, filtered by the search
+  field. The list lives **inside** the popover (not a detached floating dropdown), so the cursor can travel
+  onto it without it closing — fixes the "closes too soon / can't reach the menu" interaction. Clicking an
+  item adds it immediately; typing a custom name + Add still works.
+- **Roll log gets the initiative roll reel.** A freshly recorded total spins through the same number-flow
+  digit reel the initiative roll uses, and the **notification is timed to land as the reel settles**
+  (`ROLL_REEL_MS`) rather than firing instantly — for single rolls and the combined attack/recharge toasts.
+- **Death-save circles centred.** The FA circle-check / circle-xmark glyphs were sized to the full pip and
+  overlapped its border; shrunk to sit cleanly centred inside the ring.
+- **Round bar icons tightened.** The turn arrows · d20 · tools cluster spacing dropped from 10px to a uniform
+  3px (the "Round N" label keeps its breathing room via the divider's own margin).
+- **Narrow initiative card.** When the pane is narrow the initiative number is now **small and leads the chip
+  line** (in line with AC and the effects) instead of a tall left rail; the roll reel reads the cell's
+  font-size so the animation scales down to match. Tighter title→chips gap + trimmed padding = a more compact
+  card.
+- **Responsive combat header.** At small widths the **Load encounter** button collapses to an icon and the
+  **difficulty pill collapses to a colour dot** (full label moves to its hover title).
+
 ## Batch 128b — Within-group reorder + back-to-active
 - **Reorder within a group breaks initiative.** Dropping a card on another row (even in a grouped view) now
   reorders the turn order → `manual` sort, flagging the "out of order" restore chip; dropping on a group's open
