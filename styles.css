@@ -844,12 +844,17 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    unmistakable on top of the faction tint. --sel-accent is the row's faction colour. */
 .cbt-row.active::before{content:"";position:absolute;left:-18px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--sel-accent)}
 .ci-name{min-width:0}
-/* Narrow card (the list pane can be resized small): drop the HP tracker to its own second row so the
-   name + AC keep a full row instead of squeezing the name into a wrap. */
-@container (max-width:440px){
-  .cbt-row{row-gap:7px}
-  .cbt-row .ci-menu{order:8}
-  .cbt-row .ci-hp{order:9;flex-basis:100%;width:auto}
+/* Row element order (B124): init · identity(grow) · chip cluster · HP · kebab — single line when wide. */
+.cbt-row>.ci-init,.cbt-row>.ci-init-in{order:1}
+.cbt-row>.ci-id{order:2;flex:1 1 120px;min-width:90px}
+.cbt-row>.ci-meta{order:3}
+.cbt-row>.ci-hp{order:4}
+.cbt-row>.ci-menu{order:5}
+/* Narrow pane (resized small): the fixed-chip cluster drops to its own line below; init · name · HP ·
+   kebab stay on the first line, with HP pinned to the right end. */
+@container (max-width:470px){
+  .cbt-row{row-gap:8px}
+  .cbt-row>.ci-meta{order:6;flex-basis:100%}
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
 .cbt-row.active{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent)}
@@ -862,6 +867,22 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .seldmg{display:flex;gap:6px;align-items:center;padding:4px}
 .seldmg-in{width:72px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;text-align:center}
 .seldmg-in:focus{outline:none;border-color:var(--accent)}
+/* HP-manage popover (B124): damage/heal + quick ± + current/temp. */
+.hp-manage{padding:5px;min-width:220px}
+.hpm-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--dim);margin-bottom:8px}
+.hpm-head .hpm-nm{font-weight:600;color:var(--txt);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpm-head .hpm-cur-disp{font-size:13px;color:var(--txt);white-space:nowrap}
+.hpm-tmp{color:#7fa8d4}
+.hpm-row{display:flex;gap:6px;align-items:center}
+.hpm-row .hpm-dmg{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
+.hpm-row .hpm-dmg:focus{outline:none;border-color:var(--accent)}
+.hpm-quick{display:flex;gap:6px;margin-top:8px}
+.hpm-quick button{flex:1;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:12px;padding:6px 0;cursor:pointer;font-variant-numeric:tabular-nums}
+.hpm-quick button:hover{border-color:var(--accent);color:var(--txt)}
+.hpm-fields{display:flex;gap:8px;margin-top:10px}
+.hpm-fields label{flex:1;font-size:10px;color:var(--faint);display:flex;flex-direction:column;gap:3px;text-transform:uppercase;letter-spacing:.04em}
+.hpm-fields input{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;font-size:13px;font-variant-numeric:tabular-nums}
+.hpm-fields input:focus{outline:none;border-color:var(--accent)}
 /* Selection "peek" (B122): the active combatant's identity stays up top with an "Active turn" flag pushed
    right, a full-width divider, then the selected card's header + statblock animate in below. */
 .ca-peekhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -875,13 +896,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Waiting (delaying/holding) reads from the row variant — no icon/chip — reinforced by the grouped header. */
 .cbt-row.waiting{opacity:.72}
 .cbt-row.waiting .ci-name{font-style:italic;color:var(--dim)}
-.ci-init{flex:none;width:32px;height:30px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums}
-.cbt-row .ci-init-in{flex:none;width:38px;height:30px;text-align:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
-.cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
-.cbt-row .ci-init-in.unrolled{border-style:dashed} /* auto-roll off: shows the dimmed average as a placeholder */
+/* Initiative as a plain faction-coloured number (no field box) — a box only appears on hover/focus to edit (B124). */
+.ci-init{flex:none;width:30px;text-align:center;font-size:17px;font-weight:700;color:var(--sel-accent,var(--txt));font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in{flex:none;width:32px;height:30px;text-align:center;font-size:17px;font-weight:700;background:none;border:1px solid transparent;border-radius:6px;color:var(--sel-accent,var(--txt));color-scheme:dark;font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in:hover{background:var(--in);border-color:var(--line)}
+.cbt-row .ci-init-in:focus{background:var(--in);border-color:var(--accent);outline:none}
+.cbt-row .ci-init-in.unrolled{color:var(--faint)} /* auto-roll off: dimmed average placeholder */
 .cbt-row .ci-init-in.unrolled::placeholder{color:var(--faint);opacity:1}
-.cbt-row .ci-init-in.manual{border-color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll (solid yellow border) */
-.cbt-row .ci-init-in.manual::placeholder{color:var(--faint);opacity:1} /* dimmed grey em-dash */
+.cbt-row .ci-init-in.manual{color:var(--amber)} /* party-roll off: blank, awaiting the DM's roll */
+.cbt-row .ci-init-in.manual::placeholder{color:var(--amber);opacity:.8}
 /* Number-flow init roll: a transient reel overlaid on each cell, scrolling vertically to the rolled value. */
 .nf-roll{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden;pointer-events:none}
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
@@ -891,26 +914,29 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-status svg{width:13px;height:13px}
 .ci-status.st-dead{color:var(--faint)} /* status reads from the icon shape, not colour (was clashing with faction colours) */
 .ci-status-sp{flex:none;width:20px}
-.ci-body{flex:1;min-width:0}
+.ci-id{min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
 .ci-wait{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid #5c4d24;border-radius:4px;padding:1px 5px}
 .ci-note{font-size:11px;color:var(--faint);margin-top:2px}
-.ci-ac{flex:none;width:44px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
-.ci-hp{flex:none;width:150px;display:flex;flex-direction:column;gap:4px}
+/* Fixed-chip cluster — AC · reaction toggle · effect chips · add-effect (B124). */
+.ci-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
+.ci-ac-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ci-ac-chip svg{width:11px;height:11px;color:var(--faint)}
+.ci-react-chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:22px;border:1px solid var(--line);background:var(--in);border-radius:6px;color:var(--dim);cursor:pointer;padding:0;flex:none}
+.ci-react-chip svg{width:12px;height:12px}
+.ci-react-chip:hover{border-color:var(--accent);color:var(--txt)}
+.ci-react-chip.used{color:var(--faint);opacity:.5;border-style:dashed}
+/* Compact HP control (H6): bold current/max number + thin health underbar; opens the manage popover. */
+.ci-hp{flex:none}
+.ci-hpbtn{display:flex;flex-direction:column;align-items:flex-end;gap:3px;background:none;border:none;cursor:pointer;padding:2px}
+.ci-hpbtn:hover .ci-hpnum{color:var(--accent-soft)}
+.ci-hpnum{font-size:14px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
+.ci-hpmax{font-size:11px;font-weight:500;color:var(--faint)}
+.ci-hptmp{font-size:10px;font-weight:700;color:#7fa8d4;margin-left:4px}
+.ci-hpbar{display:block;width:54px;height:3px;background:var(--in);border-radius:2px;overflow:hidden}
+.ci-hpbar i{display:block;height:100%;transition:width .15s}
 .ci-noh{color:var(--faint);align-self:center}
-.hpbar{position:relative;height:6px;background:var(--in);border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.hpbar-cur{position:absolute;left:0;top:0;height:100%;transition:width .15s}
-.hpbar-tmp{position:absolute;top:0;height:100%;background:#5a8bc0}
-.hpline{display:flex;align-items:center;gap:5px}
-.ci-hp .hp-dmg{width:48px;text-align:center;font-size:12px;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark}
-.ci-hp .hp-dmg:focus{border-color:var(--accent);outline:none}
-.hp-nums{display:inline-flex;align-items:center;gap:2px}
-.ci-hp .hp-cur{width:42px;text-align:center;font-size:13px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:3px 2px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
-.ci-hp .hp-cur:focus{border-color:var(--accent);outline:none}
-.hp-sl{color:var(--faint);font-size:12px}
-.hp-max{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
-.hp-tmp{font-size:10px;font-weight:700;color:#7fa8d4;background:rgba(90,139,192,.15);border-radius:4px;padding:1px 4px}
 .ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
 .cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
 .cbt-add:hover{border-color:var(--accent);color:var(--txt)}
@@ -942,11 +968,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT3 — condition chips, per-combatant menu, inline note edit */
 .cbt-row .ci-menu{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .cbt-row .ci-menu:hover{border-color:var(--line);color:var(--txt);background:var(--panel2)}
-/* Reaction toggle (B120): available = visible, used = dimmed. Resets at the start of each combatant's turn. */
-.cbt-row .ci-react{flex:none;width:24px;height:24px;display:grid;place-items:center;border:none;background:none;cursor:pointer;color:var(--dim);border-radius:6px}
-.cbt-row .ci-react svg{width:13px;height:13px}
-.cbt-row .ci-react.used{color:var(--faint);opacity:.5}
-.cbt-row .ci-react:hover{background:var(--panel2)}
 .ci-conds,.ca-conds{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
 .ca-conds{margin-top:12px}
 .cc-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(180,140,230,.1);border:1px solid rgba(180,140,230,.32);border-radius:13px;padding:2px 5px 2px 9px;font-size:11px;line-height:1.4;white-space:nowrap}

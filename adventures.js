@@ -983,6 +983,8 @@ const CI_STATUS_ICON={active:SHIELD_HEART_ICON,waiting:CIRCLE_PAUSE_ICON,dead:SK
 // Reaction tracker (B120): a per-combatant toggle (FA Free arrow-turn-up) that resets at the start of each
 // of its turns. Reaction is "available" unless explicitly set false (so existing combats default to available).
 const REACT_ICON='<svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c53 0 96-43 96-96l0-306.7 73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 109.3 160 416c0 17.7-14.3 32-32 32l-96 0z"/></svg>';
+// FA-free "shield-blank" — the AC chip glyph on combat rows (B124).
+const SHIELD_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
 function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 function runCombat(a,e){
@@ -1139,6 +1141,31 @@ function openHPNumEdit(itId,anchor,kind){
   p.querySelector(".hpnum-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
 }
+// HP management popover (B124): opened from the row's compact HP control. Primary field is damage/heal
+// (positive damages — temp absorbs first; negative heals), with quick ±1/±5 chips and editable current/temp.
+function openHPManage(itId,anchor){
+  const it=combatItem(itId);if(!it||it.hpMax==null)return;
+  const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
+  const p=showPopover(anchor,`<div class="hp-manage">
+    <div class="hpm-head"><span class="hpm-nm">${esc(it.name)}</span><span class="ini hpm-cur-disp">${headHP(it)}</span></div>
+    <div class="hpm-row"><input type="number" class="hpm-dmg" placeholder="damage / heal" autocomplete="off"><button class="btn primary sm hpm-apply" style="width:auto">Apply</button></div>
+    <div class="hpm-quick"><button data-hpd="-5">−5</button><button data-hpd="-1">−1</button><button data-hpd="1">+1</button><button data-hpd="5">+5</button></div>
+    <div class="hpm-fields"><label>Current<input type="number" class="hpm-cur" value="${it.hpCur}" min="0" max="${it.hpMax}"></label><label>Temp<input type="number" class="hpm-temp" value="${it.hpTemp||0}" min="0"></label></div>
+  </div>`);
+  const dmg=p.querySelector(".hpm-dmg");dmg.focus();
+  const refresh=()=>{const t=combatItem(itId);if(!t)return;p.querySelector(".hpm-cur-disp").innerHTML=headHP(t);p.querySelector(".hpm-cur").value=t.hpCur;p.querySelector(".hpm-temp").value=t.hpTemp||0;
+    // Keep the row's compact HP control in sync without a disruptive full re-render (which would detach this
+    // popover); rebind the swapped node so it can reopen the popover afterwards.
+    const host=document.querySelector(`[data-hpmanage="${itId}"]`);
+    if(host){host.outerHTML=hpCellHTML(t);const nh=document.querySelector(`[data-hpmanage="${itId}"]`);if(nh)nh.addEventListener("click",ev=>{ev.stopPropagation();openHPManage(itId,nh);});}
+    saveAdv();};
+  const applyDmg=()=>{const v=Number(dmg.value||0);if(v){changeHP(it,v);dmg.value="";refresh();}};
+  p.querySelector(".hpm-apply").addEventListener("click",applyDmg);
+  dmg.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}else if(e.key==="Escape")closePopover();});
+  p.querySelectorAll("[data-hpd]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();changeHP(it,-Number(b.dataset.hpd));refresh();})); // button shows the HP delta; changeHP takes damage-positive
+  p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);refresh();});
+  p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));refresh();});
+}
 // Cycle the combatant status active → waiting → dead → active (CT7b).
 function cycleCombatStatus(itId){const it=combatItem(itId);if(!it)return;const i=CI_STATUSES.indexOf(it.status||"active");it.status=CI_STATUSES[(i+1)%CI_STATUSES.length];saveAdv();renderCombat();}
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
@@ -1152,13 +1179,17 @@ function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.
 function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;clearCombatSel();saveAdv();renderCombat();});}
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
+// Compact HP control (B124): a bold current/max number with a thin health-coloured underbar (the "H6"
+// design). The whole thing is a button that opens the HP-management popover (damage/heal, temp, current).
 function hpCellHTML(it){
   if(!hpTracked(it))return `<span class="ci-noh"></span>`;
   const max=it.hpMax,cur=it.hpCur,tmp=it.hpTemp||0,ratio=max?cur/max:0;
-  const col=ratio>.5?"#5fa873":ratio>.25?"var(--warn)":"var(--bad)";
-  const curPct=clamp(max?cur/max*100:0,0,100),tmpPct=clamp(max?tmp/max*100:0,0,100-curPct);
-  return `<div class="hpbar" title="${cur} / ${max} HP${tmp?` (+${tmp} temp)`:""}"><i class="hpbar-cur" style="width:${curPct}%;background:${col}"></i>${tmp?`<i class="hpbar-tmp" style="left:${curPct}%;width:${tmpPct}%"></i>`:""}</div>
-    <div class="hpline"><input class="hp-dmg" type="number" data-hpdmg="${it.id}" placeholder="dmg" title="Apply damage (negative = heal); temp HP absorbs first"><span class="hp-nums"><input class="hp-cur" type="number" data-hpcur="${it.id}" value="${cur}" title="Current HP"><span class="hp-sl">/</span><span class="hp-max">${max}</span></span>${tmp?`<span class="hp-tmp" title="Temporary HP">+${tmp}</span>`:""}</div>`;
+  const col=ratio>.5?"var(--ok)":ratio>.25?"var(--warn)":"var(--bad)";
+  const pct=clamp(max?cur/max*100:0,0,100);
+  return `<button class="ci-hpbtn" data-hpmanage="${it.id}" title="${cur} / ${max} HP${tmp?` (+${tmp} temp)`:""} — manage">
+    <span class="ci-hpnum">${cur}<span class="ci-hpmax">/${max}</span>${tmp?`<span class="ci-hptmp">+${tmp}</span>`:""}</span>
+    <span class="ci-hpbar"><i style="width:${pct}%;background:${col}"></i></span>
+  </button>`;
 }
 // ── CT8: combat view (group / sort / filter) + manual drag-sort ──────────────────────────────────
 // cb.order stays the canonical TURN order (advance/turnIndex always follow it). The toolbar's group/
@@ -1356,14 +1387,17 @@ function combatRowHTML(it,active,drag){
   // strikethrough/dim, .waiting = muted + italic, reinforced by the grouped "Waiting"/"Dead" headers.
   // Down (0 HP, not yet marked dead) keeps its own chip.
   const badge=dead?'<span class="ci-down">down</span>':"";
+  // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
+  // pane is wide and wraps to its own line below the name when narrow (container query). Events have none.
+  const acChip=it.ac!=null?`<span class="ci-ac-chip" title="Armor Class">${SHIELD_ICON}${it.ac}</span>`:"";
+  const reactChip=it.kind!=="event"?`<button class="ci-react-chip${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:"";
+  const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
+  const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
-    <div class="ci-body"><div class="ci-name">${esc(it.name)}${badge}</div>
-      ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
-      ${condsHTML(it)}</div>
-    ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
+    <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
+    ${meta}
     <div class="ci-hp">${hpCellHTML(it)}</div>
-    ${it.kind!=="event"?`<button class="ci-react${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:""}
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
@@ -1605,10 +1639,8 @@ function renderCombat(){
   }}
   // Click the empty order background to clear the selection.
   {const co=document.querySelector(".combat-order");if(co)co.addEventListener("click",e=>{if(!e.target.closest(".cbt-row,.combat-selbar,.cbt-add")&&clearCombatSel())renderCombat();});}
-  // Current HP edited directly.
-  body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpcur);if(!it||it.hpMax==null)return;it.hpCur=clamp(Number(el.value||0),0,it.hpMax);saveAdv();renderCombat();}));
-  // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
-  body.querySelectorAll("[data-hpdmg]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpdmg),amt=Number(el.value||0);if(!it||!amt){el.value="";return;}changeHP(it,amt);saveAdv();renderCombat();}));
+  // Compact HP control → manage popover (damage/heal, temp, current) (B124).
+  body.querySelectorAll("[data-hpmanage]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openHPManage(el.dataset.hpmanage,el);}));
   body.querySelectorAll("[data-initset]").forEach(el=>el.addEventListener("change",()=>setCombatInit(el.dataset.initset,el.value)));
   body.querySelectorAll("[data-cireact]").forEach(el=>{
     el.addEventListener("click",e=>{e.stopPropagation();toggleReaction(el.dataset.cireact);});

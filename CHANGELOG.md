@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 124 — Initiative row redesign (plain init, radial-less H6 HP, responsive chips)
+- **Initiative is a plain faction-coloured number** — no field box; a box only appears on hover/focus to edit
+  (`.ci-init` / `.ci-init-in`).
+- **HP control reworked (the "H6" design):** a bold `current/max` with a thin health-coloured underbar
+  (`hpCellHTML` → `.ci-hpbtn`). The whole thing is a button that opens a **HP-manage popover** (`openHPManage`):
+  damage/heal field (positive damages, negative heals), quick −5/−1/+1/+5, and editable current/temp. The old
+  inline dmg + current/max fields are gone from the row.
+- **Fixed-chip cluster** (`.ci-meta`): AC chip, **reaction as a toggle chip**, effect chips, and the +add-effect
+  button, grouped together. Reaction colour is neutral.
+- **Responsive row:** single line when the pane is wide; when narrow (container query ≤470px) the chip cluster
+  drops to its own line below, while init · name · HP · kebab stay on the first line with **HP pinned to the
+  right end**. Row markup `.ci-body`→`.ci-id`; `combatRowHTML`/CSS order rebuilt.
+
 ## Batch 123 — Combat tracker follow-ups (selection scroll, kebab, reaction colour)
 - **Selecting a row keeps the scroll position.** `renderCombat` now preserves the `.combat-order` (and
   `.ca-scroll`) scroll offsets across the full re-render, so selecting/editing a row no longer jumps to top.
