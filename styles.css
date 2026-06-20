@@ -830,6 +830,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-group:not(:first-child){margin-top:8px}
 .cbt-group-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;display:flex;align-items:center;gap:6px;padding:0 2px}
 .cbt-group-n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
+.cbt-grp-ico{display:inline-flex;width:13px;height:13px;color:var(--dim)}.cbt-grp-ico svg{width:13px;height:13px}
+.cbt-grp-ico.st-dead{color:var(--faint)}
 .cbt-grip{flex:none;align-self:stretch;display:grid;place-items:center;width:15px;color:var(--faint);cursor:grab;border-radius:4px;margin:-8px 0 -8px -2px}
 .cbt-grip:hover{color:var(--dim)}
 .cbt-grip:active{cursor:grabbing}
@@ -851,26 +853,27 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
 .cbt-row.active{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent)}
-/* Multi-select (B120): accent ring + lift — distinct from the faction-tinted "active" (current turn). */
-.cbt-row.selected{background:var(--panel2);box-shadow:0 0 0 1.5px var(--accent)}
-.cbt-row.active.selected{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent),0 0 0 1.5px var(--accent)}
-/* Selection action bar — pinned above the order. */
-.combat-selbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;padding:6px 8px;margin-bottom:9px;box-shadow:var(--shadow-pop)}
-.csb-n{font-size:12px;font-weight:600;color:var(--accent-soft);padding-left:4px;margin-right:4px}
-.csb-btn{display:inline-flex;align-items:center;gap:5px;background:var(--panel3);border:1px solid var(--line);border-radius:6px;padding:4px 9px;color:var(--txt);font-size:12px;cursor:pointer}
-.csb-btn:hover{border-color:var(--accent)}
+/* Multi-select (B120): selection ring + lift in the row's faction colour (--sel-accent), distinct from
+   the faction-tinted "active" current turn (B122). */
+.cbt-row.selected{background:var(--panel2);box-shadow:0 0 0 1.5px var(--sel-accent,var(--accent))}
+.cbt-row.active.selected{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent),0 0 0 1.5px var(--sel-accent,var(--accent))}
+/* Selection action bar reuses the .batch-bar floating style (centre-bottom of the page) (B122). */
 .csb-ico{display:inline-flex;width:13px;height:13px;color:var(--dim)}.csb-ico svg{width:13px;height:13px}
-.csb-x{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 7px;border-radius:5px}
-.csb-x:hover{color:var(--txt);background:var(--panel3)}
 .seldmg{display:flex;gap:6px;align-items:center;padding:4px}
 .seldmg-in{width:72px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;text-align:center}
 .seldmg-in:focus{outline:none;border-color:var(--accent)}
-.ca-collapsed{display:flex;align-items:center;gap:10px;padding:16px 20px}
-.ca-collapsed .cac-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);flex:none}
-.ca-collapsed .cac-name{font-size:15px;font-weight:700}
+/* Selection "peek" (B122): the active combatant's identity stays up top with an "Active turn" flag pushed
+   right, a full-width divider, then the selected card's header + statblock animate in below. */
+.ca-peekhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ca-activeflag{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.ca-divider{height:1px;background:var(--line)}
+.ca-peek{display:flex;flex-direction:column;gap:12px;animation:caPeekIn .18s ease}
+@keyframes caPeekIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
-.cbt-row.waiting{opacity:.82}
+/* Waiting (delaying/holding) reads from the row variant — no icon/chip — reinforced by the grouped header. */
+.cbt-row.waiting{opacity:.72}
+.cbt-row.waiting .ci-name{font-style:italic;color:var(--dim)}
 .ci-init{flex:none;width:32px;height:30px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums}
 .cbt-row .ci-init-in{flex:none;width:38px;height:30px;text-align:center;font-size:15px;font-weight:700;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
 .cbt-row .ci-init-in:focus{border-color:var(--accent);outline:none}
@@ -961,7 +964,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .round-edit .round-in{width:60px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
 .cond-add{padding:4px;min-width:300px}
 .cond-add-row{display:flex;align-items:center;gap:8px}
-.cond-input{flex:1;min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
+/* Effect field combo: chevron affordance for the suggestion list, like the forge name fields (B122). */
+.cond-combo{flex:1;min-width:0;position:relative;display:flex;align-items:center}
+.cond-combo .cond-input{flex:1;padding-right:26px}
+.cond-combo-chev{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:18px;height:18px;border:none;background:none;color:var(--faint);cursor:pointer;border-radius:4px}
+.cond-combo-chev:hover{color:var(--dim)}
+.cond-input{min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .cond-input:focus{outline:none;border-color:var(--accent)}
 .cond-add .cond-rounds{width:40px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:6px 3px;color:var(--txt);color-scheme:dark}
 .cond-rounds:focus{outline:none;border-color:var(--accent)}
@@ -1402,6 +1410,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Floating popover (status menu / tag add) */
 .popover{position:fixed;z-index:60;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:5px;min-width:148px;box-shadow:var(--shadow-pop);display:flex;flex-direction:column;gap:2px}
 .popover .popitem{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12.5px;cursor:pointer}
+.popover .popitem.has-ico{display:flex;align-items:center;gap:8px}
 .popover .popitem:hover{background:var(--panel3)}
 .popover .popitem.on{color:var(--accent-soft)}
 .popover .popitem.danger{color:var(--bad)}

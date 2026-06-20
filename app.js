@@ -13,7 +13,7 @@ function renderSettings(){
       <div class="set-note">Colours the Forge statblock preview only.</div>
     </div>
     <div class="set-card">
-      <div class="set-head">Click-to-roll dice<span class="set-kbd">⌘/Ctrl-click anywhere = custom roll</span></div>
+      <div class="set-head">Click-to-roll dice<span class="set-kbd">Alt/Option-click anywhere = custom roll</span></div>
       ${SW("clickRoll.on","Enable click-to-roll")}
       <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options.</div>
     </div>

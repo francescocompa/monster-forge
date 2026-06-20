@@ -91,7 +91,7 @@ function bindRefpopRolls(p){
   p.addEventListener("click",e=>{if(e.target.closest(".reflink"))return; // a nested ref opens its own popover
     const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.stopPropagation();
     const meta={label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype};
-    if(e.metaKey||e.ctrlKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type,dmgType:meta.dmgType,scale:scaleOf(t)});return;}
+    if(e.altKey){openRollPopover(t,{formula:t.dataset.roll,label:meta.label,type:meta.type,dmgType:meta.dmgType,scale:scaleOf(t)});return;}
     doRoll(t.dataset.roll,{adv:rollMode},meta);});
   p.addEventListener("contextmenu",e=>{if(e.target.closest(".reflink"))return;const t=e.target.closest("[data-roll]");if(!t||!clickRollOn())return;e.preventDefault();e.stopPropagation();openRollPopover(t,{formula:t.dataset.roll,label:p.dataset.refname||"Roll",type:t.dataset.rolltype,dmgType:t.dataset.dmgtype,scale:scaleOf(t)});});
 }
@@ -591,7 +591,7 @@ function rollRechargeSequence(nameEl){
     msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
   toast(msg,3600,true);
 }
-function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>⌘/Ctrl-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
+function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>Alt/Option-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
 // rolls. Set via the cycling tag shown in the roll-log header and the custom-roll popover.
 let rollMode=null; // null | "adv" | "dis"

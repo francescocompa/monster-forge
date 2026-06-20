@@ -1062,7 +1062,10 @@ function openCondAdd(itId,anchor,targets){
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
     <div class="cond-add-row">
-      <input type="text" class="cond-input" placeholder="Effect…" autocomplete="off">
+      <div class="cond-combo">
+        <input type="text" class="cond-input" placeholder="Effect…" autocomplete="off">
+        <button class="cond-combo-chev" type="button" tabindex="-1" aria-label="Show effects">${FS_CHEVRON}</button>
+      </div>
       <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
       <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
       <button class="btn primary sm cond-go" style="width:auto">Add</button>
@@ -1079,7 +1082,12 @@ function openCondAdd(itId,anchor,targets){
   const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
   inp.focus();
   // Effect-name suggestions as the same custom dropdown as the forge name fields (not a native datalist).
-  attachCombo(inp,()=>[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b)),{});
+  const condNames=()=>[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b));
+  attachCombo(inp,condNames,{});
+  // The chevron opens the full suggestion list (filtered by whatever's already typed), like a combo box.
+  {const chev=p.querySelector(".cond-combo-chev");if(chev)chev.addEventListener("mousedown",ev=>{ev.preventDefault();
+    const q=inp.value.trim().toLowerCase(),items=condNames().filter(v=>{const l=v.toLowerCase();return l!==q&&(!q||l.includes(q));}).slice(0,12);
+    showComboSuggest(inp,items,v=>{inp.value=v;inp.focus();});inp.focus();});}
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
@@ -1199,7 +1207,8 @@ function combatOrderBodyHTML(cb){
   let keys=[...groups.keys()];
   if(v.group==="status")keys.sort((a,b)=>(CI_STATUS_ORDER[a]??9)-(CI_STATUS_ORDER[b]??9));
   else keys.sort((a,b)=>a.localeCompare(b));
-  return keys.map(k=>`<div class="cbt-group"><div class="cbt-group-h">${esc(combatGroupLabel(v.group,k))} <span class="cbt-group-n">${groups.get(k).length}</span></div>${groups.get(k).map(rowH).join("")}</div>`).join("");
+  return keys.map(k=>{const gico=(v.group==="status"&&CI_STATUS_ICON[k])?`<span class="cbt-grp-ico st-${k}">${CI_STATUS_ICON[k]}</span>`:"";
+    return `<div class="cbt-group"><div class="cbt-group-h">${gico}${esc(combatGroupLabel(v.group,k))} <span class="cbt-group-n">${groups.get(k).length}</span></div>${groups.get(k).map(rowH).join("")}</div>`;}).join("");
 }
 function openCombatViewMenu(tool,anchor){
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,v=combatView(cb);
@@ -1289,8 +1298,12 @@ const CI_NOSELECT="input,select,textarea,button,a,.ci-status,.cc-chip,.reflink,[
 function bindCombatRows(host,dragOK){
   if(!host)return;
   host.querySelectorAll(".cbt-row").forEach(row=>{
+    // Suppress the text selection a modifier-click would otherwise drag across rows (B122).
+    row.addEventListener("mousedown",e=>{if((e.shiftKey||e.metaKey||e.ctrlKey)&&!e.target.closest(CI_NOSELECT))e.preventDefault();});
     row.addEventListener("click",e=>{if(e.target.closest(CI_NOSELECT))return;const id=row.dataset.ci;
       if(e.shiftKey||e.metaKey||e.ctrlKey)toggleCombatSel(id);else selectOnlyCombat(id);});
+    // Double-click a row → make it the current turn (B122).
+    row.addEventListener("dblclick",e=>{if(e.target.closest(CI_NOSELECT))return;clearCombatSel();setCurrentTurn(row.dataset.ci);});
   });
   if(!dragOK)return;
   let dragId=null;const clearMarks=()=>host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));
@@ -1304,17 +1317,23 @@ function bindCombatRows(host,dragOK){
 }
 // Selection action bar — appears above the order when ≥1 card is selected: set status / add an effect /
 // apply damage to all selected at once, plus a clear.
+// Selection action bar — a floating bar pinned to the centre-bottom of the page (the same .batch-bar
+// style as the bestiary/preset multi-select), so it doesn't displace the initiative entries (B122).
 function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n)return "";
-  return `<div class="combat-selbar" id="combatSelBar">
-    <span class="csb-n">${n} selected</span>
-    <button class="csb-btn" id="csbStatus" title="Set status for all selected"><span class="csb-ico">${SHIELD_HEART_ICON}</span>Status</button>
-    <button class="csb-btn" id="csbEffect" title="Add an effect to all selected">＋ Effect</button>
-    <button class="csb-btn" id="csbDmg" title="Apply damage to all selected">Damage</button>
-    <button class="csb-x" id="csbClear" title="Clear selection" aria-label="Clear selection">✕</button>
+  const one=n===1?`<button class="btn ghost sm" id="csbTurn">Set current turn</button>`:"";
+  return `<div class="batch-bar combat-selbar" id="combatSelBar">
+    <span class="bb-n">${n} selected</span>
+    <button class="btn primary sm" id="csbStatus">Status ▾</button>
+    <button class="btn ghost sm" id="csbEffect">＋ Effect</button>
+    <button class="btn ghost sm" id="csbDmg">Damage</button>
+    ${one}
+    <button class="btn ghost sm" id="csbClear">Clear</button>
   </div>`;}
+// Jump the current turn to a combatant (selection-bar "Set current turn" + double-click a row) (B122).
+function setCurrentTurn(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId);if(i<0)return;cb.turnIndex=i;saveAdv();renderCombat();}
 function setCombatStatusSel(status){combatSelInOrder().forEach(it=>{it.status=status;});saveAdv();renderCombat();}
 function applyDmgSel(amt){amt=Math.abs(Number(amt)||0);if(!amt)return;combatSelInOrder().forEach(it=>{if(hpTracked(it))changeHP(it,amt);});saveAdv();renderCombat();}
-function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=>`<button class="popitem" data-selst="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}</button>`).join(""));
+function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=>`<button class="popitem has-ico" data-selst="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}</button>`).join(""));
   p.querySelectorAll("[data-selst]").forEach(b=>b.addEventListener("click",()=>{closePopover();setCombatStatusSel(b.dataset.selst);}));}
 function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" min="0" placeholder="dmg" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
   const inp=p.querySelector(".seldmg-in");inp.focus();const go=()=>{const v=inp.value;closePopover();applyDmgSel(v);};
@@ -1324,19 +1343,18 @@ function combatRowHTML(it,active,drag){
   const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
     :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
-  // Read-only status indicator (B120): status is set via the selection action bar or by dragging into a
-  // status section, not by clicking the card.
-  const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
-    :`<span class="ci-status st-${status}" title="${CI_STATUS_LABEL[status]}">${CI_STATUS_ICON[status]||SHIELD_HEART_ICON}</span>`;
-  const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
+  // Status no longer shows an icon on the row (B122): it reads from the row variant instead — .dead =
+  // strikethrough/dim, .waiting = muted + italic, reinforced by the grouped "Waiting"/"Dead" headers.
+  // Down (0 HP, not yet marked dead) keeps its own chip.
+  const badge=dead?'<span class="ci-down">down</span>':"";
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
-    ${initEl}${statusEl}
+    ${initEl}
     <div class="ci-body"><div class="ci-name">${esc(it.name)}${badge}</div>
       ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
       ${condsHTML(it)}</div>
     ${it.ac!=null?`<div class="ci-ac" title="Armor Class">AC ${it.ac}</div>`:`<div class="ci-ac"></div>`}
     <div class="ci-hp">${hpCellHTML(it)}</div>
-    ${it.kind!=="event"?`<button class="ci-react${it.reaction===false?" used":""}" data-cireact="${it.id}" title="Reaction — ${it.reaction===false?"used":"available"} (resets at the start of its turn)" aria-label="Toggle reaction">${REACT_ICON}</button>`:""}
+    ${it.kind!=="event"?`<button class="ci-react${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:""}
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
@@ -1351,15 +1369,11 @@ function combatMainSave(m){if(!m.saves||!m.saves.length)return null;const pb=pbF
 function combatMainDC(m){let best=null;
   [].concat(m.actions||[],m.bonus||[],m.traits||[],(m.legend&&m.legend.items)||[]).forEach(en=>{if(en&&en.mode==="spell"){const pb=pbForCR(m.cr);const dc=(en.dc!==""&&en.dc!=null)?Number(en.dc):8+pb+mod(m[en.ability||"int"]);if(best==null||dc>best)best=dc;}});
   return best;}
-function combatActiveHTML(it){
-  if(!it)return `<div class="empty-state">No active combatant.</div>`;
-  const who0=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
-  // While a selection is active, collapse the active combatant's info+statblock to a single "active" row so
-  // the panel doesn't compete with the selection you're working on (B120).
-  if(combatSel.size)return `<div class="ca-topbar ${cFac(it.faction)}"></div>
-    <div class="ca-collapsed"><span class="cac-lbl">Active turn</span><span class="cac-name">${esc(it.name)}</span><span class="ca-faction">${esc(who0)}</span></div>`;
+// The inner content of the active panel for one combatant: head (name/faction, conditions, quick-ref stat
+// chips, resources) + statblock + note. Reused for the active combatant and the selection "peek" preview.
+function combatPanelInnerHTML(it){
+  const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const m=it.kind==="monster"?monById(it.srcId):null;
-  const who=who0;
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
   const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
@@ -1376,19 +1390,36 @@ function combatActiveHTML(it){
   const note=it.comment
     ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note" aria-label="Edit note">${PEN_ICON}</button></div>`
     :`<button class="ca-addnote" data-cinote="${it.id}">${PEN_ICON} Add note</button>`;
+  return `<div class="ca-head">
+      <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span></div>
+      ${conds}
+      ${statRow}
+      ${resourcePipsHTML(it)}
+    </div>
+    ${sb}
+    ${note}`;
+}
+function combatActiveHTML(it){
+  if(!it)return `<div class="empty-state">No active combatant.</div>`;
+  const who0=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  const selList=combatSelInOrder();
+  const peek=(selList.length&&selList[0].id!==it.id)?selList[0]:null;
   // CT9-fix2: a full-bleed faction colour bar pinned on top (like the adventure-page bar — outside the
   // scroller so it spans edge-to-edge); the compact meta + statblock + note scroll below it.
-  return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+  // While a selection points at a NON-active card, the panel keeps the active combatant's identity up top
+  // (name + faction, "Active turn" flag pushed right) and previews the selected card's header + statblock
+  // below a divider (B122). Selecting the active card itself (or nothing) shows the normal panel.
+  if(peek)return `<div class="ca-topbar ${cFac(it.faction)}"></div>
     <div class="ca-scroll"><div class="ca-panel">
-      <div class="ca-head">
-        <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span></div>
-        ${conds}
-        ${statRow}
-        ${resourcePipsHTML(it)}
+      <div class="ca-peekhead">
+        <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who0)}</span></div>
+        <span class="ca-activeflag">Active turn</span>
       </div>
-      ${sb}
-      ${note}
+      <div class="ca-divider"></div>
+      <div class="ca-peek" data-peek="${esc(peek.id)}">${combatPanelInnerHTML(peek)}</div>
     </div></div>`;
+  return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+    <div class="ca-scroll"><div class="ca-panel">${combatPanelInnerHTML(it)}</div></div>`;
 }
 // Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
 function resourcePipsHTML(it){
@@ -1529,10 +1560,10 @@ function renderCombat(){
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
     combatRoundBarHTML(cb)+`
     <div class="combat-grid">
-      <div class="combat-order">${combatSelBarHTML()}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
+      <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
-    </div>`:combatNotStartedHTML(a,e))+fab;
+    </div>${combatSelBarHTML()}`:combatNotStartedHTML(a,e))+fab;
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
@@ -1555,6 +1586,7 @@ function renderCombat(){
     $("#csbStatus").addEventListener("click",e=>{e.stopPropagation();openSelStatusMenu(e.currentTarget);});
     $("#csbEffect").addEventListener("click",e=>{e.stopPropagation();const s=combatSelInOrder();if(s.length)openCondAdd(s[0].id,e.currentTarget,sel());});
     $("#csbDmg").addEventListener("click",e=>{e.stopPropagation();openSelDmg(e.currentTarget);});
+    {const t=$("#csbTurn");if(t)t.addEventListener("click",e=>{e.stopPropagation();const s=combatSelInOrder();if(s.length){clearCombatSel();setCurrentTurn(s[0].id);}});}
     $("#csbClear").addEventListener("click",()=>{clearCombatSel();renderCombat();});
   }}
   // Click the empty order background to clear the selection.
@@ -1564,7 +1596,13 @@ function renderCombat(){
   // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
   body.querySelectorAll("[data-hpdmg]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpdmg),amt=Number(el.value||0);if(!it||!amt){el.value="";return;}changeHP(it,amt);saveAdv();renderCombat();}));
   body.querySelectorAll("[data-initset]").forEach(el=>el.addEventListener("change",()=>setCombatInit(el.dataset.initset,el.value)));
-  body.querySelectorAll("[data-cireact]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();toggleReaction(el.dataset.cireact);}));
+  body.querySelectorAll("[data-cireact]").forEach(el=>{
+    el.addEventListener("click",e=>{e.stopPropagation();toggleReaction(el.dataset.cireact);});
+    // Hover tooltip (the app's established tail-popover style) explaining the reaction toggle (B122).
+    el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.cireact);if(!it)return;
+      tailPopover(el,`<div class="cr-pop"><b>Reaction — ${it.reaction===false?"used":"available"}</b><br>Each creature gets one reaction per round. Click to toggle; it resets at the start of its turn.</div>`);});
+    el.addEventListener("mouseleave",()=>closePopover());
+  });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
@@ -1588,7 +1626,7 @@ function bindCombatStatblockRolls(root){
   root.addEventListener("click",ev=>{
     if(!clickRollOn())return;
     const t=ev.target.closest("[data-roll]");
-    if(t&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();openRollMenu(t);return;}
+    if(t&&ev.altKey){ev.preventDefault();openRollMenu(t);return;}
     const nm=ev.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
     const rt=ev.target.closest(".roll-rchtag[data-roll]");if(rt){quickRoll(rt);return;}
     const rn=ev.target.closest(".roll-rchname[data-roll]");if(rn){rollRechargeSequence(rn);return;}
@@ -1615,8 +1653,9 @@ $("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?
 $("#statblock").addEventListener("click",e=>{
   if(!clickRollOn())return;
   const t=e.target.closest("[data-roll]");
-  // Cmd/Ctrl-click a rollable → open the custom-roll popover pre-filled (same as right-click).
-  if(t&&(e.metaKey||e.ctrlKey)){e.preventDefault();openRollMenu(t);return;}
+  // Alt/Option-click a rollable → open the custom-roll popover pre-filled (same as right-click). Cmd is
+  // reserved for multi-select (combat init list / bestiary), so the roll modifier moved to Alt (B122).
+  if(t&&e.altKey){e.preventDefault();openRollMenu(t);return;}
   const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
   // The inner "(Recharge N–N)" tag rolls recharge only; the entry NAME rolls recharge + damage (B78).
   const rt=e.target.closest(".roll-rchtag[data-roll]");if(rt){quickRoll(rt);return;}
@@ -1632,14 +1671,14 @@ const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true
 function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
 let _ptrX=0,_ptrY=0,_cmdHeld=false;
 function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
-// Show the spinning d20 over rollable elements, and anywhere while Cmd/Ctrl is held (since that arms
+// Show the spinning d20 over rollable elements, and anywhere while Alt/Option is held (since that arms
 // the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
 function updateDiceCursor(overRoll){
   if((clickRollOn()&&overRoll)||_cmdHeld){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
   else if(_diceCur)_diceCur.classList.remove("show");
 }
 document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
-document.addEventListener("keydown",e=>{if((e.key==="Meta"||e.key==="Control")&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+document.addEventListener("keydown",e=>{if(e.key==="Alt"&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
 // Esc exits rule finder. If a definition popover is showing, close that first (one Esc per layer);
 // note .refpop nodes persist hidden in the DOM, so test for the visible .show class.
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
@@ -1649,14 +1688,14 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
 // ⌘/Ctrl-S saves the Forge to the Bestiary (instead of the browser's Save Page dialog). B68.
 document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==="s"||e.key==="S")){if(_curView!=="forge")return;e.preventDefault();const b=$("#saveMonster");if(b)b.click();}});
 function dropCmd(){if(!_cmdHeld)return;_cmdHeld=false;document.body.classList.remove("cmd-armed");const el=document.elementFromPoint(_ptrX,_ptrY);updateDiceCursor(el&&el.closest&&el.closest("[data-roll]"));}
-document.addEventListener("keyup",e=>{if(e.key==="Meta"||e.key==="Control")dropCmd();});
+document.addEventListener("keyup",e=>{if(e.key==="Alt")dropCmd();});
 window.addEventListener("blur",dropCmd);
-// Cmd/Ctrl-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
-// which keep their own modifier-click behaviour, e.g. bestiary multi-select).
+// Alt/Option-click anywhere → quick custom-roll popover at the cursor (skips interactive elements,
+// which keep their own click behaviour). Cmd is now reserved for multi-select, so this moved off Cmd (B122).
 const ROLL_INERT="input,textarea,select,a,button,label,[data-roll],[data-card],[data-menu],.menu,.menu-wrap,.combo,.popover,.modal,.refpop,.roll-log";
 function openCustomRollAt(x,y){openCustomRoll({getBoundingClientRect:()=>({left:x,right:x,top:y,bottom:y,width:0,height:0})});}
 document.addEventListener("click",e=>{
-  if(!(e.metaKey||e.ctrlKey)||!clickRollOn())return;
+  if(!e.altKey||!clickRollOn())return;
   if(e.target.closest(ROLL_INERT))return;
   e.preventDefault();
   openCustomRollAt(e.clientX,e.clientY);

@@ -241,7 +241,9 @@ function bindLibDrag(body){
 // Small floating popover used by the status & tag-add chips.
 let _pop=null;
 function closePopover(){hideDiceHelp&&hideDiceHelp();if(_pop){_pop.remove();_pop=null;document.removeEventListener("click",_popOutside,true);}}
-function _popOutside(e){if(_pop&&!_pop.contains(e.target))closePopover();}
+// A click inside the floating combo-suggest dropdown (appended to <body>, not the popover) must NOT count
+// as "outside" — otherwise picking an effect suggestion would close the whole add-effect popover (B122).
+function _popOutside(e){if(_pop&&!_pop.contains(e.target)&&!(e.target.closest&&e.target.closest(".combo-suggest")))closePopover();}
 function showPopover(anchor,html){closePopover();const p=document.createElement("div");p.className="popover";p.innerHTML=html;document.body.appendChild(p);
   const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-8);left=Math.max(8,left);
   let top=r.bottom+4;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-4);

@@ -4,6 +4,29 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 122 — Combat selection polish: faction accent, floating bar, statblock peek
+- **Status reads from the row, not an icon.** The per-row status glyph is gone; status now shows via the
+  row variant — `.dead` (strikethrough/dim) and a new `.waiting` (muted + italic) — reinforced by a status
+  icon next to the grouped **Active / Waiting / Dead** headers (`.cbt-grp-ico`). The waiting chip is dropped.
+- **Selection restyled.** The selected card's ring is now the row's **faction colour** (`--sel-accent`),
+  not the global accent. The selection action bar moved out of the initiative column to a **floating
+  centre-bottom bar** (reuses `.batch-bar`, like the bestiary/preset multi-select) so it no longer displaces
+  the entries.
+- **Statblock peek (replaces the B121 collapse).** While a selection points at a non-active card, the active
+  panel keeps the active combatant's name + faction up top with an **"Active turn"** flag pushed right, a
+  full-width divider, then the **selected card's header + statblock animate in** below (`combatPanelInnerHTML`,
+  `.ca-peek` / `caPeekIn`). Selecting the active card (or nothing) shows the normal panel; multi-select previews
+  the first. Rolls from the peek tag the previewed creature.
+- **Two new ways to set the current turn** (`setCurrentTurn`): a **Set current turn** button in the selection
+  bar (single selection) and **double-clicking a row**.
+- **Effect popover fixes.** Clicking an effect suggestion no longer closes the whole popover (`_popOutside`
+  now ignores `.combo-suggest`), and the field gets a **chevron** that opens the full suggestion list. Added
+  spacing between icon and label in the status dropdown (`.popitem.has-ico`).
+- **Reaction button** gets a hover tooltip (tail-popover style); **shift-select** no longer highlights row text.
+- **Rolls moved to Alt/Option-click.** Cmd/Ctrl is now reserved for multi-select, so the modifier that opens
+  the roll-options popover (and the click-anywhere custom roll + armed d20 cursor) is **Alt/Option** (right-click
+  still works). Hints updated in Settings + dice help.
+
 ## Batch 121 — Collapse active when selecting + reaction tracker
 - **Collapse the active panel while selecting.** When ≥1 card is selected, the active combatant's full
   info+statblock collapses to a single "Active turn — [name]" row (`.ca-collapsed`) so it doesn't compete
