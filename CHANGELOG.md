@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 127 — Init clipping fix + death-save UX, effect tabs, rollable chips, click-only popovers
+- **Fixed the initiative "drops a digit" bug:** the value was always stored correctly, but the 32px init box
+  visually clipped two-digit numbers (centred) — widened to 40px (committed as 127a).
+- **Death saves moved into the HP popover:** a row of six circles (3 success / 3 failure) that fill with
+  green circle-check / red circle-xmark on click; the row just shows a **down** chip. When it's a dying
+  combatant's **turn**, the HP section pulses red to prompt the save.
+- **Concentration auto-drops at 0 HP** (down or dead) — no save prompt.
+- **Add-effect dropdown gets category tabs** — Conditions · Masteries · Spells — so the masteries (and
+  continuous-effect, non-instantaneous spells) show without typing. Tabs sit above the field.
+- **Rollable quick-ref chips:** clicking the **ATK** or **save** chip in the statblock preview rolls
+  1d20 + bonus (Alt-click = options), tagged to the combatant.
+- **Tooltips** added for the AC chip and the add-effect chip (tail-popover style).
+- **Definition popovers are click-only** now (hover was messy); the rule finder keeps hover.
+- **"Enable dice rolling"** (renamed from click-to-roll) now disables *every* roll feature when off, including
+  the roll log.
+- HP-section hover uses `--panel3` so it stays visible on a selected (panel2) row.
+
 ## Batch 126 — Death saves, concentration checks, init-roll & multi-select fixes
 - **Death saves / "down".** At 0 HP a combatant drops to "down" (rolls death saves) or is marked dead outright,
   per a new **Settings → Drop to "down" at 0 HP** (players only / anyone / nobody; default players). Monsters are

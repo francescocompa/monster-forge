@@ -85,7 +85,7 @@ let _refTimer=null;
 // means moving from a parent popover into its child cancels the parent's pending hide.
 function bindRefpopRolls(p){
   p.addEventListener("mouseenter",()=>clearTimeout(_refTimer));
-  p.addEventListener("mouseleave",()=>hideRefpopFrom(+p.dataset.level||0));
+  p.addEventListener("mouseleave",()=>{if(ruleFinder)hideRefpopFrom(+p.dataset.level||0);}); // click-only outside the rule finder (B127)
   // Roll dice from inside a spell/condition popover (e.g. Lightning Bolt's 8d6) — B62.
   const scaleOf=t=>t.dataset.scalebase?{base:t.dataset.scalebase,per:t.dataset.scaleper,lvl:+t.dataset.scalelvl,cast:+t.dataset.scalecast||0}:null;
   p.addEventListener("click",e=>{if(e.target.closest(".reflink"))return; // a nested ref opens its own popover
@@ -144,8 +144,10 @@ function hideRefpop(){hideRefpopFrom(0);}
 // Definition popovers (spell/condition/rule) are suppressible via Settings, but the rule finder always
 // shows them — its whole purpose is to surface definitions on hover (B68).
 function refPopOn(){return ruleFinder||!(state.settings&&state.settings.refPopovers)||state.settings.refPopovers.on!==false;}
-document.addEventListener("mouseover",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
-document.addEventListener("mouseout",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
+// Definition popovers are click-only in normal use (hover was visually messy) — only the rule-finder study
+// mode keeps the hover behaviour (B127).
+document.addEventListener("mouseover",e=>{if(!ruleFinder)return;const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
+document.addEventListener("mouseout",e=>{if(!ruleFinder)return;const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
 document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest(".refpop")))hideRefpopNow(0);},true);
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
@@ -599,7 +601,8 @@ function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMo
 function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
 function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");
-  if(!rollLog.length){if(el)el.remove();return;}
+  // With dice rolling disabled, suppress the roll log entirely (B127).
+  if(!rollLog.length||!clickRollOn()){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
   // A custom drag position persists across collapse (B64); it's only cleared via the menu's

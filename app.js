@@ -13,14 +13,14 @@ function renderSettings(){
       <div class="set-note">Colours the Forge statblock preview only.</div>
     </div>
     <div class="set-card">
-      <div class="set-head">Click-to-roll dice<span class="set-kbd">Alt/Option-click anywhere = custom roll</span></div>
-      ${SW("clickRoll.on","Enable click-to-roll")}
-      <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options.</div>
+      <div class="set-head">Dice rolling<span class="set-kbd">Alt/Option-click anywhere = custom roll</span></div>
+      ${SW("clickRoll.on","Enable dice rolling")}
+      <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options. Turn this off to disable every roll feature on the page — click-to-roll, the Alt-click custom roll, the dice cursor, and the roll log.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Definition popovers</div>
       ${SW("refPopovers.on","Spell &amp; condition popovers")}
-      <div class="set-note">Hover or click a linked spell or condition to see its rules. The rule finder still shows definitions while it's active.</div>
+      <div class="set-note">Click a linked spell or condition to see its rules. The rule finder still shows definitions on hover while it's active.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Adventure defaults</div>
@@ -76,6 +76,7 @@ function renderSettings(){
     else v=el.value;
     settingPath(el.dataset.set,v);saveSettings();syncFeatureClasses();renderPreview();
     if(el.dataset.set==="colorCode.on"||el.dataset.set==="clickRoll.on")renderSettings();
+    if(el.dataset.set==="clickRoll.on"&&typeof renderRollLog==="function")renderRollLog(); // show/hide the roll log with the master toggle (B127)
   }));
   // Notes master toggle (B66): reflects all/some/none and flips all three when clicked.
   {const all=$("#setNotesAll"),n=state.settings.notes,vals=[n.adventure,n.scene,n.encounter],on=vals.filter(Boolean).length;

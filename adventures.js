@@ -992,6 +992,9 @@ function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reactio
 // Concentration toggle (B125): a bullseye chip beside reaction — "on" = the creature is concentrating on a
 // spell. Manual (broken by failed CON saves, which the DM adjudicates); unlike reaction it doesn't auto-reset.
 const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>';
+// FA-free solid circle-check / circle-xmark — death-save success / failure pips in the HP popover (B127).
+const CIRCLE_CHECK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
+const CIRCLE_XMARK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
 function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;it.concentration=!it.concentration;saveAdv();renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 function runCombat(a,e){
@@ -1024,6 +1027,7 @@ function isStable(it){if(!(isDown(it)&&downEligible(it))||it.status==="dead")ret
 function applyDownState(it){
   if(!it||it.hpMax==null||it.kind==="event")return;
   if(it.hpCur<=0){
+    it.concentration=false; // down/dead drops concentration outright — no save prompt (B127)
     if(it.status==="dead")return;
     if(downEligible(it)){if(!it.deathSaves)it.deathSaves={success:0,fail:0};}
     else it.status="dead";
@@ -1093,6 +1097,11 @@ function openCondAdd(itId,anchor,targets){
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
+    <div class="cond-tabs">
+      <button type="button" class="cond-tab on" data-tab="conditions">Conditions</button>
+      <button type="button" class="cond-tab" data-tab="masteries">Masteries</button>
+      <button type="button" class="cond-tab" data-tab="spells">Spells</button>
+    </div>
     <div class="cond-add-row">
       <div class="cond-combo">
         <input type="text" class="cond-input" placeholder="Effect…" autocomplete="off">
@@ -1114,15 +1123,19 @@ function openCondAdd(itId,anchor,targets){
   const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list");
   inp.focus();
   // Effect-name suggestions as the same custom dropdown as the forge name fields (not a native datalist).
-  // Only true conditions (the conditions library also holds diseases/status entries) + the 2024 weapon
-  // masteries that leave a tracked effect on the enemy (B126).
-  const condNames=()=>{const conds=enConditions().filter(c=>(c.category||"Conditions")==="Conditions").map(c=>c.name);
-    return [...new Set(conds.concat(WEAPON_MASTERIES))].sort((a,b)=>a.localeCompare(b));};
-  attachCombo(inp,condNames,{});
-  // The chevron opens the full suggestion list (filtered by whatever's already typed), like a combo box.
-  {const chev=p.querySelector(".cond-combo-chev");if(chev)chev.addEventListener("mousedown",ev=>{ev.preventDefault();
-    const q=inp.value.trim().toLowerCase(),items=condNames().filter(v=>{const l=v.toLowerCase();return l!==q&&(!q||l.includes(q));}).slice(0,12);
-    showComboSuggest(inp,items,v=>{inp.value=v;inp.focus();});inp.focus();});}
+  // Three tabs (B127): Conditions (the library's true conditions, not diseases/status), Masteries (the 2024
+  // weapon masteries), and Spells (those with a continuous — non-instantaneous — effect). Tabs swap the list.
+  const condNames=()=>enConditions().filter(c=>(c.category||"Conditions")==="Conditions").map(c=>c.name).sort((a,b)=>a.localeCompare(b));
+  const masteryNames=()=>WEAPON_MASTERIES.slice();
+  const spellNames=()=>[...new Set(enSpells().filter(s=>{const d=s.duration||"";return /concentration/i.test(d)||(/\d/.test(d)&&!/instant/i.test(d));}).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
+  const tabList={conditions:condNames,masteries:masteryNames,spells:spellNames};
+  let tab="conditions";
+  const curList=()=>tabList[tab]();
+  attachCombo(inp,curList,{});
+  // Show the active tab's list (filtered by any typed text), like a combo box.
+  const showTab=()=>{const q=inp.value.trim().toLowerCase(),items=curList().filter(v=>{const l=v.toLowerCase();return l!==q&&(!q||l.includes(q));}).slice(0,60);showComboSuggest(inp,items,v=>{inp.value=v;inp.focus();});inp.focus();};
+  p.querySelectorAll(".cond-tab").forEach(b=>b.addEventListener("mousedown",ev=>{ev.preventDefault();tab=b.dataset.tab;p.querySelectorAll(".cond-tab").forEach(x=>x.classList.toggle("on",x===b));showTab();}));
+  {const chev=p.querySelector(".cond-combo-chev");if(chev)chev.addEventListener("mousedown",ev=>{ev.preventDefault();showTab();});}
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
@@ -1190,6 +1203,7 @@ function openHPManage(itId,anchor,concPrompt){
     <div class="hpm-bar"><i style="${barFill(it)}"></i></div>
     <div class="hpm-row"><input type="number" class="hpm-dmg" placeholder="damage / heal" autocomplete="off"><button class="btn primary sm hpm-apply" style="width:auto">Apply</button></div>
     <div class="hpm-fields"><label>Current<input type="number" class="hpm-cur" value="${it.hpCur}" min="0" max="${it.hpMax}"></label><label>Temp<input type="number" class="hpm-temp" value="${it.hpTemp||0}" min="0"></label></div>
+    ${(isDown(it)&&downEligible(it))?deathSavesRowHTML(it):""}
     ${concHTML}
   </div>`);
   const dmg=p.querySelector(".hpm-dmg");dmg.focus();
@@ -1206,6 +1220,8 @@ function openHPManage(itId,anchor,concPrompt){
   dmg.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}else if(e.key==="Escape")closePopover();});
   p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);applyDownState(it);reopen(null);});
   p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));reopen(null);});
+  p.querySelectorAll(".hpm-ds-pip").forEach(b=>b.addEventListener("click",()=>{const[kind,n]=b.dataset.ds.split(":");const t=combatItem(itId);if(!t)return;if(!t.deathSaves)t.deathSaves={success:0,fail:0};
+    t.deathSaves[kind]=clamp(t.deathSaves[kind]===+n?+n-1:+n,0,3);if((t.deathSaves.fail||0)>=3)t.status="dead";reopen(null);}));
   const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{const b=concPrompt.bonus||0,r=rollFormula("1d20"+(b>=0?"+"+b:String(b))),pass=r.total>=concPrompt.dc;
     toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc} — ${pass?"held":"broken"}`);
     if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
@@ -1432,34 +1448,35 @@ function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=
 function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" placeholder="dmg / heal" title="Positive damages; negative heals" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
   const inp=p.querySelector(".seldmg-in");inp.focus();const go=()=>{const v=inp.value;closePopover();applyDmgSel(v);};
   p.querySelector(".seldmg-go").addEventListener("click",go);inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
-// Death-save tracker shown on a dying combatant's row (B126): three success + three failure pips, clickable.
-function deathSavesHTML(it){
+// Death-save tracker rendered inside the HP popover (B127): three success + three failure circles. Empty
+// circles fill green (circle-check) / red (circle-xmark) on click.
+function deathSavesRowHTML(it){
   const d=dsOf(it);
-  const grp=(kind,n)=>[0,1,2].map(i=>`<button class="ds-pip ds-${kind}${i<n?" on":""}" data-ds="${it.id}:${kind}:${i+1}" aria-label="${kind==="success"?"Success":"Failure"} ${i+1}"></button>`).join("");
-  return `<span class="ci-ds" title="Death saving throws — successes / failures (click to mark)"><span class="ds-grp">${grp("success",d.success)}</span><span class="ds-sep"></span><span class="ds-grp">${grp("fail",d.fail)}</span></span>`;
+  const grp=(kind,n,ico)=>[0,1,2].map(i=>`<button class="hpm-ds-pip ds-${kind}${i<n?" on":""}" data-ds="${kind}:${i+1}" aria-label="${kind==="success"?"Success":"Failure"} ${i+1}">${i<n?ico:""}</button>`).join("");
+  return `<div class="hpm-ds"><span class="hpm-ds-lbl">Death saves</span><span class="hpm-ds-grp succ">${grp("success",d.success,CIRCLE_CHECK_ICON)}</span><span class="hpm-ds-grp fail">${grp("fail",d.fail,CIRCLE_XMARK_ICON)}</span></div>`;
 }
 function combatRowHTML(it,active,drag){
   const status=it.status||"active",isDead=status==="dead",dying=isDying(it),stable=isStable(it);
   const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
     :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
-  // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic,
-  // .dying = down + rolling death saves. Dying combatants show a death-save tracker by the name (B126).
-  const badge=dying?deathSavesHTML(it):stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
+  // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic, .dying =
+  // down. The death-save tracker now lives in the HP popover (B127); the row just flags down/stable.
+  const badge=dying?'<span class="ci-down" title="Down — rolling death saves">down</span>':stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
   // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
   // pane is wide and wraps to its own line below the name when narrow (container query). Events have none.
   // DOM order is the narrow two-row order (AC · reaction · concentration · effect chips · +add). The wide
   // single-row layout flips it via flex `order` so +add leads and AC/reaction/conc sit fixed next to HP (B125).
-  const acChip=it.ac!=null?`<span class="ci-ac-chip" title="Armor Class">${SHIELD_ICON}${it.ac}</span>`:"";
+  const acChip=it.ac!=null?`<span class="ci-ac-chip">${SHIELD_ICON}${it.ac}</span>`:"";
   const reactChip=it.kind!=="event"?`<button class="ci-react-chip${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:"";
   const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
-  const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
+  const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
     <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
-    <div class="ci-hp">${hpCellHTML(it)}</div>
+    <div class="ci-hp${active&&dying?" ds-turn":""}"${active&&dying?' title="It\'s their turn — click to roll a death save"':""}>${hpCellHTML(it)}</div>
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
@@ -1476,18 +1493,20 @@ function combatMainDC(m){let best=null;
   return best;}
 // The inner content of the active panel for one combatant: head (name/faction, conditions, quick-ref stat
 // chips, resources) + statblock + note. Reused for the active combatant and the selection "peek" preview.
-function combatPanelInnerHTML(it){
+function combatPanelInnerHTML(it,isTurn){
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const m=it.kind==="monster"?monById(it.srcId):null;
-  const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋ effect</button></div>`;
+  const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
   const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
+  // A rollable chip (ATK / save): click rolls 1d20+bonus tagged to this combatant; Alt-click opens options.
+  const rollChip=(k,bonus,type,label,t)=>`<button class="ca-stat ca-stat-btn ca-stat-roll" data-roll="1d20${sgn(bonus)}" data-rolltype="${type}" data-rolllabel="${esc(label)}"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${sgn(bonus)}</span></button>`;
   const stats=[];
   if(it.ac!=null)stats.push(chip("AC",it.ac));
-  if(m){stats.push(chip("ATK",sgn(combatAtkBonus(m)),"Best attack-roll bonus"));
+  if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus — click to roll"));
     const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
-    const sv=combatMainSave(m);if(sv)stats.push(chip(sv.ab.toUpperCase(),sgn(sv.bonus),"Best saving throw"));}
-  if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
+    const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll"));}
+  if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
@@ -1521,10 +1540,10 @@ function combatActiveHTML(it){
         <span class="ca-activeflag">Active turn</span>
       </div>
       <div class="ca-divider"></div>
-      <div class="ca-peek" data-peek="${esc(peek.id)}">${combatPanelInnerHTML(peek)}</div>
+      <div class="ca-peek" data-peek="${esc(peek.id)}">${combatPanelInnerHTML(peek,false)}</div>
     </div></div>`;
   return `<div class="ca-topbar ${cFac(it.faction)}"></div>
-    <div class="ca-scroll"><div class="ca-panel">${combatPanelInnerHTML(it)}</div></div>`;
+    <div class="ca-scroll"><div class="ca-panel">${combatPanelInnerHTML(it,true)}</div></div>`;
 }
 // Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
 function resourcePipsHTML(it){
@@ -1719,7 +1738,6 @@ function renderCombat(){
       tailPopover(el,`<div class="cr-pop"><b>Concentration — ${it.concentration?"on":"off"}</b><br>Marks that this creature is concentrating on a spell. Click to toggle; broken by a failed save.</div>`);});
     el.addEventListener("mouseleave",()=>closePopover());
   });
-  body.querySelectorAll("[data-ds]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,kind,n]=el.dataset.ds.split(":");setDeathSave(id,kind,+n);}));
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
@@ -1728,6 +1746,14 @@ function renderCombat(){
   body.querySelectorAll("[data-respip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();
     const[id,ri,i]=el.dataset.respip.split(":"),it=cb.order.find(x=>x.id===id);if(!it)return;const r=it.resources[+ri];if(!r)return;
     r.used=clamp((+i<(r.max-r.used))?r.used+1:r.used-1,0,r.max);saveAdv();renderCombat();}));
+  // Quick-ref ATK / save chips in the active panel header → click rolls 1d20+bonus (Alt-click = options) (B127).
+  body.querySelectorAll(".ca-stat-roll[data-roll]").forEach(el=>{
+    el.addEventListener("click",e=>{if(!clickRollOn())return;e.stopPropagation();if(e.altKey){openRollMenu(el);return;}quickRoll(el);});
+    el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();openRollMenu(el);});
+  });
+  // Hover tooltips (the app's tail-popover style) for the AC chip and the add-effect chips (B127).
+  body.querySelectorAll(".ci-ac-chip").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Armour Class</div>`));el.addEventListener("mouseleave",()=>closePopover());});
+  body.querySelectorAll(".ci-addcond").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Add an effect or condition</div>`));el.addEventListener("mouseleave",()=>closePopover());});
   // Active-combatant statblock: render the source creature (M swapped) + colour-code, then make it
   // click-to-roll with rolls tagged to the combatant via combatRollSrc (CT4).
   const sbHost=body.querySelector(".ca-sb");
