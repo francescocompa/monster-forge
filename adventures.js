@@ -1438,14 +1438,14 @@ function bindCombatRows(host,mode,cb){
   host.querySelectorAll('.cbt-row[draggable="true"]').forEach(row=>{
     row.addEventListener("dragstart",e=>{if(e.target.closest(CI_NOSELECT)){e.preventDefault();return;}dragId=row.dataset.ci;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId);}catch(_){}row.classList.add("dragging");});
     row.addEventListener("dragend",()=>{dragId=null;clearMarks();});
+    // Row-to-row drop reorders the turn order in BOTH modes — dropping on a row inside its group breaks the
+    // initiative order (→ manual sort, flagged "out of order"). stopPropagation keeps the group drop (regroup
+    // mode, below) from also firing while the pointer is over a row (B128b).
+    row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();e.stopPropagation();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
+    row.addEventListener("dragleave",e=>{e.stopPropagation();row.classList.remove("drop-before","drop-after");});
+    row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();e.stopPropagation();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombatSel(dragId,row.dataset.ci,after);});
   });
-  if(mode==="reorder"){
-    host.querySelectorAll('.cbt-row[draggable="true"]').forEach(row=>{
-      row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
-      row.addEventListener("dragleave",()=>row.classList.remove("drop-before","drop-after"));
-      row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombatSel(dragId,row.dataset.ci,after);});
-    });
-  }else{ // regroup: drop a card onto a group to change its status / faction (B128)
+  if(mode==="regroup"){ // also: drop a card onto a group's open space to change its status / faction (B128)
     const grp=combatView(cb).group;
     host.querySelectorAll(".cbt-group[data-grpkey]").forEach(g=>{
       g.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();g.classList.add("drop-into");});
@@ -1570,7 +1570,7 @@ function combatActiveHTML(it){
     <div class="ca-scroll"><div class="ca-panel">
       <div class="ca-peekhead">
         <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who0)}</span></div>
-        <span class="ca-activeflag">Active turn</span>
+        <button class="ca-activeflag" id="caBackToActive" title="Back to the active combatant">Active turn</button>
       </div>
       <div class="ca-divider"></div>
       <div class="ca-peek" data-peek="${esc(peek.id)}">${combatPanelInnerHTML(peek,false)}</div>
@@ -1785,6 +1785,8 @@ function renderCombat(){
   body.querySelectorAll("[data-respip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();
     const[id,ri,i]=el.dataset.respip.split(":"),it=cb.order.find(x=>x.id===id);if(!it)return;const r=it.resources[+ri];if(!r)return;
     r.used=clamp((+i<(r.max-r.used))?r.used+1:r.used-1,0,r.max);saveAdv();renderCombat();}));
+  // Click the "Active turn" flag in the peek header → clear the selection and return to the active combatant (B128b).
+  {const af=$("#caBackToActive");if(af)af.addEventListener("click",()=>{clearCombatSel();renderCombat();});}
   // Quick-ref ATK / save chips in the active panel header → click rolls 1d20+bonus (Alt-click = options) (B127).
   body.querySelectorAll(".ca-stat-roll[data-roll]").forEach(el=>{
     el.addEventListener("click",e=>{if(!clickRollOn())return;e.stopPropagation();if(e.altKey){openRollMenu(el);return;}quickRoll(el);});

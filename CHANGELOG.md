@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 128b — Within-group reorder + back-to-active
+- **Reorder within a group breaks initiative.** Dropping a card on another row (even in a grouped view) now
+  reorders the turn order → `manual` sort, flagging the "out of order" restore chip; dropping on a group's open
+  space still restatus/refactions. (Row drop stops propagation so the two don't collide.)
+- **Click the "Active turn" flag** in the statblock-preview peek header to clear the selection and jump back to
+  the active combatant.
+
 ## Batch 128 — Drag between groups, reset encounter, death-save clarity, render polish
 - **Drag cards between groups.** Grouped by status/faction, dragging a card onto another group now changes
   its status/faction (`combatDragMode` "regroup" + `.cbt-group` drop zones); ungrouped init/manual still

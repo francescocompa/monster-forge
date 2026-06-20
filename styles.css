@@ -913,7 +913,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    right, a full-width divider, then the selected card's header + statblock animate in below. */
 .ca-peekhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .ca-peekhead .ca-name{color:var(--dim)}
-.ca-activeflag{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.ca-activeflag{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;display:inline-flex;align-items:center;gap:5px}
+.ca-activeflag::before{content:"";width:0;height:0;border-top:3px solid transparent;border-bottom:3px solid transparent;border-right:5px solid currentColor}
+.ca-activeflag:hover{color:var(--accent-soft);background:var(--panel2)} /* click → clear selection, back to active (B128b) */
 .ca-divider{height:1px;background:var(--line)}
 .ca-peek{display:flex;flex-direction:column;gap:12px}
 .ca-peek.ca-anim{animation:caPeekIn .18s ease} /* only on selection change, not every re-render (B128) */
