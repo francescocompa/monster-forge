@@ -623,8 +623,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sb .k{color:var(--accent-soft);font-weight:600}
 .sb table.ab{width:100%;border-collapse:collapse;margin:8px 0;table-layout:fixed}
 .sb table.ab td{padding:3px 4px;font-size:12px;text-align:left}
-.sb table.ab td.lbl{width:auto;padding-right:10px}
-.sb table.ab td.mh,.sb table.ab td.num{width:44px;text-align:center;font-variant-numeric:tabular-nums}
+/* Keep "STR 19" on one line (it was wrapping to two at narrow preview widths) and give the numeric
+   columns a touch less width so the labels keep their room longer (B133). */
+.sb table.ab td.lbl{width:auto;padding-right:6px;white-space:nowrap}
+.sb table.ab td.mh,.sb table.ab td.num{width:40px;text-align:center;font-variant-numeric:tabular-nums}
+.sb table.ab td.lbl .abc{min-width:30px}
 .sb table.ab .h{color:var(--accent-soft);font-weight:700;font-size:10.5px;letter-spacing:.04em}
 .sb table.ab td.mh{color:var(--accent-soft);font-weight:700;font-size:10.5px}
 .sb table.ab .sc{color:var(--txt);font-weight:600}
@@ -844,7 +847,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
 .popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
-.cbt-row{position:relative;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:8px 10px;flex-wrap:wrap;container-type:inline-size}
+/* column-gap is the chip spacing on one line; row-gap is the title→chips gap only when the card wraps to two
+   lines (narrow). Kept tight here because the row's own @container query can't restyle the row element (B133). */
+.cbt-row{position:relative;display:flex;align-items:center;column-gap:8px;row-gap:2px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:7px 10px;flex-wrap:wrap;container-type:inline-size}
 /* Active row: a faction-coloured caret in the left margin (next to the divider) so the current turn is
    unmistakable on top of the faction tint. --sel-accent is the row's faction colour. */
 .cbt-row.active::before{content:"";position:absolute;left:-18px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--sel-accent)}
@@ -867,7 +872,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    full-width pseudo forces the clean break between the two lines; the name grows to fill line 1. The
    tighter row-gap pulls the chips up under the title for a more compact card. */
 @container (max-width:470px){
-  .cbt-row{row-gap:2px;padding-top:6px;padding-bottom:6px}
   .cbt-row::after{content:"";flex-basis:100%;height:0;order:4}
   .cbt-row>.ci-id{order:1}
   .cbt-row>.ci-hp{order:2}
@@ -1054,7 +1058,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cl-empty{font-size:11.5px;color:var(--faint);padding:8px 9px}
 /* Effect field combo: chevron affordance for the suggestion list, like the forge name fields (B122). */
 .cond-combo{flex:1;min-width:0;position:relative;display:flex;align-items:center}
-.cond-combo .cond-input{flex:1}
+.cond-combo .cond-input{flex:1;padding-right:26px}
+.cond-combo-chev{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:18px;height:18px;border:none;background:none;color:var(--faint);cursor:pointer;border-radius:4px}
+.cond-combo-chev:hover{color:var(--dim)}
+.cond-combo-chev svg{width:12px;height:12px;transition:transform .15s}
+.cond-combo-chev.open svg{transform:rotate(180deg)}
 /* Effect-dropdown category tabs (B127): Conditions · Masteries · Spells. */
 .cond-input{min-width:0;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--txt);color-scheme:dark;font-size:13px}
 .cond-input:focus{outline:none;border-color:var(--accent)}
@@ -1635,6 +1643,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sb .reflink.reflink-plain:hover{color:inherit}
 .refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;box-shadow:var(--shadow-pop);font-size:12.5px;line-height:1.5;display:none}
 .refpop.show{display:block}
+/* Scroll-fade: a sticky strip pinned to the bottom of the scroll viewport, spanning to the card's edges,
+   hinting there's more below (B133). Negative margins pull it over the preceding content + into the padding. */
+.refpop::after{content:"";position:sticky;bottom:0;display:block;height:26px;margin:-26px -14px -12px;background:linear-gradient(transparent,var(--panel2));pointer-events:none;border-radius:0 0 var(--r-lg) var(--r-lg)}
 /* Subtle ghost dismiss in the popover's top-right; sticks while the body scrolls (B68). */
 .refpop-x{position:sticky;top:-2px;float:right;margin:-4px -6px 0 6px;display:flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;border-radius:5px;background:none;color:var(--faint);opacity:.5;cursor:pointer;transition:opacity .12s,color .12s,background .12s;z-index:1}
 .refpop-x:hover{opacity:1;color:var(--txt);background:var(--in)}

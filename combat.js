@@ -327,6 +327,10 @@ function condChipHTML(itId,c,i){
   const label=known?`<span class="reflink reflink-plain" data-ref="condition" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
   return `<span class="cc-chip cc-cond${known?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
 }
+// A chip's hover tooltip and a click-popover (e.g. the add-effect popover) share the single `_pop`
+// instance, so a bare mouseleave→closePopover would slam the click-popover shut the moment the cursor
+// leaves the chip toward it. Only dismiss the hover TOOLTIP (tailPopover adds `.tail-pop`) (B133).
+function closeTipPop(){if(_pop&&_pop.classList.contains("tail-pop"))closePopover();}
 function openCondAdd(itId,anchor,targets){
   const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
@@ -335,12 +339,13 @@ function openCondAdd(itId,anchor,targets){
     <div class="cond-add-row">
       <div class="cond-combo">
         <input type="text" class="cond-input" placeholder="Search or type an effect…" autocomplete="off">
+        <button class="cond-combo-chev" type="button" tabindex="-1" aria-label="Browse effects" title="Browse effects">${FS_CHEVRON}</button>
       </div>
       <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
       <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
       <button class="btn primary sm cond-go" style="width:auto">Add</button>
     </div>
-    <div class="cond-list"></div>
+    <div class="cond-list" hidden></div>
     <div class="cond-when" hidden>
       <span class="cw-lbl">ends at</span>
       <button class="cond-edge" type="button" data-edge="start" title="Toggle: ends at turn start / end"><span class="cw-hg">${HOURGLASS_ICON}</span><span class="cw-t">turn start</span></button>
@@ -360,12 +365,15 @@ function openCondAdd(itId,anchor,targets){
   const masteryNames=()=>WEAPON_MASTERIES.slice();
   const spellNames=()=>[...new Set(enSpells().filter(s=>{const d=s.duration||"";return /concentration/i.test(d)||(/\d/.test(d)&&!/instant/i.test(d));}).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
   const GROUPS=[["Conditions",condNames],["Masteries",masteryNames],["Spells",spellNames]];
+  const chev=p.querySelector(".cond-combo-chev");
   const renderList=()=>{const q=inp.value.trim().toLowerCase();
     const html=GROUPS.map(([label,fn])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));
       return items.length?`<div class="cl-grp">${label}</div>`+items.map(v=>`<button type="button" class="cl-item" data-v="${esc(v)}">${esc(v)}</button>`).join(""):"";}).join("");
     clist.innerHTML=html||`<div class="cl-empty">No match — press Add to use this name.</div>`;};
-  renderList();
-  inp.addEventListener("input",renderList);
+  // The grouped list is collapsed by default — it opens on the chevron (or once the user starts typing) (B133).
+  const setList=open=>{clist.toggleAttribute("hidden",!open);chev.classList.toggle("open",open);if(open)renderList();};
+  chev.addEventListener("click",ev=>{ev.preventDefault();setList(clist.hasAttribute("hidden"));inp.focus();});
+  inp.addEventListener("input",()=>{if(inp.value.trim())setList(true);else renderList();});
   clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;commitName(b.dataset.v);});
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
@@ -994,13 +1002,13 @@ function renderCombat(){
     // Hover tooltip (the app's established tail-popover style) explaining the reaction toggle (B122).
     el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.cireact);if(!it)return;
       tailPopover(el,`<div class="cr-pop"><b>Reaction — ${it.reaction===false?"used":"available"}</b><br>Each creature gets one reaction per round. Click to toggle; it resets at the start of its turn.</div>`);});
-    el.addEventListener("mouseleave",()=>closePopover());
+    el.addEventListener("mouseleave",closeTipPop);
   });
   body.querySelectorAll("[data-ciconc]").forEach(el=>{
     el.addEventListener("click",e=>{e.stopPropagation();toggleConcentration(el.dataset.ciconc);});
     el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.ciconc);if(!it)return;
       tailPopover(el,`<div class="cr-pop"><b>Concentration — ${it.concentration?"on":"off"}</b><br>Marks that this creature is concentrating on a spell. Click to toggle; broken by a failed save.</div>`);});
-    el.addEventListener("mouseleave",()=>closePopover());
+    el.addEventListener("mouseleave",closeTipPop);
   });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
@@ -1018,8 +1026,8 @@ function renderCombat(){
     el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();openRollMenu(el);});
   });
   // Hover tooltips (the app's tail-popover style) for the AC chip and the add-effect chips (B127).
-  body.querySelectorAll(".ci-ac-chip").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Armour Class</div>`));el.addEventListener("mouseleave",()=>closePopover());});
-  body.querySelectorAll(".ci-addcond").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Add an effect or condition</div>`));el.addEventListener("mouseleave",()=>closePopover());});
+  body.querySelectorAll(".ci-ac-chip").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Armour Class</div>`));el.addEventListener("mouseleave",closeTipPop);});
+  body.querySelectorAll(".ci-addcond").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Add an effect or condition</div>`));el.addEventListener("mouseleave",closeTipPop);});
   // Active-combatant statblock: render the source creature (M swapped) + colour-code, then make it
   // click-to-roll with rolls tagged to the combatant via combatRollSrc (CT4).
   const sbHost=body.querySelector(".ca-sb");

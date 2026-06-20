@@ -133,8 +133,19 @@ function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   // now stripped to plain text for spells/conditions/rules alike).
   const self=(name||"").toLowerCase();
   p.querySelectorAll(".reflink").forEach(r=>{if((r.dataset.name||"").toLowerCase()===self)r.replaceWith(document.createTextNode(r.textContent));});
-  const r=anchor.getBoundingClientRect();let left=Math.min(r.left,window.innerWidth-p.offsetWidth-10);left=Math.max(8,left);
-  let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
+  const r=anchor.getBoundingClientRect();
+  // Keep the popover inside the statblock card it sprang from — its right edge aligns with the card's right
+  // margin instead of spilling past it (falls back to the viewport for non-card anchors) (B133).
+  const card=anchor.closest&&anchor.closest(".sb");
+  const rightBound=card?card.getBoundingClientRect().right:window.innerWidth-10;
+  let left=Math.max(8,Math.min(r.left,rightBound-p.offsetWidth));
+  // Place below the anchor if it fits, else above; cap the height to the free space on the chosen side so a
+  // long entry SCROLLS inside the box (with the bottom fade) rather than running off-screen (B133).
+  const spaceBelow=window.innerHeight-8-(r.bottom+6),spaceAbove=(r.top-6)-8;
+  let top,avail;
+  if(p.offsetHeight<=spaceBelow||spaceBelow>=spaceAbove){top=r.bottom+6;avail=spaceBelow;}
+  else{avail=spaceAbove;top=Math.max(8,r.top-6-Math.min(p.offsetHeight,avail));}
+  p.style.maxHeight=Math.max(140,avail)+"px";
   p.style.left=left+"px";p.style.top=top+"px";}
 function hideRefpopNow(level){document.querySelectorAll(".refpop").forEach(p=>{if((+p.dataset.level||0)>=level)p.classList.remove("show");});}
 // Generous grace period so the cursor can travel from the link into the popover (to roll its dice)
@@ -563,10 +574,8 @@ function doRoll(formula,opts,meta){
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
-  const newId=rollLog[0].id;
-  rollLogOpen=true;renderRollLog(true);
-  // Spin the new total like the initiative reel, then fire the notification as the digits land (B129).
-  animateRollTotal(document.querySelector(`#rollLog [data-rollid="${newId}"] .rl-total`),r.total);
+  rollLogOpen=true;renderRollLog(true); // renderRollLog spins the new group's totals (B133)
+  // Fire the notification as the digits land (B129).
   if(!meta.silent)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);
   return r;
 }
@@ -613,6 +622,14 @@ function animateRollTotal(el,value){
   requestAnimationFrame(()=>reel.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   setTimeout(()=>{if(reel.isConnected)el.textContent=value;},ROLL_REEL_MS);
 }
+// Spin every total in the newest log group — so a sequence (attack + damage, recharge + damage) animates as
+// one, not just its last sub-roll (B133). The group is the run of leading entries sharing source + label,
+// matching rollLogHTML's grouping key.
+function animateNewGroup(el){
+  if(!el||!rollLog.length)return;
+  const key=r=>(r.source?r.source.name:"~")+"|"+(r.label||""),k0=key(rollLog[0]);
+  for(const r of rollLog){if(key(r)!==k0)break;animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total);}
+}
 function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");
   // With dice rolling disabled, suppress the roll log entirely (B127).
@@ -625,6 +642,7 @@ function renderRollLog(scrollNew){
   else{el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
   el.innerHTML=rollLogHTML();
   bindRollLog(el,scrollNew);
+  if(scrollNew)animateNewGroup(el);
 }
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
 function rollLogHTML(){

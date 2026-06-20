@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 133 — Combat & statblock fixes
+- **Cursor can finally reach the add-effect popover.** The `＋` chip's hover tooltip and the click-popover
+  share one `_pop`, so the chip's `mouseleave` was slamming the popover shut the instant the cursor moved
+  toward it. New `closeTipPop()` only dismisses the hover *tooltip* (`.tail-pop`), never the popover — applied
+  to the AC / reaction / concentration / add-effect chips.
+- **Add-effect list is collapsed by default**, revealed by the field's chevron (or once you start typing) —
+  no more 396-item dump on open.
+- **Roll-log reel spins for every roll in a group**, not just the last — `animateNewGroup` animates the whole
+  newest source+label run (attack + damage, recharge + damage), driven from `renderRollLog`.
+- **Definition popovers scroll in place.** `showRefpop` now caps the popover height to the free space on the
+  chosen side (so a long entry scrolls instead of running off-screen), keeps its right edge within the
+  statblock card, and a sticky bottom-fade gradient hints at more content.
+- **Ability table stops wrapping early.** `STR 19` etc. are `white-space:nowrap` with slightly narrower
+  numeric columns, so the cells stay on one line at low preview widths.
+- **Tighter initiative cards.** The wrapped (narrow) card's title→chips gap was the base `gap:8px` bleeding
+  through (a row can't be restyled by its own container query) — split to `column-gap:8px` / `row-gap:2px`
+  and trimmed padding; the gap dropped ~20px→8px.
+
 ## Batch 132 — Audit (3/3): relocate the misplaced adventures.js tail
 - The bottom of `adventures.js` held global app-shell code that was never adventure-specific. Moved it home:
   - **→ `engine.js`** (the rolling/refpop engine): the rule-finder button, the `#statblock` click-to-roll
