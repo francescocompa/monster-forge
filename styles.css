@@ -908,9 +908,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Waiting (delaying/holding) reads from the row variant — no icon/chip — reinforced by the grouped header. */
 .cbt-row.waiting{opacity:.72}
 .cbt-row.waiting .ci-name{font-style:italic;color:var(--dim)}
-/* Initiative as a plain neutral number (no field box, no faction colour) — a box only appears on hover/focus to edit (B124/B125). */
-.ci-init{flex:none;width:30px;text-align:center;font-size:17px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
-.cbt-row .ci-init-in{flex:none;width:32px;height:30px;text-align:center;font-size:17px;font-weight:700;background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
+/* Initiative as a plain neutral number (no field box, no faction colour) — a box only appears on hover/focus
+   to edit (B124/B125). Width fits two digits: a narrower box clipped 2-digit values to a single digit (B127). */
+.ci-init{flex:none;width:40px;text-align:center;font-size:17px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.cbt-row .ci-init-in{flex:none;width:40px;height:30px;text-align:center;font-size:17px;font-weight:700;background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums;padding:0}
 .cbt-row .ci-init-in:hover{background:var(--in);border-color:var(--line)}
 .cbt-row .ci-init-in:focus{background:var(--in);border-color:var(--accent);outline:none}
 .cbt-row .ci-init-in.unrolled{color:var(--faint)} /* auto-roll off: dimmed average placeholder */
