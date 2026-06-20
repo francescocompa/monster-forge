@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 120 — Init-card selection model + multi-select action bar
+- **Click selects, shift/cmd toggles a multi-selection** (`combatSel`); the drag handle is gone — the whole
+  row drags to reorder (a multi-selection drags as a block via `reorderCombatMulti`), and editable/interactive
+  areas (init, HP, ⋯, effect chips) are excluded from both select and drag (`CI_NOSELECT`). Selected rows get
+  the **accent ring + lift** (`.cbt-row.selected`), distinct from the faction-tinted "active" (current turn);
+  clicking empty space or re-clicking the sole selection clears it.
+- **Selection action bar** above the order (`combatSelBarHTML`): **Status / + Effect / Damage** applied to all
+  selected at once (`setCombatStatusSel`, `applyDmgSel`, `openCondAdd` now takes a `targets` list) + clear.
+- **Per-card status control removed** (note): the status icon is now a read-only indicator; status is set via
+  the action bar (and, coming next, by dragging into a status section). `bindCombatDrag` → `bindCombatRows`.
+
 ## Batch 119 — Polish: reel border + manual init field
 - The number-flow reel no longer draws an accent highlight border while rolling (`--accent` → `--line`).
 - Blank party init field (party-roll off) toned down: **solid yellow border** (was dashed) with a **dimmed

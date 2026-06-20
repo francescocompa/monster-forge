@@ -774,6 +774,13 @@ function pushEncounter(a,e){
 // A live initiative tracker launched from an encounter. enc.combat holds the ordered instances; the
 // combat view (full-screen) renders the order + the active combatant. Resumable + cloud-synced.
 let combatCtx=null; // {advId,encId} of the encounter whose combat is open (persisted across reloads)
+// Init-card multi-select (B120): a Set of selected combatant ids. Click selects; shift/cmd toggles; a
+// selection action bar lets you set status / add an effect / apply damage to all selected at once.
+let combatSel=new Set();
+function clearCombatSel(){if(!combatSel.size)return false;combatSel.clear();return true;}
+function combatSelInOrder(){const ctx=combatOf();return ctx?ctx.e.combat.order.filter(it=>combatSel.has(it.id)):[];}
+function toggleCombatSel(id){if(combatSel.has(id))combatSel.delete(id);else combatSel.add(id);renderCombat();}
+function selectOnlyCombat(id){const was=combatSel.size===1&&combatSel.has(id);combatSel.clear();if(id&&!was)combatSel.add(id);renderCombat();}
 function persistCombatCtx(){try{combatCtx?localStorage.setItem("mf_combatctx",JSON.stringify(combatCtx)):localStorage.removeItem("mf_combatctx");}catch(e){}}
 function readCombatCtx(){try{const d=localStorage.getItem("mf_combatctx");return d?JSON.parse(d):null;}catch(e){return null;}}
 function combatOf(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===combatCtx.advId);const e=a&&findEnc(a,combatCtx.encId);return (e&&e.combat)?{a,e}:null;}
@@ -783,7 +790,7 @@ function loadedCtx(){if(!combatCtx)return null;const a=state.adv.find(x=>x.id===
 // Sibling encounters in the same scene (active only), in display order — for the scene prev/next nav.
 function sceneEncs(a,e){return e.sceneId?a.encounters.filter(x=>x.sceneId===e.sceneId&&!x.archived):[];}
 // Load an encounter into the Combat tab without starting combat (used by the load popup + scene nav).
-function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistCombatCtx();switchView("combat");renderCombat();}
+function loadCombatEncounter(a,e){combatCtx={advId:a.id,encId:e.id};persistCombatCtx();clearCombatSel();switchView("combat");renderCombat();}
 // Load popup (CT5, reworked CT7-fixes): grouped adventure→scene→encounter picker with a status filter,
 // collapsible scenes (chevron, collapsed by default; the running encounter's scene auto-expands), the
 // currently-loaded line highlighted, and inline create buttons.
@@ -1045,7 +1052,7 @@ function condsHTML(it){
   if(it.kind==="event")return "";
   return `<div class="ci-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" title="Add effect">＋</button></div>`;
 }
-function openCondAdd(itId,anchor){
+function openCondAdd(itId,anchor,targets){
   const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
@@ -1074,7 +1081,8 @@ function openCondAdd(itId,anchor){
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
   who.addEventListener("click",e=>{e.stopPropagation();const open=list.hasAttribute("hidden");list.toggleAttribute("hidden",!open);who.classList.toggle("open",open);});
   list.querySelectorAll("[data-whoid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();who.dataset.whoid=b.dataset.whoid;who.querySelector(".cw-who-t").textContent=b.textContent;who.classList.toggle("is-self",b.dataset.whoid===itId);list.setAttribute("hidden","");who.classList.remove("open");}));
-  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(name)addCombatCond(itId,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===itId?null:who.dataset.whoid}:null);};
+  const commit=()=>{const name=(inp.value||"").trim(),timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
+    (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null));};
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
   rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
@@ -1120,7 +1128,7 @@ function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.
   // (the edit may change the "out of order" count instead).
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   saveAdv();renderCombat();}
-function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;saveAdv();renderCombat();});}
+function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;clearCombatSel();saveAdv();renderCombat();});}
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
 function hpCellHTML(it){
@@ -1263,29 +1271,61 @@ function reorderCombat(dragId,targetId,after){const ctx=combatOf();if(!ctx)retur
 function moveCombatant(itId,dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId),j=i+dir;
   if(i<0||j<0||j>=cb.order.length)return;const cur=cb.order[cb.turnIndex];
   const[m]=cb.order.splice(i,1);cb.order.splice(j,0,m);combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
-function bindCombatDrag(host){
-  if(!host)return;let dragId=null;
-  const clearMarks=()=>host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));
-  host.querySelectorAll('.cbt-grip[draggable="true"]').forEach(g=>{
-    g.addEventListener("dragstart",e=>{const row=g.closest(".cbt-row");dragId=row.dataset.ci;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId);}catch(_){}row.classList.add("dragging");});
-    g.addEventListener("dragend",()=>{dragId=null;clearMarks();});
-  });
+// Move all `ids` (a multi-selection) as a block to just before/after targetId.
+function reorderCombatMulti(ids,targetId,after){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,cur=cb.order[cb.turnIndex];
+  if(ids.includes(targetId))return;const moved=cb.order.filter(x=>ids.includes(x.id)),rest=cb.order.filter(x=>!ids.includes(x.id));
+  let to=rest.findIndex(x=>x.id===targetId);if(to<0)to=rest.length;else if(after)to++;
+  rest.splice(to,0,...moved);cb.order=rest;combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
+function reorderCombatSel(dragId,targetId,after){
+  if(combatSel.has(dragId)&&combatSel.size>1)reorderCombatMulti([...combatSel],targetId,after);
+  else reorderCombat(dragId,targetId,after);}
+// Click selects (shift/cmd toggles into a multi-selection); editable/interactive areas are excluded. When
+// drag is allowed, the whole row drags to reorder (a multi-selection drags together).
+const CI_NOSELECT="input,select,textarea,button,a,.ci-status,.cc-chip,.reflink,[data-addcond]";
+function bindCombatRows(host,dragOK){
+  if(!host)return;
   host.querySelectorAll(".cbt-row").forEach(row=>{
+    row.addEventListener("click",e=>{if(e.target.closest(CI_NOSELECT))return;const id=row.dataset.ci;
+      if(e.shiftKey||e.metaKey||e.ctrlKey)toggleCombatSel(id);else selectOnlyCombat(id);});
+  });
+  if(!dragOK)return;
+  let dragId=null;const clearMarks=()=>host.querySelectorAll(".cbt-row").forEach(r=>r.classList.remove("dragging","drop-before","drop-after"));
+  host.querySelectorAll('.cbt-row[draggable="true"]').forEach(row=>{
+    row.addEventListener("dragstart",e=>{if(e.target.closest(CI_NOSELECT)){e.preventDefault();return;}dragId=row.dataset.ci;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId);}catch(_){}row.classList.add("dragging");});
+    row.addEventListener("dragend",()=>{dragId=null;clearMarks();});
     row.addEventListener("dragover",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;row.classList.toggle("drop-after",after);row.classList.toggle("drop-before",!after);});
     row.addEventListener("dragleave",()=>row.classList.remove("drop-before","drop-after"));
-    row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombat(dragId,row.dataset.ci,after);});
+    row.addEventListener("drop",e=>{if(!dragId)return;e.preventDefault();const r=row.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;reorderCombatSel(dragId,row.dataset.ci,after);});
   });
 }
+// Selection action bar — appears above the order when ≥1 card is selected: set status / add an effect /
+// apply damage to all selected at once, plus a clear.
+function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n)return "";
+  return `<div class="combat-selbar" id="combatSelBar">
+    <span class="csb-n">${n} selected</span>
+    <button class="csb-btn" id="csbStatus" title="Set status for all selected"><span class="csb-ico">${SHIELD_HEART_ICON}</span>Status</button>
+    <button class="csb-btn" id="csbEffect" title="Add an effect to all selected">＋ Effect</button>
+    <button class="csb-btn" id="csbDmg" title="Apply damage to all selected">Damage</button>
+    <button class="csb-x" id="csbClear" title="Clear selection" aria-label="Clear selection">✕</button>
+  </div>`;}
+function setCombatStatusSel(status){combatSelInOrder().forEach(it=>{it.status=status;});saveAdv();renderCombat();}
+function applyDmgSel(amt){amt=Math.abs(Number(amt)||0);if(!amt)return;combatSelInOrder().forEach(it=>{if(hpTracked(it))changeHP(it,amt);});saveAdv();renderCombat();}
+function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=>`<button class="popitem" data-selst="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}</button>`).join(""));
+  p.querySelectorAll("[data-selst]").forEach(b=>b.addEventListener("click",()=>{closePopover();setCombatStatusSel(b.dataset.selst);}));}
+function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" min="0" placeholder="dmg" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
+  const inp=p.querySelector(".seldmg-in");inp.focus();const go=()=>{const v=inp.value;closePopover();applyDmgSel(v);};
+  p.querySelector(".seldmg-go").addEventListener("click",go);inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
 function combatRowHTML(it,active,drag){
   const dead=isDown(it),status=it.status||"active",out=dead||status==="dead";
   const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
     :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
+  // Read-only status indicator (B120): status is set via the selection action bar or by dragging into a
+  // status section, not by clicking the card.
   const statusEl=it.kind==="event"?`<span class="ci-status-sp"></span>`
-    :`<button class="ci-status st-${status}" data-cistatus="${it.id}" title="${CI_STATUS_LABEL[status]} — click to change">${CI_STATUS_ICON[status]||SHIELD_HEART_ICON}</button>`;
+    :`<span class="ci-status st-${status}" title="${CI_STATUS_LABEL[status]}">${CI_STATUS_ICON[status]||SHIELD_HEART_ICON}</span>`;
   const badge=dead?'<span class="ci-down">down</span>':status==="waiting"?'<span class="ci-wait">waiting</span>':"";
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${drag?" dragrow":""}" data-ci="${it.id}">
-    ${drag?`<span class="cbt-grip" draggable="true" title="Drag to reorder">${GRIP_SVG}</span>`:""}
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${out?" dead":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}${statusEl}
     <div class="ci-body"><div class="ci-name">${esc(it.name)}${badge}</div>
       ${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}
@@ -1479,7 +1519,7 @@ function renderCombat(){
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
     combatRoundBarHTML(cb)+`
     <div class="combat-grid">
-      <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
+      <div class="combat-order">${combatSelBarHTML()}<div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
     </div>`:combatNotStartedHTML(a,e))+fab;
@@ -1498,13 +1538,22 @@ function renderCombat(){
   {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
   {const ri=$("#combatRollInit");if(ri)ri.addEventListener("click",rollInitNow);}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
-  if(combatDragOK(cb))bindCombatDrag($("#combatRows"));
+  bindCombatRows($("#combatRows"),combatDragOK(cb));
+  // Selection action bar (B120): set status / add effect / damage for all selected.
+  {const sb=$("#combatSelBar");if(sb){
+    const sel=()=>[...combatSel];
+    $("#csbStatus").addEventListener("click",e=>{e.stopPropagation();openSelStatusMenu(e.currentTarget);});
+    $("#csbEffect").addEventListener("click",e=>{e.stopPropagation();const s=combatSelInOrder();if(s.length)openCondAdd(s[0].id,e.currentTarget,sel());});
+    $("#csbDmg").addEventListener("click",e=>{e.stopPropagation();openSelDmg(e.currentTarget);});
+    $("#csbClear").addEventListener("click",()=>{clearCombatSel();renderCombat();});
+  }}
+  // Click the empty order background to clear the selection.
+  {const co=document.querySelector(".combat-order");if(co)co.addEventListener("click",e=>{if(!e.target.closest(".cbt-row,.combat-selbar,.cbt-add")&&clearCombatSel())renderCombat();});}
   // Current HP edited directly.
   body.querySelectorAll("[data-hpcur]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpcur);if(!it||it.hpMax==null)return;it.hpCur=clamp(Number(el.value||0),0,it.hpMax);saveAdv();renderCombat();}));
   // Add-dmg field: positive = damage (temp first), negative = heal; applied on commit, then cleared.
   body.querySelectorAll("[data-hpdmg]").forEach(el=>el.addEventListener("change",()=>{const it=cb.order.find(x=>x.id===el.dataset.hpdmg),amt=Number(el.value||0);if(!it||!amt){el.value="";return;}changeHP(it,amt);saveAdv();renderCombat();}));
   body.querySelectorAll("[data-initset]").forEach(el=>el.addEventListener("change",()=>setCombatInit(el.dataset.initset,el.value)));
-  body.querySelectorAll("[data-cistatus]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();cycleCombatStatus(el.dataset.cistatus);}));
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));

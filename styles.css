@@ -851,6 +851,20 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
 .cbt-row.active{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent)}
+/* Multi-select (B120): accent ring + lift — distinct from the faction-tinted "active" (current turn). */
+.cbt-row.selected{background:var(--panel2);box-shadow:0 0 0 1.5px var(--accent)}
+.cbt-row.active.selected{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent),0 0 0 1.5px var(--accent)}
+/* Selection action bar — pinned above the order. */
+.combat-selbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;padding:6px 8px;margin-bottom:9px;box-shadow:var(--shadow-pop)}
+.csb-n{font-size:12px;font-weight:600;color:var(--accent-soft);padding-left:4px;margin-right:4px}
+.csb-btn{display:inline-flex;align-items:center;gap:5px;background:var(--panel3);border:1px solid var(--line);border-radius:6px;padding:4px 9px;color:var(--txt);font-size:12px;cursor:pointer}
+.csb-btn:hover{border-color:var(--accent)}
+.csb-ico{display:inline-flex;width:13px;height:13px;color:var(--dim)}.csb-ico svg{width:13px;height:13px}
+.csb-x{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 7px;border-radius:5px}
+.csb-x:hover{color:var(--txt);background:var(--panel3)}
+.seldmg{display:flex;gap:6px;align-items:center;padding:4px}
+.seldmg-in{width:72px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;text-align:center}
+.seldmg-in:focus{outline:none;border-color:var(--accent)}
 .cbt-row.dead{opacity:.5}
 .cbt-row.dead .ci-name{text-decoration:line-through}
 .cbt-row.waiting{opacity:.82}
@@ -866,10 +880,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .nf-digit{display:inline-block;height:1em;line-height:1;overflow:hidden}
 .nf-col{display:flex;flex-direction:column;transform:translateY(0);transition:transform 1.35s cubic-bezier(.16,.84,.3,1)}
 .nf-n{height:1em;line-height:1;display:flex;align-items:center;justify-content:center}
-.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;cursor:pointer;border-radius:50%;color:var(--dim)}
+.ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;border-radius:50%;color:var(--dim)} /* read-only indicator (B120) */
 .ci-status svg{width:13px;height:13px}
-.ci-status.st-dead{color:var(--faint)} /* status now reads from the icon shape, not colour (was clashing with faction colours) */
-.ci-status:hover{background:var(--panel2);color:var(--txt)}
+.ci-status.st-dead{color:var(--faint)} /* status reads from the icon shape, not colour (was clashing with faction colours) */
 .ci-status-sp{flex:none;width:20px}
 .ci-body{flex:1;min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
