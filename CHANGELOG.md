@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 132 — Audit (3/3): relocate the misplaced adventures.js tail
+- The bottom of `adventures.js` held global app-shell code that was never adventure-specific. Moved it home:
+  - **→ `engine.js`** (the rolling/refpop engine): the rule-finder button, the `#statblock` click-to-roll
+    delegation, the pointer-following d20 cursor, the Alt / long-press custom-roll, and the rolling keyboard
+    shortcuts. All their callbacks already resolved to engine.js functions.
+  - **→ `app.js`** (the app shell + settings): `doExportJSON`, the `#settingsBtn` toggle, `settingPath`,
+    `resyncCloud`, `clearLocalCache` — all consumed only by the settings panel.
+- `adventures.js` is now 771 lines of purely adventure / encounter / party / scene code. No behaviour change;
+  `verify` green and the moved bindings (settings toggle, statblock click-to-roll, dice cursor) re-checked live.
+
 ## Batch 131 — Audit (2/3): split combat.js out of adventures.js
 - **The live combat tracker moved to its own file `combat.js`** (~1,040 lines: the `── Combat Tracker ──`
   banner through `bindCombatStatblockRolls`). `adventures.js` drops from ~1,900 to ~860 lines and now owns

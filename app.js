@@ -356,3 +356,16 @@ function wrapStepper(input,step,min){
 // Remove the boot loader once the app is ready (or on a fatal init error so the page isn't stuck).
 function hideBootLoader(){const b=document.getElementById("bootLoader");if(!b)return;requestAnimationFrame(()=>{b.classList.add("hide");setTimeout(()=>b.remove(),450);});}
 window.addEventListener("error",hideBootLoader);
+
+// ── Export / settings shell helpers (moved from adventures.js, B132) ─────────
+function doExportJSON(){
+  const data={kind:"monster-forge",exported:new Date().toISOString(),monsters:state.lib,adventures:state.adv};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="monster-forge-backup.json";a.click();URL.revokeObjectURL(url);toast("Exported.");
+}
+// Export/Import JSON now live in Settings only (B64); the #fileIn change handler is shared.
+$("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
+// Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
+function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
+async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
+function clearLocalCache(){const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("mf_cache:")===0)keys.push(k);}keys.forEach(k=>localStorage.removeItem(k));toast("Local cache cleared — reload to re-fetch from the cloud.");}
