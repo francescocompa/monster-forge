@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 135 — CT13 (2/2): roster manager + safe delete — CT13 complete
+- **Roster manager modal** (opened from a new "Manage roster" button by ＋ From roster): lists every shared
+  character — including ones no adventure currently links (otherwise orphaned and uneditable) — each editable
+  in place (name / AC / HP / Init / custom fields), with a **usage badge** ("used in N", with the adventure
+  names on hover, or "unused") and a ＋ New character button. Editing here syncs everywhere the character is
+  linked.
+- **Safe delete:** removing a shared character that adventures still link prompts a stacked confirm and then
+  **unsyncs every linked member into a frozen local copy** (`freezePCLocal`) before dropping it — no party
+  slot is silently emptied. Deleting an unused character is immediate.
+- Concludes CT13 (the user chose the live-shared-reference model + a roster manager, no per-adventure tags).
+
 ## Batch 134 — CT13 (1/n): shared party roster + cross-adventure sync (foundation)
 - **New shared character store** `state.roster`, persisted to its own JSONBin bin `library:party` (cached +
   debounced-synced exactly like monsters/adventures — `saveRoster`, `_pend.roster`, hydrate + reconcile in

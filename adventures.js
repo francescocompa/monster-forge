@@ -243,8 +243,17 @@ function pcData(p){return (p&&p.sharedId&&rosterById(p.sharedId))||p;}
 function promotePC(p){const r=normalizeRosterPC({name:p.name,ac:p.ac,hp:p.hp,init:p.init,fields:p.fields});
   state.roster.push(r);["name","ac","hp","init","fields"].forEach(k=>delete p[k]);p.sharedId=r.id;
   saveRoster();saveAdv();renderAdvDetail();toast("Saved to the shared roster — edits now sync across adventures.");}
+// Freeze a linked member's current shared data onto it as a local copy (no save/render — callers do that).
+function freezePCLocal(p){const d=pcData(p);Object.assign(p,{name:d.name,ac:d.ac,hp:d.hp,init:d.init,fields:JSON.parse(JSON.stringify(d.fields||[]))});delete p.sharedId;}
 // Detach a linked member into an independent local copy (its current shared data is frozen onto it).
-function unsyncPC(p){const d=pcData(p);Object.assign(p,{name:d.name,ac:d.ac,hp:d.hp,init:d.init,fields:JSON.parse(JSON.stringify(d.fields||[]))});delete p.sharedId;saveAdv();renderAdvDetail();toast("Unsynced — this is now a local copy.");}
+function unsyncPC(p){freezePCLocal(p);saveAdv();renderAdvDetail();toast("Unsynced — this is now a local copy.");}
+// How many party slots across all adventures link a given shared character, and which adventures.
+function rosterUsage(rid){return state.adv.reduce((n,a)=>n+(a.party||[]).filter(p=>p.sharedId===rid).length,0);}
+function rosterAdvNames(rid){return state.adv.filter(a=>(a.party||[]).some(p=>p.sharedId===rid)).map(advDName);}
+// Delete a shared character: every adventure that links it keeps a frozen local copy (unsynced), then it's
+// dropped from the roster (CT13).
+function deleteRosterChar(rid){let unsynced=0;state.adv.forEach(a=>(a.party||[]).forEach(p=>{if(p.sharedId===rid){freezePCLocal(p);unsynced++;}}));
+  state.roster=state.roster.filter(r=>r.id!==rid);if(unsynced)saveAdv();saveRoster();}
 // Add a shared roster character to this adventure's party as a linked member.
 function addRosterPC(a,rid){if(a.party.some(p=>p.sharedId===rid)){toast("Already in this party.");return;}a.party.push({id:uid(),sharedId:rid});saveAdv();renderAdvDetail();}
 function renderParty(a){
@@ -266,11 +275,12 @@ function renderParty(a){
     </div>
     ${d.fields.length?`<div class="pc-fields">${d.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-pcfl="${p.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-pcfv="${p.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-pcfdel="${p.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
   </div>`;}).join("");
-  const fromRoster=state.roster.length?`<button class="addbtn" id="fromRoster" style="width:auto;flex:none">＋ From roster</button>`:"";
+  const rosterBtns=state.roster.length?`<button class="addbtn" id="fromRoster" style="width:auto;flex:none">＋ From roster</button><button class="addbtn" id="manageRoster" style="width:auto;flex:none" title="Edit or delete shared characters">Manage roster</button>`:"";
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>${fromRoster}</div>`;
+    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>${rosterBtns}</div>`;
   $("#addPC").addEventListener("click",()=>{a.party.push(blankPC());saveAdv();renderAdvDetail();});
   {const fr=$("#fromRoster");if(fr)fr.addEventListener("click",()=>openRosterPicker(a,fr));}
+  {const mr=$("#manageRoster");if(mr)mr.addEventListener("click",openRosterManager);}
   box.querySelectorAll("[data-pclink]").forEach(el=>el.addEventListener("click",()=>openPCSyncMenu(a,findPC(el.dataset.pclink),el)));
   box.querySelectorAll("[data-pcf]").forEach(el=>{const[id,f]=el.dataset.pcf.split(":");
     el.addEventListener("input",()=>{const p=findPC(id);if(!p)return;const d=pcData(p);d[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;savePC(p);});});
@@ -307,6 +317,39 @@ function openRosterPicker(a,anchor,link){
   pop.querySelectorAll("[data-rid]").forEach(b=>b.addEventListener("click",()=>{const rid=b.dataset.rid;closePopover();
     if(link){["name","ac","hp","init","fields"].forEach(k=>delete link[k]);link.sharedId=rid;saveAdv();renderAdvDetail();}
     else addRosterPC(a,rid);}));
+}
+// Roster manager (CT13): a modal to edit / delete EVERY shared character independent of any adventure —
+// including ones no adventure currently links (otherwise orphaned and uneditable). Editing here syncs
+// everywhere the character is linked. Opened from the party area's "Manage roster" button.
+function openRosterManager(){
+  const rows=state.roster.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")).map(r=>{
+    const used=rosterUsage(r.id),names=rosterAdvNames(r.id);
+    return `<div class="rm-row" data-rm="${r.id}">
+      <div class="rm-main">
+        <input class="rm-name" placeholder="Character name" data-rmf="${r.id}:name" value="${esc(r.name)}">
+        <label class="pc-stat">AC<input type="number" min="0" data-rmf="${r.id}:ac" value="${r.ac??""}"></label>
+        <label class="pc-stat">HP<input type="number" min="0" data-rmf="${r.id}:hp" value="${r.hp??""}"></label>
+        <label class="pc-stat">Init<input type="number" data-rmf="${r.id}:init" value="${r.init??""}" placeholder="—"></label>
+        <span class="rm-used${used?"":" unused"}"${used?` title="${esc(names.join(", "))}"`:""}>${used?`used in ${used}`:"unused"}</span>
+        <button class="iconbtn" data-rmfield="${r.id}" title="Add custom field">＋</button>
+        <button class="iconbtn" data-rmdel="${r.id}" title="Delete shared character">✕</button>
+      </div>
+      ${r.fields.length?`<div class="pc-fields">${r.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-rmfl="${r.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-rmfv="${r.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-rmfdel="${r.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
+    </div>`;}).join("");
+  openModalRaw(`<h3>Shared party roster</h3><p class="hint" style="margin:-4px 0 12px">Characters here can be dropped into any adventure with ＋ From roster. Editing one updates it in every adventure that links it.</p>
+    <div class="rm-list">${rows||`<div class="hint" style="padding:6px 0">No shared characters yet — Save a party member to the roster, or add one below.</div>`}</div>
+    <div class="mrow"><button class="btn ghost sm" id="rmClose" style="width:auto">Close</button><button class="btn primary sm" id="rmNew" style="width:auto">＋ New character</button></div>`);
+  const m=$("#modal"),findR=id=>rosterById(id);
+  $("#rmClose").addEventListener("click",()=>{closeModal();if(state.selAdv)renderAdvDetail();});
+  $("#rmNew").addEventListener("click",()=>{state.roster.push(normalizeRosterPC({}));saveRoster();openRosterManager();const n=$("#modal .rm-row:last-child .rm-name");if(n)n.focus();});
+  m.querySelectorAll("[data-rmf]").forEach(el=>{const[id,f]=el.dataset.rmf.split(":");el.addEventListener("input",()=>{const r=findR(id);if(!r)return;r[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;saveRoster();});});
+  m.querySelectorAll("[data-rmfield]").forEach(el=>el.addEventListener("click",()=>{const r=findR(el.dataset.rmfield);if(r){r.fields.push({label:"",value:""});saveRoster();openRosterManager();}}));
+  m.querySelectorAll("[data-rmfl]").forEach(el=>{const[id,i]=el.dataset.rmfl.split(":");el.addEventListener("input",()=>{const r=findR(id);if(r&&r.fields[i]){r.fields[i].label=el.value;saveRoster();}});});
+  m.querySelectorAll("[data-rmfv]").forEach(el=>{const[id,i]=el.dataset.rmfv.split(":");el.addEventListener("input",()=>{const r=findR(id);if(r&&r.fields[i]){r.fields[i].value=el.value;saveRoster();}});});
+  m.querySelectorAll("[data-rmfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.rmfdel.split(":");const r=findR(id);if(r){r.fields.splice(i,1);saveRoster();openRosterManager();}}));
+  m.querySelectorAll("[data-rmdel]").forEach(el=>el.addEventListener("click",()=>{const rid=el.dataset.rmdel,r=findR(rid),used=rosterUsage(rid);
+    const go=()=>{deleteRosterChar(rid);openRosterManager();};
+    if(used)confirmStack(`Delete "${esc((r&&r.name)||"this character")}"? ${used} party slot${used>1?"s":""} link it — they'll be kept as local copies (unsynced).`,go);else go();}));
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
