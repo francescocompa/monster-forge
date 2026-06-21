@@ -155,7 +155,7 @@ function renderAdvDetail(){
   setCrumbs(["Adventures",advDName(a)]);
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
     <div class="adv-detail-body"${a.color?` style="--sel-accent:${a.color}"`:""}>
-    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
+    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2>${a.party.length?`<span class="adv-pc-count" title="${a.party.length} player character${a.party.length>1?"s":""}">${a.party.length}</span>`:""}</div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleNotes">${a.notesOn?"Remove notes":"Add notes"}</button>
@@ -168,8 +168,8 @@ function renderAdvDetail(){
     </div></div></div>
     <div id="advInfoWrap">
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
-    <div class="section-label section-toggle" id="partyHead"><span class="st-chev${partyCollapsed()?" closed":""}">${FS_CHEVRON}</span> Party roster <span class="party-count">${a.party.length}</span></div>
-    <div id="partyWrap"${partyCollapsed()?' style="display:none"':""}></div>
+    <div class="section-label" id="partyHead">Party roster <button class="lvlup-btn" id="partyLvlUp" title="Level up the party" aria-label="Level up the party">${ARROW_TREND_UP}</button></div>
+    <div id="partyWrap"></div>
     </div>
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
     <div class="ctrl-chips" id="encChips"></div>
@@ -204,12 +204,9 @@ function renderAdvDetail(){
   $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
-  $("#partyHead").addEventListener("click",()=>{setPartyCollapsed(!partyCollapsed());renderAdvDetail();});
+  {const lu=$("#partyLvlUp");if(lu)lu.addEventListener("click",()=>levelUpParty(a));}
   renderParty(a);renderEncList(a);
 }
-// Party roster (Combat Tracker, B80): named PCs with AC / HP / initiative + free-form DM fields.
-function partyCollapsed(){try{return localStorage.getItem("mf_partycoll")==="1";}catch(e){return false;}}
-function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0");}catch(e){}}
 // ── Party roster v2 (B136) ───────────────────────────────────────────────────
 // A player character lives ONCE in the shared roster (state.roster); each adventure's `a.party` is an
 // ORDERED list of roster ids. Membership IS the adventure tag — `rosterAdventures(rid)` derives which
@@ -241,6 +238,27 @@ function hasAbilScores(c){return PC_ABILS.some(k=>{const f=abilFieldOf(c,k);retu
 function ensureAbilField(c,k){let f=abilFieldOf(c,k);if(!f){f={k,v:"",hide:true};c.fields.push(f);}return f;}
 // The prevailing party level — the first member with a set Level, else 1 (B145: new-member level default).
 function partyDefaultLevel(advId){const a=state.adv.find(x=>x.id===advId);if(a)for(const rid of (a.party||[])){const v=charFieldVal(rosterById(rid),"level");if(v!==""&&v!=null)return clamp(Number(v)||1,1,20);}return 1;}
+// The level shown for a character's row — its set Level, or the party default when unset.
+function rowLevel(c,advId){const v=charFieldVal(c,"level");return (v!==""&&v!=null)?clamp(Number(v)||1,1,20):partyDefaultLevel(advId);}
+const ARROW_TREND_UP='<svg viewBox="0 0 576 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M384 160c-17.7 0-32-14.3-32-32s14.3-32 32-32l160 0c17.7 0 32 14.3 32 32l0 160c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-82.7L342.6 374.6c-12.5 12.5-32.8 12.5-45.3 0L192 269.3 54.6 406.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0L320 306.7 466.7 160 384 160z"/></svg>';
+// Level up every party member by one (capped at 20), then scroll each row's level number from current to
+// next (a single deterministic step, not the random init spin) before re-rendering (B147).
+function levelUpParty(a){const box=$("#partyWrap"),inputs=box?[...box.querySelectorAll("[data-pclvl]")]:[],moves=[];
+  // Snapshot the displayed levels BEFORE mutating — otherwise an unset member would inherit a member we just
+  // bumped (partyDefaultLevel shifts mid-loop).
+  const snap=(a.party||[]).map(rid=>{const c=rosterById(rid);return c?rowLevel(c,a.id):null;});
+  (a.party||[]).forEach((rid,i)=>{const c=rosterById(rid),from=snap[i];if(!c||from==null||from>=20)return;const to=from+1;
+    let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=String(to);
+    moves.push({inp:inputs.find(el=>el.dataset.pclvl===rid),from,to});});
+  if(!moves.length)return;saveRoster();animateLevelUp(moves,()=>renderAdvDetail());}
+function nfStepHTML(from,to){return `<span class="nf-digit"><span class="nf-col"><span class="nf-n">${from}</span><span class="nf-n">${to}</span></span></span>`;}
+function animateLevelUp(moves,done){const ovs=[];
+  moves.forEach(({inp,from,to})=>{if(!inp)return;const r=inp.getBoundingClientRect();
+    const ov=document.createElement("div");ov.className="nf-roll pc-lvl-roll";
+    ov.style.cssText=`position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;font-size:${getComputedStyle(inp).fontSize}`;
+    ov.innerHTML=nfStepHTML(from,to);document.body.appendChild(ov);ovs.push(ov);inp.style.color="transparent";
+    requestAnimationFrame(()=>{const col=ov.querySelector(".nf-col");if(col)col.style.transform="translateY(-1em)";});});
+  if(!ovs.length){done();return;}setTimeout(()=>{ovs.forEach(o=>o.remove());done();},620);}
 // Dimmed default shown as a field's placeholder (empty value falls back to it): speed 30 ft.; level = the
 // party's level; init = DEX mod and passive perception = 10 + WIS mod once any ability score is filled.
 function fieldDefault(c,f,advId){switch(f.k){
@@ -321,7 +339,7 @@ function renderParty(a){
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
       :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
     return `<div class="pc-row" data-pcopen="${rid}">
-      <span class="pc-lvl${lvSet?"":" dim"}" title="Level">${lvSet?esc(String(lv)):partyDefaultLevel(a.id)}</span>
+      <input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit">
       <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
       <span class="pc-chips">${chips}${derived}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
@@ -332,7 +350,9 @@ function renderParty(a){
     </div>`;
   $("#addPC").addEventListener("click",()=>addPartyMember(a));
   bindRosterCombo(a,box);
-  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,.pc-dchip,[data-pcremove]"))return;openCharacterDetail(row.dataset.pcopen,a.id);}));
+  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,.pc-dchip,[data-pcremove],[data-pclvl]"))return;openCharacterDetail(row.dataset.pcopen,a.id);}));
+  box.querySelectorAll("[data-pclvl]").forEach(el=>{el.addEventListener("click",e=>e.stopPropagation());
+    el.addEventListener("change",e=>{e.stopPropagation();const c=rosterById(el.dataset.pclvl);if(!c)return;let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=el.value;saveRoster();renderAdvDetail();});});
   box.querySelectorAll("[data-pcchip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[rid,k]=el.dataset.pcchip.split(":");openPCFieldEdit(rid,k,el);}));
   box.querySelectorAll("[data-pcremove]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();removePartyMember(a,el.dataset.pcremove);}));
 }

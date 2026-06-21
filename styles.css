@@ -793,8 +793,17 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    Click a chip to quick-edit; click the row to open the Notion character detail; ✕ removes from the adventure. */
 .pc-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:var(--r-lg);padding:8px 11px;margin-bottom:6px;display:flex;align-items:center;gap:8px;cursor:pointer}
 .pc-row:hover{background:var(--panel2)}
-.pc-lvl{flex:none;min-width:22px;text-align:center;font-size:17px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
-.pc-lvl.dim{color:var(--faint)}
+.pc-row .pc-lvl-in{flex:none;width:30px;text-align:center;font-size:17px;font-weight:700;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:2px 0;font-variant-numeric:tabular-nums;color-scheme:dark;-moz-appearance:textfield}
+.pc-lvl-in.dim{color:var(--faint)}
+.pc-lvl-in:hover{border-color:var(--line)}
+.pc-lvl-in:focus{border-color:var(--accent);outline:none;color:var(--txt)}
+.pc-lvl-in::placeholder{color:var(--faint)}
+.pc-lvl-in::-webkit-inner-spin-button,.pc-lvl-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.pc-lvl-roll{color:var(--accent)}
+.pc-lvl-roll .nf-col{transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.lvlup-btn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:1px solid var(--line);border-radius:6px;color:var(--dim);cursor:pointer;padding:0}
+.lvlup-btn:hover{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.adv-pc-count{flex:none;display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--in);border:1px solid var(--line);color:var(--dim);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 .pc-nm{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-unnamed{color:var(--faint);font-weight:500}
 .pc-chips{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}

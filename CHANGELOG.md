@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 147 — Party rework (12/n): editable row levels + party level-up
+- The **party roster no longer collapses** (chevron removed) and the **member count moved next to the
+  adventure title** (a small badge). Where the count sat, a **level-up button** (arrow-trend-up) now bumps
+  **every member's level by one** (capped at 20, snapshotting current levels first so unset members don't
+  inherit a just-bumped one), then **scrolls each row's level number from current → next** — a single
+  deterministic step reusing the init number-flow reel (`nfStepHTML` / `animateLevelUp`).
+- Each row's **level is editable inline** (a 30px number input; empty shows the party-default placeholder).
+  `rowLevel` resolves the displayed value.
+
 ## Batch 146 — Party rework (11/n): field defaults, Class dropdown, abilities always open
 - **New characters** start with **Level · Class · AC · HP · Speed**. **Dimmed editable defaults** show as
   placeholders (empty value falls back to them): **Speed 30 ft.**, **Level = the party's level** (first set
