@@ -714,16 +714,20 @@ function bindCombatRows(host,mode,cb){
 // Selection action bar — a floating bar pinned to the centre-bottom of the page (the same .batch-bar
 // style as the bestiary/preset multi-select), so it doesn't displace the initiative entries (B122).
 // Selection action strip — pinned inside the active panel (B164), below the faction bar. Acts on every
-// selected combatant. (Was a floating .batch-bar that collided with the roll log + turn FAB.)
-function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n)return "";
-  const one=n===1?`<button class="btn primary sm" id="csbTurn">Set current turn</button>`:"";
-  return `<div class="ca-selbar" id="combatSelBar">
-    <span class="bb-n">${n} selected</span>
-    <button class="btn primary sm" id="csbStatus">Status ▾</button>
-    <button class="btn primary sm" id="csbEffect">＋ Effect</button>
-    <button class="btn primary sm" id="csbDmg">Damage / heal</button>
-    ${one}
-    <button class="btn ghost sm" id="csbClear">Clear</button>
+// selected combatant. Hierarchy (B166): a dim count leads, the actions are compact secondary buttons,
+// and Clear is a subtle ✕ pushed to the trailing edge. Never wraps (scrolls if cramped); slides in only
+// when the selection first opens (`_selPrevN`).
+let _selPrevN=0;
+function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n){_selPrevN=0;return "";}
+  const opening=_selPrevN===0;_selPrevN=n;
+  return `<div class="ca-selbar${opening?" caSel-in":""}" id="combatSelBar">
+    <span class="csb-count"><b>${n}</b> selected</span>
+    <div class="csb-actions">
+      <button class="csb-act" id="csbStatus" title="Set status for all selected">Status ▾</button>
+      <button class="csb-act" id="csbEffect" title="Add an effect to all selected">＋ Effect</button>
+      <button class="csb-act" id="csbDmg" title="Damage or heal all selected">Damage</button>
+    </div>
+    <button class="csb-x" id="csbClear" title="Clear selection" aria-label="Clear selection">✕</button>
   </div>`;}
 // Jump the current turn to a combatant (selection-bar "Set current turn" + double-click a row) (B122).
 function setCurrentTurn(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId);if(i<0)return;cb.turnIndex=i;saveAdv();renderCombat();}
@@ -876,8 +880,9 @@ function combatActiveHTML(it){
   // (name + faction, "Active turn" flag pushed right) and previews the selected card's header + statblock
   // below a divider (B122). Selecting the active card itself (or nothing) shows the normal panel.
   // Selection actions live INSIDE this panel now (B164) — a strip pinned below the faction bar — instead of
-  // a floating bar that collided with the roll log + FAB.
-  const selBar=selList.length?combatSelBarHTML():"";
+  // a floating bar that collided with the roll log + FAB. (Called unconditionally so its open-animation
+  // state resets when nothing is selected — it returns "" for an empty selection.)
+  const selBar=combatSelBarHTML();
   if(peek)return `<div class="ca-topbar ${cFac(it.faction)}"></div>${selBar}
     <div class="ca-scroll"><div class="ca-panel">
       <div class="ca-peekhead">
@@ -1075,7 +1080,6 @@ function renderCombat(){
     $("#csbStatus").addEventListener("click",e=>{e.stopPropagation();openSelStatusMenu(e.currentTarget);});
     $("#csbEffect").addEventListener("click",e=>{e.stopPropagation();const s=combatSelInOrder();if(s.length)openCondAdd(s[0].id,e.currentTarget,sel());});
     $("#csbDmg").addEventListener("click",e=>{e.stopPropagation();openSelDmg(e.currentTarget);});
-    {const t=$("#csbTurn");if(t)t.addEventListener("click",e=>{e.stopPropagation();const s=combatSelInOrder();if(s.length){clearCombatSel();setCurrentTurn(s[0].id);}});}
     $("#csbClear").addEventListener("click",()=>{clearCombatSel();renderCombat();});
   }}
   // Click the empty order background to clear the selection.

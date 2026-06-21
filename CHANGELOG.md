@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 166 — Selection menu rework (combat)
+- **Removed "Set current turn"** from the selection strip (still available via a row's ⋯ menu).
+- **Reworked the visual hierarchy:** a dim count leads (`N selected`), the actions are compact secondary
+  buttons, and **Clear is a subtle ✕** pushed to the trailing edge. The strip **never wraps** (scrolls if
+  cramped) and **slides in** only when the selection first opens.
+
 ## Batch 165 — Character detail: wider, no Done button, inline chipfields
 - **Removed the redundant Done button** (the top ✕ closes the detail).
 - **The detail is wider** (max-width 368→540px) and its content widens to fill.
