@@ -265,6 +265,24 @@ function addExistingToParty(a,rid){if(!a.party.includes(rid)){a.party.push(rid);
 // its other adventures. The current adventure's slot now points at the copy.
 function unsyncPartyMember(a,rid){const c=rosterById(rid);if(!c)return;const copy=normalizeRosterPC(JSON.parse(JSON.stringify(c)));copy.id=uid();
   state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced — a separate copy for this adventure.");}
+const GRIP_SVG='<svg viewBox="0 0 8 14" width="8" height="13" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/><circle cx="2" cy="7" r="1.2"/><circle cx="6" cy="7" r="1.2"/><circle cx="2" cy="12" r="1.2"/><circle cx="6" cy="12" r="1.2"/></g></svg>';
+let _cdDragIdx=null,_cdDrop=null;
+// Whether a field renders in the detail's "hidden from the party row" group (Level is always shown; init +
+// hidden-flagged fields are hidden; abilities aren't rows at all). Used for grouping and drag group-moves.
+function cdRowHidden(f){return chipHidden(f)&&f.k!=="level";}
+// Drag-reorder a property (B143b): move field `fromIdx` next to `toIdx` (or, for a divider drop, into the
+// hidden group at the end). Dropping onto a row also joins that row's group (sets `hide`), except for the
+// fixed-group standard fields (init always hidden, Level always shown).
+function reorderField(c,fromIdx,toIdx,after,intoHidden){
+  const fields=c.fields||[],moved=fields[fromIdx];if(!moved)return;
+  const target=toIdx!=null?fields[toIdx]:null;
+  let hide=null;if(intoHidden!=null)hide=intoHidden;else if(target)hide=cdRowHidden(target);
+  if(hide!=null&&moved.k!=="init"&&moved.k!=="level")moved.hide=hide;
+  const fi=fields.indexOf(moved);if(fi>=0)fields.splice(fi,1);
+  if(target){let ti=fields.indexOf(target);if(ti<0)ti=fields.length;fields.splice(after?ti+1:ti,0,moved);}
+  else fields.push(moved);
+  saveRoster();
+}
 // A character is "blank" when nothing has been filled in — no name, no notes, no field values (B140):
 // deleting it needs no confirmation prompt.
 function charIsBlank(c){return !c||(!(c.name||"").trim()&&!(c.notes||"").trim()&&!(c.fields||[]).some(f=>String(f.v??"").trim()!==""));}
@@ -339,10 +357,10 @@ function openCharacterDetail(rid,curAdvId,ui){
   const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
-    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
+    return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(chipHidden(f)&&f.k!=="level"?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(cdRowHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
   // Ability-score grid appended at the foot — star a cell to make it "main" (derives ATK/save), with override
   // inputs (computed value as a dimmed placeholder) for each flagged ability. More than one can be main.
   const abilEntries=(c.fields||[]).map((f,i)=>({f,i})).filter(x=>{const d=fieldDef(x.f);return d&&d.abil;});
@@ -355,7 +373,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdsub="atk:${i}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdsub="dc:${i}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
     abilBlock=`<div class="cd-grpdiv"><span>Ability scores</span></div><div class="abil cd-abilgrid">${cells}</div>${spell}`;
   }
-  const hidBlock=hidHTML?`<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}`:"";
+  const hidBlock=hidHTML?`<div class="cd-grpdiv" data-cdhiddiv><span>Hidden from the party row</span></div>${hidHTML}`:"";
   openModalRaw(`<div class="char-detail">
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
@@ -400,6 +418,18 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdabval]").forEach(el=>el.addEventListener("change",()=>{const f=c.fields[+el.dataset.cdabval];if(f){f.v=el.value;saveRoster();re({});}}));
   m.querySelectorAll("[data-cdmain]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdmain];if(!f)return;f.main=!f.main;saveRoster();re({});}));
   m.querySelectorAll("[data-cdsave]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdsave];if(!f)return;f.prof=!f.prof;saveRoster();re({});}));
+  // Drag-to-reorder properties (B143b): grip handles drag; dropping onto a row reorders + joins that row's
+  // group, dropping on the "Hidden" divider moves into the hidden group.
+  const clearDM=()=>m.querySelectorAll(".cd-prop.drop-before,.cd-prop.drop-after,.cd-grpdiv.drop-into").forEach(x=>x.classList.remove("drop-before","drop-after","drop-into"));
+  m.querySelectorAll("[data-cdgrip]").forEach(g=>{const row=g.closest(".cd-prop");
+    g.addEventListener("dragstart",ev=>{_cdDragIdx=+g.dataset.cdgrip;_cdDrop=null;ev.dataTransfer.effectAllowed="move";try{ev.dataTransfer.setData("text/plain","p");}catch(_){}try{ev.dataTransfer.setDragImage(row,12,12);}catch(_){}requestAnimationFrame(()=>row.classList.add("dragging"));});
+    g.addEventListener("dragend",()=>{row.classList.remove("dragging");clearDM();_cdDragIdx=null;_cdDrop=null;});});
+  m.querySelectorAll(".cd-prop[data-cdrow]").forEach(row=>{
+    row.addEventListener("dragover",ev=>{if(_cdDragIdx==null)return;const toIdx=+row.dataset.cdrow;if(toIdx===_cdDragIdx)return;ev.preventDefault();const r=row.getBoundingClientRect(),after=ev.clientY>r.top+r.height/2;clearDM();row.classList.add(after?"drop-after":"drop-before");_cdDrop={toIdx,after};});
+    row.addEventListener("drop",ev=>{if(_cdDragIdx==null||!_cdDrop)return;ev.preventDefault();const from=_cdDragIdx,dp=_cdDrop;clearDM();reorderField(c,from,dp.toIdx,dp.after,null);re({});});});
+  {const dv=m.querySelector("[data-cdhiddiv]");if(dv){
+    dv.addEventListener("dragover",ev=>{if(_cdDragIdx==null)return;ev.preventDefault();clearDM();dv.classList.add("drop-into");_cdDrop={toIdx:null,intoHidden:true};});
+    dv.addEventListener("drop",ev=>{if(_cdDragIdx==null||!_cdDrop)return;ev.preventDefault();const from=_cdDragIdx;clearDM();reorderField(c,from,null,false,true);re({});});}}
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}

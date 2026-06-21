@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 144 — Party rework (9/n): drag-to-reorder properties
+- Each character-detail property row gets a **grip handle**; dragging it **reorders the properties** and,
+  when dropped onto a row in the other group (or the "Hidden from the party row" divider), **moves the field
+  between the shown/hidden groups** (`reorderField` sets `hide` from the drop target; init stays hidden and
+  Level stays shown). The grip keeps the value inputs fully editable (only the handle starts a drag). Mirrors
+  the existing adventure-list/encounter drag pattern (grip drag-image, before/after drop marks). Scroll
+  position is preserved across the resulting re-render (B143).
+
 ## Batch 143 — Party rework (8/n): Level placement fix + scroll-preserving re-render
 - **Level is back to a regular field** at the **top** of the character detail's property list (new characters
   get it first), not the big number by the name. Instead the **party-roster row shows the level as a number
