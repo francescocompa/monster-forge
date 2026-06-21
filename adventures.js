@@ -239,127 +239,148 @@ function setAdvInfoCollapsed(v){try{localStorage.setItem("mf_advinfocoll",v?"1":
 const PC_AC_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
 const PC_HP_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>';
 const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L489.3 358.2l60.4-60.5c56.5-56.5 56.5-148 0-204.5-50-50-128.8-56.5-186.3-15.4l-1.6 1.1c-14.4 10.3-17.7 30.3-7.4 44.6s30.3 17.7 44.6 7.4l1.6-1.1c32.1-22.9 76-19.3 103.8 8.6 31.5 31.5 31.5 82.5 0 114l-65.1 65.2-71-55.9c1.1-14.5-3.8-29.5-15-40.7-19.9-19.9-51.4-21.5-73.2-4.9L38.8 5.1zM276 247.5C261.8 235.9 248.5 223.6 224 223.6c-10.3 0-20.2 3.9-27.7 10.9L75.6 348.9c-30.4 28.3-47.6 68-47.6 109.5v5.8c0 26.2 16.3 47.9 38.4 57.2l188.2 79.9c5.8 2.5 12.1 3.7 18.4 3.7s12.6-1.2 18.4-3.7l36.9-15.7-160-126.1z"/></svg>';
+// Standard typed fields (B137): a key carrying its canonical label + (AC/HP) icon or short label. Spell
+// attack / save DC are NO LONGER standalone — they're DERIVED from whichever ability is flagged the spell
+// ability + the Level (proficiency). Abilities carry `abil:true` so they can be grouped + flagged.
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
-  {k:"init",label:"Initiative",short:"init",mod:true},{k:"dc",label:"Spell save DC",short:"DC"},
-  {k:"spellatk",label:"Spell attack",short:"atk",mod:true},{k:"pp",label:"Passive Perception",short:"PP"},
-  {k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
-  {k:"str",label:"Strength",short:"STR"},{k:"dex",label:"Dexterity",short:"DEX"},{k:"con",label:"Constitution",short:"CON"},
-  {k:"int",label:"Intelligence",short:"INT"},{k:"wis",label:"Wisdom",short:"WIS"},{k:"cha",label:"Charisma",short:"CHA"}];
+  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},
+  {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
+  {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
+  {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
 const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
+const PC_ABILS=["str","dex","con","int","wis","cha"];
+const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
 function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
-  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,spell:!!f.spell})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
-function charHasField(c,key){return !!(c&&(c.fields||[]).some(x=>x.k===key));}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
-function fieldLabel(f){const d=fieldDef(f);return d?d.label:(f.label||"Field");}
+function fieldLabel(f){const d=fieldDef(f);return d?d.label:((f.k&&PC_LEGACY[f.k])||f.label||"Field");}
+function pbForLevel(lv){lv=clamp(Number(lv)||1,1,20);return 2+Math.floor((lv-1)/4);}
+function abilMod(score){const n=Number(score);return isNaN(n)?0:Math.floor((n-10)/2);}
+function spellAbilField(c){return (c.fields||[]).find(f=>f.spell&&fieldDef(f)&&fieldDef(f).abil)||null;}
+// Spell ATK / save DC derived from the flagged ability's modifier + proficiency (from Level). Null if none.
+function charSpellAtkDc(c){const sa=spellAbilField(c);if(!sa||sa.v===""||sa.v==null)return null;const m=abilMod(sa.v),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
 // The adventures a roster character is in (membership = the ordered id lists in each a.party).
 function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
-function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();}
+function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();openCharacterDetail(c.id,a.id);}
 function removePartyMember(a,rid){a.party=a.party.filter(x=>x!==rid);saveAdv();renderAdvDetail();}
+function addExistingToParty(a,rid){if(!a.party.includes(rid)){a.party.push(rid);saveAdv();renderAdvDetail();}}
 // Unsync: fork a SEPARATE roster entry (a copy) tagged only with the current adventure; the original keeps
 // its other adventures. The current adventure's slot now points at the copy.
 function unsyncPartyMember(a,rid){const c=rosterById(rid);if(!c)return;const copy=normalizeRosterPC(JSON.parse(JSON.stringify(c)));copy.id=uid();
   state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced — a separate copy for this adventure.");}
 // Delete a character everywhere: drop it from the roster and from every adventure's party.
 function deleteRosterChar(rid){state.roster=state.roster.filter(r=>r.id!==rid);state.adv.forEach(a=>{if(a.party)a.party=a.party.filter(x=>x!==rid);});saveRoster();saveAdv();}
+function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span class="pc-cl">${esc((d&&d.short)||fieldLabel(f))}</span>`;
+  return `<button class="pc-chip" data-pcchip="${rid}:${f.k||""}" title="${esc(fieldLabel(f))}">${lbl}${esc(String(f.v))}</button>`;}
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
-  const chip=(rid,f)=>{const d=fieldDef(f);const lbl=d?(d.icon?d.icon:`<span class="pc-cl">${esc(d.short||d.label)}</span>`):`<span class="pc-cl">${esc(f.label||"")}</span>`;
-    return `<button class="pc-chip${f.k==="dc"?" dc":""}" data-pcchip="${rid}:${f.k||""}" title="${esc(fieldLabel(f))}">${lbl}${esc(String(f.v))}</button>`;};
   const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
-    const chips=(c.fields||[]).filter(f=>f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>chip(rid,f)).join("");
+    const chips=(c.fields||[]).filter(f=>!f.hide&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
+    const sd=charSpellAtkDc(c),derived=sd?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(sd.atk)}</span><span class="pc-dchip dc"><span class="pc-cl">DC</span>${sd.dc}</span>`:"";
     return `<div class="pc-row" data-pcopen="${rid}">
       <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
-      <span class="pc-chips">${chips}</span>
-      <button class="pc-kebab" data-pcmenu="${rid}" aria-label="More" title="More">⋯</button>
+      <span class="pc-chips">${chips}${derived}</span>
+      <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
     </div>`;}).join("");
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button><button class="addbtn" id="openRoster" style="width:auto;flex:none" title="Browse every character across adventures">Roster</button></div>`;
+    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>
+      <div class="pc-roster"><input class="pc-roster-in" id="rosterIn" placeholder="Roster…" autocomplete="off"><div class="pc-roster-dd" hidden></div></div>
+    </div>`;
   $("#addPC").addEventListener("click",()=>addPartyMember(a));
-  $("#openRoster").addEventListener("click",()=>openRosterModal());
-  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,[data-pcmenu]"))return;openCharacterDetail(row.dataset.pcopen);}));
+  bindRosterCombo(a,box);
+  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,.pc-dchip,[data-pcremove]"))return;openCharacterDetail(row.dataset.pcopen,a.id);}));
   box.querySelectorAll("[data-pcchip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[rid,k]=el.dataset.pcchip.split(":");openPCFieldEdit(rid,k,el);}));
-  box.querySelectorAll("[data-pcmenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openPCRowMenu(a,el.dataset.pcmenu,el);}));
+  box.querySelectorAll("[data-pcremove]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();removePartyMember(a,el.dataset.pcremove);}));
 }
-// Quick edit of one field's value from a row chip (B136).
-function openPCFieldEdit(rid,key,anchor){const c=rosterById(rid);if(!c)return;const f=(c.fields||[]).find(x=>x.k===key);if(!f)return;
-  const p=showPopover(anchor,`<div class="note-edit" style="min-width:160px"><label class="cond-rl">${esc(fieldLabel(f))}<input type="text" class="popinput pcfe" value="${esc(String(f.v))}" style="width:90px"></label><button class="btn primary sm pcfe-go" style="width:auto">Set</button></div>`);
+// Roster combo (B137): the "Roster" control is a fillable field that drops a dropdown of every character
+// grouped by adventure (like the combat add-effect). Click a row to ADD that character to this adventure's
+// party; click the hover-revealed ⋯ to open its detail. Typing filters.
+function bindRosterCombo(a,box){
+  const inp=box.querySelector("#rosterIn"),dd=box.querySelector(".pc-roster-dd");if(!inp||!dd)return;
+  const draw=()=>{const q=inp.value.trim().toLowerCase();
+    const groups=state.adv.map(ad=>[advDName(ad),(ad.party||[])]).concat([["Not in any adventure",state.roster.filter(r=>!state.adv.some(x=>(x.party||[]).includes(r.id))).map(r=>r.id)]]);
+    let html="";groups.forEach(([title,ids])=>{const rows=ids.map(id=>rosterById(id)).filter(c=>c&&(!q||(c.name||"").toLowerCase().includes(q))).map(c=>
+      `<div class="rr${a.party.includes(c.id)?" in":""}" data-rid="${c.id}"><span class="rr-nm">${esc(c.name)||"New character"}</span>${a.party.includes(c.id)?'<span class="rr-tag">in party</span>':""}<button class="rr-kebab" data-rropen="${c.id}" aria-label="Open character">⋯</button></div>`).join("");
+      if(rows)html+=`<div class="gh">${esc(title)}</div>${rows}`;});
+    dd.innerHTML=html||`<div class="rr-empty">No matching characters.</div>`;};
+  const open=()=>{draw();dd.removeAttribute("hidden");};
+  const close=()=>dd.setAttribute("hidden","");
+  inp.addEventListener("focus",open);inp.addEventListener("click",open);inp.addEventListener("input",()=>{open();});
+  dd.addEventListener("click",e=>{const k=e.target.closest("[data-rropen]");if(k){e.stopPropagation();close();openCharacterDetail(k.dataset.rropen,a.id);return;}
+    const r=e.target.closest("[data-rid]");if(r){addExistingToParty(a,r.dataset.rid);}});
+  document.addEventListener("click",e=>{if(!box.querySelector(".pc-roster").contains(e.target))close();});
+}
+// Quick edit of one field from a row chip (B137): a Notion-style mini property row (icon · label · value;
+// label editable for custom fields). No backgrounds; both editable.
+function openPCFieldEdit(rid,key,anchor){const c=rosterById(rid);if(!c)return;const i=(c.fields||[]).findIndex(x=>(x.k||"")===(key||""));const f=c.fields[i];if(!f)return;
+  const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
+  const nameEl=f.k?`<span class="cd-pn static">${ico}${esc(fieldLabel(f))}</span>`:`<input class="cd-pn-edit pcfe-l" value="${esc(f.label)}" placeholder="Field name">`;
+  const p=showPopover(anchor,`<div class="cd-prop cd-prop-pop">${nameEl}<input class="cd-pv pcfe" value="${esc(String(f.v))}" placeholder="Empty"></div>`);
   const inp=p.querySelector(".pcfe");inp.focus();inp.select();
-  const go=()=>{f.v=inp.value.trim();closePopover();saveRoster();renderAdvDetail();};
-  p.querySelector(".pcfe-go").addEventListener("click",go);
-  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
-// Row ⋯ menu: open the character, unsync (only when shared by >1 adventure), or remove from this adventure.
-function openPCRowMenu(a,rid,anchor){const shared=rosterAdventures(rid).length>1;
-  let html=`<button class="popitem" data-pcm="open">Open character</button>`;
-  if(shared)html+=`<button class="popitem" data-pcm="unsync">Unsync from this adventure</button>`;
-  html+=`<div class="popsep"></div><button class="popitem danger" data-pcm="remove">Remove from this adventure</button>`;
-  const p=showPopover(anchor,html);
-  p.querySelectorAll("[data-pcm]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.pcm;closePopover();
-    if(k==="open")openCharacterDetail(rid);else if(k==="unsync")unsyncPartyMember(a,rid);else if(k==="remove")removePartyMember(a,rid);}));}
+  const save=()=>{f.v=inp.value;const l=p.querySelector(".pcfe-l");if(l)f.label=l.value.trim();saveRoster();renderAdvDetail();};
+  inp.addEventListener("input",save);{const l=p.querySelector(".pcfe-l");if(l)l.addEventListener("input",save);}
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key==="Escape"){e.preventDefault();closePopover();}});}
 const PC_TUNE_ICON='<svg viewBox="0 0 512 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 96a32 32 0 1 1 0 64 32 32 0 1 1 0-64zm73.3 0C253 67.7 224.8 48 192 48s-61 19.7-73.3 48L32 96C14.3 96 0 110.3 0 128s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 160c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 96z"/></svg>';
-// Character detail — a Notion-style peek (B136). Plain title, single-column typed properties (click a name
-// for its options, click a value to edit), shared-adventure tags up top, an unsync icon when >1 adventure
-// shares it, notes below a divider. `curAdvId` is the adventure it was opened from (null from the roster).
+// Character detail — a Notion-style peek (B137). Fixed top (tags + icons) and footer (Done · Delete); the
+// title, typed properties and notes scroll together between them. Properties are split into two groups —
+// shown in the party row vs hidden — by a divider; a property's name menu toggles the group, flags an
+// ability as the spell ATK/DC source, renames a custom field, or removes it. `curAdvId` = where it opened.
 function openCharacterDetail(rid,curAdvId,ui){
   ui=ui||{};const c=rosterById(rid);if(!c){closeModal();return;}
   const curAdv=curAdvId!==undefined?curAdvId:state.selAdv;
   const advs=rosterAdventures(rid),shared=advs.length>1;
-  const tagsHTML=advs.length?advs.map(a=>`<span class="cd-tag${a.id===curAdv?" cur":""}">${esc(advDName(a))}</span>`).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
-  const propRows=(c.fields||[]).map((f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
-    const nameEl=(ui.rename===i&&!f.k)
-      ? `<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
-      : `<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
-    const menu=ui.menu===i?`<div class="cd-pmenu">${f.k?"":`<button class="popitem" data-cdrename>Rename</button>`}<button class="popitem danger" data-cdremove>Remove field</button></div>`:"";
-    return `<div class="cd-prop">${nameEl}${menu}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;}).join("");
+  const tag=ad=>{const col=ad.color||"var(--accent)",cur=ad.id===curAdv;return `<span class="cd-tag" style="${cur?`background:${col};border-color:${col};color:#0e0f12`:`border-color:${col};color:${col}`}">${esc(advDName(ad))}</span>`;};
+  const tagsHTML=advs.length?advs.map(tag).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
+  const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"",isAbil=d&&d.abil;
+    const badge=(isAbil&&f.spell)?`<span class="cd-spell-badge" title="Spell ATK / save DC ability">atk·dc</span>`:"";
+    const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
+      :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}${badge}</button>`;
+    const menu=ui.menu===i?`<div class="cd-pmenu">${isAbil?`<button class="popitem" data-cdspell>${f.spell?"Clear spell ability":"Mark as spell ATK / DC"}</button>`:""}<button class="popitem" data-cdhide>${f.hide?"Show in party row":"Hide from party row"}</button>${f.k?"":`<button class="popitem" data-cdrename>Rename</button>`}<button class="popitem danger" data-cdremove>Remove field</button></div>`:"";
+    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}${menu}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{(f.hide?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
   const present=new Set((c.fields||[]).map(f=>f.k).filter(Boolean));
-  const sugg=ui.add?`<div class="cd-add-dd"><input class="cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${PC_FIELDS.filter(f=>!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("")}</div></div>`:"";
+  const stdOpts=PC_FIELDS.filter(f=>!f.abil&&!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("");
+  const abilOpt=PC_ABILS.some(k=>!present.has(k))?`<button class="popitem" data-cdaddabils><span class="cd-grp-ico">${PC_TUNE_ICON}</span>Ability scores</button>`:"";
+  const sugg=ui.add?`<div class="cd-add-dd"><input class="cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${stdOpts}${abilOpt}</div></div>`:"";
   const scrim=(ui.menu!=null||ui.add)?`<div class="cd-scrim" data-cdscrim></div>`:"";
   openModalRaw(`<div class="char-detail">${scrim}
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
-      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdadd2 title="Add a field" aria-label="Add a field">${PC_TUNE_ICON}</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
+      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdaddprop title="Add a field" aria-label="Add a field">${PC_TUNE_ICON}</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
     </div>
-    <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
-    <div class="cd-props">${propRows}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${sugg}</div>
-    <div class="cd-divider"></div>
-    <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
-    <div class="cd-foot"><button class="btn primary sm" data-cddone style="width:auto">Done</button><span style="flex:1"></span><button class="cd-del" data-cddelete>delete character</button></div>
+    <div class="cd-scroll">
+      <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
+      <div class="cd-props">${visHTML}<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${sugg}</div>
+      <div class="cd-divider"></div>
+      <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
+    </div>
+    <div class="cd-foot"><span style="flex:1"></span><button class="btn primary sm" data-cddone style="width:auto">Done</button><button class="cd-del" data-cddelete>Delete</button></div>
   </div>`);
   const m=$("#modal"),re=u=>openCharacterDetail(rid,curAdv,u),close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
+  const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   m.querySelector("[data-cdclose]").addEventListener("click",close);
   m.querySelector("[data-cddone]").addEventListener("click",close);
   {const s=m.querySelector("[data-cdscrim]");if(s)s.addEventListener("click",()=>re({}));}
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
-  m.querySelector(".cd-notes").addEventListener("input",e=>{c.notes=e.target.value;saveRoster();});
+  {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>re({menu:+el.dataset.cdname})));
+  {const sp=m.querySelector("[data-cdspell]");if(sp)sp.addEventListener("click",()=>{const f=c.fields[ui.menu],on=!f.spell;c.fields.forEach(x=>{if(fieldDef(x)&&fieldDef(x).abil)x.spell=false;});f.spell=on;saveRoster();re({});});}
+  {const hd=m.querySelector("[data-cdhide]");if(hd)hd.addEventListener("click",()=>{const f=c.fields[ui.menu];f.hide=!f.hide;saveRoster();re({});});}
   {const rm=m.querySelector("[data-cdremove]");if(rm)rm.addEventListener("click",()=>{c.fields.splice(ui.menu,1);saveRoster();re({});});}
   {const rn=m.querySelector("[data-cdrename]");if(rn)rn.addEventListener("click",()=>re({rename:ui.menu}));}
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
-  m.querySelectorAll("[data-cdaddprop],[data-cdadd2]").forEach(el=>el.addEventListener("click",()=>re({add:true})));
-  {const ai=m.querySelector(".cd-add-in");if(ai){ai.focus();ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();m.querySelectorAll(".cd-add-list [data-cdadd]").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
+  m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>re({add:true})));
+  {const ai=m.querySelector(".cd-add-in");if(ai){ai.focus();ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();m.querySelectorAll(".cd-add-list .popitem").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
     ai.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const nm=ai.value.trim();if(nm){c.fields.push({k:"",label:nm,v:""});saveRoster();re({});}}else if(e.key==="Escape")re({});});}}
   m.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();re({});}));
+  {const ab=m.querySelector("[data-cdaddabils]");if(ab)ab.addEventListener("click",()=>{PC_ABILS.forEach(k=>{if(!present.has(k))c.fields.push({k,v:"",hide:true});});saveRoster();re({});});}
   {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
   m.querySelector("[data-cddelete]").addEventListener("click",()=>confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();}));
-}
-// Roster modal (B136): every character grouped by the adventures it's in (membership = the adventure tag),
-// plus an "unassigned" group. Search filters; click a row to open its detail; ＋ New adds a roster-only char.
-function openRosterModal(){
-  const inAny=new Set();state.adv.forEach(a=>(a.party||[]).forEach(id=>inAny.add(id)));
-  const orphans=state.roster.filter(r=>!inAny.has(r.id));
-  const grp=(title,ids,muted)=>ids.length?`<div class="gh">${esc(title)} <span>· ${ids.length}</span></div>`+ids.map(id=>{const c=rosterById(id);return c?`<div class="rr${muted?" muted":""}" data-rid="${id}"><span style="flex:1">${esc(c.name)||"New character"}</span><i class="rr-go">›</i></div>`:"";}).join(""):"";
-  let body=state.adv.map(a=>grp(advDName(a),(a.party||[]).slice())).join("");
-  if(orphans.length)body+=grp("Not in any adventure",orphans.map(r=>r.id),true);
-  openModalRaw(`<h3>Roster</h3><input class="popinput rr-search" placeholder="Search characters…" style="width:100%;margin:-2px 0 10px;box-sizing:border-box"><div class="rr-list">${body||`<div class="hint" style="padding:6px 0">No characters yet — add one in an adventure's party, or below.</div>`}</div><div class="mrow"><button class="btn ghost sm" data-rclose style="width:auto">Close</button><button class="btn primary sm" data-rnew style="width:auto">＋ New character</button></div>`);
-  const m=$("#modal");
-  m.querySelector("[data-rclose]").addEventListener("click",()=>{closeModal();if(state.selAdv)renderAdvDetail();});
-  m.querySelector("[data-rnew]").addEventListener("click",()=>{const c=newRosterChar("");state.roster.push(c);saveRoster();openCharacterDetail(c.id,null);});
-  m.querySelectorAll("[data-rid]").forEach(el=>el.addEventListener("click",()=>openCharacterDetail(el.dataset.rid,null)));
-  const s=m.querySelector(".rr-search");s.addEventListener("input",()=>{const q=s.value.trim().toLowerCase();m.querySelectorAll(".rr").forEach(r=>{r.style.display=(!q||r.textContent.toLowerCase().includes(q))?"":"none";});});
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}

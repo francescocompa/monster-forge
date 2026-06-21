@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 137 — Party rework (2/n): detail peek refinements, roster dropdown, ATK/DC
+Addressed the feedback on B136 (cross-checked against the mockups).
+- **Character detail.** Fixed top (tags · icons) + footer (Done · Delete, right-aligned); the title /
+  properties / notes scroll together between them (the notes no longer scroll inside themselves and lost the
+  resize handle). Property **values are transparent, background on hover only** (the global input rule was
+  overriding them). Properties split into two groups — **shown in the party row vs hidden** — by a labelled
+  divider; a property's name menu toggles its group, and more space sits before ＋ Add a property. **Tags
+  inherit each adventure's colour** (solid = current adventure, outline = others).
+- **Standard fields reworked.** Added **Level** and a single **Ability scores** option (auto-creates all six,
+  hidden by default). Dropped the standalone Spell attack / Spell save DC; instead **flag one ability as the
+  spell ability** (name menu) → the party row shows derived **ATK / DC chips** computed from the ability
+  modifier + proficiency (from Level). Initiative is no longer a forced default property.
+- **Roster is now a dropdown field** (like the combat add-effect), not a modal: type to filter, browse by
+  adventure; **click a row to add that character to this adventure's party**, or the hover-revealed ⋯ to open
+  its detail.
+- **Party rows.** The chip quick-edit popover adopts the Notion property style; the ⋯ became a **ghost ✕**
+  (remove from this adventure, revealed on hover).
+- Verified: migration (init-optional), rows, roster add, detail groups/scroll/transparent fields, ATK/DC
+  derivation, notes. **Deferred to the next pass:** drag-to-reorder properties (and drag between groups).
+
 ## Batch 136 — Party rework (1/n): typed-field model + compact rows + character detail peek
 Foundation of the redesigned party system (mockup-driven, A "compact row" direction).
 - **New model.** A player character lives ONCE in the shared roster; each `a.party` is now an **ordered list

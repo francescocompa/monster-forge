@@ -334,7 +334,8 @@ function normalizeAdv(a){
 function migrateCharShape(c){
   if(!c||(!("ac" in c)&&!("hp" in c)&&!("init" in c)&&Array.isArray(c.fields)&&c.fields.every(f=>"k" in f)))return false;
   const old=Array.isArray(c.fields)?c.fields:[];
-  c.fields=[{k:"ac",v:c.ac??""},{k:"hp",v:c.hp??""},{k:"init",v:c.init??""}]
+  c.fields=[{k:"ac",v:c.ac??""},{k:"hp",v:c.hp??""}]
+    .concat((c.init!=null&&c.init!=="")?[{k:"init",v:c.init}]:[]) // init only when it had a value (no longer a fixed default)
     .concat(old.map(f=>"k" in f?{k:f.k||"",label:f.label||"",v:f.v??""}:{k:"",label:f.label||"",v:f.value||""}));
   c.notes=c.notes||"";delete c.ac;delete c.hp;delete c.init;return true;
 }
