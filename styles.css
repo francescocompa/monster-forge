@@ -846,7 +846,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .rr-empty{font-size:12px;color:var(--faint);padding:8px}
 /* Character detail — Notion peek (B137): fixed top + footer, the title/properties/notes scroll between. */
 .char-detail{position:relative;width:100%;min-width:0;display:flex;flex-direction:column}
-.modal.cd-host{max-width:368px;padding:18px}
+.modal.cd-host{max-width:min(540px,94vw);width:100%;padding:18px}
 .cd-top{flex:none;display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .cd-tags{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
 .cd-tags::-webkit-scrollbar{display:none}
@@ -872,9 +872,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-prop.drop-after::after{bottom:-2px}
 .cd-grpdiv.drop-into{color:var(--accent)}
 .cd-grpdiv.drop-into::after{background:var(--accent)}
-.cd-preset{flex-wrap:wrap}
+/* Preset rows: label + chipfield on ONE line; the chips scroll horizontally under a right-edge fade,
+   with the ＋add control pinned outside the scroller so it's always reachable (B165). */
+.cd-preset{flex-wrap:nowrap}
 .cd-preset .cd-pn{flex:none}
-.cd-chipfield{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0 2px 20px}
+.cd-chipfield{flex:1 1 auto;min-width:0;display:flex;flex-wrap:nowrap;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin:0;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)}
+.cd-chipfield::-webkit-scrollbar{display:none}
+.cd-preset>.cd-chip-addbtn{flex:none;margin-left:2px}
 .cd-chipfield .cd-chip-add{flex:none;width:130px;background:none;border:1px dashed var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--txt);color-scheme:dark}
 .cd-chip-addbtn{flex:none;background:none;border:1px dashed var(--line);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--faint);cursor:pointer}
 .cd-chip-addbtn:hover{border-color:var(--accent);border-style:solid;color:var(--dim)}

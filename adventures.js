@@ -457,7 +457,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       :f.k==="class"?`<button class="cd-chip-addbtn" data-cdclassadd="${i}">＋ class</button>`
       :f.k==="subclass"?`<button class="cd-chip-addbtn" data-cdsubadd="${i}">＋ subclass</button>`
       :`<button class="cd-chip-addbtn" data-cdskilladd="${i}">＋ skill</button>`;
-    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}${addCtrl}</div></div>`;};
+    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}</div>${addCtrl}</div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
   let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;const html=isPreset(f)?presetRow(f,i):propRow(f,i);(cdRowHidden(f)?hidHTML+=html:visHTML+=html);});
@@ -482,7 +482,6 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-    <div class="cd-foot"><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
   </div>`);
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
@@ -510,7 +509,6 @@ function openCharacterDetail(rid,curAdvId,ui){
     p.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();closePopover();re({});}));
     p.querySelectorAll("[data-cdaddpreset]").forEach(el=>el.addEventListener("click",()=>{c.fields.push(newPresetField(el.dataset.cdaddpreset));saveRoster();closePopover();re({});}));};
   m.querySelector("[data-cdclose]").addEventListener("click",close);
-  m.querySelector("[data-cddone]").addEventListener("click",close);
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
   m.querySelectorAll("[data-cdabsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,k]=el.dataset.cdabsub.split(":"),f=ensureAbilField(c,k);if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));

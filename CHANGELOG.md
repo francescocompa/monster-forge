@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 165 — Character detail: wider, no Done button, inline chipfields
+- **Removed the redundant Done button** (the top ✕ closes the detail).
+- **The detail is wider** (max-width 368→540px) and its content widens to fill.
+- **Chipfield properties (Class / Subclass / Skills / Passives / Damage) now sit inline with their label**
+  and **scroll horizontally under a right-edge fade**, with the ＋add control pinned outside the scroller
+  so it's always reachable.
+
 ## Batch 164 — Combat polish: chip order, reels, selection bar, split FAB
 - **Party-row chips reversed** so the first field (AC) sits rightmost (the always-visible end behind the
   left fade).
