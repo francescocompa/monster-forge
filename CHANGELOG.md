@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 168 — FAB divider, init reel, chipfield add button, stat-box colours
+- **Turn FAB** now shows a **divider line between its two parts** (the `button{border:none}` rule was
+  hiding it).
+- **Initiative reel** uses the same range-based spin as the roll log — only plausible results (1d20+mod,
+  1- or 2-digit) appear during the animation, regardless of the final value (`rollReelHTML`; removed the
+  old per-digit `nfReelHTML`).
+- **Chipfield ＋add control moved to the left** (before the chips) in the character detail and relabelled a
+  uniform **"＋ Add"** across all chipfields.
+- **ATK / DC / save stat boxes** in the combat panel are now **tinted by their source ability** when there
+  is one (PC main ability; monster save ability).
+
 ## Batch 167 — Initiative-row popovers + rule finder scope
 - **Concentration / Reaction hover popovers** are now just a **title + the current status**, right-aligned
   and **coloured** (available / on = green, used / off = neutral) — no body text, no em dash.

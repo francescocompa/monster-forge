@@ -452,12 +452,10 @@ function openCharacterDetail(rid,curAdvId,ui){
   // a custom dropdown; skills keep the datalist combobox. Passive chips derive proficiency from the Skills field.
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
     const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):(f.k==="class"||f.k==="subclass")?plainChipHTML(e,j):skillChipHTML(c,e,j)).join("");
-    const addCtrl=f.k==="dmgmod"?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
-      :f.k==="passives"?`<button class="cd-chip-addbtn" data-cdpassadd="${i}">＋ skill</button>`
-      :f.k==="class"?`<button class="cd-chip-addbtn" data-cdclassadd="${i}">＋ class</button>`
-      :f.k==="subclass"?`<button class="cd-chip-addbtn" data-cdsubadd="${i}">＋ subclass</button>`
-      :`<button class="cd-chip-addbtn" data-cdskilladd="${i}">＋ skill</button>`;
-    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}</div>${addCtrl}</div>`;};
+    const addAttr=f.k==="dmgmod"?"data-cddmgadd":f.k==="passives"?"data-cdpassadd":f.k==="class"?"data-cdclassadd":f.k==="subclass"?"data-cdsubadd":"data-cdskilladd";
+    const addCtrl=`<button class="cd-chip-addbtn" ${addAttr}="${i}">＋ Add</button>`;
+    // Add control sits BEFORE the chips (B168); chips scroll horizontally after it.
+    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button>${addCtrl}<div class="cd-chipfield" data-cdchips="${i}">${chips}</div></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
   let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;const html=isPreset(f)?presetRow(f,i):propRow(f,i);(cdRowHidden(f)?hidHTML+=html:visHTML+=html);});

@@ -629,14 +629,6 @@ function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat
     sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));combatView(cb).sort="init";saveAdv();renderCombat();
   });
 }
-// Build a vertical digit reel per digit of `target` — a 0–9 column (×2 cycles) ending on the digit, so a
-// translateY to the end scrolls through the numbers and lands on it (number-flow style).
-function nfReelHTML(target){
-  // Each digit column spins through 20 RANDOM digits before landing on the target, so no two spins look
-  // identical (the reel length stays fixed at 21 so the animation speed is consistent).
-  return String(target).split("").map(d=>{const seq=[];for(let i=0;i<20;i++)seq.push(Math.floor(Math.random()*10));seq.push(Number(d));
-    return `<span class="nf-digit"><span class="nf-col" style="--nf-len:${seq.length}">${seq.map(n=>`<span class="nf-n">${n}</span>`).join("")}</span></span>`;}).join("");
-}
 function animateInitRoll(byGroup,done){
   const d20=document.getElementById("combatRollInit");if(d20)d20.classList.add("rolling");
   const pane=document.querySelector(".combat-order");if(!pane){done();return;}
@@ -649,7 +641,7 @@ function animateInitRoll(byGroup,done){
     // pane's own overflow clips any cell that's half-hidden under the statblock panel. The reel inherits the
     // cell's own font-size so it matches whether the init is full-size (wide) or the small narrow-card number.
     ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px;font-size:${getComputedStyle(inp).fontSize}`;
-    ov.innerHTML=nfReelHTML(target);pane.appendChild(ov);overlays.push(ov);
+    ov.innerHTML=rollReelHTML(target,1+(it.initMod||0),20+(it.initMod||0));pane.appendChild(ov);overlays.push(ov);
     inp.classList.add("nf-hide"); // hide the old number behind the (transparent) reel while it scrolls (B128)
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   });
@@ -838,18 +830,19 @@ function combatPanelInnerHTML(it,isTurn){
   const m=it.kind==="monster"?monById(it.srcId):null;
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
-  const chip=(k,v,t)=>`<span class="ca-stat"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
+  // Optional `ab` (ability key) tints the box with that ability's colour (B168).
+  const chip=(k,v,t,ab)=>`<span class="ca-stat${ab?` cc-ab-${ab}`:""}"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${v}</span></span>`;
   // A rollable chip (ATK / save): click rolls 1d20+bonus tagged to this combatant; Alt-click opens options.
-  const rollChip=(k,bonus,type,label,t)=>`<button class="ca-stat ca-stat-btn ca-stat-roll" data-roll="1d20${sgn(bonus)}" data-rolltype="${type}" data-rolllabel="${esc(label)}"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${sgn(bonus)}</span></button>`;
+  const rollChip=(k,bonus,type,label,t,ab)=>`<button class="ca-stat ca-stat-btn ca-stat-roll${ab?` cc-ab-${ab}`:""}" data-roll="1d20${sgn(bonus)}" data-rolltype="${type}" data-rolllabel="${esc(label)}"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${sgn(bonus)}</span></button>`;
   const stats=[];
   if(it.ac!=null)stats.push(chip("AC",it.ac));
   if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus — click to roll"));
     const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
-    const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll"));}
+    const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll",sv.ab));}
   if(pc){const mains=(pc.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
-    if(mains.length){const atk=Math.max(...mains.map(f=>effAtk(pc,f))),dc=Math.max(...mains.map(f=>effDc(pc,f)));
-      stats.push(rollChip("ATK",atk,"attack","Attack","Attack bonus — click to roll"));
-      stats.push(chip("DC",dc,"Save DC"));}}
+    if(mains.length){const atkF=mains.reduce((b,f)=>(!b||effAtk(pc,f)>effAtk(pc,b))?f:b,null),dcF=mains.reduce((b,f)=>(!b||effDc(pc,f)>effDc(pc,b))?f:b,null);
+      stats.push(rollChip("ATK",effAtk(pc,atkF),"attack","Attack","Attack bonus — click to roll",atkF.k));
+      stats.push(chip("DC",effDc(pc,dcF),"Save DC",dcF.k));}}
   if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const monEdit=(m&&monById(it.srcId))?`<div class="ca-sbbar"><button class="pcs-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button></div>`:"";
