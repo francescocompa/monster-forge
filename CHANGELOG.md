@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 149 — Party rework (14/n): Senses & passives preset
+- Third preset field: **Senses & passives** — a free-text senses/darkvision line plus **passive Perception /
+  Insight / Investigation** chips, each computed **10 + ability mod (+ proficiency if flagged)** and coloured
+  by ability (WIS / WIS / INT). Click a passive chip to toggle its proficiency. Value is an object
+  (`{dv, prof:{}}`); `passiveVal` computes the scores.
+
 ## Batch 148 — Party rework (13/n): chip-field presets (damage mods + skills)
 - Two **preset chip fields** in the Add-a-property menu (`PC_PRESETS`). Each holds an array of entries shown
   as **click-to-cycle chips**, added via a datalist input, removed with the chip's ×.
