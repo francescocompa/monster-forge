@@ -883,8 +883,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pchip .pchip-n{font-weight:700;font-variant-numeric:tabular-nums}
 .pchip .pchip-x{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;color:var(--faint);font-size:13px;line-height:1}
 .pchip .pchip-x:hover{background:var(--panel3);color:var(--txt)}
-.dchip-res{border-color:#3a5b66}.dchip-res .pchip-n{color:#6fb7c9}
-.dchip-imm{border-color:#6a5a2a}.dchip-imm .pchip-n{color:var(--amber)}
+/* Resistance / immunity / vulnerability → yellow / green / red, matching the Forge palette. */
+.dchip-res{border-color:#6a5a2a}.dchip-res .pchip-n{color:var(--amber)}
+.dchip-imm{border-color:#2f5e3a}.dchip-imm .pchip-n{color:#8fce9a}
 .dchip-vuln{border-color:#6e3329}.dchip-vuln .pchip-n{color:var(--accent-soft)}
 .skchip{border-color:color-mix(in srgb,var(--abc) 45%,var(--line))}
 .skchip .pchip-n{color:var(--abc)}
@@ -1178,6 +1179,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pcs-chips{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0}
 .pcs-txt{font-size:12.5px;color:var(--txt);line-height:1.7;flex:1;min-width:0}
 .ca-pcsheet .pchip{cursor:default}
+.ca-pcsheet .pcs-roll{cursor:pointer}
+.ca-pcsheet .pcs-roll:hover{border-color:var(--abc);box-shadow:0 0 0 1px color-mix(in srgb,var(--abc) 40%,transparent)}
 /* CT3 — condition chips, per-combatant menu, inline note edit */
 .cbt-row .ci-menu{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .cbt-row .ci-menu:hover{border-color:var(--line);color:var(--txt);background:var(--panel2)}

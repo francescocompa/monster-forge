@@ -565,8 +565,9 @@ function naturalRollText(label,type,total,dmgType,abil){
 function doRoll(formula,opts,meta){
   opts=opts||{};meta=meta||{};
   const r=rollFormula(formula,opts);
-  // Grit (B65): a damage roll deals at least its pre-crit maximum.
-  if(meta.type==="damage"&&gritOn()){const floor=formulaCeil(formula);if(r.total<floor){r.parts=(r.parts?r.parts+" ":"")+`→ ${floor} (grit)`;r.total=floor;}}
+  // Grit (B65): a CRITICAL damage roll deals at least its pre-crit maximum (a crit never undershoots a
+  // normal max hit). Only applies on crits — a normal hit is never floored.
+  if(meta.type==="damage"&&gritOn()&&opts.crit){const floor=formulaCeil(formula);if(r.total<floor){r.parts=(r.parts?r.parts+" ":"")+`→ ${floor} (grit)`;r.total=floor;}}
   const crit=!!opts.crit||(meta.type==="attack"&&r.nat20); // attack nat-20 glows as a crit
   // Win/lose colouring only when a pass/fail threshold is known (e.g. a recharge roll).
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
@@ -624,13 +625,21 @@ function animateRollTotal(el,value){
   requestAnimationFrame(()=>reel.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   setTimeout(()=>{if(reel.isConnected)el.textContent=value;},ROLL_REEL_MS);
 }
-// Spin every total in the newest log group — so a sequence (attack + damage, recharge + damage) animates as
-// one, not just its last sub-roll (B133). The group is the run of leading entries sharing source + label,
-// matching rollLogHTML's grouping key.
+// Spin only totals that haven't animated yet — each roll's reel plays exactly ONCE, when it's added.
+// A multi-roll sequence (attack + damage, recharge + damage) still animates each new sub-roll as it
+// arrives, but previously-settled rolls in the same group are never re-spun on later renders (the bug
+// where adding a roll re-rolled the whole group's numbers). `_rlAnimated` tracks spun ids, pruned to
+// the live log so it can't grow unbounded.
+let _rlAnimated=new Set();
 function animateNewGroup(el){
   if(!el||!rollLog.length)return;
-  const key=r=>(r.source?r.source.name:"~")+"|"+(r.label||""),k0=key(rollLog[0]);
-  for(const r of rollLog){if(key(r)!==k0)break;animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total);}
+  const live=new Set(rollLog.map(r=>r.id));
+  _rlAnimated.forEach(id=>{if(!live.has(id))_rlAnimated.delete(id);});
+  for(const r of rollLog){
+    if(_rlAnimated.has(r.id))continue;
+    _rlAnimated.add(r.id);
+    animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total);
+  }
 }
 function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");

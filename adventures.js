@@ -221,7 +221,7 @@ const PC_HP_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="curren
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
   {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},{k:"player",label:"Player",short:"player"},
-  {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},{k:"senses",label:"Senses",short:"senses"},
+  {k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},{k:"senses",label:"Senses",short:"senses"},
   {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
   {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
 const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
@@ -278,10 +278,14 @@ function fieldDefault(c,f,advId){switch(f.k){
 // Effective initiative modifier for combat — the set value, else the DEX-mod default when abilities exist.
 function effInit(c){const v=charFieldVal(c,"init");if(v!==""&&v!=null)return Number(v)||0;return hasAbilScores(c)?abilMod(abilScoreOf(c,"dex")):0;}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
-  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",
+  // Drop the retired Passive Perception field (the standard `pp` key + the legacy custom field) — the
+  // Passive skills preset covers it now.
+  fields:(Array.isArray(p.fields)?p.fields:[{k:"ac",v:""},{k:"hp",v:""}])
+    .filter(f=>f&&f.k!=="pp"&&!(!f.k&&/^passive perception$/i.test((f.label||"").trim())))
+    .map(f=>({k:f.k||"",label:f.label||"",
     // Legacy B149 "senses" preset (an object) collapses to the plain text field it became in B152.
     v:(f.k==="senses"&&f.v&&typeof f.v==="object"&&!Array.isArray(f.v))?(f.v.dv||""):(f.v??""),hide:!!f.hide,
-    main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+    main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""}))};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);if(d)return d.label;const pp=PC_PRESETS.find(p=>p.k===f.k);if(pp)return pp.label;return (f.k&&PC_LEGACY[f.k])||f.label||"Field";}
@@ -304,7 +308,7 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
 function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
 // Chip-field presets offered in the Add-a-property menu — each holds an ARRAY of entries rendered as chips
 // you click to cycle (B148). `newPresetField` builds the empty field; `isPreset` detects one.
-const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"passives",label:"Passives"}];
+const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"passives",label:"Passive skills"}];
 function newPresetField(k){const p=PC_PRESETS.find(x=>x.k===k);return {k,label:p?p.label:k,v:k==="passives"?["Perception","Insight","Investigation"]:[]};}
 function isPreset(f){return PC_PRESETS.some(p=>p.k===f.k);}
 // Passive score = 10 + the skill's ability mod, + proficiency taken FROM the Skills preset if that skill is

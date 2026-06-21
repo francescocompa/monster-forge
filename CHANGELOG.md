@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 159 — Combat/character fixes round
+- **Roll log no longer re-spins settled rolls.** Each roll's number-flow reel now plays exactly once, when
+  it's added (`_rlAnimated` tracks spun ids, pruned to the live log); adding a roll no longer re-rolls the
+  whole group's numbers.
+- **Grit applies only on crits.** The Grit homebrew floor (a roll deals at least its pre-crit maximum) now
+  fires only when the damage roll is a critical hit — a normal hit is never floored.
+- **Retired the Passive Perception field.** Dropped the standard `pp` field and the legacy custom "Passive
+  Perception" field (migrated out in `migrateCharShape` / `normalizeRosterPC`); the **Passives** preset is
+  renamed **Passive skills**. The Passive skills preset already computes passive Perception.
+- **PC combat chips are rollable.** Ability checks, saves, skills and spell attack in the PC combat sheet now
+  roll (1d20 + bonus, Alt/right-click for options), attributed to the PC. Roll attribution (`combatRollSrc`)
+  now follows the panel actually shown — the peeked selection if any, else the active turn — for PCs and
+  monsters alike. Passive scores / spell DC / defenses stay static.
+- **Damage-modifier chips recoloured** to yellow / green / red (resistance / immunity / vulnerability) to
+  match the Forge palette, in both the character detail and the combat sheet.
+
 ## Batch 158 — Character details in combat (PC sheet)
 - A PC selected in the combat tracker now shows a **display-only character sheet** in the active/peek panel
   — the PC counterpart to the monster statblock embed — replacing the old "no statblock to roll from" line.

@@ -772,22 +772,27 @@ function pcSheetHTML(it){
   const c=rosterById(it.srcId);
   if(!c)return `<div class="ca-soon">Player character — linked record not found.</div>`;
   const lines=[];
+  const R=clickRollOn(); // rollable when dice rolling is enabled; otherwise plain display chips
   const line=(lbl,inner,txt)=>`<div class="pcs-line${txt?" txt":""}"><span class="pcs-lbl">${lbl}</span><span class="pcs-${txt?"txt":"chips"}">${inner}</span></div>`;
+  // A coloured chip; rollable (button + data-roll) when dice rolling is on, else a static span.
+  const rchip=(ab,inner,roll,type,label,extra)=>R
+    ?`<button class="pchip skchip cc-ab-${ab}${extra||""} pcs-roll" data-roll="${roll}" data-rolltype="${type}" data-rolllabel="${esc(label)}" data-abil="${ab}" title="Roll ${esc(label)}">${inner}</button>`
+    :`<span class="pchip skchip cc-ab-${ab}${extra||""}">${inner}</span>`;
   // Abilities the character has actually filled (a value, not the placeholder default).
   const ab=ABILS.map(k=>{const f=abilFieldOf(c,k);return (!f||f.v===""||f.v==null)?null:{k,f};}).filter(Boolean);
   if(ab.length){
-    lines.push(line("Abilities",ab.map(a=>`<span class="pchip skchip cc-ab-${a.k}"><span class="pchip-n">${abilScore(a.f)}</span> ${a.k.toUpperCase()} ${sgn(abilMod(abilScore(a.f)))}</span>`).join("")));
-    lines.push(line("Saves",ab.map(a=>`<span class="pchip skchip cc-ab-${a.k}${a.f.prof?" exp":""}"><span class="pchip-n">${sgn(abilSave(c,a.f))}</span> ${a.k.toUpperCase()}</span>`).join("")));
+    lines.push(line("Abilities",ab.map(a=>{const mod=abilMod(abilScore(a.f));return rchip(a.k,`<span class="pchip-n">${abilScore(a.f)}</span> ${a.k.toUpperCase()} ${sgn(mod)}`,`1d20${sgn(mod)}`,"check",ABIL_NAME[a.k]||a.k.toUpperCase());}).join("")));
+    lines.push(line("Saves",ab.map(a=>{const sv=abilSave(c,a.f);return rchip(a.k,`<span class="pchip-n">${sgn(sv)}</span> ${a.k.toUpperCase()}`,`1d20${sgn(sv)}`,"save",ABIL_NAME[a.k]||a.k.toUpperCase(),a.f.prof?" exp":"");}).join("")));
   }
   const sf=(c.fields||[]).find(f=>f.k==="skills");
   if(sf&&Array.isArray(sf.v)&&sf.v.length)
-    lines.push(line("Skills",sf.v.map(e=>{const a=SKILLS[e.s]||"int",exp=(Number(e.e)||1)>=2;return `<span class="pchip skchip cc-ab-${a}${exp?" exp":""}"><span class="pchip-n">${sgn(skillBonus(c,e))}</span> ${esc(e.s.replace(/_/g," "))}</span>`;}).join("")));
+    lines.push(line("Skills",sf.v.map(e=>{const a=SKILLS[e.s]||"int",exp=(Number(e.e)||1)>=2,b=skillBonus(c,e),nm=e.s.replace(/_/g," ");return rchip(a,`<span class="pchip-n">${sgn(b)}</span> ${esc(nm)}`,`1d20${sgn(b)}`,"check",nm,exp?" exp":"");}).join("")));
   const pf=(c.fields||[]).find(f=>f.k==="passives");
   if(pf&&Array.isArray(pf.v)&&pf.v.length)
-    lines.push(line("Passives",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
+    lines.push(line("Passive skills",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
   const mains=(c.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
   if(mains.length)
-    lines.push(line("Spell",mains.map(f=>`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk</span><span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
+    lines.push(line("Spell",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" spell")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
   const df=(c.fields||[]).find(f=>f.k==="dmgmod");
   if(df&&Array.isArray(df.v)&&df.v.length)
     lines.push(line("Defenses",df.v.map(e=>{const m=e.m||"res";return `<span class="pchip dchip-${m}"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}</span>`;}).join("")));
@@ -995,8 +1000,10 @@ function renderCombat(){
   const {a,e}=ctx,cb=e.combat,sc=sceneOf(a,e.sceneId);
   if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
   const cur=cb?cb.order[cb.turnIndex]:null;
-  // Attribute rolls made from the active statblock to this combatant (CT4).
-  combatRollSrc=(cb&&cur&&cur.kind==="monster")?{name:cur.name,id:cur.srcId||null}:null;
+  // Attribute statblock / chip rolls to the combatant whose panel is shown — the peeked selection if any,
+  // else the active turn (CT4; extended to PCs + the peek panel). PCs carry no id (not in the bestiary).
+  {const sel=cb?combatSelInOrder():[];const shown=(sel.length&&cur&&sel[0].id!==cur.id)?sel[0]:cur;
+   combatRollSrc=shown?{name:shown.name,id:shown.kind==="monster"?(shown.srcId||null):null}:null;}
   setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
   const fab=cb?`<button class="fab combat-fab end" id="combatFab" style="width:auto">End combat</button>`
     :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
@@ -1063,6 +1070,12 @@ function renderCombat(){
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
   // PC sheet "Edit" → open the full character detail (closing it re-renders combat — see openCharacterDetail).
   body.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const ctx=loadedCtx();openCharacterDetail(el.dataset.pcedit,ctx?ctx.a.id:null);}));
+  // PC sheet chips (ability checks / saves / skills / spell attack) roll like the monster quick-ref chips,
+  // attributed to the shown PC via combatRollSrc. Alt-click / right-click opens roll options.
+  body.querySelectorAll(".pcs-roll[data-roll]").forEach(el=>{
+    el.addEventListener("click",e=>{if(!clickRollOn())return;e.stopPropagation();if(e.altKey){openRollMenu(el);return;}quickRoll(el);});
+    el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();openRollMenu(el);});
+  });
   body.querySelectorAll("[data-rmcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,i]=el.dataset.rmcond.split(":");removeCombatCond(id,+i);}));
   // Resource pips: filled pip → spend one, empty pip → restore one.
   body.querySelectorAll("[data-respip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();

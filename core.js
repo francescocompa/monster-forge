@@ -336,7 +336,9 @@ function migrateCharShape(c){
   const old=Array.isArray(c.fields)?c.fields:[];
   c.fields=[{k:"ac",v:c.ac??""},{k:"hp",v:c.hp??""}]
     .concat((c.init!=null&&c.init!=="")?[{k:"init",v:c.init}]:[]) // init only when it had a value (no longer a fixed default)
-    .concat(old.map(f=>"k" in f?{k:f.k||"",label:f.label||"",v:f.v??""}:{k:"",label:f.label||"",v:f.value||""}));
+    .concat(old.map(f=>"k" in f?{k:f.k||"",label:f.label||"",v:f.v??""}:{k:"",label:f.label||"",v:f.value||""}))
+    // Drop the retired Passive Perception field (standard `pp` + legacy custom) — the Passive skills preset covers it.
+    .filter(f=>f.k!=="pp"&&!(!f.k&&/^passive perception$/i.test((f.label||"").trim())));
   c.notes=c.notes||"";delete c.ac;delete c.hp;delete c.init;return true;
 }
 function migrateLocalToChar(p){const c={id:(p&&p.id)||uid(),name:(p&&p.name)||"",ac:(p&&p.ac)??"",hp:(p&&p.hp)??"",init:(p&&p.init)??"",fields:Array.isArray(p&&p.fields)?p.fields:[]};migrateCharShape(c);return c;}
