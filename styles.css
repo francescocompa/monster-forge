@@ -1355,9 +1355,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-d20 svg{width:17px;height:17px}
 .ct-d20.rolling svg{animation:croSpin .55s linear infinite}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
-.combat-fab svg{width:15px;height:15px;fill:currentColor;flex:none}
-.combat-fab.end{background:var(--bad)!important}
-.combat-fab.end:hover{background:#a4392f!important}
+.combat-fab svg{width:13px;height:13px;fill:none;stroke:currentColor;flex:none}
+/* Turn-control FAB: a previous-turn chevron + the primary "Next turn" button (combat is always live). */
+.combat-fab-turn{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:stretch;gap:8px}
+.combat-fab-prev{height:32px;width:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r);background:var(--panel2);color:var(--txt);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer;padding:0}
+.combat-fab-prev:hover{background:var(--panel3);border-color:var(--dim)}
+.combat-fab-prev svg{width:13px;height:13px;fill:none;stroke:currentColor}
+.combat-fab.next{box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .picker-scroll{min-height:240px}
 .modal .mrow.picker-foot .btn{width:auto}
 .picker-foot .pf-btn{display:inline-flex;align-items:center;gap:6px}

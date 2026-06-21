@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 162 — Combat is always live (no start screen)
+- **Removed the pre-combat "Start combat" screen.** Loading an encounter into the combat tab now
+  **auto-starts** the tracker (builds the order silently) whenever it has combatants or party — combat is
+  always "started". The dramatic "Rolling initiative…" flourish stays on the explicit ⚔ entry from an
+  encounter card (`runCombat`).
+- **The FAB is now the turn control:** a primary **"Next turn"** button + a previous-turn chevron
+  (`combatNext` / `combatPrev` → `combatAdvance`). The old Start/End FAB and `endCombat` are gone; the
+  duplicate turn arrows were removed from the round bar. Reset / re-roll initiative live in the round-bar
+  tools (⚙) menu. Encounter "completed" status is managed from the encounter card as before.
+
 ## Batch 161 — Party row + roll/dropdown polish
 - **Party row name truncation is consistent + generous.** The name now keeps a `min-width` floor and the
   chip cluster shrinks/scrolls first, so every row truncates at the same point and short names (e.g. "Vex")

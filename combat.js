@@ -492,7 +492,6 @@ function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.
   // (the edit may change the "out of order" count instead).
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   saveAdv();renderCombat();}
-function endCombat(){const ctx=combatOf();if(!ctx)return;confirmModal("End this combat? The initiative order and tracked HP will be cleared.",()=>{ctx.e.combat=null;if(!ctx.e.archived)ctx.e.status="completed";combatRollSrc=null;clearCombatSel();saveAdv();renderCombat();});}
 // Reset the encounter to a fresh start: rebuild the order from the encounter combatants + party — full HP,
 // fresh initiative, round 1, cleared conditions / death saves / statuses (B128).
 function resetCombat(){const ctx=combatOf();if(!ctx)return;const a=ctx.a,e=ctx.e;
@@ -933,8 +932,6 @@ function combatRoundBarHTML(cb){
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
-    <button class="ct-turnbtn" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
-    <button class="ct-turnbtn" id="combatNext" title="Next turn" aria-label="Next turn">${CHEV_R}</button>
     ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
     ${canRoll?`<button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}</button>`:""}
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
@@ -1014,7 +1011,11 @@ function renderCombat(){
       <button class="btn primary" id="combatLoad" style="width:auto">Load encounter</button>
     </div>`;
     $("#combatLoad").addEventListener("click",openLoadCombat);return;}
-  const {a,e}=ctx,cb=e.combat,sc=sceneOf(a,e.sceneId);
+  const {a,e}=ctx,sc=sceneOf(a,e.sceneId);let cb=e.combat;
+  // Combat is always "started": auto-start the tracker on load (no pre-combat screen) whenever the
+  // encounter has something to fight. The dramatic "Rolling initiative…" flourish stays on the explicit
+  // ⚔ entry (runCombat); loading the tab just builds the order silently.
+  if(!cb&&(e.combatants.some(c=>c.type!=="event")||a.party.length)){startCombat(a,e);if(!e.archived)e.status="active";cb=e.combat;}
   if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
   const cur=cb?cb.order[cb.turnIndex]:null;
   // Attribute statblock / chip rolls to the combatant whose panel is shown — the peeked selection if any,
@@ -1022,8 +1023,12 @@ function renderCombat(){
   {const sel=cb?combatSelInOrder():[];const shown=(sel.length&&cur&&sel[0].id!==cur.id)?sel[0]:cur;
    combatRollSrc=shown?{name:shown.name,id:shown.kind==="monster"?(shown.srcId||null):null}:null;}
   setCrumbs(["Combat"]); // combat is a top-level tab now, not a sub-section of Adventures (CT7)
-  const fab=cb?`<button class="fab combat-fab end" id="combatFab" style="width:auto">End combat</button>`
-    :`<button class="fab combat-fab" id="combatFab" style="width:auto">${SWORDS_SVG}<span>${e.status==="completed"?"Restart combat":"Start combat"}</span></button>`;
+  // The FAB is the turn control now (combat is always live): a primary "Next turn" + a previous-turn
+  // chevron. Reset / re-roll live in the round-bar tools menu.
+  const fab=cb?`<div class="combat-fab-turn">
+      <button class="combat-fab-prev" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
+      <button class="fab combat-fab next" id="combatNext" style="position:static" title="Next turn"><span>Next turn</span>${CHEV_R}</button>
+    </div>`:"";
   // Preserve the scroll position of the order list (and active panel) across the full re-render — selecting
   // or editing a row rebuilds the DOM and would otherwise jump back to the top (B123).
   const _pOrd=body.querySelector(".combat-order"),_pAct=body.querySelector(".ca-scroll");
@@ -1044,7 +1049,6 @@ function renderCombat(){
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
   {const nt=$(".ct-notes"),mb=$(".ct-notes-more");if(nt&&mb&&nt.scrollHeight>nt.clientHeight+2){mb.hidden=false;mb.addEventListener("click",()=>{mb.textContent=nt.classList.toggle("clamped")?"more":"less";});}}
   {const ed=$("#combatEncDrop");if(ed)ed.addEventListener("click",ev=>{ev.stopPropagation();openSceneEncMenu(ed,a,e);});}
-  $("#combatFab").addEventListener("click",()=>cb?endCombat():runCombat(a,e));
   const addBtn=$("#combatAddBtn");if(addBtn)addBtn.addEventListener("click",()=>openBestiaryPicker(a,e));
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
