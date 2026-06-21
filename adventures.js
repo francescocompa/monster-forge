@@ -424,8 +424,11 @@ function openCharacterDetail(rid,curAdvId,ui){
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
     const ph=fieldDefault(c,f,curAdv)||"Empty";
-    const list=f.k==="class"?` list="pcClassList"`:"";
-    return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}<input class="cd-pv" data-cdval="${i}"${list} value="${esc(String(f.v))}" placeholder="${esc(ph)}"></div>`;};
+    // Class: free-text input + a hover/focus chevron that opens a custom class dropdown (B156).
+    const valEl=f.k==="class"
+      ?`<div class="cd-class-wrap"><input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}"><button class="cd-class-chev" data-cdclasschev="${i}" tabindex="-1" aria-label="Pick a class">▾</button></div>`
+      :`<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}">`;
+    return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}${valEl}</div>`;};
   // Preset chip field (B148) — label + a wrapping field of chips and an add control. dmgmod/passives pick from
   // a custom dropdown; skills keep the datalist combobox. Passive chips derive proficiency from the Skills field.
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
@@ -459,7 +462,6 @@ function openCharacterDetail(rid,curAdvId,ui){
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
     <div class="cd-foot"><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
-    <datalist id="pcClassList">${D5_CLASSES.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="pcSkillList">${Object.keys(SKILLS).map(s=>`<option value="${s.replace(/_/g," ")}">`).join("")}</datalist>
   </div>`);
   $("#modal").classList.add("cd-host");
@@ -531,6 +533,9 @@ function openCharacterDetail(rid,curAdvId,ui){
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
+  m.querySelectorAll("[data-cdclasschev]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const f=c.fields[+el.dataset.cdclasschev];if(!f)return;
+    const p=showPopover(el,`<div class="popscroll">${D5_CLASSES.map(x=>`<button class="popitem${f.v===x?" on":""}" data-cl="${x}">${x}</button>`).join("")}</div>`);
+    p.querySelectorAll("[data-cl]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v=b.dataset.cl;saveRoster();re({});}));}));
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
   {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved — new characters start from these properties.");});}
   // Top kebab menu (B155): clear page · import template · unsync (shared only) · delete.

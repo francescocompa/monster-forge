@@ -911,6 +911,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-pv{flex:1;min-width:0;font-size:14px;background:none;border:none;color:var(--txt);padding:6px 8px;border-radius:6px;outline:none}
 .cd-pv::placeholder{color:var(--faint)}
 .cd-pv:hover,.cd-pv:focus{background:var(--in)}
+.cd-class-wrap{flex:1;min-width:0;display:flex;align-items:center}
+.cd-class-wrap .cd-pv{flex:1;min-width:0}
+.cd-class-chev{flex:none;opacity:0;background:none;border:none;color:var(--faint);cursor:pointer;padding:4px 6px;font-size:11px;line-height:1;transition:opacity .12s}
+.cd-class-wrap:hover .cd-class-chev,.cd-class-wrap:focus-within .cd-class-chev{opacity:1}
+.cd-class-chev:hover{color:var(--txt)}
 .cd-prop-pop{min-width:0}
 .cd-prop-pop .cd-pn,.cd-prop-pop .cd-pn.static{min-width:0;padding:6px 4px}
 .cd-prop-pop .cd-pn-edit{min-width:0;width:120px}

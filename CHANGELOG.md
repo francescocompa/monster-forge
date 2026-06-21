@@ -4,6 +4,11 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 156 — Party rework (21/n): Class field chevron dropdown
+- The **Class** field (the default 2nd property) keeps its free-text input but now has a **chevron that appears
+  on hover/focus** and opens a **custom dropdown of the 13 D&D classes** (current value marked), replacing the
+  native datalist.
+
 ## Batch 155 — Party rework (20/n): character-detail kebab menu
 - A **kebab (⋯) menu** at the top of the character detail consolidates: **Clear page** (wipe name, notes and
   every property value — confirmed), **Import current template** (reshape the character to the saved template,
