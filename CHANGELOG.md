@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 155 — Party rework (20/n): character-detail kebab menu
+- A **kebab (⋯) menu** at the top of the character detail consolidates: **Clear page** (wipe name, notes and
+  every property value — confirmed), **Import current template** (reshape the character to the saved template,
+  keeping overlapping fields' values and **prompting before removing any *filled* property**), **Unsync**
+  (shared characters only) and **Delete character**. The standalone unsync icon and the footer Delete button
+  are gone (footer is just Done); dropped the now-unused `UNLINK_ICON`. `fieldHasVal` detects filled fields.
+
 ## Batch 154 — Party rework (19/n): roster header tweaks + main-ability save tint
 - **"Level Up" text** beside the level-up button. The **member count moved back next to the "Party roster"
   label** (dim, no border) — removed from the adventure title.

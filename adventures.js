@@ -215,7 +215,6 @@ function renderAdvDetail(){
 // (ac/hp/init/…) carrying its canonical label + icon, or a custom label. Defaults are AC + HP (removable).
 const PC_AC_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
 const PC_HP_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>';
-const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L489.3 358.2l60.4-60.5c56.5-56.5 56.5-148 0-204.5-50-50-128.8-56.5-186.3-15.4l-1.6 1.1c-14.4 10.3-17.7 30.3-7.4 44.6s30.3 17.7 44.6 7.4l1.6-1.1c32.1-22.9 76-19.3 103.8 8.6 31.5 31.5 31.5 82.5 0 114l-65.1 65.2-71-55.9c1.1-14.5-3.8-29.5-15-40.7-19.9-19.9-51.4-21.5-73.2-4.9L38.8 5.1zM276 247.5C261.8 235.9 248.5 223.6 224 223.6c-10.3 0-20.2 3.9-27.7 10.9L75.6 348.9c-30.4 28.3-47.6 68-47.6 109.5v5.8c0 26.2 16.3 47.9 38.4 57.2l188.2 79.9c5.8 2.5 12.1 3.7 18.4 3.7s12.6-1.2 18.4-3.7l36.9-15.7-160-126.1z"/></svg>';
 // Standard typed fields (B137): a key carrying its canonical label + (AC/HP) icon or short label. Spell
 // attack / save DC are NO LONGER standalone — they're DERIVED from whichever ability is flagged the spell
 // ability + the Level (proficiency). Abilities carry `abil:true` so they can be grouped + flagged.
@@ -348,7 +347,9 @@ function reorderField(c,fromIdx,toIdx,after,intoHidden){
 }
 // A character is "blank" when nothing has been filled in — no name, no notes, no field values (B140):
 // deleting it needs no confirmation prompt.
-function charIsBlank(c){return !c||(!(c.name||"").trim()&&!(c.notes||"").trim()&&!(c.fields||[]).some(f=>String(f.v??"").trim()!==""));}
+function charIsBlank(c){return !c||(!(c.name||"").trim()&&!(c.notes||"").trim()&&!(c.fields||[]).some(fieldHasVal));}
+// A field "has a value": non-empty scalar, non-empty chip array, or non-empty object.
+function fieldHasVal(f){const v=f&&f.v;return Array.isArray(v)?v.length>0:(v&&typeof v==="object")?Object.keys(v).length>0:String(v??"").trim()!=="";}
 // Delete a character everywhere: drop it from the roster and from every adventure's party.
 function deleteRosterChar(rid){state.roster=state.roster.filter(r=>r.id!==rid);state.adv.forEach(a=>{if(a.party)a.party=a.party.filter(x=>x!==rid);});saveRoster();saveAdv();}
 function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span class="pc-cl">${esc((d&&d.short)||fieldLabel(f))}</span>`;
@@ -449,7 +450,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   openModalRaw(`<div class="char-detail">
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
-      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
+      <div class="cd-icons"><button class="cd-gx" data-cdmenu title="More" aria-label="More">⋯</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
     </div>
     <div class="cd-scroll">
       <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
@@ -457,7 +458,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-    <div class="cd-foot"><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
+    <div class="cd-foot"><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
     <datalist id="pcClassList">${D5_CLASSES.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="pcSkillList">${Object.keys(SKILLS).map(s=>`<option value="${s.replace(/_/g," ")}">`).join("")}</datalist>
   </div>`);
@@ -532,9 +533,21 @@ function openCharacterDetail(rid,curAdvId,ui){
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
   {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved — new characters start from these properties.");});}
-  {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
-  m.querySelector("[data-cddelete]").addEventListener("click",()=>{const del=()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();};
-    if(charIsBlank(c))del();else confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,del);});
+  // Top kebab menu (B155): clear page · import template · unsync (shared only) · delete.
+  {const km=m.querySelector("[data-cdmenu]");if(km)km.addEventListener("click",()=>{
+    const items=`<button class="popitem" data-cdm="clear">Clear page</button><button class="popitem" data-cdm="template">Import current template</button>${shared&&curAdv?`<button class="popitem" data-cdm="unsync">Unsync from this adventure</button>`:""}<div class="popsep"></div><button class="popitem danger" data-cdm="delete">Delete character</button>`;
+    const p=showPopover(km,items);
+    p.querySelectorAll("[data-cdm]").forEach(b=>b.addEventListener("click",()=>{const act=b.dataset.cdm;closePopover();
+      if(act==="clear"){confirmStack("Clear this page — name, notes and every property value? The properties themselves stay.",()=>{c.name="";c.notes="";(c.fields||[]).forEach(f=>{if(Array.isArray(f.v))f.v=[];else if(f.v&&typeof f.v==="object")f.v={};else f.v="";f.main=false;f.prof=false;f.atkV="";f.dcV="";});saveRoster();re({});});}
+      else if(act==="template"){const tpl=loadPcTemplate();if(!tpl){toast("No template saved yet — use Save as template first.");return;}
+        const keyOf=f=>f.k||("l:"+(f.label||"").toLowerCase()),cur=c.fields||[],tk=new Set(tpl.map(keyOf));
+        const removed=cur.filter(f=>!tk.has(keyOf(f))&&fieldHasVal(f));
+        const apply=()=>{c.fields=tpl.map(tf=>{const ex=cur.find(f=>keyOf(f)===keyOf(tf));return ex?ex:JSON.parse(JSON.stringify(tf));});saveRoster();re({});};
+        if(removed.length)confirmStack(`Importing the template removes ${removed.length} filled propert${removed.length>1?"ies":"y"} (${esc(removed.map(fieldLabel).join(", "))}). Continue?`,apply);else apply();}
+      else if(act==="unsync"){const ad=state.adv.find(x=>x.id===curAdv);if(ad)unsyncPartyMember(ad,rid);closeModal();}
+      else if(act==="delete"){const del=()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();};if(charIsBlank(c))del();else confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,del);}
+    }));
+  });}
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
