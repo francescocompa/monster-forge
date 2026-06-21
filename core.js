@@ -232,7 +232,7 @@ function xpOf(m){return (m.xpOver!==""&&m.xpOver!=null)?Number(m.xpOver):(CR_XP[
 
 function blankMonster(){return{id:uid(),chassis:false,name:"",shortName:{word:"creature",proper:false,plural:false},size:"Medium",type:"",subtype:"",align:"",
   ac:null,acnote:"",hp:null,hpf:"",spd:{walk:30,climb:0,fly:0,swim:0,burrow:0,hover:false},init:"",initProf:"none",
-  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],skills:[],tools:[],dmg:{},dmgnote:"",cimm:"",gear:"",
+  str:10,dex:10,con:10,int:10,wis:10,cha:10,saves:[],mainAbils:[],skills:[],tools:[],dmg:{},dmgnote:"",cimm:"",gear:"",
   senses:{darkvision:0,blindsight:0,tremorsense:0,truesight:0,blindBeyond:false,other:""},lang:"Common",
   cr:"1",xpOver:"",traits:[],actions:[],bonus:[],reactions:[],sort:{},
   legend:{on:false,intro:"",items:[]},villain:{on:false,intro:"",items:[]},lair:{on:false,intro:"",items:[]},regional:{on:false,text:""},notes:[],
@@ -350,7 +350,7 @@ function migratePartyModel(){let changed=false;
 }
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
-function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell cc-ab-${a}"><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell cc-ab-${a}"><button type="button" class="abmain" id="mn_${a}" title="Main ability — sources bare [ATK] / [SAVE]" aria-pressed="false">★</button><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
 // Damage modifiers — same shape as the Skills section: one row per type = name select +
 // 3-state toggle (Resist/Immune/Vulnerable) + remove. "All Physical" expands to B/P/S.
 const DMG3=[["res","Resist"],["imm","Immune"],["vuln","Vulnerable"]];
@@ -442,6 +442,7 @@ function bindStatic(){
   ABILS.forEach(a=>{
     $("#ab_"+a).addEventListener("input",()=>{M[a]=Number($("#ab_"+a).value||10);refreshAbil();renderEntries();renderPreview();});
     $("#sv_"+a).addEventListener("click",()=>{const on=!M.saves.includes(a);M.saves=M.saves.filter(x=>x!==a);if(on)M.saves.push(a);refreshAbil();renderPreview();});
+    $("#mn_"+a).addEventListener("click",()=>{if(!Array.isArray(M.mainAbils))M.mainAbils=[];const on=!M.mainAbils.includes(a);M.mainAbils=M.mainAbils.filter(x=>x!==a);if(on)M.mainAbils.push(a);refreshAbil();renderPreview();});
   });
   $("#f_legintro").addEventListener("input",()=>{M.legend.intro=$("#f_legintro").value;renderPreview();});
   $("#f_vilintro").addEventListener("input",()=>{M.villain.intro=$("#f_vilintro").value;renderPreview();});
@@ -492,7 +493,7 @@ function buildCRStepper(){const w=$("#wb_cr");if(!w||w.querySelector(".stepbtns"
   b.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{
     const i=CR_LIST.indexOf(M.cr),ni=clamp(i+(+btn.dataset.d),0,CR_LIST.length-1);
     if(ni!==i)setCR(CR_LIST[ni]);}));}
-function refreshAbil(){const pb=pbForCR(M.cr);ABILS.forEach(a=>{const m=mod(M[a]);$("#mod_"+a).textContent=sgn(m);const p=M.saves.includes(a);$("#svv_"+a).textContent=sgn(m+(p?pb:0));const b=$("#sv_"+a);b.classList.toggle("active",p);b.setAttribute("aria-pressed",p?"true":"false");});}
+function refreshAbil(){const pb=pbForCR(M.cr),mains=Array.isArray(M.mainAbils)?M.mainAbils:[];ABILS.forEach(a=>{const m=mod(M[a]);$("#mod_"+a).textContent=sgn(m);const p=M.saves.includes(a);$("#svv_"+a).textContent=sgn(m+(p?pb:0));const b=$("#sv_"+a);b.classList.toggle("active",p);b.setAttribute("aria-pressed",p?"true":"false");const mn=$("#mn_"+a);if(mn){const on=mains.includes(a);mn.classList.toggle("active",on);mn.setAttribute("aria-pressed",on?"true":"false");mn.closest(".cell").classList.toggle("is-main",on);}});}
 
 function renderSkills(){const box=$("#skillRows");
   box.innerHTML=M.skills.map((s,i)=>`<div class="rowline">

@@ -260,7 +260,10 @@ select::-ms-expand{display:none}
 .shortcuts td.res{color:var(--txt)}
 
 .abil{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
-.abil .cell{background:var(--in);border:1px solid var(--line);border-radius:7px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column}
+.abil .cell{position:relative;background:var(--in);border:1px solid var(--line);border-radius:7px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column}
+.abil .cell .abmain{position:absolute;top:4px;right:4px;width:16px;height:16px;display:grid;place-items:center;padding:0;background:none;border:none;color:var(--faint);font-size:11px;line-height:1;cursor:pointer;opacity:.45}
+.abil .cell .abmain:hover,.abil .cell .abmain.active{opacity:1;color:var(--amber)}
+.abil .cell.is-main{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
 .abil .cell .ab{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--amber);margin-bottom:6px}
 /* Ability colour tokens (matches the statblock cc-ab scheme). Set --abc on any cc-ab-* element so
    the Forge ability boxes + skill/tool rows can tint themselves by ability. B79/B81. */
@@ -850,11 +853,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-pn:hover{background:var(--panel2)}
 .cd-pn.static{cursor:default}
 .cd-pn svg{width:13px;height:13px;color:var(--faint)}
-.cd-abtog{flex:none;display:flex;gap:4px}
-.cd-tog{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);background:none;border:1px solid var(--line);border-radius:5px;padding:3px 7px;line-height:1;cursor:pointer}
-.cd-tog:hover{color:var(--dim);border-color:var(--dim)}
-.cd-tog.on{color:var(--accent);border-color:var(--accent)}
-.cd-subrow{display:flex;gap:14px;margin:1px 0 6px 158px}
+.cd-abilgrid{grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.cd-abilgrid .cell{padding:7px 4px 6px}
+.cd-abilgrid .cell input{font-size:15px;color-scheme:dark}
+.cd-abilgrid .cell .mod{margin:4px 0 0}
+.cd-spell{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.cd-spellrow{display:flex;align-items:flex-end;gap:12px}
+.cd-spell-ab{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--abc,var(--amber));min-width:30px;padding-bottom:7px}
 .cd-sub{display:flex;flex-direction:column;gap:3px}
 .cd-sub-l{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 .cd-sub-v{width:62px;box-sizing:border-box;font-size:13px;background:var(--in);border:1px solid var(--line);border-radius:5px;color:var(--txt);padding:4px 7px;outline:none;font-variant-numeric:tabular-nums}

@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 139 — Party rework (4/n): reuse the Forge ability grid + shared "main ability"
+Replaced B138's inline per-ability atk/save toggles with the **Forge ability-score block, reused** in the
+character detail and a shared **"main ability"** concept across both surfaces.
+- **Forge.** Each ability cell gains a ★ **main** toggle (`M.mainAbils`, multi-select). A flagged ability
+  **sources the bare `[ATK]` / `[SAVE]` brackets** — they now use the highest of the *marked* abilities
+  (instead of the creature's highest overall); unflagged behaviour is unchanged. `buildAbilityGrid` /
+  `refreshAbil` render the star + `is-main` ring; `applyRefsFor` (engine) does the resolution.
+- **Character detail.** The six abilities no longer render as property rows — they're a **3-column ability
+  grid appended at the foot** (reusing `.abil .cell`), each cell with a ★ main toggle. Marking an ability
+  **main derives both its spell ATK and save DC** (mod + PB from Level; DC +8); a per-ability override row
+  (computed value as a **dimmed placeholder**, `atkV` / `dcV`) sits under the grid, and the derived values
+  surface as party-row chips. Multiple abilities can be main. `f.main` replaces B138's split `atk`/`dc`
+  flags; `normalizeRosterPC` migrates `spell`/`atk`/`dc` → `main`. `chipHidden` now also keeps abilities out
+  of the row (the grid owns them; the row shows their derived chips).
+
 ## Batch 138 — Party rework (3/n): detail polish + per-ability ATK/save toggles
 Feedback round on B137's character detail.
 - **Initiative is never a party-row chip** (`chipHidden`) — combat rolls it; the row stays a clean summary.

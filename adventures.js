@@ -255,7 +255,7 @@ function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
 function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
   fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
-    atk:!!(f.atk||f.spell),dc:!!(f.dc||f.spell),atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+    main:!!(f.main||f.atk||f.dc||f.spell),atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);return d?d.label:((f.k&&PC_LEGACY[f.k])||f.label||"Field");}
@@ -267,11 +267,12 @@ function abilMod(score){const n=Number(score);return isNaN(n)?0:Math.floor((n-10
 function abilDerived(c,f){const m=abilMod(f.v),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
 function effAtk(c,f){const d=abilDerived(c,f);return (f.atkV!==""&&f.atkV!=null)?(Number(f.atkV)||0):d.atk;}
 function effDc(c,f){const d=abilDerived(c,f);return (f.dcV!==""&&f.dcV!=null)?(Number(f.dcV)||0):d.dc;}
-// Every enabled derived chip across the character's abilities, in field order (each toggled atk/save).
-function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fieldDef(f);if(!d||!d.abil)return;
-  if(f.atk)out.push({kind:"atk",v:effAtk(c,f)});if(f.dc)out.push({kind:"dc",v:effDc(c,f)});});return out;}
-// Initiative never appears as a party-row chip (B138) — combat rolls it; the row stays a display summary.
-function chipHidden(f){return !!f.hide||f.k==="init";}
+// A "main" ability (B139) derives BOTH the spell ATK and the save DC chip; multiple abilities can be main.
+function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fieldDef(f);if(!d||!d.abil||!f.main)return;
+  out.push({kind:"atk",v:effAtk(c,f)});out.push({kind:"dc",v:effDc(c,f)});});return out;}
+// Never a party-row chip: hidden fields, initiative (combat rolls it) and abilities (they live in the grid;
+// the row instead shows their derived ATK/DC chips when flagged main).
+function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||!!(d&&d.abil);}
 // The adventures a roster character is in (membership = the ordered id lists in each a.party).
 function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
 function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();openCharacterDetail(c.id,a.id);}
@@ -347,18 +348,25 @@ function openCharacterDetail(rid,curAdvId,ui){
   const advs=rosterAdventures(rid).slice().sort((x,y)=>(x.id===curAdv?-1:y.id===curAdv?1:0)),shared=advs.length>1;
   const tag=ad=>`<span class="cd-tag${ad.id===curAdv?" cur":""}" style="--tagc:${ad.color||"var(--accent)"}">${esc(advDName(ad))}</span>`;
   const tagsHTML=advs.length?advs.map(tag).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
-  const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"",isAbil=d&&d.abil;
+  const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
-    // Abilities carry atk/save toggles next to the value; toggling one reveals a derived sub-row whose
-    // input shows the computed atk/DC as a dimmed placeholder and accepts a manual override.
-    const tog=isAbil?`<div class="cd-abtog"><button class="cd-tog${f.atk?" on":""}" data-cdtog="atk:${i}" title="Spell attack bonus">atk</button><button class="cd-tog${f.dc?" on":""}" data-cdtog="dc:${i}" title="Spell save DC">save</button></div>`:"";
-    let sub="";
-    if(isAbil&&(f.atk||f.dc)){const cv=abilDerived(c,f);
-      const col=(on,kind,lbl,ph,val)=>on?`<div class="cd-sub"><span class="cd-sub-l">${lbl}</span><input class="cd-sub-v" data-cdsub="${kind}:${i}" value="${esc(val==null?"":String(val))}" placeholder="${ph}"></div>`:"";
-      sub=`<div class="cd-subrow">${col(f.atk,"atk","atk",sgn(cv.atk),f.atkV)}${col(f.dc,"dc","save DC",cv.dc,f.dcV)}</div>`;}
-    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty">${tog}</div>${sub}`;};
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
+  // Abilities live in the reused Forge ability grid (B139), not as property rows.
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+  // Ability-score grid appended at the foot — star a cell to make it "main" (derives ATK/save), with override
+  // inputs (computed value as a dimmed placeholder) for each flagged ability. More than one can be main.
+  const abilEntries=(c.fields||[]).map((f,i)=>({f,i})).filter(x=>{const d=fieldDef(x.f);return d&&d.abil;});
+  let abilBlock="";
+  if(abilEntries.length){
+    const cells=PC_ABILS.map(k=>{const x=abilEntries.find(y=>y.f.k===k);if(!x)return"";const {f,i}=x,on=!!f.main;
+      return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdmain="${i}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabval="${i}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(f.v))}</div></div>`;}).join("");
+    const mains=abilEntries.filter(x=>x.f.main);
+    const spell=mains.length?`<div class="cd-spell">${mains.map(({f,i})=>{const cv=abilDerived(c,f);
+      return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdsub="atk:${i}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdsub="dc:${i}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
+    abilBlock=`<div class="cd-grpdiv"><span>Ability scores</span></div><div class="abil cd-abilgrid">${cells}</div>${spell}`;
+  }
+  const hidBlock=hidHTML?`<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}`:"";
   openModalRaw(`<div class="char-detail">
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
@@ -366,7 +374,7 @@ function openCharacterDetail(rid,curAdvId,ui){
     </div>
     <div class="cd-scroll">
       <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
-      <div class="cd-props">${visHTML}<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button></div>
+      <div class="cd-props">${visHTML}${hidBlock}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${abilBlock}</div>
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
@@ -396,7 +404,9 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
   m.querySelectorAll("[data-cdsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,i]=el.dataset.cdsub.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
-  m.querySelectorAll("[data-cdtog]").forEach(el=>el.addEventListener("click",()=>{const[kind,i]=el.dataset.cdtog.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atk=!f.atk;else f.dc=!f.dc;saveRoster();re({});}));
+  // Ability score commits on change (re-render refreshes the mod + derived placeholders without stealing focus mid-type).
+  m.querySelectorAll("[data-cdabval]").forEach(el=>el.addEventListener("change",()=>{const f=c.fields[+el.dataset.cdabval];if(f){f.v=el.value;saveRoster();re({});}}));
+  m.querySelectorAll("[data-cdmain]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdmain];if(!f)return;f.main=!f.main;saveRoster();re({});}));
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}

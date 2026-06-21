@@ -6,9 +6,11 @@
 function applyRefsFor(mon,t){if(!t)return t;const sn=(mon&&mon.shortName)||{word:"creature",proper:false,plural:false};const w=sn.word||"creature";
   const ph=cap=>sn.proper?w:((cap?"The ":"the ")+w);const sfx=sn.plural?"":"s";
   // [ABIL SAVE] → save DC, [ABIL ATK] → attack/check modifier (PB + ability mod, from this creature's CR).
-  // Bare [SAVE]/[ATK] (no ability) fall back to the creature's HIGHEST ability modifier.
+  // Bare [SAVE]/[ATK] (no ability) use the highest of the creature's flagged MAIN abilities (B139), or the
+  // highest ability overall when none is flagged.
   const pb=mon?pbForCR(mon.cr):2,abmod=a=>mon?mod(mon[a.toLowerCase()]??10):0,capw=w.charAt(0).toUpperCase()+w.slice(1);
-  const bestMod=Math.max(...ABILS.map(a=>abmod(a)));
+  const mains=(mon&&Array.isArray(mon.mainAbils)&&mon.mainAbils.length)?mon.mainAbils:ABILS;
+  const bestMod=Math.max(...mains.map(a=>abmod(a)));
   t=t.replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+SAVE[\]}]/gi,(_,a)=>"DC "+(8+pb+abmod(a)))
      .replace(/[[{](STR|DEX|CON|INT|WIS|CHA)\s+ATK[\]}]/gi,(_,a)=>sgn(pb+abmod(a)))
      .replace(/[[{]\s*SAVE\s*[\]}]/gi,"DC "+(8+pb+bestMod))
