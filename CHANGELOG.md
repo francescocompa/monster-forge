@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 148 — Party rework (13/n): chip-field presets (damage mods + skills)
+- Two **preset chip fields** in the Add-a-property menu (`PC_PRESETS`). Each holds an array of entries shown
+  as **click-to-cycle chips**, added via a datalist input, removed with the chip's ×.
+  - **Damage res / imm / vuln** — chip shows the multiplier (`½×` resistance default → `0×` immunity →
+    `2×` vulnerability), cycling on click with a colour shift (cool / amber / red).
+  - **Skills & expertise** — chip shows the signed bonus (ability mod + proficiency, **×2 for expertise**),
+    **coloured by the skill's ability**; click toggles proficient ↔ expertise (the expert chip is tinted).
+- Field values for presets are arrays (`newPresetField` / `isPreset`); `normalizeRosterPC` already preserves
+  them. Reuses `SKILLS` / `DMG_TYPES`.
+
 ## Batch 147 — Party rework (12/n): editable row levels + party level-up
 - The **party roster no longer collapses** (chevron removed) and the **member count moved next to the
   adventure title** (a small badge). Where the count sat, a **level-up button** (arrow-trend-up) now bumps
