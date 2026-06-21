@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 153 — Party rework (18/n): property template
+- **"Save as template"** button next to ＋ Add a property in the character detail. It stores the current
+  character's **property structure** (fields + flags + preset entries, with scalar values and ATK/DC
+  overrides cleared) to a local `mf_pc_template`. **New characters then start from that template**
+  (`newRosterChar` → `loadPcTemplate`), falling back to the Level·Class·AC·HP·Speed default when none is set.
+
 ## Batch 152 — Party rework (17/n): split Senses & Passives
 - The old **Senses & passives** preset is split. **Senses** is now a plain text field (darkvision / special
   senses; legacy object values migrate to text in `normalizeRosterPC`). **Passives** is its own chip-field

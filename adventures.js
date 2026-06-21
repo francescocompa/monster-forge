@@ -230,9 +230,15 @@ const PC_ABILS=["str","dex","con","int","wis","cha"];
 const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
 const D5_CLASSES=["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
+// Property template (B153): a saved set of properties new characters start from. Stored locally (a UI
+// preference, not roster data). `buildPcTemplate` keeps each field's structure + flags + preset entries but
+// clears the instance-specific scalar values and ATK/DC overrides.
+function buildPcTemplate(c){return (c&&c.fields||[]).map(f=>{const t=JSON.parse(JSON.stringify(f));if(!Array.isArray(t.v)&&!(t.v&&typeof t.v==="object"))t.v="";t.atkV="";t.dcV="";return t;});}
+function savePcTemplate(c){try{localStorage.setItem("mf_pc_template",JSON.stringify(buildPcTemplate(c)));}catch(e){}}
+function loadPcTemplate(){try{const s=localStorage.getItem("mf_pc_template");if(s){const f=JSON.parse(s);if(Array.isArray(f)&&f.length)return JSON.parse(JSON.stringify(f));}}catch(e){}return null;}
 // A character's class — the standard `class` field, or a legacy custom field labelled "Class".
 function charClass(c){const f=(c&&c.fields||[]).find(x=>x.k==="class"||(!x.k&&(x.label||"").toLowerCase()==="class"));return f&&f.v!=null?String(f.v):"";}
-function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"level",v:""},{k:"class",v:""},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:loadPcTemplate()||[{k:"level",v:""},{k:"class",v:""},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
 // Ability helpers that tolerate a missing field (ability grid is always shown; fields are created lazily).
 function abilFieldOf(c,k){return (c.fields||[]).find(f=>f.k===k)||null;}
 function abilScoreOf(c,k){const f=abilFieldOf(c,k);return f?abilScore(f):10;}
@@ -243,6 +249,7 @@ function partyDefaultLevel(advId){const a=state.adv.find(x=>x.id===advId);if(a)f
 // The level shown for a character's row — its set Level, or the party default when unset.
 function rowLevel(c,advId){const v=charFieldVal(c,"level");return (v!==""&&v!=null)?clamp(Number(v)||1,1,20):partyDefaultLevel(advId);}
 const ARROW_TREND_UP='<svg viewBox="0 0 576 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M384 160c-17.7 0-32-14.3-32-32s14.3-32 32-32l160 0c17.7 0 32 14.3 32 32l0 160c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-82.7L342.6 374.6c-12.5 12.5-32.8 12.5-45.3 0L192 269.3 54.6 406.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160c12.5-12.5 32.8-12.5 45.3 0L320 306.7 466.7 160 384 160z"/></svg>';
+const SAVE_TPL_ICON='<svg viewBox="0 0 384 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M0 48C0 21.5 21.5 0 48 0L336 0c26.5 0 48 21.5 48 48l0 426.7c0 20.6-23.5 32.4-40 20l-152-114-152 114c-16.5 12.4-40 .6-40-20L0 48z"/></svg>';
 // Level up every party member by one (capped at 20), then scroll each row's level number from current to
 // next (a single deterministic step, not the random init spin) before re-rendering (B147).
 function levelUpParty(a){const box=$("#partyWrap"),inputs=box?[...box.querySelectorAll("[data-pclvl]")]:[],moves=[];
@@ -446,7 +453,7 @@ function openCharacterDetail(rid,curAdvId,ui){
     </div>
     <div class="cd-scroll">
       <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
-      <div class="cd-props">${visHTML}${hidBlock}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${abilBlock}</div>
+      <div class="cd-props">${visHTML}${hidBlock}<div class="cd-addrow2"><button class="cd-addprop" data-cdaddprop>＋ Add a property</button><button class="cd-addprop cd-savetpl" data-cdsavetpl title="New characters will start from this character's properties">${SAVE_TPL_ICON}Save as template</button></div>${abilBlock}</div>
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
@@ -524,6 +531,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
+  {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved — new characters start from these properties.");});}
   {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
   m.querySelector("[data-cddelete]").addEventListener("click",()=>{const del=()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();};
     if(charIsBlank(c))del();else confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,del);});

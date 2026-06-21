@@ -915,8 +915,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-grpdiv{display:flex;align-items:center;gap:8px;margin:10px 4px 6px;color:var(--faint);font-size:10.5px;letter-spacing:.02em}
 .cd-grpdiv span{flex:none}
 .cd-grpdiv::after{content:"";flex:1;height:1px;background:var(--line)}
-.cd-addprop{margin-top:8px;font-size:13px;color:var(--faint);background:none;border:none;padding:6px 8px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:6px}
+.cd-addrow2{display:flex;align-items:center;gap:4px;margin-top:8px}
+.cd-addprop{font-size:13px;color:var(--faint);background:none;border:none;padding:6px 8px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:6px}
 .cd-addprop:hover{background:var(--panel2);color:var(--dim)}
+.cd-savetpl{margin-left:auto;font-size:12px}
+.cd-savetpl svg{width:11px;height:11px;opacity:.85}
 .popover .cd-add-in{width:100%;box-sizing:border-box;margin-bottom:4px}
 .cd-add-list{max-height:210px;overflow-y:auto}
 .cd-add-list .popitem svg,.cd-grp-ico svg{width:13px;height:13px;margin-right:7px;vertical-align:-2px;color:var(--faint)}
