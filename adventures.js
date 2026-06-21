@@ -467,7 +467,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
   // the user back to the top (B143).
-  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
+  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat")renderCombat();};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
   const fieldMenu=(i,anchor)=>{const f=c.fields[i];if(!f)return;

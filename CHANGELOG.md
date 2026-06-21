@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 158 — Character details in combat (PC sheet)
+- A PC selected in the combat tracker now shows a **display-only character sheet** in the active/peek panel
+  — the PC counterpart to the monster statblock embed — replacing the old "no statblock to roll from" line.
+- Reads the full roster character live (`pcSheetHTML`, fed by `rosterById`) and renders **statblock-style
+  labelled lines** for only the fields that carry data: **Abilities** (score + mod), **Saves** (proficient
+  ones emphasised), **Skills** (expertise tinted), **Spell** (atk + DC from the character's main ability),
+  **Defenses** (damage res/imm/vuln), **Speed**, **Senses**, and any remaining custom fields. Chips reuse
+  the ability/skill **colour scheme**; nothing is click-to-roll (players roll their own dice).
+- An **Edit** pencil opens the existing character-detail modal; closing it re-renders combat so edits show
+  immediately. The initiative row is unchanged.
+
 ## Batch 157 — Local test kit loader (dev only)
 - `seed.js` now pulls in a **gitignored, localhost-only `testkit.js`** (`loadTestkit`) when seeding. The
   kit adds two sidebar buttons under a "Testing · local" block — **Fill** (populate the bestiary +

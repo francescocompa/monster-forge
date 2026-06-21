@@ -763,6 +763,49 @@ function combatMainDC(m){let best=null;
   return best;}
 // The inner content of the active panel for one combatant: head (name/faction, conditions, quick-ref stat
 // chips, resources) + statblock + note. Reused for the active combatant and the selection "peek" preview.
+// Display-only character sheet for a PC in the combat panel — the PC counterpart to the monster
+// statblock embed. Surfaces the full roster character (abilities/saves, skills, passives,
+// spellcasting, defenses, senses, speed + any custom fields) as statblock-style labelled lines,
+// showing ONLY fields that carry data. Read-only here (no click-to-roll); the pencil opens the
+// character detail. Reads live from the roster so edits reflect on the next render.
+function pcSheetHTML(it){
+  const c=rosterById(it.srcId);
+  if(!c)return `<div class="ca-soon">Player character — linked record not found.</div>`;
+  const lines=[];
+  const line=(lbl,inner,txt)=>`<div class="pcs-line${txt?" txt":""}"><span class="pcs-lbl">${lbl}</span><span class="pcs-${txt?"txt":"chips"}">${inner}</span></div>`;
+  // Abilities the character has actually filled (a value, not the placeholder default).
+  const ab=ABILS.map(k=>{const f=abilFieldOf(c,k);return (!f||f.v===""||f.v==null)?null:{k,f};}).filter(Boolean);
+  if(ab.length){
+    lines.push(line("Abilities",ab.map(a=>`<span class="pchip skchip cc-ab-${a.k}"><span class="pchip-n">${abilScore(a.f)}</span> ${a.k.toUpperCase()} ${sgn(abilMod(abilScore(a.f)))}</span>`).join("")));
+    lines.push(line("Saves",ab.map(a=>`<span class="pchip skchip cc-ab-${a.k}${a.f.prof?" exp":""}"><span class="pchip-n">${sgn(abilSave(c,a.f))}</span> ${a.k.toUpperCase()}</span>`).join("")));
+  }
+  const sf=(c.fields||[]).find(f=>f.k==="skills");
+  if(sf&&Array.isArray(sf.v)&&sf.v.length)
+    lines.push(line("Skills",sf.v.map(e=>{const a=SKILLS[e.s]||"int",exp=(Number(e.e)||1)>=2;return `<span class="pchip skchip cc-ab-${a}${exp?" exp":""}"><span class="pchip-n">${sgn(skillBonus(c,e))}</span> ${esc(e.s.replace(/_/g," "))}</span>`;}).join("")));
+  const pf=(c.fields||[]).find(f=>f.k==="passives");
+  if(pf&&Array.isArray(pf.v)&&pf.v.length)
+    lines.push(line("Passives",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
+  const mains=(c.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
+  if(mains.length)
+    lines.push(line("Spell",mains.map(f=>`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk</span><span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
+  const df=(c.fields||[]).find(f=>f.k==="dmgmod");
+  if(df&&Array.isArray(df.v)&&df.v.length)
+    lines.push(line("Defenses",df.v.map(e=>{const m=e.m||"res";return `<span class="pchip dchip-${m}"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}</span>`;}).join("")));
+  const spd=charFieldVal(c,"speed");if(spd!==""&&spd!=null)lines.push(line("Speed",esc(String(spd)),true));
+  const sen=charFieldVal(c,"senses");if(sen!==""&&sen!=null)lines.push(line("Senses",esc(String(sen)),true));
+  // Remaining custom / standard scalar fields with a value (Player, PP, custom notes…).
+  const SKIP=new Set(["ac","hp","init","level","class","speed","senses","prof","skills","passives","dmgmod",...ABILS]);
+  (c.fields||[]).forEach(f=>{
+    if(SKIP.has(f.k)||isPreset(f)||Array.isArray(f.v)||f.v===""||f.v==null)return;
+    if(!f.k&&/^(class|level)$/i.test((f.label||"").trim()))return; // legacy class/level live in the subtitle
+    lines.push(line(esc(fieldLabel(f)),esc(String(f.v)),true));
+  });
+  const cls=charClass(c),lv=charFieldVal(c,"level");
+  const sub=[cls,(lv!==""&&lv!=null)?`Level ${lv}`:""].filter(Boolean).map(esc).join(" · ");
+  const head=`<div class="pcs-head"><span class="pcs-sub${sub?"":" dim"}">${sub||"Character details"}</span><button class="pcs-edit" data-pcedit="${esc(it.srcId)}" title="Edit character">${PEN_ICON} Edit</button></div>`;
+  if(!lines.length)return `<div class="ca-pcsheet">${head}<div class="ca-soon">No character details yet — add abilities, skills or passives to ${esc(c.name||"this PC")}.</div></div>`;
+  return `<div class="ca-pcsheet">${head}${lines.join("")}</div>`;
+}
 function combatPanelInnerHTML(it,isTurn){
   const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
   const m=it.kind==="monster"?monById(it.srcId):null;
@@ -780,7 +823,8 @@ function combatPanelInnerHTML(it,isTurn){
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
-    :`<div class="ca-soon">${it.kind==="pc"?"Player character — no statblock to roll from.":it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
+    :it.kind==="pc"?pcSheetHTML(it)
+    :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
   const note=it.comment
     ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note" aria-label="Edit note">${PEN_ICON}</button></div>`
     :`<button class="ca-addnote" data-cinote="${it.id}">${PEN_ICON} Add note</button>`;
@@ -1017,6 +1061,8 @@ function renderCombat(){
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
+  // PC sheet "Edit" → open the full character detail (closing it re-renders combat — see openCharacterDetail).
+  body.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const ctx=loadedCtx();openCharacterDetail(el.dataset.pcedit,ctx?ctx.a.id:null);}));
   body.querySelectorAll("[data-rmcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[id,i]=el.dataset.rmcond.split(":");removeCombatCond(id,+i);}));
   // Resource pips: filled pip → spend one, empty pip → restore one.
   body.querySelectorAll("[data-respip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();
