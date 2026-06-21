@@ -31,7 +31,7 @@ function renderAdvList(){
   // Em dash when the adventure is still untitled (the default name), else up to 3 initials (B66).
   const aiIni=a=>`<span class="ai-ini">${a.name&&a.name.trim()?esc(advInitials(a.name)):"—"}</span>`;
   const aiPin=a=>a.pinned?`<span class="ai-pin" title="Pinned">${PIN_SVG}</span>`:"";
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${a.uneven?"mixed lvl":(a.size+"× lvl "+a.level)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${advPartyLabel(a)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
   if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
@@ -110,11 +110,14 @@ function bindAdvDrag(box){
 function advMini(){try{return localStorage.getItem("mf_advmini")==="1";}catch(e){return false;}}
 function closeAdvDrawer(){const lay=$(".adv-layout");if(lay)lay.classList.remove("adv-drawer");}
 {const sc=$("#advScrim");if(sc)sc.addEventListener("click",closeAdvDrawer);}
-$("#newAdv").addEventListener("click",()=>{const d=state.settings.defaults,sz=clamp(d.partySize||4,1,12),lv=clamp(d.partyLevel||1,1,20);const a=normalizeAdv({id:uid(),name:"",size:sz,level:lv,uneven:false,levels:Array(sz).fill(lv),notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);advListView=false;state.selAdv=a.id;saveAdv();renderAdvList();});
+$("#newAdv").addEventListener("click",()=>{const a=normalizeAdv({id:uid(),name:"",notes:"",notesOn:notesDefault("adventure"),encounters:[]});state.adv.unshift(a);advListView=false;state.selAdv=a.id;saveAdv();renderAdvList();});
 function curAdv(){return state.adv.find(a=>a.id===state.selAdv);}
-function partyOf(adv,e){return (e&&e.partyOverride)?e.partyOverride:{size:adv.size,level:adv.level,uneven:adv.uneven,levels:adv.levels};}
-function partyLevels(p){return p.uneven?p.levels.slice(0,p.size):Array.from({length:p.size},()=>p.level);}
-function baseBudget(p){const lv=partyLevels(p);return [0,1,2].map(di=>lv.reduce((s,l)=>s+BUDGET[clamp(l,1,20)][di],0));}
+// The party is the adventure's roster (B142): size = member count, levels = each character's Level field
+// (unset → 1). The XP budget is the sum of every member's per-level Low/Moderate/High threshold.
+function charLevel(c){const v=c&&charFieldVal(c,"level");return (v===""||v==null)?1:clamp(Number(v)||1,1,20);}
+function advPartyLevels(a){return (a.party||[]).map(rid=>{const c=rosterById(rid);return c?charLevel(c):1;});}
+function baseBudget(a){const lv=advPartyLevels(a);return [0,1,2].map(di=>lv.reduce((s,l)=>s+(BUDGET[clamp(l,1,20)]||[0,0,0])[di],0));}
+function advPartyLabel(a){const lv=advPartyLevels(a);if(!lv.length)return "no party";const set=[...new Set(lv)];return set.length===1?`${lv.length}× lvl ${set[0]}`:`${lv.length} PCs`;}
 function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
 function addMonsterCombatant(enc,monsterId){
   const cid=uid();
@@ -135,7 +138,7 @@ function combatIsMinion(c){return c.type==="monster"?!!(monOf(c)&&monOf(c).minio
 function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
 function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
 function encBudget(adv,e){
-  const base=baseBudget(partyOf(adv,e));const add=[0,0,0];
+  const base=baseBudget(adv);const add=[0,0,0];
   // Ally creatures raise the party's budget ≈ a PC of level round(CR). A minion ally contributes
   // proportionally less (scaled by minion-XP ÷ standard-XP), matching the enemy-side minion math.
   e.combatants.forEach(c=>{if(c.faction==="Ally"&&c.type!=="event"){const cr=combatCR(c);if(cr!=null){const lv=clamp(Math.round(CR_NUM[cr]),1,20);
@@ -150,14 +153,11 @@ function renderAdvDetail(){
   const a=curAdv(),d=$("#advDetail");
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",advDName(a)]);
-  const bud=baseBudget(partyOf(a,null));
-  const infoColl=advInfoCollapsed();
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
     <div class="adv-detail-body"${a.color?` style="--sel-accent:${a.color}"`:""}>
-    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2><button class="adv-info-toggle" id="advInfoToggle" title="${infoColl?"Show":"Hide"} adventure info" aria-label="Toggle adventure info"><span class="st-chev${infoColl?" closed":""}">${FS_CHEVRON}</span></button></div>
+    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
-      <button id="advToggleUneven">${a.uneven?"✓ Uneven levels":"Uneven levels"}</button>
       <button id="advToggleNotes">${a.notesOn?"Remove notes":"Add notes"}</button>
       <div class="sep"></div>
       <button id="advPin">${a.pinned?"Unpin":"Pin to top"}</button>
@@ -166,19 +166,7 @@ function renderAdvDetail(){
       <div class="sep"></div>
       <button class="danger" id="delAdv">Delete adventure</button>
     </div></div></div>
-    <div id="advInfoWrap"${infoColl?' style="display:none"':""}>
-    <div class="party-bar">
-      <label class="f">Party size<input type="number" id="pSize" min="1" max="12" value="${a.size}" style="width:78px"></label>
-      <label class="f" id="pLevelWrap" ${a.uneven?'style="display:none"':""}>Party level<input type="number" id="pLevel" min="1" max="20" value="${a.level}" style="width:78px"></label>
-      <div id="pcLevels" ${a.uneven?"":'style="display:none"'} style="flex-basis:100%"><div class="hint" style="margin-bottom:4px">Per-PC levels</div><div class="pcgrid" id="pcGrid"></div></div>
-      <div style="flex-basis:100%">
-        <div class="adv-bud-chips">
-          <div class="bud-chip low"><span class="bc-lbl">Low</span><span class="bc-val">${bud[0].toLocaleString()}</span></div>
-          <div class="bud-chip mod"><span class="bc-lbl">Moderate</span><span class="bc-val">${bud[1].toLocaleString()}</span></div>
-          <div class="bud-chip high"><span class="bc-lbl">High</span><span class="bc-val">${bud[2].toLocaleString()}</span></div>
-        </div>
-      </div>
-    </div>
+    <div id="advInfoWrap">
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
     <div class="section-label section-toggle" id="partyHead"><span class="st-chev${partyCollapsed()?" closed":""}">${FS_CHEVRON}</span> Party roster <span class="party-count">${a.party.length}</span></div>
     <div id="partyWrap"${partyCollapsed()?' style="display:none"':""}></div>
@@ -202,18 +190,13 @@ function renderAdvDetail(){
   // Narrow widths: the adventure list is an off-canvas drawer; this button slides it in/out over the
   // detail (the main app rail is already collapsed to the burger here, so there's no sidebar conflict).
   $("#advBack").addEventListener("click",()=>{const lay=$(".adv-layout");if(lay)lay.classList.toggle("adv-drawer");});
-  $("#advInfoToggle").addEventListener("click",()=>{setAdvInfoCollapsed(!advInfoCollapsed());renderAdvDetail();});
   d.querySelectorAll("[data-advcolor]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAdvColorMenu(el,el.dataset.advcolor);}));
   const nm=$("#advName");nm.addEventListener("blur",()=>{a.name=nm.textContent.trim();saveAdv();renderAdvList();});
   $("#delAdv").addEventListener("click",()=>confirmModal(`Delete "${advDName(a)}" and its encounters?`,()=>{state.adv=state.adv.filter(x=>x.id!==a.id);state.selAdv=null;saveAdv();renderAdvList();}));
   $("#advPin").addEventListener("click",()=>{a.pinned=!a.pinned;saveAdv();renderAdvList();});
   $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
-  $("#advToggleUneven").addEventListener("click",()=>{a.uneven=!a.uneven;syncLevels(a);saveAdv();renderAdvDetail();});
   $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
-  wrapStepper($("#pSize"),1,1);wrapStepper($("#pLevel"),1,1);
-  $("#pSize").addEventListener("change",e=>{a.size=clamp(Number(e.target.value||1),1,12);syncLevels(a);saveAdv();renderAdvDetail();});
-  $("#pLevel").addEventListener("change",e=>{a.level=clamp(Number(e.target.value||1),1,20);saveAdv();renderAdvDetail();});
   {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}
   $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
   $("#encAddScene").addEventListener("click",()=>addScene(a));
@@ -222,14 +205,11 @@ function renderAdvDetail(){
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
   $("#partyHead").addEventListener("click",()=>{setPartyCollapsed(!partyCollapsed());renderAdvDetail();});
-  renderPCgrid(a);renderParty(a);renderEncList(a);
+  renderParty(a);renderEncList(a);
 }
 // Party roster (Combat Tracker, B80): named PCs with AC / HP / initiative + free-form DM fields.
 function partyCollapsed(){try{return localStorage.getItem("mf_partycoll")==="1";}catch(e){return false;}}
 function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0");}catch(e){}}
-// Whole adventure "main info" block (party bar + notes + roster) collapses from the chevron by the title.
-function advInfoCollapsed(){try{return localStorage.getItem("mf_advinfocoll")==="1";}catch(e){return false;}}
-function setAdvInfoCollapsed(v){try{localStorage.setItem("mf_advinfocoll",v?"1":"0");}catch(e){}}
 // ── Party roster v2 (B136) ───────────────────────────────────────────────────
 // A player character lives ONCE in the shared roster (state.roster); each adventure's `a.party` is an
 // ORDERED list of roster ids. Membership IS the adventure tag — `rosterAdventures(rid)` derives which
@@ -429,7 +409,7 @@ function openCharacterDetail(rid,curAdvId,ui){
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
-function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:"draft",notes:"",notesOn:notesDefault("encounter"),partyOverride:null,sceneId:sceneId||null,combatants:[]};}
+function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:"draft",notes:"",notesOn:notesDefault("encounter"),sceneId:sceneId||null,combatants:[]};}
 // Effective lifecycle status: archived (the operative flag) wins, then a running combat reads "active",
 // else the stored status. (CT7)
 function encStatus(e){return e.archived?"archived":(e.combat&&e.combat.active?"active":(e.status||"draft"));}
@@ -451,8 +431,6 @@ function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",no
 function advDName(a){return (a&&a.name&&a.name.trim())||"New Adventure";}
 function sceneDName(s){return (s&&s.name&&s.name.trim())||"New Scene";}
 function encDName(e){return (e&&e.name&&e.name.trim())||"New Encounter";}
-function syncLevels(a){a.levels=Array.from({length:a.size},(_,i)=>a.levels[i]??a.level);}
-function renderPCgrid(a){const g=$("#pcGrid");if(!g)return;syncLevels(a);g.innerHTML=a.levels.slice(0,a.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-pc="${i}">`).join("");g.querySelectorAll("[data-pc]").forEach(el=>el.addEventListener("input",()=>{a.levels[+el.dataset.pc]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));}
 
 // The encounter most recently edited (focused) gets a highlight. Editing = focusing any field inside
 // it (delegated) or adding a combatant; we update classes in place so no re-render is needed.
@@ -581,8 +559,7 @@ function encTargetActive(e){return e.target!=null;}
 function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
 function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
 function encReadHTML(a,e,bud,spent){
-  const p=partyOf(a,e);
-  const extra=`${e.partyOverride?` · <span style="color:var(--amber)">override: ${p.uneven?"mixed":p.size+"× lvl "+p.level}</span>`:""}${e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:""}`;
+  const extra=e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:"";
   if(!encTargetActive(e))return `Spent <b>${spent.toLocaleString()} XP</b> · <span style="color:var(--faint)">drag the marker to set a target</span>${extra}`;
   const tgt=encTargetVal(e,bud),d=spent-tgt;
   const dtxt=d===0?`<span style="color:var(--ok)">on target</span>`:d>0?`<span style="color:var(--accent)">+${d.toLocaleString()} over target</span>`:`<span style="color:var(--dim)">${Math.abs(d).toLocaleString()} under target</span>`;
@@ -616,7 +593,6 @@ function encHTML(a,e){
           <button data-encpin="${e.id}">${e.pinned?"Unpin":"Pin to top"}</button>
           ${moveSubmenuHTML("encmove","encmove",e.id,pinSort(a.encounters.filter(x=>x.archived===e.archived)),e)}
           <div class="sep"></div>
-          <button data-encovr="${e.id}">${e.partyOverride?"Remove party override":"Override party for this encounter"}</button>
           <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
           <div class="sep"></div>
@@ -638,7 +614,6 @@ function encHTML(a,e){
         <span class="pill ${cls}">${label}</span>
       </div>
     </div>
-    <div class="ovr ${e.partyOverride?"show":""}">${e.partyOverride?ovrInner(e):""}</div>
     ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
@@ -647,11 +622,6 @@ function encHTML(a,e){
     </div>
   </div>`;
 }
-function ovrInner(e){const o=e.partyOverride;return `<div class="row">
-  <label class="f">Size<input type="number" min="1" max="12" value="${o.size}" data-ovrsize="${e.id}" style="width:74px"></label>
-  <label class="f" ${o.uneven?'style="display:none"':""}>Level<input type="number" min="1" max="20" value="${o.level}" data-ovrlevel="${e.id}" style="width:74px"></label>
-  <label class="toggle" style="margin-bottom:8px"><input type="checkbox" data-ovruneven="${e.id}" ${o.uneven?"checked":""}> Uneven</label>
-  </div>${o.uneven?`<div class="pcgrid" style="margin-top:8px">${(o.levels||[]).slice(0,o.size).map((l,i)=>`<input type="number" min="1" max="20" value="${l}" data-ovrpc="${e.id}:${i}">`).join("")}</div>`:""}`;}
 function combatHTML(e,c){
   if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
   const fc=facClass(c.faction);const xp=combatXP(c);
@@ -710,11 +680,6 @@ function bindEncEvents(a){
     n?confirmModal(`Delete scene "${s.name}"? Its ${n} encounter${n>1?"s":""} will become ungrouped.`,go):go();}));
   bindEncDrag(a,q);
   bindEncTarget(a,q);
-  q("[data-encovr]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encovr);e.partyOverride=e.partyOverride?null:{size:a.size,level:a.level,uneven:a.uneven,levels:[...a.levels]};saveAdv();renderAdvDetail();}));
-  q("[data-ovrsize]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovrsize);e.partyOverride.size=clamp(Number(el.value||1),1,12);e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
-  q("[data-ovrlevel]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.ovrlevel).partyOverride.level=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
-  q("[data-ovruneven]").forEach(el=>el.addEventListener("change",()=>{const e=findEnc(a,el.dataset.ovruneven);e.partyOverride.uneven=el.checked;e.partyOverride.levels=Array.from({length:e.partyOverride.size},(_,i)=>e.partyOverride.levels[i]??e.partyOverride.level);saveAdv();renderAdvDetail();}));
-  q("[data-ovrpc]").forEach(el=>el.addEventListener("change",()=>{const[id,i]=el.dataset.ovrpc.split(":");findEnc(a,id).partyOverride.levels[+i]=clamp(Number(el.value||1),1,20);saveAdv();renderEncList(a);}));
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-startcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.startcombat))));
@@ -930,9 +895,9 @@ function openBestiaryPicker(a,e){
 // "Forge new →" from anywhere: park a pendingForge target, load a blank monster, jump to the Forge.
 function forgeForEncounter(a,e){pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}
 function pushEncounter(a,e){
-  const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud),p=partyOf(a,e);
+  const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud);
   const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,
-    party:{size:p.size,levels:partyLevels(p),overridden:!!e.partyOverride},
+    party:{size:(a.party||[]).length,levels:advPartyLevels(a)},
     battlefield_notes:e.notes||"",
     budget:{low:bud[0],moderate:bud[1],high:bud[2],spent,reads_as:label,note:"allies (faction Ally) already folded into budget via CR→level"},
     combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),minion:combatIsMinion(c),xp_each:combatXPEach(c),count:Number(c.count),faction:c.faction};}),

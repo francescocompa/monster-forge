@@ -734,16 +734,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Adventure-colour topbar (B81): a thin bar spanning the column from the top, replacing the colour
    dot — click it to change the colour. Default accent gradient; per-adventure colour set inline. */
 .adv-topbar{height:4px;margin:0;background:linear-gradient(90deg,var(--accent),#8f3527);cursor:pointer;flex:none}
-/* Chevron by the title collapses the whole adventure info block (party bar + notes + roster). */
-.adv-info-toggle{background:none;border:1px solid transparent;color:var(--faint);border-radius:6px;width:26px;height:26px;flex:none;display:grid;place-items:center;padding:0;cursor:pointer}
-.adv-info-toggle:hover{border-color:var(--line);color:var(--txt)}
-.adv-info-toggle .st-chev{display:inline-flex;width:14px;height:14px;transition:transform .15s}
-.adv-info-toggle .st-chev.closed{transform:rotate(-90deg)}
 .adv-back{display:none;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;width:32px;height:32px;flex:none;padding:0;cursor:pointer}
 .adv-back svg{display:block}
 .adv-back:hover{border-color:var(--accent);color:var(--txt)}
-.party-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;margin-bottom:14px}
-.pcgrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.pcgrid input{width:52px;text-align:center}
 .advnotes{width:100%;margin-bottom:16px}
 .enc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:18px}
 .enc.arch{opacity:.62}
@@ -1405,9 +1398,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pill.high{background:rgba(226,101,77,.18);color:var(--accent-soft);border:1px solid #6e3329}
 .pill.over{background:rgba(210,96,74,.3);color:#f0a08c;border:1px solid #8d4233}
 .pill.trivial{background:var(--panel2);color:var(--faint);border:1px solid var(--line)}
-.ovr{background:#15171b;border:1px solid var(--line);border-radius:7px;padding:10px 12px;margin:9px 0;display:none}
-.ovr.show{display:block}
-.ovr .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .encnotes{margin:9px 0}
 .cbt{border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-bottom:7px;background:#15171b}
 .cbt.ev{border-left:3px solid var(--info)}
@@ -1774,18 +1764,6 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .grp.collapsed .grp-collapse{transform:rotate(-90deg)}
 .grp.collapsed .cards{display:none}
 
-/* Adventure budget bar in party header */
-/* FP5: party XP-budget caps as three color-coded chips (Low / Moderate / High). */
-.adv-bud-chips{display:flex;gap:8px;margin-top:8px}
-.bud-chip{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 6px;border:1px solid var(--line);border-radius:7px;background:var(--in)}
-.bud-chip .bc-lbl{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
-.bud-chip .bc-val{font-size:15px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
-.bud-chip.low{border-color:#3c5e45;background:rgba(95,168,115,.10)}
-.bud-chip.low .bc-lbl{color:var(--ok)}
-.bud-chip.mod{border-color:#6a5a2a;background:rgba(217,169,65,.10)}
-.bud-chip.mod .bc-lbl{color:var(--amber)}
-.bud-chip.high{border-color:#6e3329;background:rgba(226,101,77,.10)}
-.bud-chip.high .bc-lbl{color:var(--accent-soft)}
 
 /* Archived encounters collapsible reveal */
 .arch-reveal{background:none;border:none;color:var(--dim);font-size:12px;font-weight:600;cursor:pointer;padding:3px 0;display:flex;align-items:center;gap:6px}

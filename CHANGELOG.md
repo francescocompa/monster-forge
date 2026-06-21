@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 142 — Party rework (7/n): roster drives the budget; adventure top trimmed
+The party roster is now the single source of truth for encounter scaling.
+- **Encounter XP budget is derived from the roster.** Party size = number of members; each member's level
+  comes from its **Level** field (unset → 1); the Low/Moderate/High budget is the **sum of every member's
+  per-level threshold** (`advPartyLevels` / `baseBudget`). Confirmed live (e.g. levels [5,1,1,1] →
+  [650, 975, 1400]). Allies still fold in via CR→level as before.
+- **Removed the manual party controls.** The top **party bar is gone** — party size, party level, the
+  per-PC level grid, the **Uneven levels** option, and the **Low/Mod/High budget chips**. The **per-encounter
+  party override** is gone too (button, panel, handlers). The per-encounter budget **bar, difficulty pill,
+  and draggable XP target stay** (now fed by the roster). The **chevron beside the adventure title** (the
+  whole-info collapse) is removed; the info is always shown. New adventures no longer carry
+  size/level/uneven/levels. Adventure-list subtitle now reads from the roster (e.g. "4× lvl 1", "no party").
+- Dropped the dead helpers (`partyOf`, `partyLevels`, `syncLevels`, `renderPCgrid`, `ovrInner`, the adv-info
+  collapse) and their CSS (`.party-bar`, `.adv-bud-chips`/`.bud-chip`, `.pcgrid`, `.ovr`, `.adv-info-toggle`).
+
 ## Batch 141 — Party rework (6/n): Level as the big number by the name
 - New characters get a **Level** field by default. In the character detail it renders as a **large editable
   number with a "LVL" cap before the name** (like combat initiative), not as a plain property row; empty shows
