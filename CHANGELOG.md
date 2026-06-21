@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 138 — Party rework (3/n): detail polish + per-ability ATK/save toggles
+Feedback round on B137's character detail.
+- **Initiative is never a party-row chip** (`chipHidden`) — combat rolls it; the row stays a clean summary.
+  In the detail it always lands in the *Hidden from the party row* group (no show/hide toggle).
+- **Per-ability spell ATK / save DC.** Replaced the single exclusive "spell ability" flag with **atk / save
+  toggles next to each ability's value** (any ability, independently). Toggling one reveals a derived sub-row
+  (one or two columns) whose input shows the computed value (mod + PB; DC also +8) as a **dimmed placeholder**,
+  cleared for input but counted as filled → it surfaces as a row chip. Typing **overrides** (`atkV`/`dcV`,
+  empty = computed). `charDerivedChips` collects every enabled atk/DC across the abilities. Legacy `spell:true`
+  migrates to both atk + dc in `normalizeRosterPC`.
+- **Detail chrome.** Modal narrowed (max 360, was 460); **Done** is now the larger primary button to the right
+  of **Delete**; removed the redundant top add-field gear (＋ Add a property stays at the foot). The **field
+  name menu and Add-a-property dropdown now use the shared `showPopover` base** like every other menu (dropped
+  the bespoke `.cd-pmenu` / `.cd-add-dd` / scrim). Adventure **tags read clearer** (tinted fill + full-contrast
+  text) and the **current adventure's tag always leads**.
+- *Next:* swap the inline atk/save toggles for the Forge ability-score block reused here, with a shared
+  "main ability" marker (multi-select, overridable) in both Forge and the character detail.
+
 ## Batch 137 — Party rework (2/n): detail peek refinements, roster dropdown, ATK/DC
 Addressed the feedback on B136 (cross-checked against the mockups).
 - **Character detail.** Fixed top (tags · icons) + footer (Done · Delete, right-aligned); the title /

@@ -254,15 +254,24 @@ const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standar
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
 function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
-  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,spell:!!f.spell})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
+    atk:!!(f.atk||f.spell),dc:!!(f.dc||f.spell),atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);return d?d.label:((f.k&&PC_LEGACY[f.k])||f.label||"Field");}
 function pbForLevel(lv){lv=clamp(Number(lv)||1,1,20);return 2+Math.floor((lv-1)/4);}
 function abilMod(score){const n=Number(score);return isNaN(n)?0:Math.floor((n-10)/2);}
-function spellAbilField(c){return (c.fields||[]).find(f=>f.spell&&fieldDef(f)&&fieldDef(f).abil)||null;}
-// Spell ATK / save DC derived from the flagged ability's modifier + proficiency (from Level). Null if none.
-function charSpellAtkDc(c){const sa=spellAbilField(c);if(!sa||sa.v===""||sa.v==null)return null;const m=abilMod(sa.v),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
+// Per-ability derived spell ATK / save DC (B138): any ability field can flag `atk` and/or `dc` via the
+// toggles next to its value. Each derives from the ability modifier + proficiency (DC also +8), with an
+// optional manual override (atkV/dcV) — an empty override falls back to the computed value.
+function abilDerived(c,f){const m=abilMod(f.v),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
+function effAtk(c,f){const d=abilDerived(c,f);return (f.atkV!==""&&f.atkV!=null)?(Number(f.atkV)||0):d.atk;}
+function effDc(c,f){const d=abilDerived(c,f);return (f.dcV!==""&&f.dcV!=null)?(Number(f.dcV)||0):d.dc;}
+// Every enabled derived chip across the character's abilities, in field order (each toggled atk/save).
+function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fieldDef(f);if(!d||!d.abil)return;
+  if(f.atk)out.push({kind:"atk",v:effAtk(c,f)});if(f.dc)out.push({kind:"dc",v:effDc(c,f)});});return out;}
+// Initiative never appears as a party-row chip (B138) — combat rolls it; the row stays a display summary.
+function chipHidden(f){return !!f.hide||f.k==="init";}
 // The adventures a roster character is in (membership = the ordered id lists in each a.party).
 function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
 function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();openCharacterDetail(c.id,a.id);}
@@ -279,8 +288,10 @@ function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
   const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
-    const chips=(c.fields||[]).filter(f=>!f.hide&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
-    const sd=charSpellAtkDc(c),derived=sd?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(sd.atk)}</span><span class="pc-dchip dc"><span class="pc-cl">DC</span>${sd.dc}</span>`:"";
+    const chips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
+    const derived=charDerivedChips(c).map(x=>x.kind==="atk"
+      ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
+      :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
     return `<div class="pc-row" data-pcopen="${rid}">
       <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
       <span class="pc-chips">${chips}${derived}</span>
@@ -332,53 +343,64 @@ const PC_TUNE_ICON='<svg viewBox="0 0 512 512" width="14" height="14" fill="curr
 function openCharacterDetail(rid,curAdvId,ui){
   ui=ui||{};const c=rosterById(rid);if(!c){closeModal();return;}
   const curAdv=curAdvId!==undefined?curAdvId:state.selAdv;
-  const advs=rosterAdventures(rid),shared=advs.length>1;
-  const tag=ad=>{const col=ad.color||"var(--accent)",cur=ad.id===curAdv;return `<span class="cd-tag" style="${cur?`background:${col};border-color:${col};color:#0e0f12`:`border-color:${col};color:${col}`}">${esc(advDName(ad))}</span>`;};
+  // Current adventure's tag always leads (B138).
+  const advs=rosterAdventures(rid).slice().sort((x,y)=>(x.id===curAdv?-1:y.id===curAdv?1:0)),shared=advs.length>1;
+  const tag=ad=>`<span class="cd-tag${ad.id===curAdv?" cur":""}" style="--tagc:${ad.color||"var(--accent)"}">${esc(advDName(ad))}</span>`;
   const tagsHTML=advs.length?advs.map(tag).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
   const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"",isAbil=d&&d.abil;
-    const badge=(isAbil&&f.spell)?`<span class="cd-spell-badge" title="Spell ATK / save DC ability">atk·dc</span>`:"";
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
-      :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}${badge}</button>`;
-    const menu=ui.menu===i?`<div class="cd-pmenu">${isAbil?`<button class="popitem" data-cdspell>${f.spell?"Clear spell ability":"Mark as spell ATK / DC"}</button>`:""}<button class="popitem" data-cdhide>${f.hide?"Show in party row":"Hide from party row"}</button>${f.k?"":`<button class="popitem" data-cdrename>Rename</button>`}<button class="popitem danger" data-cdremove>Remove field</button></div>`:"";
-    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}${menu}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{(f.hide?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
-  const present=new Set((c.fields||[]).map(f=>f.k).filter(Boolean));
-  const stdOpts=PC_FIELDS.filter(f=>!f.abil&&!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("");
-  const abilOpt=PC_ABILS.some(k=>!present.has(k))?`<button class="popitem" data-cdaddabils><span class="cd-grp-ico">${PC_TUNE_ICON}</span>Ability scores</button>`:"";
-  const sugg=ui.add?`<div class="cd-add-dd"><input class="cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${stdOpts}${abilOpt}</div></div>`:"";
-  const scrim=(ui.menu!=null||ui.add)?`<div class="cd-scrim" data-cdscrim></div>`:"";
-  openModalRaw(`<div class="char-detail">${scrim}
+      :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
+    // Abilities carry atk/save toggles next to the value; toggling one reveals a derived sub-row whose
+    // input shows the computed atk/DC as a dimmed placeholder and accepts a manual override.
+    const tog=isAbil?`<div class="cd-abtog"><button class="cd-tog${f.atk?" on":""}" data-cdtog="atk:${i}" title="Spell attack bonus">atk</button><button class="cd-tog${f.dc?" on":""}" data-cdtog="dc:${i}" title="Spell save DC">save</button></div>`:"";
+    let sub="";
+    if(isAbil&&(f.atk||f.dc)){const cv=abilDerived(c,f);
+      const col=(on,kind,lbl,ph,val)=>on?`<div class="cd-sub"><span class="cd-sub-l">${lbl}</span><input class="cd-sub-v" data-cdsub="${kind}:${i}" value="${esc(val==null?"":String(val))}" placeholder="${ph}"></div>`:"";
+      sub=`<div class="cd-subrow">${col(f.atk,"atk","atk",sgn(cv.atk),f.atkV)}${col(f.dc,"dc","save DC",cv.dc,f.dcV)}</div>`;}
+    return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty">${tog}</div>${sub}`;};
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+  openModalRaw(`<div class="char-detail">
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
-      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdaddprop title="Add a field" aria-label="Add a field">${PC_TUNE_ICON}</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
+      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
     </div>
     <div class="cd-scroll">
       <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
-      <div class="cd-props">${visHTML}<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${sugg}</div>
+      <div class="cd-props">${visHTML}<div class="cd-grpdiv"><span>Hidden from the party row</span></div>${hidHTML}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button></div>
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-    <div class="cd-foot"><span style="flex:1"></span><button class="btn primary sm" data-cddone style="width:auto">Done</button><button class="cd-del" data-cddelete>Delete</button></div>
+    <div class="cd-foot"><span style="flex:1"></span><button class="cd-del" data-cddelete>Delete</button><button class="btn primary" data-cddone style="width:auto">Done</button></div>
   </div>`);
   const m=$("#modal"),re=u=>openCharacterDetail(rid,curAdv,u),close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
+  // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
+  const fieldMenu=(i,anchor)=>{const f=c.fields[i];if(!f)return;
+    const hideItem=f.k==="init"?"":`<button class="popitem" data-mh>${f.hide?"Show in party row":"Hide from party row"}</button>`;
+    const p=showPopover(anchor,`${hideItem}${f.k?"":`<button class="popitem" data-mr>Rename</button>`}<button class="popitem danger" data-mx>Remove field</button>`);
+    {const b=p.querySelector("[data-mh]");if(b)b.addEventListener("click",()=>{closePopover();f.hide=!f.hide;saveRoster();re({});});}
+    {const b=p.querySelector("[data-mr]");if(b)b.addEventListener("click",()=>{closePopover();re({rename:i});});}
+    p.querySelector("[data-mx]").addEventListener("click",()=>{closePopover();c.fields.splice(i,1);saveRoster();re({});});};
+  // Add-a-property — standard popover: a filter input over the unused standard keys + an "Ability scores" group.
+  const addPropMenu=anchor=>{const present=new Set((c.fields||[]).map(f=>f.k).filter(Boolean));
+    const stdOpts=PC_FIELDS.filter(f=>!f.abil&&!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("");
+    const abilOpt=PC_ABILS.some(k=>!present.has(k))?`<button class="popitem" data-cdaddabils><span class="cd-grp-ico">${PC_TUNE_ICON}</span>Ability scores</button>`:"";
+    const p=showPopover(anchor,`<input class="popinput cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${stdOpts}${abilOpt}</div>`);
+    const ai=p.querySelector(".cd-add-in");ai.focus();
+    ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();p.querySelectorAll(".cd-add-list .popitem").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
+    ai.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const nm=ai.value.trim();if(nm){c.fields.push({k:"",label:nm,v:""});saveRoster();closePopover();re({});}}else if(e.key==="Escape")closePopover();});
+    p.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();closePopover();re({});}));
+    {const ab=p.querySelector("[data-cdaddabils]");if(ab)ab.addEventListener("click",()=>{PC_ABILS.forEach(k=>{if(!present.has(k))c.fields.push({k,v:"",hide:true});});saveRoster();closePopover();re({});});}};
   m.querySelector("[data-cdclose]").addEventListener("click",close);
   m.querySelector("[data-cddone]").addEventListener("click",close);
-  {const s=m.querySelector("[data-cdscrim]");if(s)s.addEventListener("click",()=>re({}));}
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
+  m.querySelectorAll("[data-cdsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,i]=el.dataset.cdsub.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
+  m.querySelectorAll("[data-cdtog]").forEach(el=>el.addEventListener("click",()=>{const[kind,i]=el.dataset.cdtog.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atk=!f.atk;else f.dc=!f.dc;saveRoster();re({});}));
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
-  m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>re({menu:+el.dataset.cdname})));
-  {const sp=m.querySelector("[data-cdspell]");if(sp)sp.addEventListener("click",()=>{const f=c.fields[ui.menu],on=!f.spell;c.fields.forEach(x=>{if(fieldDef(x)&&fieldDef(x).abil)x.spell=false;});f.spell=on;saveRoster();re({});});}
-  {const hd=m.querySelector("[data-cdhide]");if(hd)hd.addEventListener("click",()=>{const f=c.fields[ui.menu];f.hide=!f.hide;saveRoster();re({});});}
-  {const rm=m.querySelector("[data-cdremove]");if(rm)rm.addEventListener("click",()=>{c.fields.splice(ui.menu,1);saveRoster();re({});});}
-  {const rn=m.querySelector("[data-cdrename]");if(rn)rn.addEventListener("click",()=>re({rename:ui.menu}));}
+  m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
-  m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>re({add:true})));
-  {const ai=m.querySelector(".cd-add-in");if(ai){ai.focus();ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();m.querySelectorAll(".cd-add-list .popitem").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
-    ai.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const nm=ai.value.trim();if(nm){c.fields.push({k:"",label:nm,v:""});saveRoster();re({});}}else if(e.key==="Escape")re({});});}}
-  m.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();re({});}));
-  {const ab=m.querySelector("[data-cdaddabils]");if(ab)ab.addEventListener("click",()=>{PC_ABILS.forEach(k=>{if(!present.has(k))c.fields.push({k,v:"",hide:true});});saveRoster();re({});});}
+  m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
   {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
   m.querySelector("[data-cddelete]").addEventListener("click",()=>confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();}));
 }

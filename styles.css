@@ -829,13 +829,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .rr-kebab:hover{background:var(--panel);color:var(--txt)}
 .rr-empty{font-size:12px;color:var(--faint);padding:8px}
 /* Character detail — Notion peek (B137): fixed top + footer, the title/properties/notes scroll between. */
-.char-detail{position:relative;min-width:360px;max-width:460px;display:flex;flex-direction:column}
-.cd-scrim{position:absolute;inset:-16px -18px;z-index:4}
+.char-detail{position:relative;min-width:300px;max-width:360px;display:flex;flex-direction:column}
 .cd-top{flex:none;display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .cd-tags{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
 .cd-tags::-webkit-scrollbar{display:none}
-.cd-tag{flex:none;font-size:11px;border-radius:20px;padding:2px 10px;white-space:nowrap;border:1px solid var(--line);background:transparent}
-.cd-tag.empty{color:var(--faint)}
+.cd-tag{flex:none;font-size:11px;font-weight:600;border-radius:20px;padding:2px 10px;white-space:nowrap;border:1px solid var(--tagc,var(--line));color:var(--txt);background:color-mix(in srgb,var(--tagc,var(--line)) 18%,transparent)}
+.cd-tag.cur{background:var(--tagc);border-color:var(--tagc);color:#0e0f12}
+.cd-tag.empty{color:var(--faint);background:transparent;border-color:var(--line)}
 .cd-icons{display:flex;gap:2px;flex:none}
 .cd-gx{width:26px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--faint);border-radius:6px;cursor:pointer;font-size:14px}
 .cd-gx:hover{background:var(--panel2);color:var(--txt)}
@@ -850,7 +850,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-pn:hover{background:var(--panel2)}
 .cd-pn.static{cursor:default}
 .cd-pn svg{width:13px;height:13px;color:var(--faint)}
-.cd-spell-badge{font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--amber-soft);border:1px solid #5c4d24;border-radius:4px;padding:0 4px;margin-left:2px}
+.cd-abtog{flex:none;display:flex;gap:4px}
+.cd-tog{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);background:none;border:1px solid var(--line);border-radius:5px;padding:3px 7px;line-height:1;cursor:pointer}
+.cd-tog:hover{color:var(--dim);border-color:var(--dim)}
+.cd-tog.on{color:var(--accent);border-color:var(--accent)}
+.cd-subrow{display:flex;gap:14px;margin:1px 0 6px 158px}
+.cd-sub{display:flex;flex-direction:column;gap:3px}
+.cd-sub-l{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.cd-sub-v{width:62px;box-sizing:border-box;font-size:13px;background:var(--in);border:1px solid var(--line);border-radius:5px;color:var(--txt);padding:4px 7px;outline:none;font-variant-numeric:tabular-nums}
+.cd-sub-v:focus{border-color:var(--accent)}
+.cd-sub-v::placeholder{color:var(--faint)}
 .cd-pn-edit{min-width:150px;font-size:13px;background:var(--in);border:1px solid var(--accent);border-radius:5px;color:var(--txt);padding:5px 8px;outline:none}
 .cd-pv{flex:1;min-width:0;font-size:14px;background:none;border:none;color:var(--txt);padding:6px 8px;border-radius:6px;outline:none}
 .cd-pv::placeholder{color:var(--faint)}
@@ -859,12 +868,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-grpdiv{display:flex;align-items:center;gap:8px;margin:10px 4px 6px;color:var(--faint);font-size:10.5px;letter-spacing:.02em}
 .cd-grpdiv span{flex:none}
 .cd-grpdiv::after{content:"";flex:1;height:1px;background:var(--line)}
-.cd-pmenu{position:absolute;left:8px;top:100%;z-index:6;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px;box-shadow:var(--shadow-pop);min-width:150px}
 .cd-addprop{margin-top:8px;font-size:13px;color:var(--faint);background:none;border:none;padding:6px 8px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:6px}
 .cd-addprop:hover{background:var(--panel2);color:var(--dim)}
-.cd-add-dd{position:relative;z-index:6;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;margin:2px 0 0 8px;box-shadow:var(--shadow-pop);max-width:250px}
-.cd-add-in{width:100%;box-sizing:border-box;background:var(--in);border:1px solid var(--line);border-radius:5px;color:var(--txt);padding:6px 8px;margin-bottom:4px;font-size:13px;color-scheme:dark}
-.cd-add-in:focus{outline:none;border-color:var(--accent)}
+.popover .cd-add-in{width:100%;box-sizing:border-box;margin-bottom:4px}
 .cd-add-list{max-height:210px;overflow-y:auto}
 .cd-add-list .popitem svg,.cd-grp-ico svg{width:13px;height:13px;margin-right:7px;vertical-align:-2px;color:var(--faint)}
 .cd-divider{border-top:1px solid var(--line);margin:14px 0 11px}
@@ -879,7 +885,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .char-detail .cd-title{padding:2px;font-weight:600}
 .char-detail .cd-pv:hover,.char-detail .cd-pv:focus,.cd-prop-pop .cd-pv:hover,.cd-prop-pop .cd-pv:focus{background:var(--in)}
 .char-detail .cd-pn-edit,.cd-prop-pop .cd-pn-edit{background:var(--in);border:1px solid var(--accent);padding:5px 8px}
-.char-detail .cd-add-in{background:var(--in);border:1px solid var(--line);padding:6px 8px}
 .pc-roster .pc-roster-in{background:var(--panel2);padding:8px 10px}
 /* ── Combat Tracker view (B80) ── */
 .combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0}
