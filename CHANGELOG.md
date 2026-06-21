@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 161 — Party row + roll/dropdown polish
+- **Party row name truncation is consistent + generous.** The name now keeps a `min-width` floor and the
+  chip cluster shrinks/scrolls first, so every row truncates at the same point and short names (e.g. "Vex")
+  no longer collapse to one letter.
+- **Roll reels are randomized.** Each digit column spins through random digits before landing (fixed length
+  so timing stays consistent) — no two spins look identical.
+- **Sticky dropdown group headers** sit flush (removed the `.cond-list` padding-top gap that let a scrolling
+  item peek above the pinned header).
+- **Combat sheet labels shortened** to avoid wrapping: "Attack / DC" → **"ATK / DC"**, "Passive skills" →
+  **"Passives"** (the character-detail preset keeps the full "Passive skills" name).
+
 ## Batch 160 — Combat/character fixes round 2
 - **Roll log animation fixed properly.** Each roll animates while it's *fresh* (added < `ROLL_REEL_MS`
   ago, tracked via a new `_t` timestamp); an in-flight reel survives the per-sub-roll re-render, so a new

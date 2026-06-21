@@ -633,7 +633,9 @@ function rollInitNow(){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat
 // Build a vertical digit reel per digit of `target` — a 0–9 column (×2 cycles) ending on the digit, so a
 // translateY to the end scrolls through the numbers and lands on it (number-flow style).
 function nfReelHTML(target){
-  return String(target).split("").map(d=>{const seq=[];for(let c=0;c<2;c++)for(let n=0;n<=9;n++)seq.push(n);seq.push(Number(d));
+  // Each digit column spins through 20 RANDOM digits before landing on the target, so no two spins look
+  // identical (the reel length stays fixed at 21 so the animation speed is consistent).
+  return String(target).split("").map(d=>{const seq=[];for(let i=0;i<20;i++)seq.push(Math.floor(Math.random()*10));seq.push(Number(d));
     return `<span class="nf-digit"><span class="nf-col" style="--nf-len:${seq.length}">${seq.map(n=>`<span class="nf-n">${n}</span>`).join("")}</span></span>`;}).join("");
 }
 function animateInitRoll(byGroup,done){
@@ -803,10 +805,10 @@ function pcSheetHTML(it){
     lines.push(line("Skills",sf.v.map(e=>{const a=SKILLS[e.s]||"int",exp=(Number(e.e)||1)>=2,b=skillBonus(c,e),nm=e.s.replace(/_/g," ");return rchip(a,`<span class="pchip-n">${sgn(b)}</span> ${esc(nm)}`,`1d20${sgn(b)}`,"check",nm,exp?" exp":"");}).join("")));
   const pf=(c.fields||[]).find(f=>f.k==="passives");
   if(pf&&Array.isArray(pf.v)&&pf.v.length)
-    lines.push(line("Passive skills",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
+    lines.push(line("Passives",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
   const mains=(c.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
   if(mains.length)
-    lines.push(line("Attack / DC",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" attack")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
+    lines.push(line("ATK / DC",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" attack")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
   const df=(c.fields||[]).find(f=>f.k==="dmgmod");
   if(df&&Array.isArray(df.v)&&df.v.length)
     lines.push(line("Defenses",df.v.map(e=>{const m=e.m||"res";return `<span class="pchip dchip-${m}"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}</span>`;}).join("")));
