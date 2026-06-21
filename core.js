@@ -192,6 +192,8 @@ async function loadAll(){
     cloudReady=false;
     showBanner("Cloud unreachable — working from your local copy. Edits are saved on this device and will sync when the cloud is back.",hideBanner);
   }
+  // Convert any pre-B136 party/roster shapes once the final state is in hand, then persist the new shape.
+  if(migratePartyModel()){saveAdv();saveRoster();}
 }
 // debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
 let _saveTimer=null,_pend={lib:false,adv:false,roster:false};
@@ -306,11 +308,9 @@ function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
   a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
   a.pinned=!!a.pinned; // pinned adventures float to the top of the column (B78)
-  // Party roster for the Combat Tracker (B80): named PCs with AC/HP/initiative + DM custom fields. A member
-  // LINKED to the shared cross-adventure roster keeps just {id,sharedId} — its data lives on the roster (CT13).
-  a.party=(Array.isArray(a.party)?a.party:[]).map(p=>p&&p.sharedId?{id:p.id||uid(),sharedId:p.sharedId}
-    :({id:(p&&p.id)||uid(),name:(p&&p.name)||"",ac:(p&&p.ac)??"",hp:(p&&p.hp)??"",init:(p&&p.init)??"",
-    fields:(Array.isArray(p&&p.fields)?p.fields:[]).map(f=>({label:f.label||"",value:f.value||""}))}));
+  // Party = an ordered list of shared-roster ids (B136). Old shapes (B80 local objects / B134 {id,sharedId})
+  // are left untouched here and converted once by migratePartyModel() after both adv + roster have loaded.
+  if(!Array.isArray(a.party))a.party=[];
   a.scenes=(a.scenes||[]).map(s=>({id:s.id||uid(),name:s.name||"Scene",collapsed:!!s.collapsed,notes:s.notes||"",notesOn:s.notesOn!==false,archived:!!s.archived,pinned:!!s.pinned}));
   a.encounters=(a.encounters||[]).map(e=>{
     e.archived=!!e.archived;e.notes=e.notes||"";e.notesOn=e.notesOn!==false;e.partyOverride=e.partyOverride||null;e.sceneId=e.sceneId||null;
@@ -327,6 +327,25 @@ function normalizeAdv(a){
     return e;
   });
   return a;
+}
+// One-time migration to the B136 party model: roster characters gain typed fields ({k,label,v}), and each
+// adventure's `a.party` becomes an ORDERED list of shared-roster ids (local B80 members are promoted into the
+// roster; B134 {id,sharedId} links collapse to their id). Idempotent — detects already-migrated shapes.
+function migrateCharShape(c){
+  if(!c||(!("ac" in c)&&!("hp" in c)&&!("init" in c)&&Array.isArray(c.fields)&&c.fields.every(f=>"k" in f)))return false;
+  const old=Array.isArray(c.fields)?c.fields:[];
+  c.fields=[{k:"ac",v:c.ac??""},{k:"hp",v:c.hp??""},{k:"init",v:c.init??""}]
+    .concat(old.map(f=>"k" in f?{k:f.k||"",label:f.label||"",v:f.v??""}:{k:"",label:f.label||"",v:f.value||""}));
+  c.notes=c.notes||"";delete c.ac;delete c.hp;delete c.init;return true;
+}
+function migrateLocalToChar(p){const c={id:(p&&p.id)||uid(),name:(p&&p.name)||"",ac:(p&&p.ac)??"",hp:(p&&p.hp)??"",init:(p&&p.init)??"",fields:Array.isArray(p&&p.fields)?p.fields:[]};migrateCharShape(c);return c;}
+function migratePartyModel(){let changed=false;
+  (state.roster||[]).forEach(c=>{if(migrateCharShape(c))changed=true;});
+  (state.adv||[]).forEach(a=>{if(!Array.isArray(a.party))a.party=[];
+    if(a.party.every(p=>typeof p==="string"))return;
+    a.party=a.party.map(p=>{if(typeof p==="string")return p;if(p&&p.sharedId)return p.sharedId;const c=migrateLocalToChar(p);state.roster.push(c);return c.id;});
+    changed=true;});
+  return changed;
 }
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}

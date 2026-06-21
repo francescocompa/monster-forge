@@ -230,126 +230,136 @@ function setPartyCollapsed(v){try{localStorage.setItem("mf_partycoll",v?"1":"0")
 // Whole adventure "main info" block (party bar + notes + roster) collapses from the chevron by the title.
 function advInfoCollapsed(){try{return localStorage.getItem("mf_advinfocoll")==="1";}catch(e){return false;}}
 function setAdvInfoCollapsed(v){try{localStorage.setItem("mf_advinfocoll",v?"1":"0");}catch(e){}}
-function blankPC(){return {id:uid(),name:"",ac:"",hp:"",init:"",fields:[]};}
-// FA Free solid "link" — marks a party member linked to the shared cross-adventure roster (CT13/B134).
-const LINK_ICON='<svg viewBox="0 0 640 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M579.8 267.7c56.5-56.5 56.5-148 0-204.5-50-50-128.8-56.5-186.3-15.4l-1.6 1.1c-14.4 10.3-17.7 30.3-7.4 44.6s30.3 17.7 44.6 7.4l1.6-1.1c32.1-22.9 76-19.3 103.8 8.6 31.5 31.5 31.5 82.5 0 114l-101.5 101.5c-31.5 31.5-82.5 31.5-114 0-27.9-27.9-31.5-71.8-8.6-103.8l1.1-1.6c10.3-14.4 6.9-34.4-7.4-44.6s-34.4-6.9-44.6 7.4l-1.1 1.6C210.9 235 217.4 313.8 267.4 363.8c56.5 56.5 148 56.5 204.5 0L573.8 262.3l6-6zM60.2 244.3c-56.5 56.5-56.5 148 0 204.5 50 50 128.8 56.5 186.3 15.4l1.6-1.1c14.4-10.3 17.7-30.3 7.4-44.6s-30.3-17.7-44.6-7.4l-1.6 1.1c-32.1 22.9-76 19.3-103.8-8.6C81.9 372 81.9 321 113.4 289.5L214.9 188c31.5-31.5 82.5-31.5 114 0 27.9 27.9 31.5 71.8 8.6 103.9l-1.1 1.6c-10.3 14.4-6.9 34.4 7.4 44.6s34.4 6.9 44.6-7.4l1.1-1.6C429.1 277 422.6 198.2 372.6 148.2c-56.5-56.5-148-56.5-204.5 0L66.2 250.3l-6 6z"/></svg>';
-function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",ac:p.ac??"",hp:p.hp??"",init:p.init??"",fields:Array.isArray(p.fields)?p.fields:[]};}
+// ── Party roster v2 (B136) ───────────────────────────────────────────────────
+// A player character lives ONCE in the shared roster (state.roster); each adventure's `a.party` is an
+// ORDERED list of roster ids. Membership IS the adventure tag — `rosterAdventures(rid)` derives which
+// adventures a character is in. Editing a character changes it in every adventure (live shared). "Unsync"
+// forks a separate roster entry tagged only with the current adventure. Fields are TYPED: a standard key
+// (ac/hp/init/…) carrying its canonical label + icon, or a custom label. Defaults are AC + HP (removable).
+const PC_AC_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
+const PC_HP_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>';
+const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L489.3 358.2l60.4-60.5c56.5-56.5 56.5-148 0-204.5-50-50-128.8-56.5-186.3-15.4l-1.6 1.1c-14.4 10.3-17.7 30.3-7.4 44.6s30.3 17.7 44.6 7.4l1.6-1.1c32.1-22.9 76-19.3 103.8 8.6 31.5 31.5 31.5 82.5 0 114l-65.1 65.2-71-55.9c1.1-14.5-3.8-29.5-15-40.7-19.9-19.9-51.4-21.5-73.2-4.9L38.8 5.1zM276 247.5C261.8 235.9 248.5 223.6 224 223.6c-10.3 0-20.2 3.9-27.7 10.9L75.6 348.9c-30.4 28.3-47.6 68-47.6 109.5v5.8c0 26.2 16.3 47.9 38.4 57.2l188.2 79.9c5.8 2.5 12.1 3.7 18.4 3.7s12.6-1.2 18.4-3.7l36.9-15.7-160-126.1z"/></svg>';
+const PC_FIELDS=[
+  {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
+  {k:"init",label:"Initiative",short:"init",mod:true},{k:"dc",label:"Spell save DC",short:"DC"},
+  {k:"spellatk",label:"Spell attack",short:"atk",mod:true},{k:"pp",label:"Passive Perception",short:"PP"},
+  {k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
+  {k:"str",label:"Strength",short:"STR"},{k:"dex",label:"Dexterity",short:"DEX"},{k:"con",label:"Constitution",short:"CON"},
+  {k:"int",label:"Intelligence",short:"INT"},{k:"wis",label:"Wisdom",short:"WIS"},{k:"cha",label:"Charisma",short:"CHA"}];
+const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
-// A party member is either LOCAL (carries its own name/ac/hp/init/fields) or LINKED to a shared roster
-// character by `sharedId` — a live reference, so editing it changes the character in every adventure (CT13).
-function pcLinked(p){return !!(p&&p.sharedId&&rosterById(p.sharedId));}
-function pcData(p){return (p&&p.sharedId&&rosterById(p.sharedId))||p;}
-// Promote a local member to the shared roster, then link the member to it (its data moves onto the char).
-function promotePC(p){const r=normalizeRosterPC({name:p.name,ac:p.ac,hp:p.hp,init:p.init,fields:p.fields});
-  state.roster.push(r);["name","ac","hp","init","fields"].forEach(k=>delete p[k]);p.sharedId=r.id;
-  saveRoster();saveAdv();renderAdvDetail();toast("Saved to the shared roster — edits now sync across adventures.");}
-// Freeze a linked member's current shared data onto it as a local copy (no save/render — callers do that).
-function freezePCLocal(p){const d=pcData(p);Object.assign(p,{name:d.name,ac:d.ac,hp:d.hp,init:d.init,fields:JSON.parse(JSON.stringify(d.fields||[]))});delete p.sharedId;}
-// Detach a linked member into an independent local copy (its current shared data is frozen onto it).
-function unsyncPC(p){freezePCLocal(p);saveAdv();renderAdvDetail();toast("Unsynced — this is now a local copy.");}
-// How many party slots across all adventures link a given shared character, and which adventures.
-function rosterUsage(rid){return state.adv.reduce((n,a)=>n+(a.party||[]).filter(p=>p.sharedId===rid).length,0);}
-function rosterAdvNames(rid){return state.adv.filter(a=>(a.party||[]).some(p=>p.sharedId===rid)).map(advDName);}
-// Delete a shared character: every adventure that links it keeps a frozen local copy (unsynced), then it's
-// dropped from the roster (CT13).
-function deleteRosterChar(rid){let unsynced=0;state.adv.forEach(a=>(a.party||[]).forEach(p=>{if(p.sharedId===rid){freezePCLocal(p);unsynced++;}}));
-  state.roster=state.roster.filter(r=>r.id!==rid);if(unsynced)saveAdv();saveRoster();}
-// Add a shared roster character to this adventure's party as a linked member.
-function addRosterPC(a,rid){if(a.party.some(p=>p.sharedId===rid)){toast("Already in this party.");return;}a.party.push({id:uid(),sharedId:rid});saveAdv();renderAdvDetail();}
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
+function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
+  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
+function charHasField(c,key){return !!(c&&(c.fields||[]).some(x=>x.k===key));}
+function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
+function fieldLabel(f){const d=fieldDef(f);return d?d.label:(f.label||"Field");}
+// The adventures a roster character is in (membership = the ordered id lists in each a.party).
+function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
+function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();}
+function removePartyMember(a,rid){a.party=a.party.filter(x=>x!==rid);saveAdv();renderAdvDetail();}
+// Unsync: fork a SEPARATE roster entry (a copy) tagged only with the current adventure; the original keeps
+// its other adventures. The current adventure's slot now points at the copy.
+function unsyncPartyMember(a,rid){const c=rosterById(rid);if(!c)return;const copy=normalizeRosterPC(JSON.parse(JSON.stringify(c)));copy.id=uid();
+  state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced — a separate copy for this adventure.");}
+// Delete a character everywhere: drop it from the roster and from every adventure's party.
+function deleteRosterChar(rid){state.roster=state.roster.filter(r=>r.id!==rid);state.adv.forEach(a=>{if(a.party)a.party=a.party.filter(x=>x!==rid);});saveRoster();saveAdv();}
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
-  // Save targets: a LINKED member's edits go to the shared roster char (saveRoster, syncs everywhere); a LOCAL
-  // member's go to the adventure (saveAdv). Either way the edited data object is pcData(p).
-  const findPC=id=>a.party.find(p=>p.id===id);
-  const savePC=p=>pcLinked(p)?saveRoster():saveAdv();
-  const rows=a.party.map(p=>{const d=pcData(p),linked=pcLinked(p);
-    return `<div class="pc-row${linked?" linked":""}" data-pc="${p.id}">
-    <div class="pc-main">
-      <button class="iconbtn pc-link${linked?" on":""}" data-pclink="${p.id}" title="${linked?"Shared character — edits sync across adventures. Click for options":"Local to this adventure. Click to share or link"}">${LINK_ICON}</button>
-      <input class="pc-name" placeholder="Character name" data-pcf="${p.id}:name" value="${esc(d.name)}">
-      <label class="pc-stat">AC<input type="number" min="0" data-pcf="${p.id}:ac" value="${d.ac??""}"></label>
-      <label class="pc-stat">HP<input type="number" min="0" data-pcf="${p.id}:hp" value="${d.hp??""}"></label>
-      <label class="pc-stat">Init<input type="number" data-pcf="${p.id}:init" value="${d.init??""}" placeholder="—" title="Initiative modifier (left blank = rolled flat when combat starts)"></label>
-      <button class="iconbtn" data-pcfield="${p.id}" title="Add custom field">＋</button>
-      <button class="iconbtn" data-pcdel="${p.id}" title="${linked?"Remove from this adventure (the shared character is kept)":"Remove"}">✕</button>
-    </div>
-    ${d.fields.length?`<div class="pc-fields">${d.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-pcfl="${p.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-pcfv="${p.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-pcfdel="${p.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
-  </div>`;}).join("");
-  const rosterBtns=state.roster.length?`<button class="addbtn" id="fromRoster" style="width:auto;flex:none">＋ From roster</button><button class="addbtn" id="manageRoster" style="width:auto;flex:none" title="Edit or delete shared characters">Manage roster</button>`:"";
-  box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>${rosterBtns}</div>`;
-  $("#addPC").addEventListener("click",()=>{a.party.push(blankPC());saveAdv();renderAdvDetail();});
-  {const fr=$("#fromRoster");if(fr)fr.addEventListener("click",()=>openRosterPicker(a,fr));}
-  {const mr=$("#manageRoster");if(mr)mr.addEventListener("click",openRosterManager);}
-  box.querySelectorAll("[data-pclink]").forEach(el=>el.addEventListener("click",()=>openPCSyncMenu(a,findPC(el.dataset.pclink),el)));
-  box.querySelectorAll("[data-pcf]").forEach(el=>{const[id,f]=el.dataset.pcf.split(":");
-    el.addEventListener("input",()=>{const p=findPC(id);if(!p)return;const d=pcData(p);d[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;savePC(p);});});
-  box.querySelectorAll("[data-pcfield]").forEach(el=>el.addEventListener("click",()=>{const p=findPC(el.dataset.pcfield);if(p){pcData(p).fields.push({label:"",value:""});savePC(p);renderParty(a);}}));
-  box.querySelectorAll("[data-pcdel]").forEach(el=>el.addEventListener("click",()=>{a.party=a.party.filter(p=>p.id!==el.dataset.pcdel);saveAdv();renderAdvDetail();}));
-  box.querySelectorAll("[data-pcfl]").forEach(el=>{const[id,i]=el.dataset.pcfl.split(":");el.addEventListener("input",()=>{const p=findPC(id),d=p&&pcData(p);if(d&&d.fields[i]){d.fields[i].label=el.value;savePC(p);}});});
-  box.querySelectorAll("[data-pcfv]").forEach(el=>{const[id,i]=el.dataset.pcfv.split(":");el.addEventListener("input",()=>{const p=findPC(id),d=p&&pcData(p);if(d&&d.fields[i]){d.fields[i].value=el.value;savePC(p);}});});
-  box.querySelectorAll("[data-pcfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.pcfdel.split(":");const p=findPC(id),d=p&&pcData(p);if(d){d.fields.splice(i,1);savePC(p);renderParty(a);}}));
-}
-// Per-member sync menu: promote a local member to the shared roster, link it to an existing shared
-// character, or unsync a linked member into a local copy (CT13).
-function openPCSyncMenu(a,p,anchor){
-  if(!p)return;const linked=pcLinked(p);let html="";
-  if(linked){
-    html=`<div class="popgrp-h">Shared character</div><div class="pop-note">Edits sync to every adventure using this character.</div>
-      <button class="popitem" data-pcm="unsync">Unsync — make a local copy</button>`;
-  }else{
-    html=`<button class="popitem" data-pcm="promote">Save to shared roster</button>`;
-    if(state.roster.length)html+=`<button class="popitem" data-pcm="link">Link to a shared character…</button>`;
-  }
-  const pop=showPopover(anchor,html);
-  pop.querySelectorAll("[data-pcm]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.pcm;closePopover();
-    if(k==="promote")promotePC(p);else if(k==="unsync")unsyncPC(p);else if(k==="link")openRosterPicker(a,anchor,p);}));
-}
-// Pick a shared roster character — either to ADD as a new linked member, or (when `link` is given) to link
-// an existing local member to (replacing its data with the shared one) (CT13).
-function openRosterPicker(a,anchor,link){
-  if(!state.roster.length){toast("No shared characters yet — Save one to the roster first.");return;}
-  const inUse=new Set(a.party.map(p=>p.sharedId).filter(Boolean));
-  const items=state.roster.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")).map(r=>{
-    const dis=!link&&inUse.has(r.id);
-    return `<button class="popitem${dis?" disabled":""}" data-rid="${r.id}"${dis?" disabled":""}>${esc(r.name||"Unnamed")}${r.ac!==""?` <span class="pop-val">AC ${esc(String(r.ac))}</span>`:""}</button>`;});
-  const pop=showPopover(anchor,`<div class="popgrp-h">${link?"Link to":"Add from roster"}</div>${items.join("")}`);
-  pop.querySelectorAll("[data-rid]").forEach(b=>b.addEventListener("click",()=>{const rid=b.dataset.rid;closePopover();
-    if(link){["name","ac","hp","init","fields"].forEach(k=>delete link[k]);link.sharedId=rid;saveAdv();renderAdvDetail();}
-    else addRosterPC(a,rid);}));
-}
-// Roster manager (CT13): a modal to edit / delete EVERY shared character independent of any adventure —
-// including ones no adventure currently links (otherwise orphaned and uneditable). Editing here syncs
-// everywhere the character is linked. Opened from the party area's "Manage roster" button.
-function openRosterManager(){
-  const rows=state.roster.slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")).map(r=>{
-    const used=rosterUsage(r.id),names=rosterAdvNames(r.id);
-    return `<div class="rm-row" data-rm="${r.id}">
-      <div class="rm-main">
-        <input class="rm-name" placeholder="Character name" data-rmf="${r.id}:name" value="${esc(r.name)}">
-        <label class="pc-stat">AC<input type="number" min="0" data-rmf="${r.id}:ac" value="${r.ac??""}"></label>
-        <label class="pc-stat">HP<input type="number" min="0" data-rmf="${r.id}:hp" value="${r.hp??""}"></label>
-        <label class="pc-stat">Init<input type="number" data-rmf="${r.id}:init" value="${r.init??""}" placeholder="—"></label>
-        <span class="rm-used${used?"":" unused"}"${used?` title="${esc(names.join(", "))}"`:""}>${used?`used in ${used}`:"unused"}</span>
-        <button class="iconbtn" data-rmfield="${r.id}" title="Add custom field">＋</button>
-        <button class="iconbtn" data-rmdel="${r.id}" title="Delete shared character">✕</button>
-      </div>
-      ${r.fields.length?`<div class="pc-fields">${r.fields.map((f,i)=>`<span class="pc-field"><input class="pcf-l" placeholder="label" data-rmfl="${r.id}:${i}" value="${esc(f.label)}"><input class="pcf-v" placeholder="value" data-rmfv="${r.id}:${i}" value="${esc(f.value)}"><button class="chipx" data-rmfdel="${r.id}:${i}" title="Remove field">×</button></span>`).join("")}</div>`:""}
+  const chip=(rid,f)=>{const d=fieldDef(f);const lbl=d?(d.icon?d.icon:`<span class="pc-cl">${esc(d.short||d.label)}</span>`):`<span class="pc-cl">${esc(f.label||"")}</span>`;
+    return `<button class="pc-chip${f.k==="dc"?" dc":""}" data-pcchip="${rid}:${f.k||""}" title="${esc(fieldLabel(f))}">${lbl}${esc(String(f.v))}</button>`;};
+  const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
+    const chips=(c.fields||[]).filter(f=>f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>chip(rid,f)).join("");
+    return `<div class="pc-row" data-pcopen="${rid}">
+      <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
+      <span class="pc-chips">${chips}</span>
+      <button class="pc-kebab" data-pcmenu="${rid}" aria-label="More" title="More">⋯</button>
     </div>`;}).join("");
-  openModalRaw(`<h3>Shared party roster</h3><p class="hint" style="margin:-4px 0 12px">Characters here can be dropped into any adventure with ＋ From roster. Editing one updates it in every adventure that links it.</p>
-    <div class="rm-list">${rows||`<div class="hint" style="padding:6px 0">No shared characters yet — Save a party member to the roster, or add one below.</div>`}</div>
-    <div class="mrow"><button class="btn ghost sm" id="rmClose" style="width:auto">Close</button><button class="btn primary sm" id="rmNew" style="width:auto">＋ New character</button></div>`);
-  const m=$("#modal"),findR=id=>rosterById(id);
-  $("#rmClose").addEventListener("click",()=>{closeModal();if(state.selAdv)renderAdvDetail();});
-  $("#rmNew").addEventListener("click",()=>{state.roster.push(normalizeRosterPC({}));saveRoster();openRosterManager();const n=$("#modal .rm-row:last-child .rm-name");if(n)n.focus();});
-  m.querySelectorAll("[data-rmf]").forEach(el=>{const[id,f]=el.dataset.rmf.split(":");el.addEventListener("input",()=>{const r=findR(id);if(!r)return;r[f]=el.type==="number"?(el.value===""?"":clamp(Number(el.value||0),f==="init"?-20:0,9999)):el.value;saveRoster();});});
-  m.querySelectorAll("[data-rmfield]").forEach(el=>el.addEventListener("click",()=>{const r=findR(el.dataset.rmfield);if(r){r.fields.push({label:"",value:""});saveRoster();openRosterManager();}}));
-  m.querySelectorAll("[data-rmfl]").forEach(el=>{const[id,i]=el.dataset.rmfl.split(":");el.addEventListener("input",()=>{const r=findR(id);if(r&&r.fields[i]){r.fields[i].label=el.value;saveRoster();}});});
-  m.querySelectorAll("[data-rmfv]").forEach(el=>{const[id,i]=el.dataset.rmfv.split(":");el.addEventListener("input",()=>{const r=findR(id);if(r&&r.fields[i]){r.fields[i].value=el.value;saveRoster();}});});
-  m.querySelectorAll("[data-rmfdel]").forEach(el=>el.addEventListener("click",()=>{const[id,i]=el.dataset.rmfdel.split(":");const r=findR(id);if(r){r.fields.splice(i,1);saveRoster();openRosterManager();}}));
-  m.querySelectorAll("[data-rmdel]").forEach(el=>el.addEventListener("click",()=>{const rid=el.dataset.rmdel,r=findR(rid),used=rosterUsage(rid);
-    const go=()=>{deleteRosterChar(rid);openRosterManager();};
-    if(used)confirmStack(`Delete "${esc((r&&r.name)||"this character")}"? ${used} party slot${used>1?"s":""} link it — they'll be kept as local copies (unsynced).`,go);else go();}));
+  box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
+    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button><button class="addbtn" id="openRoster" style="width:auto;flex:none" title="Browse every character across adventures">Roster</button></div>`;
+  $("#addPC").addEventListener("click",()=>addPartyMember(a));
+  $("#openRoster").addEventListener("click",()=>openRosterModal());
+  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,[data-pcmenu]"))return;openCharacterDetail(row.dataset.pcopen);}));
+  box.querySelectorAll("[data-pcchip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[rid,k]=el.dataset.pcchip.split(":");openPCFieldEdit(rid,k,el);}));
+  box.querySelectorAll("[data-pcmenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openPCRowMenu(a,el.dataset.pcmenu,el);}));
+}
+// Quick edit of one field's value from a row chip (B136).
+function openPCFieldEdit(rid,key,anchor){const c=rosterById(rid);if(!c)return;const f=(c.fields||[]).find(x=>x.k===key);if(!f)return;
+  const p=showPopover(anchor,`<div class="note-edit" style="min-width:160px"><label class="cond-rl">${esc(fieldLabel(f))}<input type="text" class="popinput pcfe" value="${esc(String(f.v))}" style="width:90px"></label><button class="btn primary sm pcfe-go" style="width:auto">Set</button></div>`);
+  const inp=p.querySelector(".pcfe");inp.focus();inp.select();
+  const go=()=>{f.v=inp.value.trim();closePopover();saveRoster();renderAdvDetail();};
+  p.querySelector(".pcfe-go").addEventListener("click",go);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
+// Row ⋯ menu: open the character, unsync (only when shared by >1 adventure), or remove from this adventure.
+function openPCRowMenu(a,rid,anchor){const shared=rosterAdventures(rid).length>1;
+  let html=`<button class="popitem" data-pcm="open">Open character</button>`;
+  if(shared)html+=`<button class="popitem" data-pcm="unsync">Unsync from this adventure</button>`;
+  html+=`<div class="popsep"></div><button class="popitem danger" data-pcm="remove">Remove from this adventure</button>`;
+  const p=showPopover(anchor,html);
+  p.querySelectorAll("[data-pcm]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.pcm;closePopover();
+    if(k==="open")openCharacterDetail(rid);else if(k==="unsync")unsyncPartyMember(a,rid);else if(k==="remove")removePartyMember(a,rid);}));}
+const PC_TUNE_ICON='<svg viewBox="0 0 512 512" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 96a32 32 0 1 1 0 64 32 32 0 1 1 0-64zm73.3 0C253 67.7 224.8 48 192 48s-61 19.7-73.3 48L32 96C14.3 96 0 110.3 0 128s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 160c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 96z"/></svg>';
+// Character detail — a Notion-style peek (B136). Plain title, single-column typed properties (click a name
+// for its options, click a value to edit), shared-adventure tags up top, an unsync icon when >1 adventure
+// shares it, notes below a divider. `curAdvId` is the adventure it was opened from (null from the roster).
+function openCharacterDetail(rid,curAdvId,ui){
+  ui=ui||{};const c=rosterById(rid);if(!c){closeModal();return;}
+  const curAdv=curAdvId!==undefined?curAdvId:state.selAdv;
+  const advs=rosterAdventures(rid),shared=advs.length>1;
+  const tagsHTML=advs.length?advs.map(a=>`<span class="cd-tag${a.id===curAdv?" cur":""}">${esc(advDName(a))}</span>`).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
+  const propRows=(c.fields||[]).map((f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
+    const nameEl=(ui.rename===i&&!f.k)
+      ? `<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
+      : `<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
+    const menu=ui.menu===i?`<div class="cd-pmenu">${f.k?"":`<button class="popitem" data-cdrename>Rename</button>`}<button class="popitem danger" data-cdremove>Remove field</button></div>`:"";
+    return `<div class="cd-prop">${nameEl}${menu}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;}).join("");
+  const present=new Set((c.fields||[]).map(f=>f.k).filter(Boolean));
+  const sugg=ui.add?`<div class="cd-add-dd"><input class="cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${PC_FIELDS.filter(f=>!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("")}</div></div>`:"";
+  const scrim=(ui.menu!=null||ui.add)?`<div class="cd-scrim" data-cdscrim></div>`:"";
+  openModalRaw(`<div class="char-detail">${scrim}
+    <div class="cd-top">
+      <div class="cd-tags">${tagsHTML}</div>
+      <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdadd2 title="Add a field" aria-label="Add a field">${PC_TUNE_ICON}</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
+    </div>
+    <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
+    <div class="cd-props">${propRows}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${sugg}</div>
+    <div class="cd-divider"></div>
+    <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
+    <div class="cd-foot"><button class="btn primary sm" data-cddone style="width:auto">Done</button><span style="flex:1"></span><button class="cd-del" data-cddelete>delete character</button></div>
+  </div>`);
+  const m=$("#modal"),re=u=>openCharacterDetail(rid,curAdv,u),close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
+  m.querySelector("[data-cdclose]").addEventListener("click",close);
+  m.querySelector("[data-cddone]").addEventListener("click",close);
+  {const s=m.querySelector("[data-cdscrim]");if(s)s.addEventListener("click",()=>re({}));}
+  m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
+  m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
+  m.querySelector(".cd-notes").addEventListener("input",e=>{c.notes=e.target.value;saveRoster();});
+  m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>re({menu:+el.dataset.cdname})));
+  {const rm=m.querySelector("[data-cdremove]");if(rm)rm.addEventListener("click",()=>{c.fields.splice(ui.menu,1);saveRoster();re({});});}
+  {const rn=m.querySelector("[data-cdrename]");if(rn)rn.addEventListener("click",()=>re({rename:ui.menu}));}
+  {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
+  m.querySelectorAll("[data-cdaddprop],[data-cdadd2]").forEach(el=>el.addEventListener("click",()=>re({add:true})));
+  {const ai=m.querySelector(".cd-add-in");if(ai){ai.focus();ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();m.querySelectorAll(".cd-add-list [data-cdadd]").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
+    ai.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const nm=ai.value.trim();if(nm){c.fields.push({k:"",label:nm,v:""});saveRoster();re({});}}else if(e.key==="Escape")re({});});}}
+  m.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();re({});}));
+  {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
+  m.querySelector("[data-cddelete]").addEventListener("click",()=>confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();}));
+}
+// Roster modal (B136): every character grouped by the adventures it's in (membership = the adventure tag),
+// plus an "unassigned" group. Search filters; click a row to open its detail; ＋ New adds a roster-only char.
+function openRosterModal(){
+  const inAny=new Set();state.adv.forEach(a=>(a.party||[]).forEach(id=>inAny.add(id)));
+  const orphans=state.roster.filter(r=>!inAny.has(r.id));
+  const grp=(title,ids,muted)=>ids.length?`<div class="gh">${esc(title)} <span>· ${ids.length}</span></div>`+ids.map(id=>{const c=rosterById(id);return c?`<div class="rr${muted?" muted":""}" data-rid="${id}"><span style="flex:1">${esc(c.name)||"New character"}</span><i class="rr-go">›</i></div>`:"";}).join(""):"";
+  let body=state.adv.map(a=>grp(advDName(a),(a.party||[]).slice())).join("");
+  if(orphans.length)body+=grp("Not in any adventure",orphans.map(r=>r.id),true);
+  openModalRaw(`<h3>Roster</h3><input class="popinput rr-search" placeholder="Search characters…" style="width:100%;margin:-2px 0 10px;box-sizing:border-box"><div class="rr-list">${body||`<div class="hint" style="padding:6px 0">No characters yet — add one in an adventure's party, or below.</div>`}</div><div class="mrow"><button class="btn ghost sm" data-rclose style="width:auto">Close</button><button class="btn primary sm" data-rnew style="width:auto">＋ New character</button></div>`);
+  const m=$("#modal");
+  m.querySelector("[data-rclose]").addEventListener("click",()=>{closeModal();if(state.selAdv)renderAdvDetail();});
+  m.querySelector("[data-rnew]").addEventListener("click",()=>{const c=newRosterChar("");state.roster.push(c);saveRoster();openCharacterDetail(c.id,null);});
+  m.querySelectorAll("[data-rid]").forEach(el=>el.addEventListener("click",()=>openCharacterDetail(el.dataset.rid,null)));
+  const s=m.querySelector(".rr-search");s.addEventListener("input",()=>{const q=s.value.trim().toLowerCase();m.querySelectorAll(".rr").forEach(r=>{r.style.display=(!q||r.textContent.toLowerCase().includes(q))?"":"none";});});
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}

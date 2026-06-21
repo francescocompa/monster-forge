@@ -170,10 +170,14 @@ function autoRollOn(){return !(state.settings.combat&&state.settings.combat.init
 // Roll party (PC) initiative on start? (Settings combat.rollParty) — off = PCs start blank at the top,
 // flagged for the DM to type each character's roll.
 function rollPartyOn(){return !(state.settings.combat&&state.settings.combat.rollParty===false);}
-function pcInstance(p){const d=pcData(p),im=d.init===""||d.init==null?0:Number(d.init),man=!rollPartyOn();
-  return {id:uid(),kind:"pc",srcId:p.id,srcEntry:"pc:"+p.id,name:d.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
-    ac:d.ac===""?null:Number(d.ac),hpMax:d.hp===""?null:Number(d.hp),hpCur:d.hp===""?null:Number(d.hp),
-    hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+p.id,resources:[]};}
+// A party member is a shared-roster id (B136); pull AC/HP/Initiative from its typed fields.
+function pcInstance(rid){const c=rosterById(rid);if(!c)return null;
+  const iv=charFieldVal(c,"init"),av=charFieldVal(c,"ac"),hv=charFieldVal(c,"hp");
+  const im=iv===""||iv==null?0:(Number(iv)||0),man=!rollPartyOn();
+  const acN=av===""||av==null?null:Number(av),hpN=hv===""||hv==null?null:Number(hv);
+  return {id:uid(),kind:"pc",srcId:rid,srcEntry:"pc:"+rid,name:c.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
+    ac:acN!=null&&!isNaN(acN)?acN:null,hpMax:hpN!=null&&!isNaN(hpN)?hpN:null,hpCur:hpN!=null&&!isNaN(hpN)?hpN:null,
+    hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+rid,resources:[]};}
 function startCombat(a,e){
   const order=[];
   // Pass 1: total instances per base name → continuous numbering across same-name entries.
@@ -181,7 +185,7 @@ function startCombat(a,e){
   e.combatants.forEach(c=>{const n=combatBaseName(c);totals[n]=(totals[n]||0)+Math.max(1,Number(c.count||1));});
   // Pass 2: create, advancing the per-name offset so each entry's numbers follow the previous one's.
   e.combatants.forEach(c=>{const n=combatBaseName(c),cnt=Math.max(1,Number(c.count||1));order.push(...combatantInstances(c,totals[n],offs[n]||0));offs[n]=(offs[n]||0)+cnt;});
-  a.party.forEach(p=>order.push(pcInstance(p)));
+  (a.party||[]).forEach(rid=>{const inst=pcInstance(rid);if(inst)order.push(inst);});
   sortInitiative(order);
   e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
 }
@@ -190,7 +194,7 @@ function startCombat(a,e){
 function syncCombatOrder(a,e){const cb=e.combat;if(!cb)return false;
   const have=new Set(cb.order.map(o=>o.srcEntry||o.groupId));let added=false;
   e.combatants.forEach(c=>{if(!have.has(c.id)){const n=combatBaseName(c),existing=cb.order.filter(o=>(o.name||"").replace(/\s+\d+$/,"")===n).length,cnt=Math.max(1,Number(c.count||1));cb.order.push(...combatantInstances(c,existing+cnt,existing));added=true;}});
-  a.party.forEach(p=>{if(!have.has("pc:"+p.id)){cb.order.push(pcInstance(p));added=true;}});
+  (a.party||[]).forEach(rid=>{if(!have.has("pc:"+rid)){const inst=pcInstance(rid);if(inst){cb.order.push(inst);added=true;}}});
   if(added&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   return added;
 }

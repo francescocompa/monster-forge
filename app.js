@@ -345,6 +345,7 @@ function wrapStepper(input,step,min){
   await loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
   if(typeof maybeApplySeed==="function")maybeApplySeed(); // dev-only local sandbox data (seed.js)
+  if(migratePartyModel()){saveAdv();saveRoster();} // also fold any seed-applied old-shape party into the B136 model
   buildMonsterDatalists();
   // Restore the creature that was being edited + the last open tab across reloads (B78).
   loadMonster(readForgeDraft()||blankMonster());

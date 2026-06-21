@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 136 — Party rework (1/n): typed-field model + compact rows + character detail peek
+Foundation of the redesigned party system (mockup-driven, A "compact row" direction).
+- **New model.** A player character lives ONCE in the shared roster; each `a.party` is now an **ordered list
+  of roster ids**, so membership *is* the adventure tag (`rosterAdventures(rid)` derives it). Fields are
+  **typed**: a standard key (ac / hp / init / spell save DC / spell attack / passive perception / proficiency
+  / speed / the six abilities) carrying a canonical label + icon, or a free custom label. Defaults are AC + HP
+  (both removable). One-time idempotent migration (`migratePartyModel`) folds every pre-B136 shape (B80 local
+  members, B134 `{id,sharedId}` links, old roster chars) into the new model.
+- **Compact rows.** Each party member is a one-line row: name + its enabled stats as chips (♥ HP = max only,
+  ⛊ AC by icon; init / DC / etc. by short label). Click a chip to quick-edit it; click the row to open the
+  character; ⋯ for open / unsync / remove.
+- **Character detail — Notion peek.** Plain editable title, single-column typed properties (click a name for
+  a small options menu, click the value to edit), the shared-adventure tags up top (current adventure filled,
+  others outlined; scroll-faded), an **unsync** icon shown only when >1 adventure shares it (forks a separate
+  roster copy tagged to the current adventure), notes/backstory below a divider, Done (bottom-left) / delete.
+  ＋ Add a property suggests the standard fields.
+- **Roster** button (replaces From roster / Manage roster) opens a searchable list grouped by adventure.
+- Combat reads PCs from the typed fields. Verified: migration, rows, detail, add-field, unsync, combat.
+- Next pass: the roster search-dropdown polish + a path to add an existing character to another adventure.
+
 ## Batch 135 — CT13 (2/2): roster manager + safe delete — CT13 complete
 - **Roster manager modal** (opened from a new "Manage roster" button by ＋ From roster): lists every shared
   character — including ones no adventure currently links (otherwise orphaned and uneditable) — each editable

@@ -793,33 +793,65 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .section-label .st-chev.closed{transform:rotate(-90deg)}
 .section-label .party-count{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;font-weight:600;margin-left:auto}
 #partyWrap{margin-bottom:6px}
-.pc-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:8px;padding:8px 10px;margin-bottom:7px}
-/* A member linked to the shared cross-adventure roster (CT13) — the link button lights up. */
-.pc-link{color:var(--faint)}
-.pc-link.on{color:var(--accent-soft);border-color:#6e3329;background:rgba(226,101,77,.12)}
-.pc-link svg{pointer-events:none}
+/* Party roster v2 (B136): a compact clickable row — name + the character's enabled stats as chips + a ⋯
+   menu. Click a chip to quick-edit it; click the row to open the Notion-style character detail. */
+.pc-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:var(--r-lg);padding:8px 11px;margin-bottom:6px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.pc-row:hover{background:var(--panel2)}
+.pc-nm{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-unnamed{color:var(--faint);font-weight:500}
+.pc-chips{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.pc-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pc-chip:hover{border-color:var(--accent);color:var(--txt)}
+.pc-chip svg{width:12px;height:12px;color:var(--faint)}
+.pc-chip .pc-cl{font-size:11px;color:var(--faint)}
+.pc-chip.dc,.pc-chip.dc .pc-cl{color:var(--amber-soft)}
+.pc-kebab{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.pc-kebab:hover{border-color:var(--line);color:var(--txt);background:var(--panel)}
 .pc-addrow{display:flex;gap:7px}
-/* Roster manager modal (CT13): rows mirror the party rows + a usage badge, scroll when the list is long. */
-.rm-list{max-height:min(56vh,460px);overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:7px}
-.rm-row{background:var(--panel);border:1px solid var(--line);border-left:3px solid #3f7a52;border-radius:8px;padding:8px 10px}
-.rm-main{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.rm-main .rm-name{flex:1;min-width:120px;font-size:14px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 8px;color:var(--txt)}
-.rm-main .rm-name:focus{border-color:var(--accent);outline:none}
-.rm-used{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-soft);background:rgba(226,101,77,.12);border:1px solid #6e3329;border-radius:5px;padding:3px 7px;white-space:nowrap}
-.rm-used.unused{color:var(--faint);background:var(--in);border-color:var(--line)}
-.pop-note{font-size:11px;color:var(--faint);padding:3px 9px 6px;max-width:230px;line-height:1.4}
-.pc-main{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pc-main .pc-name{flex:1;min-width:120px;font-size:14px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 8px;color:var(--txt)}
-.pc-main .pc-name:focus{border-color:var(--accent);outline:none}
-.pc-stat{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
-.pc-stat input{width:58px;text-align:center;font-size:13px;font-weight:600;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px 4px;color:var(--txt);color-scheme:dark}
-.pc-stat input:focus{border-color:var(--accent);outline:none}
-.pc-fields{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-.pc-field{display:inline-flex;align-items:center;gap:3px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:2px 4px 2px 6px}
-.pc-field input{background:transparent;border:none;color:var(--txt);font-size:12px;padding:2px;color-scheme:dark}
-.pc-field input:focus{outline:none}
-.pc-field .pcf-l{width:78px;color:var(--faint);font-weight:600}
-.pc-field .pcf-v{width:96px;border-left:1px solid var(--line);padding-left:6px}
+/* Character detail — a Notion-style peek (B136). */
+.char-detail{position:relative;min-width:340px;max-width:460px;display:flex;flex-direction:column}
+.cd-scrim{position:absolute;inset:-16px -18px;z-index:4}
+.cd-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cd-tags{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+.cd-tags::-webkit-scrollbar{display:none}
+.cd-tag{flex:none;font-size:11px;border-radius:20px;padding:2px 10px;white-space:nowrap;border:1px solid #3f7a52;color:#8fce9a;background:transparent}
+.cd-tag.cur{background:#5fa873;border-color:#5fa873;color:#0f2417;font-weight:600}
+.cd-tag.empty{border-color:var(--line);color:var(--faint)}
+.cd-icons{display:flex;gap:2px;flex:none}
+.cd-gx{width:26px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--faint);border-radius:6px;cursor:pointer;font-size:14px}
+.cd-gx:hover{background:var(--panel2);color:var(--txt)}
+.cd-title{width:100%;box-sizing:border-box;font-size:20px;font-weight:600;background:none;border:none;color:var(--txt);padding:2px;margin-bottom:10px;outline:none}
+.cd-props{position:relative;margin-bottom:2px}
+.cd-prop{display:flex;align-items:center;gap:8px;border-radius:6px;position:relative}
+.cd-pn{display:flex;align-items:center;gap:8px;min-width:142px;font-size:13px;color:var(--dim);background:none;border:none;text-align:left;padding:6px 8px;border-radius:6px;cursor:pointer}
+.cd-pn:hover{background:var(--panel2);color:var(--txt)}
+.cd-pn svg{width:13px;height:13px;color:var(--faint)}
+.cd-pn-edit{min-width:142px;font-size:13px;background:var(--in);border:1px solid var(--accent);border-radius:5px;color:var(--txt);padding:5px 8px;outline:none}
+.cd-pv{flex:1;min-width:0;font-size:14px;background:none;border:none;color:var(--txt);padding:6px 8px;border-radius:6px;outline:none}
+.cd-pv::placeholder{color:var(--faint)}
+.cd-pv:hover,.cd-pv:focus{background:var(--in)}
+.cd-pmenu{position:absolute;left:8px;top:100%;z-index:6;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px;box-shadow:var(--shadow-pop);min-width:128px}
+.cd-addprop{font-size:13px;color:var(--faint);background:none;border:none;padding:6px 8px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:6px}
+.cd-addprop:hover{background:var(--panel2);color:var(--dim)}
+.cd-add-dd{position:relative;z-index:6;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;margin:2px 0 0 8px;box-shadow:var(--shadow-pop);max-width:250px}
+.cd-add-in{width:100%;box-sizing:border-box;background:var(--in);border:1px solid var(--line);border-radius:5px;color:var(--txt);padding:6px 8px;margin-bottom:4px;font-size:13px;color-scheme:dark}
+.cd-add-in:focus{outline:none;border-color:var(--accent)}
+.cd-add-list{max-height:210px;overflow-y:auto}
+.cd-add-list .popitem svg{width:13px;height:13px;margin-right:7px;vertical-align:-2px;color:var(--faint)}
+.cd-divider{border-top:1px solid var(--line);margin:13px 0 11px}
+.cd-notes{width:100%;box-sizing:border-box;background:none;border:none;color:var(--dim);font-size:13px;line-height:1.65;resize:vertical;min-height:60px;max-height:240px;outline:none;font-family:inherit;padding:0 2px}
+.cd-notes::placeholder{color:var(--faint)}
+.cd-foot{display:flex;align-items:center;margin-top:15px}
+.cd-del{font-size:12px;color:var(--faint);background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.cd-del:hover{color:var(--bad)}
+/* Roster modal (B136): characters grouped by adventure; click a row to open its detail. */
+.rr-list{max-height:min(56vh,440px);overflow-y:auto;margin-bottom:12px}
+.rr-list .gh{font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--dim);margin:10px 2px 3px}
+.rr-list .gh span{color:var(--faint);font-weight:400}
+.rr{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--txt)}
+.rr:hover{background:var(--panel2)}
+.rr.muted{color:var(--dim)}
+.rr-go{color:var(--faint);font-style:normal}
 /* ── Combat Tracker view (B80) ── */
 .combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0}
 .combat-wrap>.combat-notstarted,.combat-wrap>.combat-empty{flex:1;min-height:0}
