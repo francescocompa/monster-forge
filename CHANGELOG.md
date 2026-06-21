@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 152 — Party rework (17/n): split Senses & Passives
+- The old **Senses & passives** preset is split. **Senses** is now a plain text field (darkvision / special
+  senses; legacy object values migrate to text in `normalizeRosterPC`). **Passives** is its own chip-field
+  preset (default Perception / Insight / Investigation, add more via a custom skill dropdown), and each
+  passive's value = **10 + ability mod, taking proficiency FROM the Skills preset** when that skill is listed
+  there (`charSkillProf` / `passiveVal`); a proficient passive is tinted.
+
 ## Batch 151 — Party rework (16/n): Damage Modifiers dropdown + grayscale saves
 - Renamed the damage preset to **Damage Modifiers** (`fieldLabel` now resolves preset labels from
   `PC_PRESETS`, so the rename applies to existing fields too) and its **add control is a custom dropdown**

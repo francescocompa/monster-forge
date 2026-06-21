@@ -222,7 +222,7 @@ const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="curre
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
   {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},{k:"player",label:"Player",short:"player"},
-  {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
+  {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},{k:"senses",label:"Senses",short:"senses"},
   {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
   {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
 const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
@@ -272,7 +272,9 @@ function fieldDefault(c,f,advId){switch(f.k){
 // Effective initiative modifier for combat — the set value, else the DEX-mod default when abilities exist.
 function effInit(c){const v=charFieldVal(c,"init");if(v!==""&&v!=null)return Number(v)||0;return hasAbilScores(c)?abilMod(abilScoreOf(c,"dex")):0;}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
-  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
+  fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",
+    // Legacy B149 "senses" preset (an object) collapses to the plain text field it became in B152.
+    v:(f.k==="senses"&&f.v&&typeof f.v==="object"&&!Array.isArray(f.v))?(f.v.dv||""):(f.v??""),hide:!!f.hide,
     main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
@@ -296,13 +298,14 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
 function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
 // Chip-field presets offered in the Add-a-property menu — each holds an ARRAY of entries rendered as chips
 // you click to cycle (B148). `newPresetField` builds the empty field; `isPreset` detects one.
-const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"senses",label:"Senses & passives"}];
-function newPresetField(k){const p=PC_PRESETS.find(x=>x.k===k);return {k,label:p?p.label:k,v:k==="senses"?{dv:"",prof:{}}:[]};}
-const PASSIVE_SKILLS=["Perception","Insight","Investigation"];
-// Passive score = 10 + the skill's ability mod (+ proficiency if flagged) — Perception/Insight (WIS),
-// Investigation (INT).
-function passiveVal(c,name,prof){return 10+abilMod(abilScoreOf(c,SKILLS[name]))+(prof?pbForLevel(charFieldVal(c,"level")):0);}
+const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"passives",label:"Passives"}];
+function newPresetField(k){const p=PC_PRESETS.find(x=>x.k===k);return {k,label:p?p.label:k,v:k==="passives"?["Perception","Insight","Investigation"]:[]};}
 function isPreset(f){return PC_PRESETS.some(p=>p.k===f.k);}
+// Passive score = 10 + the skill's ability mod, + proficiency taken FROM the Skills preset if that skill is
+// listed there (B152). `charSkillProf` returns the expertise multiplier (1 prof / 2 expertise / 0 none).
+function charSkillProf(c,name){const sf=(c&&c.fields||[]).find(f=>f.k==="skills");if(!sf||!Array.isArray(sf.v))return 0;const e=sf.v.find(x=>x.s===name);return e?(Number(e.e)||1):0;}
+function passiveVal(c,name){return 10+abilMod(abilScoreOf(c,SKILLS[name]||"wis"))+pbForLevel(charFieldVal(c,"level"))*charSkillProf(c,name);}
+function passiveChipHTML(c,name,j){const ab=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<button class="pchip skchip cc-ab-${ab}${prof?" exp":""}" title="Passive ${name}${prof?" (proficient via Skills)":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${name}<span class="pchip-x" data-cdchipdel="${j}">×</span></button>`;}
 // Damage modifier chip: ½× resistance (default) → 0× immunity → 2× vulnerability, cycling on click.
 const DMG_MULT={res:"½×",imm:"0×",vuln:"2×"},DMG_CYCLE={res:"imm",imm:"vuln",vuln:"res"};
 function dmgChipHTML(e,j){const m=e.m||"res";return `<button class="pchip dchip-${m}" data-cdcycle="${j}" title="Click to change resistance / immunity / vulnerability"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}<span class="pchip-x" data-cdchipdel="${j}">×</span></button>`;}
@@ -415,22 +418,17 @@ function openCharacterDetail(rid,curAdvId,ui){
     const ph=fieldDefault(c,f,curAdv)||"Empty";
     const list=f.k==="class"?` list="pcClassList"`:"";
     return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}<input class="cd-pv" data-cdval="${i}"${list} value="${esc(String(f.v))}" placeholder="${esc(ph)}"></div>`;};
-  // Preset chip field — label + a wrapping field of click-to-cycle chips and an add input (B148).
+  // Preset chip field (B148) — label + a wrapping field of chips and an add control. dmgmod/passives pick from
+  // a custom dropdown; skills keep the datalist combobox. Passive chips derive proficiency from the Skills field.
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
-    const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):skillChipHTML(c,e,j)).join("");
-    // Damage types pick from a custom dropdown (B151); skills keep the datalist combobox.
-    const addCtrl=f.k==="dmgmod"
-      ?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
+    const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):skillChipHTML(c,e,j)).join("");
+    const addCtrl=f.k==="dmgmod"?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
+      :f.k==="passives"?`<button class="cd-chip-addbtn" data-cdpassadd="${i}">＋ skill</button>`
       :`<input class="cd-chip-add" data-cdchipadd="${i}" list="pcSkillList" placeholder="add skill…" autocomplete="off">`;
     return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}${addCtrl}</div></div>`;};
-  // Senses preset (B149): a free-text senses/darkvision line + three passive chips (10 + mod, click to flag
-  // proficiency, coloured by ability).
-  const sensesRow=(f,i)=>{const v=(f.v&&typeof f.v==="object"&&!Array.isArray(f.v))?f.v:{dv:"",prof:{}},pr=v.prof||{};
-    const passive=name=>{const ab=SKILLS[name],on=!!pr[name];return `<button class="pchip skchip cc-ab-${ab}${on?" exp":""}" data-cdsenseprof="${name}" title="Click to toggle proficiency"><span class="pchip-n">${passiveVal(c,name,on)}</span> ${name}</button>`;};
-    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield"><input class="cd-pv cd-sense-dv" data-cdsensedv="${i}" value="${esc(v.dv||"")}" placeholder="Darkvision 60 ft., …">${PASSIVE_SKILLS.map(passive).join("")}</div></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;const html=isPreset(f)?(f.k==="senses"?sensesRow(f,i):presetRow(f,i)):propRow(f,i);(cdRowHidden(f)?hidHTML+=html:visHTML+=html);});
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;const html=isPreset(f)?presetRow(f,i):propRow(f,i);(cdRowHidden(f)?hidHTML+=html:visHTML+=html);});
   // Ability-score grid is ALWAYS shown (B145) — cells bind by ability key and the field is created lazily on
   // first edit. Star a cell to make it "main" (derives ATK/save), with override inputs per flagged ability.
   const abilCell=k=>{const f=abilFieldOf(c,k)||{k,v:"",main:false,prof:false},on=!!f.main;
@@ -506,8 +504,10 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdchips]").forEach(box=>box.addEventListener("click",e=>{const f=c.fields[+box.dataset.cdchips];if(!f||!Array.isArray(f.v))return;
     const del=e.target.closest("[data-cdchipdel]");if(del){e.stopPropagation();f.v.splice(+del.dataset.cdchipdel,1);saveRoster();re({});return;}
     const cyc=e.target.closest("[data-cdcycle]");if(cyc){const en=f.v[+cyc.dataset.cdcycle];if(!en)return;if(f.k==="dmgmod")en.m=DMG_CYCLE[en.m||"res"];else en.e=(Number(en.e)||1)>=2?1:2;saveRoster();re({});}}));
-  m.querySelectorAll("[data-cdsensedv]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdsensedv];if(!f)return;if(!f.v||typeof f.v!=="object"||Array.isArray(f.v))f.v={dv:"",prof:{}};f.v.dv=el.value;saveRoster();}));
-  m.querySelectorAll("[data-cdsenseprof]").forEach(el=>el.addEventListener("click",()=>{const row=el.closest("[data-cdrow]"),f=c.fields[+row.dataset.cdrow];if(!f)return;if(!f.v||typeof f.v!=="object"||Array.isArray(f.v))f.v={dv:"",prof:{}};if(!f.v.prof)f.v.prof={};const n=el.dataset.cdsenseprof;f.v.prof[n]=!f.v.prof[n];saveRoster();re({});}));
+  m.querySelectorAll("[data-cdpassadd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdpassadd];if(!f)return;const used=new Set(f.v||[]),avail=Object.keys(SKILLS).filter(s=>!used.has(s));
+    if(!avail.length){toast("All skills added.");return;}
+    const p=showPopover(el,`<div class="popscroll">${avail.map(s=>`<button class="popitem" data-pk="${s}">${s.replace(/_/g," ")}</button>`).join("")}</div>`);
+    p.querySelectorAll("[data-pk]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v.push(b.dataset.pk);saveRoster();re({});}));}));
   // Drag-to-reorder properties (B143b): grip handles drag; dropping onto a row reorders + joins that row's
   // group, dropping on the "Hidden" divider moves into the hidden group.
   const clearDM=()=>m.querySelectorAll(".cd-prop.drop-before,.cd-prop.drop-after,.cd-grpdiv.drop-into").forEach(x=>x.classList.remove("drop-before","drop-after","drop-into"));

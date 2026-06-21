@@ -887,9 +887,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .skchip{border-color:color-mix(in srgb,var(--abc) 45%,var(--line))}
 .skchip .pchip-n{color:var(--abc)}
 .skchip.exp{background:color-mix(in srgb,var(--abc) 15%,var(--in));border-color:var(--abc);font-weight:600}
-.cd-chipfield .cd-sense-dv{flex:1 1 150px;min-width:120px;background:none;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--txt);color-scheme:dark}
-.cd-chipfield .cd-sense-dv:focus{outline:none;border-color:var(--accent)}
-.cd-chipfield .cd-sense-dv::placeholder{color:var(--faint)}
 .cd-pn{display:flex;align-items:center;gap:8px;min-width:150px;font-size:13px;color:var(--dim);background:none;border:none;text-align:left;padding:6px 8px;border-radius:6px;cursor:pointer}
 .cd-pn:hover,.cd-pn.static{background:none}
 .cd-pn:hover{color:var(--txt)}
