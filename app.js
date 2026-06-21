@@ -271,7 +271,7 @@ $("#fileIn").addEventListener("change",e=>{
 });
 
 function openModalRaw(html){$("#modal").innerHTML=html;$("#modalBg").classList.add("show");}
-function closeModal(){$("#modalBg").classList.remove("show");}
+function closeModal(){$("#modalBg").classList.remove("show");$("#modal").classList.remove("cd-host");}
 $("#modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
 function copyModal(title,text,hint){
   openModalRaw(`<h3>${esc(title)}</h3><p class="hint" style="margin:-4px 0 12px">${esc(hint)}</p><textarea id="copyArea" readonly>${esc(text)}</textarea><div class="mrow"><button class="btn ghost sm" id="mClose" style="width:auto">Close</button><button class="btn primary sm" id="mCopy" style="width:auto">Copy to clipboard</button></div>`);

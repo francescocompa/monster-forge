@@ -262,8 +262,8 @@ select::-ms-expand{display:none}
 .abil{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
 .abil .cell{position:relative;background:var(--in);border:1px solid var(--line);border-radius:7px;padding:9px 6px 8px;text-align:center;display:flex;flex-direction:column}
 .abil .cell .abmain{position:absolute;top:4px;right:4px;width:16px;height:16px;display:grid;place-items:center;padding:0;background:none;border:none;color:var(--faint);font-size:11px;line-height:1;cursor:pointer;opacity:.45}
-.abil .cell .abmain:hover,.abil .cell .abmain.active{opacity:1;color:var(--amber)}
-.abil .cell.is-main{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.abil .cell .abmain:hover,.abil .cell .abmain.active{opacity:1;color:var(--abc,var(--amber))}
+.abil .cell.is-main{background:color-mix(in srgb,var(--abc) 18%,var(--in));border-color:var(--abc)}
 .abil .cell .ab{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--amber);margin-bottom:6px}
 /* Ability colour tokens (matches the statblock cc-ab scheme). Set --abc on any cc-ab-* element so
    the Forge ability boxes + skill/tool rows can tint themselves by ability. B79/B81. */
@@ -286,8 +286,8 @@ select::-ms-expand{display:none}
 .abil .cell .svtog{background:var(--panel2);border:1px solid var(--line);color:var(--faint);border-radius:5px;padding:4px 2px;font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:4px}
 .abil .cell .svtog b{font-size:11px;font-variant-numeric:tabular-nums}
 .abil .cell .svtog:hover{border-color:var(--accent);color:var(--dim)}
-.abil .cell .svtog.active{background:rgba(226,101,77,.16);border-color:var(--accent);color:var(--accent-soft)}
-.abil .cell .svtog.active b{color:#fff}
+.abil .cell .svtog.active{background:color-mix(in srgb,var(--abc) 16%,transparent);border-color:var(--abc);color:var(--abc)}
+.abil .cell .svtog.active b{color:var(--txt)}
 
 .rowline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .rowline:last-child{margin-bottom:0}
@@ -832,7 +832,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .rr-kebab:hover{background:var(--panel);color:var(--txt)}
 .rr-empty{font-size:12px;color:var(--faint);padding:8px}
 /* Character detail — Notion peek (B137): fixed top + footer, the title/properties/notes scroll between. */
-.char-detail{position:relative;min-width:300px;max-width:360px;display:flex;flex-direction:column}
+.char-detail{position:relative;width:100%;min-width:0;display:flex;flex-direction:column}
+.modal.cd-host{max-width:368px;padding:18px}
 .cd-top{flex:none;display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .cd-tags{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
 .cd-tags::-webkit-scrollbar{display:none}
@@ -869,7 +870,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-pv{flex:1;min-width:0;font-size:14px;background:none;border:none;color:var(--txt);padding:6px 8px;border-radius:6px;outline:none}
 .cd-pv::placeholder{color:var(--faint)}
 .cd-pv:hover,.cd-pv:focus{background:var(--in)}
-.cd-prop-pop{min-width:230px}
+.cd-prop-pop{min-width:0}
+.cd-prop-pop .cd-pn,.cd-prop-pop .cd-pn.static{min-width:0;padding:6px 4px}
+.cd-prop-pop .cd-pn-edit{min-width:0;width:120px}
 .cd-grpdiv{display:flex;align-items:center;gap:8px;margin:10px 4px 6px;color:var(--faint);font-size:10.5px;letter-spacing:.02em}
 .cd-grpdiv span{flex:none}
 .cd-grpdiv::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -887,6 +890,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* The global input[type=text]/:not([type]) rule outranks the bare classes — scope these to win so detail
    values stay transparent (hover only), and the custom inputs keep their intended fills (B137). */
 .char-detail .cd-title,.char-detail .cd-pv,.cd-prop-pop .cd-pv{background:none;border:none;padding:6px 8px;width:100%}
+.cd-prop-pop .cd-pv{width:92px;flex:none}
 .char-detail .cd-title{padding:2px;font-weight:600}
 .char-detail .cd-pv:hover,.char-detail .cd-pv:focus,.cd-prop-pop .cd-pv:hover,.cd-prop-pop .cd-pv:focus{background:var(--in)}
 .char-detail .cd-pn-edit,.cd-prop-pop .cd-pn-edit{background:var(--in);border:1px solid var(--accent);padding:5px 8px}

@@ -255,7 +255,7 @@ function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
 function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
   fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
-    main:!!(f.main||f.atk||f.dc||f.spell),atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
+    main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);return d?d.label:((f.k&&PC_LEGACY[f.k])||f.label||"Field");}
@@ -264,7 +264,10 @@ function abilMod(score){const n=Number(score);return isNaN(n)?0:Math.floor((n-10
 // Per-ability derived spell ATK / save DC (B138): any ability field can flag `atk` and/or `dc` via the
 // toggles next to its value. Each derives from the ability modifier + proficiency (DC also +8), with an
 // optional manual override (atkV/dcV) — an empty override falls back to the computed value.
-function abilDerived(c,f){const m=abilMod(f.v),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
+// An unset ability defaults to 10 (its placeholder) so the modifier reads +0, not −5 (B140).
+function abilScore(f){return (f.v===""||f.v==null)?10:(Number(f.v)||0);}
+function abilSave(c,f){return abilMod(abilScore(f))+(f.prof?pbForLevel(charFieldVal(c,"level")):0);}
+function abilDerived(c,f){const m=abilMod(abilScore(f)),pb=pbForLevel(charFieldVal(c,"level"));return {atk:m+pb,dc:8+m+pb};}
 function effAtk(c,f){const d=abilDerived(c,f);return (f.atkV!==""&&f.atkV!=null)?(Number(f.atkV)||0):d.atk;}
 function effDc(c,f){const d=abilDerived(c,f);return (f.dcV!==""&&f.dcV!=null)?(Number(f.dcV)||0):d.dc;}
 // A "main" ability (B139) derives BOTH the spell ATK and the save DC chip; multiple abilities can be main.
@@ -282,6 +285,9 @@ function addExistingToParty(a,rid){if(!a.party.includes(rid)){a.party.push(rid);
 // its other adventures. The current adventure's slot now points at the copy.
 function unsyncPartyMember(a,rid){const c=rosterById(rid);if(!c)return;const copy=normalizeRosterPC(JSON.parse(JSON.stringify(c)));copy.id=uid();
   state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced — a separate copy for this adventure.");}
+// A character is "blank" when nothing has been filled in — no name, no notes, no field values (B140):
+// deleting it needs no confirmation prompt.
+function charIsBlank(c){return !c||(!(c.name||"").trim()&&!(c.notes||"").trim()&&!(c.fields||[]).some(f=>String(f.v??"").trim()!==""));}
 // Delete a character everywhere: drop it from the roster and from every adventure's party.
 function deleteRosterChar(rid){state.roster=state.roster.filter(r=>r.id!==rid);state.adv.forEach(a=>{if(a.party)a.party=a.party.filter(x=>x!==rid);});saveRoster();saveAdv();}
 function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span class="pc-cl">${esc((d&&d.short)||fieldLabel(f))}</span>`;
@@ -360,7 +366,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   let abilBlock="";
   if(abilEntries.length){
     const cells=PC_ABILS.map(k=>{const x=abilEntries.find(y=>y.f.k===k);if(!x)return"";const {f,i}=x,on=!!f.main;
-      return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdmain="${i}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabval="${i}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(f.v))}</div></div>`;}).join("");
+      return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdmain="${i}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabval="${i}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(abilScore(f)))}</div><button type="button" class="svtog${f.prof?" active":""}" data-cdsave="${i}" aria-pressed="${f.prof?"true":"false"}">Save <b>${sgn(abilSave(c,f))}</b></button></div>`;}).join("");
     const mains=abilEntries.filter(x=>x.f.main);
     const spell=mains.length?`<div class="cd-spell">${mains.map(({f,i})=>{const cv=abilDerived(c,f);
       return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdsub="atk:${i}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdsub="dc:${i}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
@@ -378,8 +384,9 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-    <div class="cd-foot"><span style="flex:1"></span><button class="cd-del" data-cddelete>Delete</button><button class="btn primary" data-cddone style="width:auto">Done</button></div>
+    <div class="cd-foot"><span style="flex:1"></span><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="width:auto;min-width:120px">Done</button></div>
   </div>`);
+  $("#modal").classList.add("cd-host");
   const m=$("#modal"),re=u=>openCharacterDetail(rid,curAdv,u),close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
@@ -407,12 +414,14 @@ function openCharacterDetail(rid,curAdvId,ui){
   // Ability score commits on change (re-render refreshes the mod + derived placeholders without stealing focus mid-type).
   m.querySelectorAll("[data-cdabval]").forEach(el=>el.addEventListener("change",()=>{const f=c.fields[+el.dataset.cdabval];if(f){f.v=el.value;saveRoster();re({});}}));
   m.querySelectorAll("[data-cdmain]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdmain];if(!f)return;f.main=!f.main;saveRoster();re({});}));
+  m.querySelectorAll("[data-cdsave]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdsave];if(!f)return;f.prof=!f.prof;saveRoster();re({});}));
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
   {const us=m.querySelector("[data-cdunsync]");if(us)us.addEventListener("click",()=>{const a=state.adv.find(x=>x.id===curAdv);if(a)unsyncPartyMember(a,rid);closeModal();});}
-  m.querySelector("[data-cddelete]").addEventListener("click",()=>confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();}));
+  m.querySelector("[data-cddelete]").addEventListener("click",()=>{const del=()=>{deleteRosterChar(rid);closeModal();if(state.selAdv)renderAdvDetail();};
+    if(charIsBlank(c))del();else confirmStack(`Delete "${esc(c.name||"this character")}" everywhere? It's removed from every adventure.`,del);});
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
