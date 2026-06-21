@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 163 — Class/subclass chipfields + PC combat stat boxes
+- **Class and Subclass are now chipfields** (preset properties). **Class** adds from a custom dropdown of the
+  13 D&D classes (incl. Artificer) and also accepts a typed custom class; **multiple class chips = multiclass**.
+  **Subclass** is a free-text chipfield. The party row still shows the **first** class next to the name; the
+  combat preview's identity line **appends all classes, slash-joined** (e.g. "Player character · Fighter /
+  Wizard"). Legacy scalar/custom "Class" fields migrate to the array shape (`normalizeRosterPC` +
+  `migratePartyModel`); `classList` / `charClass` / `charClasses` helpers added. The old single class field +
+  its chevron dropdown are gone.
+- **PC combat stat boxes now include ATK / DC** as boxes like monsters (computed from the main ability; ATK
+  rolls, DC static), and the class moved out of the sheet subtitle into the identity line. The sheet's
+  former "ATK / DC" chip line was removed.
+
 ## Batch 162 — Combat is always live (no start screen)
 - **Removed the pre-combat "Start combat" screen.** Loading an encounter into the combat tab now
   **auto-starts** the tracker (builds the order silently) whenever it has combatants or party — combat is

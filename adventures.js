@@ -220,7 +220,7 @@ const PC_HP_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="curren
 // ability + the Level (proficiency). Abilities carry `abil:true` so they can be grouped + flagged.
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
-  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},{k:"player",label:"Player",short:"player"},
+  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"player",label:"Player",short:"player"},
   {k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},{k:"senses",label:"Senses",short:"senses"},
   {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
   {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
@@ -236,8 +236,13 @@ function buildPcTemplate(c){return (c&&c.fields||[]).map(f=>{const t=JSON.parse(
 function savePcTemplate(c){try{localStorage.setItem("mf_pc_template",JSON.stringify(buildPcTemplate(c)));}catch(e){}}
 function loadPcTemplate(){try{const s=localStorage.getItem("mf_pc_template");if(s){const f=JSON.parse(s);if(Array.isArray(f)&&f.length)return JSON.parse(JSON.stringify(f));}}catch(e){}return null;}
 // A character's class — the standard `class` field, or a legacy custom field labelled "Class".
-function charClass(c){const f=(c&&c.fields||[]).find(x=>x.k==="class"||(!x.k&&(x.label||"").toLowerCase()==="class"));return f&&f.v!=null?String(f.v):"";}
-function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:loadPcTemplate()||[{k:"level",v:""},{k:"class",v:""},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
+// Class is a chipfield now (array of class names; multiple = multiclass). These tolerate legacy scalar
+// values and the legacy custom "Class" field so they work before/after migration.
+function classField(c){return (c&&c.fields||[]).find(x=>x.k==="class"||(!x.k&&(x.label||"").toLowerCase()==="class"));}
+function classList(c){const f=classField(c);if(!f)return [];return Array.isArray(f.v)?f.v.filter(Boolean):(f.v?[String(f.v)]:[]);}
+function charClass(c){return classList(c)[0]||"";}   // first class — the party row shows this one
+function charClasses(c){return classList(c);}         // all classes — the combat preview appends these
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:loadPcTemplate()||[{k:"level",v:""},{k:"class",v:[]},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
 // Ability helpers that tolerate a missing field (ability grid is always shown; fields are created lazily).
 function abilFieldOf(c,k){return (c.fields||[]).find(f=>f.k===k)||null;}
 function abilScoreOf(c,k){const f=abilFieldOf(c,k);return f?abilScore(f):10;}
@@ -283,10 +288,18 @@ function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",not
   // Passive skills preset covers it now.
   fields:(Array.isArray(p.fields)?p.fields:[{k:"ac",v:""},{k:"hp",v:""}])
     .filter(f=>f&&f.k!=="pp"&&!(!f.k&&/^passive perception$/i.test((f.label||"").trim())))
-    .map(f=>({k:f.k||"",label:f.label||"",
-    // Legacy B149 "senses" preset (an object) collapses to the plain text field it became in B152.
-    v:(f.k==="senses"&&f.v&&typeof f.v==="object"&&!Array.isArray(f.v))?(f.v.dv||""):(f.v??""),hide:!!f.hide,
-    main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""}))};}
+    .map(f=>{
+      let k=f.k||"",label=f.label||"";
+      // Legacy custom "Class"/"Subclass" fields fold into the new class/subclass chipfield presets.
+      if(!k&&/^class$/i.test(label.trim())){k="class";label="";}
+      if(!k&&/^subclass$/i.test(label.trim())){k="subclass";label="";}
+      let v;
+      if(k==="class"||k==="subclass")v=Array.isArray(f.v)?f.v.filter(Boolean):(f.v?[String(f.v)]:[]);
+      // Legacy B149 "senses" preset (an object) collapses to the plain text field it became in B152.
+      else if(k==="senses"&&f.v&&typeof f.v==="object"&&!Array.isArray(f.v))v=f.v.dv||"";
+      else v=f.v??"";
+      return {k,label,v,hide:!!f.hide,main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""};
+    })};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);if(d)return d.label;const pp=PC_PRESETS.find(p=>p.k===f.k);if(pp)return pp.label;return (f.k&&PC_LEGACY[f.k])||f.label||"Field";}
@@ -309,7 +322,9 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
 function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
 // Chip-field presets offered in the Add-a-property menu — each holds an ARRAY of entries rendered as chips
 // you click to cycle (B148). `newPresetField` builds the empty field; `isPreset` detects one.
-const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"passives",label:"Passive skills"}];
+const PC_PRESETS=[{k:"class",label:"Class"},{k:"subclass",label:"Subclass"},{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"passives",label:"Passive skills"}];
+// A plain (non-cycling) chip for string chipfields like Class / Subclass — name + delete only.
+function plainChipHTML(name,j){return `<button class="pchip">${esc(String(name))}<span class="pchip-x" data-cdchipdel="${j}">×</span></button>`;}
 function newPresetField(k){const p=PC_PRESETS.find(x=>x.k===k);return {k,label:p?p.label:k,v:k==="passives"?["Perception","Insight","Investigation"]:[]};}
 function isPreset(f){return PC_PRESETS.some(p=>p.k===f.k);}
 // Passive score = 10 + the skill's ability mod, + proficiency taken FROM the Skills preset if that skill is
@@ -429,17 +444,16 @@ function openCharacterDetail(rid,curAdvId,ui){
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
     const ph=fieldDefault(c,f,curAdv)||"Empty";
-    // Class: free-text input + a hover/focus chevron that opens a custom class dropdown (B156).
-    const valEl=f.k==="class"
-      ?`<div class="cd-class-wrap"><input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}"><button class="cd-class-chev" data-cdclasschev="${i}" tabindex="-1" aria-label="Pick a class">▾</button></div>`
-      :`<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}">`;
+    const valEl=`<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}">`;
     return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}${valEl}</div>`;};
   // Preset chip field (B148) — label + a wrapping field of chips and an add control. dmgmod/passives pick from
   // a custom dropdown; skills keep the datalist combobox. Passive chips derive proficiency from the Skills field.
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
-    const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):skillChipHTML(c,e,j)).join("");
+    const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):(f.k==="class"||f.k==="subclass")?plainChipHTML(e,j):skillChipHTML(c,e,j)).join("");
     const addCtrl=f.k==="dmgmod"?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
       :f.k==="passives"?`<button class="cd-chip-addbtn" data-cdpassadd="${i}">＋ skill</button>`
+      :f.k==="class"?`<button class="cd-chip-addbtn" data-cdclassadd="${i}">＋ class</button>`
+      :f.k==="subclass"?`<button class="cd-chip-addbtn" data-cdsubadd="${i}">＋ subclass</button>`
       :`<button class="cd-chip-addbtn" data-cdskilladd="${i}">＋ skill</button>`;
     return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}${addCtrl}</div></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
@@ -520,6 +534,20 @@ function openCharacterDetail(rid,curAdvId,ui){
     if(!avail.length){toast("All skills added.");return;}
     const p=showPopover(el,`<div class="popscroll">${avail.map(s=>`<button class="popitem" data-pk="${s}">${s.replace(/_/g," ")}</button>`).join("")}</div>`);
     p.querySelectorAll("[data-pk]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v.push(b.dataset.pk);saveRoster();re({});}));}));
+  // Class: custom dropdown of the D&D classes (filterable) that ALSO accepts a typed custom class (Enter).
+  m.querySelectorAll("[data-cdclassadd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdclassadd];if(!f)return;
+    const used=new Set((f.v||[]).map(x=>String(x).toLowerCase())),avail=D5_CLASSES.filter(x=>!used.has(x.toLowerCase()));
+    const p=showPopover(el,`<input class="popinput cd-class-in" placeholder="Class… (or type a custom one)" autocomplete="off"><div class="popscroll">${avail.map(x=>`<button class="popitem" data-cl="${esc(x)}">${esc(x)}</button>`).join("")}</div>`);
+    const inp=p.querySelector(".cd-class-in");inp.focus();
+    const add=v=>{v=(v||"").trim();if(!v)return;closePopover();f.v.push(v);saveRoster();re({});};
+    inp.addEventListener("input",()=>{const q=inp.value.trim().toLowerCase();p.querySelectorAll(".popitem").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
+    inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();add(inp.value);}else if(ev.key==="Escape")closePopover();});
+    p.querySelectorAll("[data-cl]").forEach(b=>b.addEventListener("click",()=>add(b.dataset.cl)));}));
+  // Subclass: free-text chip (no fixed list) — type and press Enter.
+  m.querySelectorAll("[data-cdsubadd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdsubadd];if(!f)return;
+    const p=showPopover(el,`<input class="popinput cd-sub-in" placeholder="Subclass…" autocomplete="off">`);
+    const inp=p.querySelector(".cd-sub-in");inp.focus();
+    inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();const v=inp.value.trim();if(v){closePopover();f.v.push(v);saveRoster();re({});}}else if(ev.key==="Escape")closePopover();});}));
   // Drag-to-reorder properties (B143b): grip handles drag; dropping onto a row reorders + joins that row's
   // group, dropping on the "Hidden" divider moves into the hidden group.
   const clearDM=()=>m.querySelectorAll(".cd-prop.drop-before,.cd-prop.drop-after,.cd-grpdiv.drop-into").forEach(x=>x.classList.remove("drop-before","drop-after","drop-into"));
@@ -535,9 +563,6 @@ function openCharacterDetail(rid,curAdvId,ui){
   {const nt=m.querySelector(".cd-notes");grow(nt);nt.addEventListener("input",e=>{c.notes=e.target.value;saveRoster();grow(e.target);});}
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
-  m.querySelectorAll("[data-cdclasschev]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const f=c.fields[+el.dataset.cdclasschev];if(!f)return;
-    const p=showPopover(el,`<div class="popscroll">${D5_CLASSES.map(x=>`<button class="popitem${f.v===x?" on":""}" data-cl="${x}">${x}</button>`).join("")}</div>`);
-    p.querySelectorAll("[data-cl]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v=b.dataset.cl;saveRoster();re({});}));}));
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
   {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved — new characters start from these properties.");});}
   // Top kebab menu (B155): clear page · import template · unsync (shared only) · delete.

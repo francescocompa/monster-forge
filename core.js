@@ -346,7 +346,7 @@ function migratePartyModel(){let changed=false;
   (state.roster||[]).forEach(c=>{if(migrateCharShape(c))changed=true;});
   (state.adv||[]).forEach(a=>{if(!Array.isArray(a.party))a.party=[];
     if(a.party.every(p=>typeof p==="string"))return;
-    a.party=a.party.map(p=>{if(typeof p==="string")return p;if(p&&p.sharedId)return p.sharedId;const c=migrateLocalToChar(p);state.roster.push(c);return c.id;});
+    a.party=a.party.map(p=>{if(typeof p==="string")return p;if(p&&p.sharedId)return p.sharedId;const c=normalizeRosterPC(migrateLocalToChar(p));state.roster.push(c);return c.id;});
     changed=true;});
   return changed;
 }

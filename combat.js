@@ -805,9 +805,7 @@ function pcSheetHTML(it){
   const pf=(c.fields||[]).find(f=>f.k==="passives");
   if(pf&&Array.isArray(pf.v)&&pf.v.length)
     lines.push(line("Passives",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
-  const mains=(c.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
-  if(mains.length)
-    lines.push(line("ATK / DC",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" attack")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
+  // ATK / DC now render as stat boxes in the panel header (combatPanelInnerHTML), like monsters.
   const df=(c.fields||[]).find(f=>f.k==="dmgmod");
   if(df&&Array.isArray(df.v)&&df.v.length)
     lines.push(line("Defenses",df.v.map(e=>{const m=e.m||"res";return `<span class="pchip dchip-${m}"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}</span>`;}).join("")));
@@ -820,14 +818,17 @@ function pcSheetHTML(it){
     if(!f.k&&/^(class|level)$/i.test((f.label||"").trim()))return; // legacy class/level live in the subtitle
     lines.push(line(esc(fieldLabel(f)),esc(String(f.v)),true));
   });
-  const cls=charClass(c),lv=charFieldVal(c,"level");
-  const sub=[cls,(lv!==""&&lv!=null)?`Level ${lv}`:""].filter(Boolean).map(esc).join(" · ");
+  // Class(es) live in the identity line now (combatPanelInnerHTML); the sheet subtitle just shows level.
+  const lv=charFieldVal(c,"level");
+  const sub=(lv!==""&&lv!=null)?`Level ${esc(String(lv))}`:"";
   const head=`<div class="pcs-head"><span class="pcs-sub${sub?"":" dim"}">${sub||"Character details"}</span><button class="pcs-edit" data-pcedit="${esc(it.srcId)}" title="Edit character">${PEN_ICON} Edit</button></div>`;
   if(!lines.length)return `<div class="ca-pcsheet">${head}<div class="ca-soon">No character details yet — add abilities, skills or passives to ${esc(c.name||"this PC")}.</div></div>`;
   return `<div class="ca-pcsheet">${head}${lines.join("")}</div>`;
 }
 function combatPanelInnerHTML(it,isTurn){
-  const who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  const pc=it.kind==="pc"?rosterById(it.srcId):null;
+  let who=it.faction==="PC"?"Player character":(it.kind==="event"?"Event":it.faction);
+  if(pc){const cs=charClasses(pc);if(cs.length)who+=" · "+cs.join(" / ");} // multiclass: slash-joined (B163)
   const m=it.kind==="monster"?monById(it.srcId):null;
   const conds=it.kind==="event"?"":`<div class="ca-conds">${(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("")}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋ effect</button></div>`;
   // Quick-ref stat chips — the numbers a DM glances at, all on one compact line.
@@ -839,6 +840,10 @@ function combatPanelInnerHTML(it,isTurn){
   if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus — click to roll"));
     const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
     const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll"));}
+  if(pc){const mains=(pc.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
+    if(mains.length){const atk=Math.max(...mains.map(f=>effAtk(pc,f))),dc=Math.max(...mains.map(f=>effDc(pc,f)));
+      stats.push(rollChip("ATK",atk,"attack","Attack","Attack bonus — click to roll"));
+      stats.push(chip("DC",dc,"Save DC"));}}
   if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   const monEdit=(m&&monById(it.srcId))?`<div class="ca-sbbar"><button class="pcs-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button></div>`:"";
