@@ -713,9 +713,11 @@ function bindCombatRows(host,mode,cb){
 // apply damage to all selected at once, plus a clear.
 // Selection action bar — a floating bar pinned to the centre-bottom of the page (the same .batch-bar
 // style as the bestiary/preset multi-select), so it doesn't displace the initiative entries (B122).
+// Selection action strip — pinned inside the active panel (B164), below the faction bar. Acts on every
+// selected combatant. (Was a floating .batch-bar that collided with the roll log + turn FAB.)
 function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n)return "";
   const one=n===1?`<button class="btn primary sm" id="csbTurn">Set current turn</button>`:"";
-  return `<div class="batch-bar combat-selbar" id="combatSelBar">
+  return `<div class="ca-selbar" id="combatSelBar">
     <span class="bb-n">${n} selected</span>
     <button class="btn primary sm" id="csbStatus">Status ▾</button>
     <button class="btn primary sm" id="csbEffect">＋ Effect</button>
@@ -873,7 +875,10 @@ function combatActiveHTML(it){
   // While a selection points at a NON-active card, the panel keeps the active combatant's identity up top
   // (name + faction, "Active turn" flag pushed right) and previews the selected card's header + statblock
   // below a divider (B122). Selecting the active card itself (or nothing) shows the normal panel.
-  if(peek)return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+  // Selection actions live INSIDE this panel now (B164) — a strip pinned below the faction bar — instead of
+  // a floating bar that collided with the roll log + FAB.
+  const selBar=selList.length?combatSelBarHTML():"";
+  if(peek)return `<div class="ca-topbar ${cFac(it.faction)}"></div>${selBar}
     <div class="ca-scroll"><div class="ca-panel">
       <div class="ca-peekhead">
         <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who0)}</span></div>
@@ -882,7 +887,7 @@ function combatActiveHTML(it){
       <div class="ca-divider"></div>
       <div class="ca-peek" data-peek="${esc(peek.id)}">${combatPanelInnerHTML(peek,false)}</div>
     </div></div>`;
-  return `<div class="ca-topbar ${cFac(it.faction)}"></div>
+  return `<div class="ca-topbar ${cFac(it.faction)}"></div>${selBar}
     <div class="ca-scroll"><div class="ca-panel">${combatPanelInnerHTML(it,true)}</div></div>`;
 }
 // Auto-detected resource trackers as clickable pips. Click a filled pip to spend, an empty one to restore.
@@ -1032,7 +1037,7 @@ function renderCombat(){
   // chevron. Reset / re-roll live in the round-bar tools menu.
   const fab=cb?`<div class="combat-fab-turn">
       <button class="combat-fab-prev" id="combatPrev" title="Previous turn" aria-label="Previous turn">${CHEV_L}</button>
-      <button class="fab combat-fab next" id="combatNext" style="position:static" title="Next turn"><span>Next turn</span>${CHEV_R}</button>
+      <button class="combat-fab-next" id="combatNext" title="Next turn"><span>Next turn</span>${CHEV_R}</button>
     </div>`:"";
   // Preserve the scroll position of the order list (and active panel) across the full re-render — selecting
   // or editing a row rebuilds the DOM and would otherwise jump back to the top (B123).
@@ -1044,7 +1049,7 @@ function renderCombat(){
       <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
       <div class="combat-active">${combatActiveHTML(cur)}</div>
-    </div>${combatSelBarHTML()}`:combatNotStartedHTML(a,e))+fab;
+    </div>`:combatNotStartedHTML(a,e))+fab;
   {const o=body.querySelector(".combat-order");if(o&&_ordTop)o.scrollTop=_ordTop;const ac=body.querySelector(".ca-scroll");if(ac&&_actTop)ac.scrollTop=_actTop;}
   // Animate the statblock peek only when the previewed combatant actually changes — not on every re-render
   // (toggling reaction, marking a death save, etc. shouldn't visibly refresh the preview) (B128).

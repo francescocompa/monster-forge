@@ -1027,7 +1027,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
    the faction-tinted "active" current turn (B122). */
 .cbt-row.selected{background:var(--panel2);box-shadow:0 0 0 1.5px var(--sel-accent,var(--accent))}
 .cbt-row.active.selected{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent),0 0 0 1.5px var(--sel-accent,var(--accent))}
-/* Selection action bar reuses the .batch-bar floating style (centre-bottom of the page) (B122). */
+/* Selection action strip — pinned inside the active panel below the faction bar (B164). */
+.ca-selbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.ca-selbar .bb-n{font-size:12px;color:var(--dim);font-weight:600;margin-right:2px}
+.ca-selbar .btn{flex:none;width:auto}
 .csb-ico{display:inline-flex;width:13px;height:13px;color:var(--dim)}.csb-ico svg{width:13px;height:13px}
 .seldmg{display:flex;gap:6px;align-items:center;padding:4px}
 .seldmg-in{width:72px;background:var(--in);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--txt);color-scheme:dark;text-align:center}
@@ -1356,12 +1359,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-d20.rolling svg{animation:croSpin .55s linear infinite}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
 .combat-fab svg{width:13px;height:13px;fill:none;stroke:currentColor;flex:none}
-/* Turn-control FAB: a previous-turn chevron + the primary "Next turn" button (combat is always live). */
-.combat-fab-turn{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:stretch;gap:8px}
-.combat-fab-prev{height:32px;width:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r);background:var(--panel2);color:var(--txt);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer;padding:0}
-.combat-fab-prev:hover{background:var(--panel3);border-color:var(--dim)}
-.combat-fab-prev svg{width:13px;height:13px;fill:none;stroke:currentColor}
-.combat-fab.next{box-shadow:0 6px 18px rgba(0,0,0,.5)}
+/* Turn-control FAB: a unified split pill — previous-turn chevron divided from the primary "Next turn"
+   button (like the Bestiary New split FAB). Combat is always live, so this is the main control. */
+.combat-fab-turn{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:stretch;border-radius:var(--r);overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.combat-fab-turn button{height:32px;background:var(--accent);color:#fff;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:500}
+.combat-fab-turn button:hover{background:var(--accent-hover)}
+.combat-fab-prev{padding:0 11px;border-right:1px solid rgba(0,0,0,.28)}
+.combat-fab-next{padding:0 15px}
+.combat-fab-turn svg{width:13px;height:13px;fill:none;stroke:currentColor}
 .picker-scroll{min-height:240px}
 .modal .mrow.picker-foot .btn{width:auto}
 .picker-foot .pf-btn{display:inline-flex;align-items:center;gap:6px}

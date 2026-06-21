@@ -378,14 +378,16 @@ function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
   const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
     const lv=charFieldVal(c,"level"),lvSet=lv!==""&&lv!=null,cls=charClass(c);
-    const chips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k!=="class"&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
-    const derived=charDerivedChips(c).map(x=>x.kind==="atk"
+    const stdChips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k!=="class"&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f));
+    const derChips=charDerivedChips(c).map(x=>x.kind==="atk"
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
-      :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
+      :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`);
+    // Reversed so the FIRST chip sits rightmost (the always-visible end behind the left fade) (B164).
+    const allChips=[...stdChips,...derChips].reverse().join("");
     return `<div class="pc-row" data-pcopen="${rid}">
       <span class="pc-lvl-wrap"><span class="pc-lv-cap">LV</span><input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit"></span>
       <span class="pc-name"><span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>${cls?`<span class="pc-cls">${esc(cls)}</span>`:""}</span>
-      <span class="pc-chips">${chips}${derived}</span>
+      <span class="pc-chips">${allChips}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
     </div>`;}).join("");
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}

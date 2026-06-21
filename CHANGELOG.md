@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 164 — Combat polish: chip order, reels, selection bar, split FAB
+- **Party-row chips reversed** so the first field (AC) sits rightmost (the always-visible end behind the
+  left fade).
+- **Roll-log reels spin through whole numbers within the roll's possible range** (e.g. 1–20 for a d20,
+  via `formulaFloor`/`formulaCeil`) and vary their digit count, so a spin never telegraphs whether the
+  result is above or below 10. New single-column `rollReelHTML`.
+- **Selection action bar moved into the active panel** (a strip pinned below the faction bar) instead of
+  floating center-bottom where it collided with the roll log + turn FAB.
+- **Turn FAB is now a split button** — the previous-turn chevron is divided from the "Next turn" button
+  (like the Bestiary New FAB).
+
 ## Batch 163 — Class/subclass chipfields + PC combat stat boxes
 - **Class and Subclass are now chipfields** (preset properties). **Class** adds from a custom dropdown of the
   13 D&D classes (incl. Artificer) and also accepts a typed custom class; **multiple class chips = multiclass**.

@@ -534,6 +534,20 @@ function formulaCeil(f){
   }
   return total;
 }
+// Minimum of a formula: every die's lowest face (1) × count, plus flat modifiers. Used to bound the
+// roll-log reel's random spin to the roll's plausible result range (B164).
+function formulaFloor(f){
+  const norm=String(f).replace(/\s+/g,"").replace(/−/g,"-").replace(/^\+/,"");
+  const re=/([+-]?)(\d*)d(%|\d+)((?:kh|kl|dh|dl)\d*)?|([+-]?\d+)/gi;
+  let total=0,m;
+  while((m=re.exec(norm))){
+    if(m[5]!==undefined){const v=Number(m[5]);if(!isNaN(v))total+=v;continue;}
+    const neg=m[1]==="-";let n=Number(m[2]||1),sides=m[3]==="%"?100:Number(m[3]);if(!sides||!n)continue;
+    if(m[4]){const kn=Number(m[4].slice(2)||1);if(/^(kh|kl)/i.test(m[4]))n=Math.min(n,kn);else n=Math.max(0,n-kn);}
+    total+=(neg?-1:1)*n*1; // each die contributes its minimum face (1)
+  }
+  return total;
+}
 function gritOn(){return !!(state.settings&&state.settings.homebrew&&state.settings.homebrew.gritMin);}
 // Label = feature/ability name only (the roll type is shown as a separate tag).
 // Strip trailing-period + any bracketed note ("(Recharge 5–6)", "(3/Day)", "(Costs 2 Actions)"…) from
@@ -618,9 +632,22 @@ function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":n
 // initiative roll uses (nfReelHTML lives in adventures.js, shared scope). Notifications are delayed by
 // ROLL_REEL_MS so the alert appears exactly as the reel settles (B129).
 const ROLL_REEL_MS=1000;
-function animateRollTotal(el,value){
-  if(!el||typeof nfReelHTML!=="function")return;
-  const reel=document.createElement("span");reel.className="rl-reel";reel.innerHTML=nfReelHTML(value);
+// A single-column reel that spins through whole NUMBERS (not per-digit) within [min,max] before landing on
+// `value`. The intermediate count varies (1- or 2-digit) so the spin never telegraphs the result's
+// magnitude, and the range tracks the roll's possible results when known (B164).
+function rollReelHTML(value,min,max){
+  if(min==null||max==null||!(max>=min)){min=value;max=value;}
+  min=Math.min(min,value);max=Math.max(max,value);
+  const span=Math.max(0,max-min),seq=[];
+  for(let i=0;i<20;i++)seq.push(min+(span?Math.floor(Math.random()*(span+1)):0));
+  seq.push(value);
+  return `<span class="nf-col" style="--nf-len:${seq.length}">${seq.map(n=>`<span class="nf-n">${n}</span>`).join("")}</span>`;
+}
+function animateRollTotal(el,value,formula){
+  if(!el)return;
+  let min=value,max=value;
+  if(formula){try{min=formulaFloor(formula);max=formulaCeil(formula);}catch(e){/* fall back to value */}}
+  const reel=document.createElement("span");reel.className="rl-reel";reel.innerHTML=rollReelHTML(value,min,max);
   el.textContent="";el.appendChild(reel);
   requestAnimationFrame(()=>reel.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   setTimeout(()=>{if(reel.isConnected)el.textContent=value;},ROLL_REEL_MS);
@@ -635,7 +662,7 @@ function animateNewGroup(el){
   const now=Date.now();
   for(const r of rollLog){
     if(now-(r._t||0)>=ROLL_REEL_MS)continue; // settled — leave static
-    animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total);
+    animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total,r.roll&&r.roll.formula);
   }
 }
 function renderRollLog(scrollNew){
