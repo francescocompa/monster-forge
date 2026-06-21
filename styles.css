@@ -846,6 +846,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-gx svg{width:14px;height:14px}
 .cd-scroll{max-height:min(58vh,460px);overflow-y:auto;margin:0 -4px;padding:0 4px}
 .cd-title{width:100%;box-sizing:border-box;font-size:20px;font-weight:600;background:none;border:none;color:var(--txt);padding:2px;margin-bottom:10px;outline:none}
+.cd-namerow{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.cd-namerow .cd-title{flex:1;margin-bottom:0}
+.cd-lvl{flex:none;display:flex;flex-direction:column;align-items:center;line-height:1;cursor:text}
+.cd-lvl-cap{font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--faint)}
+.cd-lvl-in{width:44px;text-align:center;font-size:27px;font-weight:700;background:none;border:none;color:var(--txt);padding:1px 0 0;outline:none;font-variant-numeric:tabular-nums;color-scheme:dark}
+.cd-lvl-in::placeholder{color:var(--faint)}
+.cd-lvl-in::-webkit-inner-spin-button,.cd-lvl-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .cd-props{position:relative}
 .cd-prop{display:flex;align-items:center;gap:8px;border-radius:6px;position:relative}
 .cd-pn{display:flex;align-items:center;gap:8px;min-width:150px;font-size:13px;color:var(--dim);background:none;border:none;text-align:left;padding:6px 8px;border-radius:6px;cursor:pointer}

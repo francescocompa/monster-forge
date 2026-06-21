@@ -252,7 +252,7 @@ const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
 const PC_ABILS=["str","dex","con","int","wis","cha"];
 const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
-function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""}]};}
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""},{k:"level",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
   fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
     main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
@@ -358,8 +358,10 @@ function openCharacterDetail(rid,curAdvId,ui){
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
     return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
-  // Abilities live in the reused Forge ability grid (B139), not as property rows.
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+  // Abilities live in the reused Forge ability grid (B139); level is the big number by the name (B141) —
+  // both are kept out of the plain property rows.
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if((d&&d.abil)||f.k==="level")return;(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
+  const lvlVal=(()=>{const f=(c.fields||[]).find(x=>x.k==="level");return f?f.v:"";})();
   // Ability-score grid appended at the foot — star a cell to make it "main" (derives ATK/save), with override
   // inputs (computed value as a dimmed placeholder) for each flagged ability. More than one can be main.
   const abilEntries=(c.fields||[]).map((f,i)=>({f,i})).filter(x=>{const d=fieldDef(x.f);return d&&d.abil;});
@@ -379,7 +381,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
     </div>
     <div class="cd-scroll">
-      <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
+      <div class="cd-namerow"><label class="cd-lvl" title="Level"><span class="cd-lvl-cap">LVL</span><input class="cd-lvl-in" type="number" min="1" max="20" data-cdlvl value="${esc(String(lvlVal))}" placeholder="1"></label><input class="cd-title" placeholder="Character name" value="${esc(c.name)}"></div>
       <div class="cd-props">${visHTML}${hidBlock}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${abilBlock}</div>
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
@@ -409,6 +411,8 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelector("[data-cdclose]").addEventListener("click",close);
   m.querySelector("[data-cddone]").addEventListener("click",close);
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
+  // Level commits on change → re-render so the derived ATK/save placeholders (which use PB from level) refresh.
+  {const lv=m.querySelector("[data-cdlvl]");if(lv)lv.addEventListener("change",()=>{let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.push(f);}f.v=lv.value;saveRoster();re({});});}
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
   m.querySelectorAll("[data-cdsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,i]=el.dataset.cdsub.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
   // Ability score commits on change (re-render refreshes the mod + derived placeholders without stealing focus mid-type).

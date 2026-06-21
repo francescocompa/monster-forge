@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 141 — Party rework (6/n): Level as the big number by the name
+- New characters get a **Level** field by default. In the character detail it renders as a **large editable
+  number with a "LVL" cap before the name** (like combat initiative), not as a plain property row; empty shows
+  a **dimmed `1`** placeholder and editing it lazily creates the field. Level still surfaces as a party-row
+  chip when set, and drives the derived ATK/save PB (`pbForLevel`). Committing level re-renders so those
+  placeholders refresh.
+
+## Batch 140 — Party rework (5/n): ability-block polish + detail sizing
+- **Ability cells (Forge + character detail).** The character detail gained the **Save-proficiency toggle**
+  (parity with Forge). Save + main toggles and the main-cell highlight now use **the ability's own colour**
+  (`var(--abc)`), not the generic accent/amber; **"main" tints the cell background** (a hue of the ability)
+  instead of a yellow border. An **empty ability score reads as 10** so the modifier shows +0, not −5
+  (`abilScore`); derived ATK/save and the Save value use it too.
+- **Detail chrome.** The modal now **sizes to its content** (`.modal.cd-host`, ~368px) instead of sitting in
+  the generic 580px shell with a big right gutter. **Done** keeps its regular height but is **wider** (min
+  120px). The **party-row chip quick-edit popover is compact** (~160px, was 230). **Delete skips the confirm
+  prompt when the character is blank** (`charIsBlank`).
+
 ## Batch 139 — Party rework (4/n): reuse the Forge ability grid + shared "main ability"
 Replaced B138's inline per-ability atk/save toggles with the **Forge ability-score block, reused** in the
 character detail and a shared **"main ability"** concept across both surfaces.
