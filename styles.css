@@ -154,6 +154,14 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .cr-help:hover{border-color:var(--accent);color:var(--txt)}
 .cr-pop{font-size:11.5px;line-height:1.55;color:var(--dim);max-width:230px} /* custom tooltips / (?) bodies: neutral, not yellow (B125) */
 .cr-pop b{color:var(--txt)}
+/* Tail-pop tooltips fit their content (drop the .popover min-width floor) (B167). */
+.popover.tail-pop{min-width:0}
+/* Title + right-aligned, coloured status (Reaction / Concentration) tooltips (B167). */
+.cr-stat{display:flex;align-items:center;gap:16px;min-width:118px;color:var(--dim)}
+.cr-stat .cr-stat-t{color:var(--txt);font-weight:600}
+.cr-stat .cr-stat-v{margin-left:auto;text-transform:capitalize}
+.cr-stat .cr-stat-v.on{color:var(--ok)}
+.cr-stat .cr-stat-v.off{color:var(--dim)}
 /* Preview-pane header: creature name + ghost kebab (Claude / Notion exports). */
 .sb-wrap .sb-copy{position:absolute;top:15px;right:14px;z-index:5}
 .sb-copy-btn{background:transparent;border-color:transparent;width:26px;height:26px;color:var(--faint)}

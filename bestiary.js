@@ -3,7 +3,11 @@
 // Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
-function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;if(v!=="library"&&libSel.size)clearLibSel();$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");setCrumbs([VIEW_LABELS[v]||"Forge"]);try{localStorage.setItem("mf_view",v);}catch(e){}if(v==="library")renderLibrary();if(v==="adventures"){advListView=false;renderAdvList();}if(v==="combat")renderCombat();if(v==="settings")renderSettings();}
+function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;if(v!=="library"&&libSel.size)clearLibSel();$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");
+  // Rule finder only applies to statblock surfaces (Forge + Combat) — hide its button elsewhere, and exit
+  // the mode if leaving while it's on (B167).
+  {const rf=$("#ruleFinderBtn");if(rf){const ok=(v==="forge"||v==="combat");rf.style.display=ok?"":"none";if(!ok&&ruleFinder){ruleFinder=false;document.body.classList.remove("rule-finder");rf.classList.remove("active");rf.innerHTML=RF_Q_ICON;rf.title="Rule finder";closePopover();}}}
+  setCrumbs([VIEW_LABELS[v]||"Forge"]);try{localStorage.setItem("mf_view",v);}catch(e){}if(v==="library")renderLibrary();if(v==="adventures"){advListView=false;renderAdvList();}if(v==="combat")renderCombat();if(v==="settings")renderSettings();}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b){switchView(b.dataset.view);$("#app").classList.remove("sidebar-open");}});
 
 // ====== Notion-style control bars: search · filter · sort · group (Batch 15) ======

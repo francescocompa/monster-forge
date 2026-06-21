@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 167 — Initiative-row popovers + rule finder scope
+- **Concentration / Reaction hover popovers** are now just a **title + the current status**, right-aligned
+  and **coloured** (available / on = green, used / off = neutral) — no body text, no em dash.
+- **Tooltip popovers fit their content** (dropped the `.popover` min-width floor for tail-pops), so the AC
+  popover (and the others) are no longer over-wide.
+- **Added hover popovers** to the **Initiative** field ("Initiative") and the **HP** cell ("Hit points");
+  removed their redundant native `title` tooltips.
+- **Rule finder now works in the combat statblock preview** (toggling it re-renders the combat panel) and
+  its button is **shown only on Forge + Combat** (hidden on Bestiary / Adventures; exits if you leave).
+
 ## Batch 166 — Selection menu rework (combat)
 - **Removed "Set current turn"** from the selection strip (still available via a row's ⋯ menu).
 - **Reworked the visual hierarchy:** a dim count leads (`N selected`), the actions are compact secondary

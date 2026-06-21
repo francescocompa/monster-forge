@@ -508,7 +508,7 @@ function hpCellHTML(it){
   const max=it.hpMax,cur=it.hpCur,tmp=it.hpTemp||0,ratio=max?cur/max:0;
   const col=ratio>.5?"var(--ok)":ratio>.25?"var(--warn)":"var(--bad)";
   const pct=clamp(max?cur/max*100:0,0,100);
-  return `<button class="ci-hpbtn" data-hpmanage="${it.id}" title="${cur} / ${max} HP${tmp?` (+${tmp} temp)`:""} — manage">
+  return `<button class="ci-hpbtn" data-hpmanage="${it.id}">
     <span class="ci-hpnum">${cur}<span class="ci-hpmax">/${max}</span>${tmp?`<span class="ci-hptmp">+${tmp}</span>`:""}</span>
     <span class="ci-hpbar"><i style="width:${pct}%;background:${col}"></i></span>
   </button>`;
@@ -750,7 +750,7 @@ function combatRowHTML(it,active,drag){
   const status=it.status||"active",isDead=status==="dead",dying=isDying(it),stable=isStable(it);
   const manual=it.initManual&&it.init==null,unrolled=!manual&&it.initRolled===false;
   const initEl=it.kind==="event"?`<div class="ci-init" title="Initiative count">${it.init}</div>`
-    :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`} title="${manual?"Enter this character's initiative":unrolled?"Average shown — roll initiative, or type to set":"Initiative — edit to re-sort"}">`;
+    :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`}>`;
   // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic, .dying =
   // down. The death-save tracker now lives in the HP popover (B127); the row just flags down/stable.
   const badge=dying?'<span class="ci-down" title="Down — rolling death saves">down</span>':stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
@@ -1090,14 +1090,14 @@ function renderCombat(){
   body.querySelectorAll("[data-cireact]").forEach(el=>{
     el.addEventListener("click",e=>{e.stopPropagation();toggleReaction(el.dataset.cireact);});
     // Hover tooltip (the app's established tail-popover style) explaining the reaction toggle (B122).
-    el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.cireact);if(!it)return;
-      tailPopover(el,`<div class="cr-pop"><b>Reaction — ${it.reaction===false?"used":"available"}</b><br>Each creature gets one reaction per round. Click to toggle; it resets at the start of its turn.</div>`);});
+    el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.cireact);if(!it)return;const up=it.reaction!==false;
+      tailPopover(el,`<div class="cr-pop cr-stat"><span class="cr-stat-t">Reaction</span><span class="cr-stat-v ${up?"on":"off"}">${up?"available":"used"}</span></div>`);});
     el.addEventListener("mouseleave",closeTipPop);
   });
   body.querySelectorAll("[data-ciconc]").forEach(el=>{
     el.addEventListener("click",e=>{e.stopPropagation();toggleConcentration(el.dataset.ciconc);});
     el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.ciconc);if(!it)return;
-      tailPopover(el,`<div class="cr-pop"><b>Concentration — ${it.concentration?"on":"off"}</b><br>Marks that this creature is concentrating on a spell. Click to toggle; broken by a failed save.</div>`);});
+      tailPopover(el,`<div class="cr-pop cr-stat"><span class="cr-stat-t">Concentration</span><span class="cr-stat-v ${it.concentration?"on":"off"}">${it.concentration?"on":"off"}</span></div>`);});
     el.addEventListener("mouseleave",closeTipPop);
   });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
@@ -1128,6 +1128,8 @@ function renderCombat(){
   // Hover tooltips (the app's tail-popover style) for the AC chip and the add-effect chips (B127).
   body.querySelectorAll(".ci-ac-chip").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Armour Class</div>`));el.addEventListener("mouseleave",closeTipPop);});
   body.querySelectorAll(".ci-addcond").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Add an effect or condition</div>`));el.addEventListener("mouseleave",closeTipPop);});
+  body.querySelectorAll(".ci-init-in,.ci-init").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Initiative</div>`));el.addEventListener("mouseleave",closeTipPop);});
+  body.querySelectorAll(".ci-hpbtn").forEach(el=>{el.addEventListener("mouseenter",()=>tailPopover(el,`<div class="cr-pop">Hit points</div>`));el.addEventListener("mouseleave",closeTipPop);});
   // Active-combatant statblock: render the source creature (M swapped) + colour-code, then make it
   // click-to-roll with rolls tagged to the combatant via combatRollSrc (CT4).
   const sbHost=body.querySelector(".ca-sb");
