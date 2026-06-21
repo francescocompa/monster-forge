@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 150 — Party rework (15/n): roster-row polish + Player field
+- **Class shows next to the character name** in the roster row (dimmed, smaller; `charClass` finds the
+  standard `class` field or a legacy "Class" custom field) and no longer renders as a row chip.
+- **"LV" cap** sits above each row's level number (tightened so the row height doesn't grow). The party-row
+  **chips scroll on one line behind a left gradient** near the title, and a long **name truncates with `…`**
+  (`.pc-name` / `.pc-cls`, masked `.pc-chips`).
+- **Level-up button border removed.** New **Player** standard field (real-world player name) offered in the
+  Add-a-property menu.
+
 ## Batch 149 — Party rework (14/n): Senses & passives preset
 - Third preset field: **Senses & passives** — a free-text senses/darkvision line plus **passive Perception /
   Insight / Investigation** chips, each computed **10 + ability mod (+ proficiency if flagged)** and coloured

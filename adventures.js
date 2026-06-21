@@ -221,7 +221,7 @@ const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="curre
 // ability + the Level (proficiency). Abilities carry `abil:true` so they can be grouped + flagged.
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
-  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},
+  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},{k:"player",label:"Player",short:"player"},
   {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
   {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
   {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
@@ -230,6 +230,8 @@ const PC_ABILS=["str","dex","con","int","wis","cha"];
 const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
 const D5_CLASSES=["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
+// A character's class — the standard `class` field, or a legacy custom field labelled "Class".
+function charClass(c){const f=(c&&c.fields||[]).find(x=>x.k==="class"||(!x.k&&(x.label||"").toLowerCase()==="class"));return f&&f.v!=null?String(f.v):"";}
 function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"level",v:""},{k:"class",v:""},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
 // Ability helpers that tolerate a missing field (ability grid is always shown; fields are created lazily).
 function abilFieldOf(c,k){return (c.fields||[]).find(f=>f.k===k)||null;}
@@ -344,14 +346,14 @@ function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
   const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
-    const lv=charFieldVal(c,"level"),lvSet=lv!==""&&lv!=null;
-    const chips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
+    const lv=charFieldVal(c,"level"),lvSet=lv!==""&&lv!=null,cls=charClass(c);
+    const chips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k!=="class"&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
     const derived=charDerivedChips(c).map(x=>x.kind==="atk"
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
       :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
     return `<div class="pc-row" data-pcopen="${rid}">
-      <input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit">
-      <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
+      <span class="pc-lvl-wrap"><span class="pc-lv-cap">LV</span><input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit"></span>
+      <span class="pc-name"><span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>${cls?`<span class="pc-cls">${esc(cls)}</span>`:""}</span>
       <span class="pc-chips">${chips}${derived}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
     </div>`;}).join("");
