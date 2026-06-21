@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 145 — Party rework (10/n): add-menu cleanup + footer + roster label
+- **Add-a-property menu** no longer suggests **Proficiency** (derived from Level) or **Ability scores** (always
+  shown in the grid now), and **hides any option already present** — by key *or* by a matching custom label
+  (so a custom "Passive Perception" suppresses the standard one). Groundwork for chip-field presets
+  (`PC_PRESETS` / `newPresetField`, populated later).
+- **Done** now fills the footer row beside Delete (no more fixed width). The party-roster add button reads
+  **"Add character"**.
+
 ## Batch 144 — Party rework (9/n): drag-to-reorder properties
 - Each character-detail property row gets a **grip handle**; dragging it **reorders the properties** and,
   when dropped onto a row in the other group (or the "Hidden from the party row" divider), **moves the field

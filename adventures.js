@@ -256,6 +256,10 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
 // Never a party-row chip: hidden fields, initiative (combat rolls it) and abilities (they live in the grid;
 // the row instead shows their derived ATK/DC chips when flagged main).
 function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
+// Chip-field presets offered in the Add-a-property menu (damage modifiers / skills / senses). Populated in
+// a later batch; `newPresetField` builds the empty field for a chosen preset key.
+const PC_PRESETS=[];
+function newPresetField(k){return {k,v:[]};}
 // The adventures a roster character is in (membership = the ordered id lists in each a.party).
 function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
 function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();openCharacterDetail(c.id,a.id);}
@@ -305,7 +309,7 @@ function renderParty(a){
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
     </div>`;}).join("");
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add player character</button>
+    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add character</button>
       <div class="pc-roster"><input class="pc-roster-in" id="rosterIn" placeholder="Roster…" autocomplete="off"><div class="pc-roster-dd" hidden></div></div>
     </div>`;
   $("#addPC").addEventListener("click",()=>addPartyMember(a));
@@ -385,7 +389,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-    <div class="cd-foot"><span style="flex:1"></span><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="width:auto;min-width:120px">Done</button></div>
+    <div class="cd-foot"><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
   </div>`);
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
@@ -400,15 +404,18 @@ function openCharacterDetail(rid,curAdvId,ui){
     {const b=p.querySelector("[data-mr]");if(b)b.addEventListener("click",()=>{closePopover();re({rename:i});});}
     p.querySelector("[data-mx]").addEventListener("click",()=>{closePopover();c.fields.splice(i,1);saveRoster();re({});});};
   // Add-a-property — standard popover: a filter input over the unused standard keys + an "Ability scores" group.
+  // Suggest only standard fields that aren't already present (by key OR matching custom label) — abilities are
+  // always shown in the grid, Proficiency is derived from Level, so neither is offered (B145).
   const addPropMenu=anchor=>{const present=new Set((c.fields||[]).map(f=>f.k).filter(Boolean));
-    const stdOpts=PC_FIELDS.filter(f=>!f.abil&&!present.has(f.k)).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("");
-    const abilOpt=PC_ABILS.some(k=>!present.has(k))?`<button class="popitem" data-cdaddabils><span class="cd-grp-ico">${PC_TUNE_ICON}</span>Ability scores</button>`:"";
-    const p=showPopover(anchor,`<input class="popinput cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${stdOpts}${abilOpt}</div>`);
+    const labels=new Set((c.fields||[]).map(f=>fieldLabel(f).toLowerCase()));
+    const stdOpts=PC_FIELDS.filter(f=>!f.abil&&f.k!=="prof"&&!present.has(f.k)&&!labels.has(f.label.toLowerCase())).map(f=>`<button class="popitem" data-cdadd="${f.k}">${f.icon||""}${esc(f.label)}</button>`).join("");
+    const presetOpts=PC_PRESETS.filter(p=>!present.has(p.k)).map(p=>`<button class="popitem" data-cdaddpreset="${p.k}">${p.label}</button>`).join("");
+    const p=showPopover(anchor,`<input class="popinput cd-add-in" placeholder="Field name…" autocomplete="off"><div class="cd-add-list">${stdOpts}${presetOpts}</div>`);
     const ai=p.querySelector(".cd-add-in");ai.focus();
     ai.addEventListener("input",()=>{const q=ai.value.trim().toLowerCase();p.querySelectorAll(".cd-add-list .popitem").forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?"":"none";});});
     ai.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const nm=ai.value.trim();if(nm){c.fields.push({k:"",label:nm,v:""});saveRoster();closePopover();re({});}}else if(e.key==="Escape")closePopover();});
     p.querySelectorAll("[data-cdadd]").forEach(el=>el.addEventListener("click",()=>{c.fields.push({k:el.dataset.cdadd,v:""});saveRoster();closePopover();re({});}));
-    {const ab=p.querySelector("[data-cdaddabils]");if(ab)ab.addEventListener("click",()=>{PC_ABILS.forEach(k=>{if(!present.has(k))c.fields.push({k,v:"",hide:true});});saveRoster();closePopover();re({});});}};
+    p.querySelectorAll("[data-cdaddpreset]").forEach(el=>el.addEventListener("click",()=>{c.fields.push(newPresetField(el.dataset.cdaddpreset));saveRoster();closePopover();re({});}));};
   m.querySelector("[data-cdclose]").addEventListener("click",close);
   m.querySelector("[data-cddone]").addEventListener("click",close);
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
