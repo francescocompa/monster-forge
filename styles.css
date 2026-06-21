@@ -816,13 +816,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lvlup-btn{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:24px;background:none;border:none;border-radius:6px;color:var(--dim);cursor:pointer;padding:0 6px;text-transform:none;letter-spacing:0}
 .lvlup-btn .lvlup-txt{font-size:11px;font-weight:600}
 .lvlup-btn:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
-/* Name gets a generous, consistent floor (so every row truncates at the same point); the chip cluster
-   shrinks/scrolls first rather than starving the name (B161). */
-.pc-name{flex:1 1 auto;min-width:120px;display:flex;align-items:baseline;gap:6px;overflow:hidden}
+/* Name takes its content (chips shrink first); the chip cluster is right-anchored (row-reverse so AC sits
+   rightmost) and overflows toward the name, faded ONLY when it actually overflows (B169). */
+.pc-name{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
 .pc-nm{flex:0 1 auto;min-width:0;max-width:240px;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cls{flex:none;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap}
 .pc-unnamed{color:var(--faint);font-weight:500}
-.pc-chips{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:5px;flex-wrap:nowrap;justify-content:flex-end;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px);mask-image:linear-gradient(90deg,transparent 0,#000 16px)}
+.pc-chips{flex:1 1 auto;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.pc-chips.ov{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24px);mask-image:linear-gradient(90deg,transparent 0,#000 24px)}
 .pc-chips::-webkit-scrollbar{display:none}
 .pc-chip,.pc-dchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:3px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pc-chip{cursor:pointer}

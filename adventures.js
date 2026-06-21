@@ -382,8 +382,9 @@ function renderParty(a){
     const derChips=charDerivedChips(c).map(x=>x.kind==="atk"
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
       :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`);
-    // Reversed so the FIRST chip sits rightmost (the always-visible end behind the left fade) (B164).
-    const allChips=[...stdChips,...derChips].reverse().join("");
+    // DOM order AC…DC; `.pc-chips` is row-reverse so AC sits rightmost (always visible) and extra chips
+    // overflow toward the name, faded only when they actually overflow (B169 — see renderParty's rAF).
+    const allChips=[...stdChips,...derChips].join("");
     return `<div class="pc-row" data-pcopen="${rid}">
       <span class="pc-lvl-wrap"><span class="pc-lv-cap">LV</span><input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit"></span>
       <span class="pc-name"><span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>${cls?`<span class="pc-cls">${esc(cls)}</span>`:""}</span>
@@ -401,6 +402,8 @@ function renderParty(a){
     el.addEventListener("change",e=>{e.stopPropagation();const c=rosterById(el.dataset.pclvl);if(!c)return;let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=el.value;saveRoster();renderAdvDetail();});});
   box.querySelectorAll("[data-pcchip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[rid,k]=el.dataset.pcchip.split(":");openPCFieldEdit(rid,k,el);}));
   box.querySelectorAll("[data-pcremove]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();removePartyMember(a,el.dataset.pcremove);}));
+  // Fade the chip cluster toward the name ONLY when it actually overflows (B169).
+  requestAnimationFrame(()=>box.querySelectorAll(".pc-chips").forEach(el=>el.classList.toggle("ov",el.scrollWidth>el.clientWidth+1)));
 }
 // Roster combo (B137): the "Roster" control is a fillable field that drops a dropdown of every character
 // grouped by adventure (like the combat add-effect). Click a row to ADD that character to this adventure's
@@ -484,7 +487,9 @@ function openCharacterDetail(rid,curAdvId,ui){
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
   // the user back to the top (B143).
-  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat"){resyncPcInstances();renderCombat();}};
+  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>closeModal();
+  // Refresh on ANY close path (✕, kebab action, or backdrop click) so edits made during combat show up (B169).
+  _onModalClose=()=>{if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat"){resyncPcInstances();renderCombat();}};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
   const fieldMenu=(i,anchor)=>{const f=c.fields[i];if(!f)return;

@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 169 — Party-row chip fixes + live combat edits
+- **Party-row chips no longer clip.** They were right-aligned with `justify-content:flex-end`, which (the
+  classic flexbox bug) pushed the leftmost chips (atk/DC) off-screen to negative positions. Now the cluster
+  is **`flex-direction:row-reverse`** (AC still rightmost) so it overflows toward the name *reachably*, and
+  the **left fade only shows when it actually overflows** (`.pc-chips.ov`, toggled per render) instead of a
+  permanent gradient over a chip.
+- **Edits during combat now apply on ANY close path.** Closing the character detail via a **backdrop click**
+  previously called `closeModal()` directly, bypassing the resync + `renderCombat`. Added a `_onModalClose`
+  callback that fires on ✕, action buttons, AND backdrop clicks — so e.g. changing a PC's main ability
+  re-tints its ATK/DC boxes and updates its stats immediately.
+
 ## Batch 168 — FAB divider, init reel, chipfield add button, stat-box colours
 - **Turn FAB** now shows a **divider line between its two parts** (the `button{border:none}` rule was
   hiding it).
