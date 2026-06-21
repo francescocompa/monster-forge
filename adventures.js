@@ -276,7 +276,7 @@ function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",not
     main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
-function fieldLabel(f){const d=fieldDef(f);return d?d.label:((f.k&&PC_LEGACY[f.k])||f.label||"Field");}
+function fieldLabel(f){const d=fieldDef(f);if(d)return d.label;const pp=PC_PRESETS.find(p=>p.k===f.k);if(pp)return pp.label;return (f.k&&PC_LEGACY[f.k])||f.label||"Field";}
 function pbForLevel(lv){lv=clamp(Number(lv)||1,1,20);return 2+Math.floor((lv-1)/4);}
 function abilMod(score){const n=Number(score);return isNaN(n)?0:Math.floor((n-10)/2);}
 // Per-ability derived spell ATK / save DC (B138): any ability field can flag `atk` and/or `dc` via the
@@ -296,7 +296,7 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
 function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
 // Chip-field presets offered in the Add-a-property menu — each holds an ARRAY of entries rendered as chips
 // you click to cycle (B148). `newPresetField` builds the empty field; `isPreset` detects one.
-const PC_PRESETS=[{k:"dmgmod",label:"Damage res / imm / vuln"},{k:"skills",label:"Skills & expertise"},{k:"senses",label:"Senses & passives"}];
+const PC_PRESETS=[{k:"dmgmod",label:"Damage Modifiers"},{k:"skills",label:"Skills & expertise"},{k:"senses",label:"Senses & passives"}];
 function newPresetField(k){const p=PC_PRESETS.find(x=>x.k===k);return {k,label:p?p.label:k,v:k==="senses"?{dv:"",prof:{}}:[]};}
 const PASSIVE_SKILLS=["Perception","Insight","Investigation"];
 // Passive score = 10 + the skill's ability mod (+ proficiency if flagged) — Perception/Insight (WIS),
@@ -418,8 +418,11 @@ function openCharacterDetail(rid,curAdvId,ui){
   // Preset chip field — label + a wrapping field of click-to-cycle chips and an add input (B148).
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
     const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):skillChipHTML(c,e,j)).join("");
-    const dl=f.k==="dmgmod"?"pcDmgList":"pcSkillList",ph=f.k==="dmgmod"?"add damage type…":"add skill…";
-    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}<input class="cd-chip-add" data-cdchipadd="${i}" list="${dl}" placeholder="${ph}" autocomplete="off"></div></div>`;};
+    // Damage types pick from a custom dropdown (B151); skills keep the datalist combobox.
+    const addCtrl=f.k==="dmgmod"
+      ?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
+      :`<input class="cd-chip-add" data-cdchipadd="${i}" list="pcSkillList" placeholder="add skill…" autocomplete="off">`;
+    return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}${addCtrl}</div></div>`;};
   // Senses preset (B149): a free-text senses/darkvision line + three passive chips (10 + mod, click to flag
   // proficiency, coloured by ability).
   const sensesRow=(f,i)=>{const v=(f.v&&typeof f.v==="object"&&!Array.isArray(f.v))?f.v:{dv:"",prof:{}},pr=v.prof||{};
@@ -451,7 +454,6 @@ function openCharacterDetail(rid,curAdvId,ui){
     </div>
     <div class="cd-foot"><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
     <datalist id="pcClassList">${D5_CLASSES.map(x=>`<option value="${x}">`).join("")}</datalist>
-    <datalist id="pcDmgList">${DMG_TYPES.map(t=>`<option value="${t}">`).join("")}</datalist>
     <datalist id="pcSkillList">${Object.keys(SKILLS).map(s=>`<option value="${s.replace(/_/g," ")}">`).join("")}</datalist>
   </div>`);
   $("#modal").classList.add("cd-host");
@@ -497,6 +499,10 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdchipadd]").forEach(el=>{const f=c.fields[+el.dataset.cdchipadd];if(!f)return;
     el.addEventListener("change",()=>addChip(f,el));
     el.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();addChip(f,el);}});});
+  m.querySelectorAll("[data-cddmgadd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cddmgadd];if(!f)return;const used=new Set((f.v||[]).map(e=>e.t)),avail=DMG_TYPES.filter(t=>!used.has(t));
+    if(!avail.length){toast("All damage types added.");return;}
+    const p=showPopover(el,`<div class="popscroll">${avail.map(t=>`<button class="popitem" data-dt="${t}">${t}</button>`).join("")}</div>`);
+    p.querySelectorAll("[data-dt]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v.push({t:b.dataset.dt,m:"res"});saveRoster();re({});}));}));
   m.querySelectorAll("[data-cdchips]").forEach(box=>box.addEventListener("click",e=>{const f=c.fields[+box.dataset.cdchips];if(!f||!Array.isArray(f.v))return;
     const del=e.target.closest("[data-cdchipdel]");if(del){e.stopPropagation();f.v.splice(+del.dataset.cdchipdel,1);saveRoster();re({});return;}
     const cyc=e.target.closest("[data-cdcycle]");if(cyc){const en=f.v[+cyc.dataset.cdcycle];if(!en)return;if(f.k==="dmgmod")en.m=DMG_CYCLE[en.m||"res"];else en.e=(Number(en.e)||1)>=2?1:2;saveRoster();re({});}}));

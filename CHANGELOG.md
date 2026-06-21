@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 151 — Party rework (16/n): Damage Modifiers dropdown + grayscale saves
+- Renamed the damage preset to **Damage Modifiers** (`fieldLabel` now resolves preset labels from
+  `PC_PRESETS`, so the rename applies to existing fields too) and its **add control is a custom dropdown**
+  (showPopover of the remaining damage types) instead of the native datalist.
+- **Ability Save toggles** (Forge + character detail) now use a **desaturated, hue-tinted grayscale** when
+  active instead of the full ability colour — distinguishing them from the colour-saturated "main" star.
+
 ## Batch 150 — Party rework (15/n): roster-row polish + Player field
 - **Class shows next to the character name** in the roster row (dimmed, smaller; `charClass` finds the
   standard `class` field or a legacy "Class" custom field) and no longer renders as a row chip.
