@@ -4,6 +4,30 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 160 — Combat/character fixes round 2
+- **Roll log animation fixed properly.** Each roll animates while it's *fresh* (added < `ROLL_REEL_MS`
+  ago, tracked via a new `_t` timestamp); an in-flight reel survives the per-sub-roll re-render, so a new
+  attack's atk + damage animate together while a previously-rolled identical attack grouped with it stays
+  static. Also locked `.rl-total` to a constant height so reel/static rows align (no more fractured gutter
+  line).
+- **Grit** unchanged from B159 (crits only) — listed here for context.
+- **Senses field** in the character detail now prefills a dimmed editable default of **"Darkvision 60 ft."**
+  (`fieldDefault`), like Speed's "30 ft.".
+- **Add-skill control is a custom dropdown** (replaced the native datalist). New convention: any
+  type-to-filter suggestion list uses a custom dropdown, never a datalist.
+- **Real-time stat edits reflect in combat.** Closing the character detail re-syncs each live PC combat
+  instance's AC / max HP / initiative modifier from the roster (`resyncPcInstances`, preserving damage
+  taken). Added an **"Edit in Forge"** button to the monster combat panel → opens the creature in the Forge.
+- **Grouped dropdowns get sticky headers.** The current group label pins to the top of the scroll area
+  until the next group arrives — applied to the add-effect list (`.cl-grp`) and the menu groups
+  (`.popgrp-h`); the skill/tool dropdown (`.pop-grp-lbl`) already did this.
+- **Generic derived label.** The PC combat sheet's main-ability line is now **"Attack / DC"** instead of
+  "Spell" (the ability may not be a spellcaster).
+- **Note popup** field and button are now equal width (`.popinput` no longer forced to 190px inside the
+  note editor).
+- Testkit **Fill** now also populates the party roster with fully-detailed characters (abilities, saves,
+  skills, passives, defenses) by class — dev-only, not shipped.
+
 ## Batch 159 — Combat/character fixes round
 - **Roll log no longer re-spins settled rolls.** Each roll's number-flow reel now plays exactly once, when
   it's added (`_rlAnimated` tracks spun ids, pruned to the live log); adding a roll no longer re-rolls the

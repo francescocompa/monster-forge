@@ -178,6 +178,20 @@ function pcInstance(rid){const c=rosterById(rid);if(!c)return null;
   return {id:uid(),kind:"pc",srcId:rid,srcEntry:"pc:"+rid,name:c.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
     ac:acN!=null&&!isNaN(acN)?acN:null,hpMax:hpN!=null&&!isNaN(hpN)?hpN:null,hpCur:hpN!=null&&!isNaN(hpN)?hpN:null,
     hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+rid,resources:[]};}
+// Re-sync live PC combat instances from their roster source after an edit (e.g. closing the character
+// detail). AC + the initiative modifier track the source; max HP follows too, preserving any damage taken
+// (a full-HP combatant rises with a raised max). Abilities/skills already read live in pcSheetHTML.
+function resyncPcInstances(){
+  const ctx=combatOf();if(!ctx)return;let ch=false;
+  ctx.e.combat.order.forEach(it=>{if(it.kind!=="pc")return;const c=rosterById(it.srcId);if(!c)return;
+    const av=charFieldVal(c,"ac"),acN=(av===""||av==null)?null:Number(av);
+    if(acN!=null&&!isNaN(acN)&&acN!==it.ac){it.ac=acN;ch=true;}
+    const hv=charFieldVal(c,"hp"),hpN=(hv===""||hv==null)?null:Number(hv);
+    if(hpN!=null&&!isNaN(hpN)&&hpN!==it.hpMax){const full=it.hpCur===it.hpMax;it.hpMax=hpN;it.hpCur=full?hpN:Math.min(it.hpCur,hpN);ch=true;}
+    const im=effInit(c);if(im!==it.initMod){it.initMod=im;ch=true;}
+  });
+  if(ch)saveAdv();
+}
 function startCombat(a,e){
   const order=[];
   // Pass 1: total instances per base name → continuous numbering across same-name entries.
@@ -792,7 +806,7 @@ function pcSheetHTML(it){
     lines.push(line("Passive skills",pf.v.map(name=>{const a=SKILLS[name]||"wis",prof=charSkillProf(c,name)>0;return `<span class="pchip skchip cc-ab-${a}${prof?" exp":""}"><span class="pchip-n">${passiveVal(c,name)}</span> ${esc(name)}</span>`;}).join("")));
   const mains=(c.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
   if(mains.length)
-    lines.push(line("Spell",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" spell")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
+    lines.push(line("Attack / DC",mains.map(f=>rchip(f.k,`<span class="pchip-n">${sgn(effAtk(c,f))}</span> ${f.k.toUpperCase()} atk`,`1d20${sgn(effAtk(c,f))}`,"attack",f.k.toUpperCase()+" attack")+`<span class="pchip skchip cc-ab-${f.k}"><span class="pchip-n">${effDc(c,f)}</span> ${f.k.toUpperCase()} DC</span>`).join("")));
   const df=(c.fields||[]).find(f=>f.k==="dmgmod");
   if(df&&Array.isArray(df.v)&&df.v.length)
     lines.push(line("Defenses",df.v.map(e=>{const m=e.m||"res";return `<span class="pchip dchip-${m}"><span class="pchip-n">${DMG_MULT[m]}</span> ${esc(e.t)}</span>`;}).join("")));
@@ -826,8 +840,9 @@ function combatPanelInnerHTML(it,isTurn){
     const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll"));}
   if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
+  const monEdit=(m&&monById(it.srcId))?`<div class="ca-sbbar"><button class="pcs-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button></div>`:"";
   const sb=m
-    ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
+    ?`${monEdit}<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :it.kind==="pc"?pcSheetHTML(it)
     :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
   const note=it.comment
@@ -1070,6 +1085,8 @@ function renderCombat(){
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
   // PC sheet "Edit" → open the full character detail (closing it re-renders combat — see openCharacterDetail).
   body.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const ctx=loadedCtx();openCharacterDetail(el.dataset.pcedit,ctx?ctx.a.id:null);}));
+  // Monster statblock "Edit in Forge" → load the creature in the Forge and switch there.
+  body.querySelectorAll("[data-monedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const mon=monById(el.dataset.monedit);if(mon){loadMonster(mon);switchView("forge");}}));
   // PC sheet chips (ability checks / saves / skills / spell attack) roll like the monster quick-ref chips,
   // attributed to the shown PC via combatRollSrc. Alt-click / right-click opens roll options.
   body.querySelectorAll(".pcs-roll[data-roll]").forEach(el=>{

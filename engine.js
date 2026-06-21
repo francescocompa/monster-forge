@@ -573,7 +573,7 @@ function doRoll(formula,opts,meta){
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
   // Custom rolls carry no source (nothing to attribute them to), so the log shows no statblock name.
   const src=meta.custom?null:(meta.source||rollSource());
-  rollLog.unshift({id:uid(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
+  rollLog.unshift({id:uid(),_t:Date.now(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
@@ -625,19 +625,16 @@ function animateRollTotal(el,value){
   requestAnimationFrame(()=>reel.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   setTimeout(()=>{if(reel.isConnected)el.textContent=value;},ROLL_REEL_MS);
 }
-// Spin only totals that haven't animated yet — each roll's reel plays exactly ONCE, when it's added.
-// A multi-roll sequence (attack + damage, recharge + damage) still animates each new sub-roll as it
-// arrives, but previously-settled rolls in the same group are never re-spun on later renders (the bug
-// where adding a roll re-rolled the whole group's numbers). `_rlAnimated` tracks spun ids, pruned to
-// the live log so it can't grow unbounded.
-let _rlAnimated=new Set();
+// Spin only rolls still within their animation window (added < ROLL_REEL_MS ago). A multi-roll sequence
+// (attack + damage) re-renders once per sub-roll; an in-flight reel survives that rebuild because the
+// roll is still "fresh", so the whole sequence animates together — while rolls from an EARLIER click
+// (already settled) are left static and never re-spun, even when grouped with the new ones. Each entry
+// carries `_t` (its creation time) set in doRoll.
 function animateNewGroup(el){
   if(!el||!rollLog.length)return;
-  const live=new Set(rollLog.map(r=>r.id));
-  _rlAnimated.forEach(id=>{if(!live.has(id))_rlAnimated.delete(id);});
+  const now=Date.now();
   for(const r of rollLog){
-    if(_rlAnimated.has(r.id))continue;
-    _rlAnimated.add(r.id);
+    if(now-(r._t||0)>=ROLL_REEL_MS)continue; // settled — leave static
     animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total);
   }
 }

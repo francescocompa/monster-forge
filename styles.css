@@ -571,7 +571,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .roll-log .rl-group-abil[data-abil="int"]::after{background:#a06ed6}
 .roll-log .rl-group-abil[data-abil="wis"]::after{background:#5fa873}
 .roll-log .rl-group-abil[data-abil="cha"]::after{background:#e878b4}
-.roll-log .rl-total{flex:none;min-width:30px;text-align:center;font-weight:700;font-size:16px;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1.3}
+.roll-log .rl-total{flex:none;min-width:30px;height:1.3em;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1.3}
 /* Number-flow reel for a freshly recorded total (B129) — reuses the init-roll .nf-* parts at a 1s scroll. */
 .roll-log .rl-reel{display:inline-flex;height:1em;overflow:hidden;vertical-align:-.12em;line-height:1}
 .roll-log .rl-reel .nf-col{transition:transform 1s cubic-bezier(.16,.84,.3,1)}
@@ -985,7 +985,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-row.dragging{opacity:.45}
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
-.popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px}
+.popgrp-h{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:5px 10px 2px;position:sticky;top:0;background:var(--panel2);z-index:2}
 /* column-gap is the chip spacing on one line; row-gap is the title→chips gap only when the card wraps to two
    lines (narrow). Kept tight here because the row's own @container query can't restyle the row element (B133). */
 .cbt-row{position:relative;display:flex;align-items:center;column-gap:8px;row-gap:2px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-lg);padding:7px 10px;flex-wrap:wrap;container-type:inline-size}
@@ -1179,6 +1179,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pcs-chips{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0}
 .pcs-txt{font-size:12.5px;color:var(--txt);line-height:1.7;flex:1;min-width:0}
 .ca-pcsheet .pchip{cursor:default}
+/* Monster statblock "Edit in Forge" bar (mirrors the PC sheet's edit pencil). */
+.ca-sbbar{display:flex;justify-content:flex-end;margin:10px 0 -2px}
 .ca-pcsheet .pcs-roll{cursor:pointer}
 .ca-pcsheet .pcs-roll:hover{border-color:var(--abc);box-shadow:0 0 0 1px color-mix(in srgb,var(--abc) 40%,transparent)}
 /* CT3 — condition chips, per-combatant menu, inline note edit */
@@ -1198,6 +1200,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-noteedit:hover{color:var(--accent-soft);background:var(--panel2)}
 .ca-noteedit svg{display:block}
 .note-edit .btn{width:100%}
+/* The note textarea carries the .popinput class (190px); inside .note-edit it should match the button. */
+.popover .note-edit .popinput{width:100%}
 .round-edit{display:flex;align-items:center;gap:8px;padding:4px;font-size:12px;color:var(--dim)}
 .round-edit .round-in{width:60px;text-align:center;background:var(--in);border:1px solid var(--line);border-radius:5px;padding:5px;color:var(--txt);color-scheme:dark;font-variant-numeric:tabular-nums}
 .cond-add{padding:4px;min-width:320px}
@@ -1205,7 +1209,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Inline grouped effect list inside the popover (B129): headed Conditions / Masteries / Spells sections,
    filtered by the search field. Lives in the popover so the cursor can travel onto it without it closing. */
 .cond-list{margin-top:8px;max-height:230px;overflow-y:auto;border-top:1px solid var(--line);padding-top:5px;display:flex;flex-direction:column}
-.cl-grp{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:7px 7px 3px}
+.cl-grp{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:7px 7px 3px;position:sticky;top:0;background:var(--panel2);z-index:2}
 .cl-grp:first-child{padding-top:2px}
 .cl-item{text-align:left;background:none;border:none;color:var(--txt);padding:5px 9px;border-radius:5px;font-size:12.5px;cursor:pointer}
 .cl-item:hover{background:var(--panel3)}

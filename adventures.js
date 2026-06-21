@@ -271,6 +271,7 @@ function animateLevelUp(moves,done){const ovs=[];
 // party's level; init = DEX mod and passive perception = 10 + WIS mod once any ability score is filled.
 function fieldDefault(c,f,advId){switch(f.k){
   case "speed":return "30 ft.";
+  case "senses":return "Darkvision 60 ft.";
   case "level":return String(partyDefaultLevel(advId));
   case "init":return hasAbilScores(c)?sgn(abilMod(abilScoreOf(c,"dex"))):"";
   case "pp":return hasAbilScores(c)?String(10+abilMod(abilScoreOf(c,"wis"))):"";
@@ -439,7 +440,7 @@ function openCharacterDetail(rid,curAdvId,ui){
     const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):skillChipHTML(c,e,j)).join("");
     const addCtrl=f.k==="dmgmod"?`<button class="cd-chip-addbtn" data-cddmgadd="${i}">＋ type</button>`
       :f.k==="passives"?`<button class="cd-chip-addbtn" data-cdpassadd="${i}">＋ skill</button>`
-      :`<input class="cd-chip-add" data-cdchipadd="${i}" list="pcSkillList" placeholder="add skill…" autocomplete="off">`;
+      :`<button class="cd-chip-addbtn" data-cdskilladd="${i}">＋ skill</button>`;
     return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button><div class="cd-chipfield" data-cdchips="${i}">${chips}${addCtrl}</div></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
@@ -466,12 +467,11 @@ function openCharacterDetail(rid,curAdvId,ui){
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
     <div class="cd-foot"><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
-    <datalist id="pcSkillList">${Object.keys(SKILLS).map(s=>`<option value="${s.replace(/_/g," ")}">`).join("")}</datalist>
   </div>`);
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
   // the user back to the top (B143).
-  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat")renderCombat();};
+  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat"){resyncPcInstances();renderCombat();}};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
   const fieldMenu=(i,anchor)=>{const f=c.fields[i];if(!f)return;
@@ -503,14 +503,12 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdabkey]").forEach(el=>el.addEventListener("change",()=>{ensureAbilField(c,el.dataset.cdabkey).v=el.value;saveRoster();re({});}));
   m.querySelectorAll("[data-cdabmain]").forEach(el=>el.addEventListener("click",()=>{const f=ensureAbilField(c,el.dataset.cdabmain);f.main=!f.main;saveRoster();re({});}));
   m.querySelectorAll("[data-cdabsave]").forEach(el=>el.addEventListener("click",()=>{const f=ensureAbilField(c,el.dataset.cdabsave);f.prof=!f.prof;saveRoster();re({});}));
-  // Preset chip fields (B148): add via the datalist input, click a chip to cycle its state, the × to remove.
-  const addChip=(f,el)=>{const val=el.value.trim();if(!val)return;
-    if(f.k==="dmgmod"){const t=DMG_TYPES.find(x=>x.toLowerCase()===val.toLowerCase());if(t&&!f.v.some(e=>e.t===t)){f.v.push({t,m:"res"});saveRoster();re({});return;}}
-    else{const key=Object.keys(SKILLS).find(s=>s.replace(/_/g," ").toLowerCase()===val.toLowerCase());if(key&&!f.v.some(e=>e.s===key)){f.v.push({s:key,e:1});saveRoster();re({});return;}}
-    el.value="";};
-  m.querySelectorAll("[data-cdchipadd]").forEach(el=>{const f=c.fields[+el.dataset.cdchipadd];if(!f)return;
-    el.addEventListener("change",()=>addChip(f,el));
-    el.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();addChip(f,el);}});});
+  // Preset chip fields (B148): add via a custom dropdown, click a chip to cycle its state, the × to remove.
+  m.querySelectorAll("[data-cdskilladd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdskilladd];if(!f)return;
+    const used=new Set((f.v||[]).map(e=>e.s)),avail=Object.keys(SKILLS).filter(s=>!used.has(s));
+    if(!avail.length){toast("All skills added.");return;}
+    const p=showPopover(el,`<div class="popscroll">${avail.map(s=>`<button class="popitem" data-sk="${s}">${s.replace(/_/g," ")}</button>`).join("")}</div>`);
+    p.querySelectorAll("[data-sk]").forEach(b=>b.addEventListener("click",()=>{closePopover();f.v.push({s:b.dataset.sk,e:1});saveRoster();re({});}));}));
   m.querySelectorAll("[data-cddmgadd]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cddmgadd];if(!f)return;const used=new Set((f.v||[]).map(e=>e.t)),avail=DMG_TYPES.filter(t=>!used.has(t));
     if(!avail.length){toast("All damage types added.");return;}
     const p=showPopover(el,`<div class="popscroll">${avail.map(t=>`<button class="popitem" data-dt="${t}">${t}</button>`).join("")}</div>`);
