@@ -19,7 +19,22 @@ function maybeApplySeed(){
     if(!isLocal)return; // never seed the live site
     window.__MF_SEED=true; // from here on, cloud writes are neutered (see jbinSet)
     applySeedData();
+    loadTestkit(); // localhost-only dev tooling (gitignored, absent on the live site)
   }catch(e){console.warn("[seed] skipped:",e);}
+}
+
+// Dev only: pull in the gitignored local test kit (Fill/Clear sidebar buttons) when present.
+// Never runs on the live site (only reached from the localhost branch of maybeApplySeed); if the
+// file isn't there (it's gitignored) the load just fails silently.
+function loadTestkit(){
+  try{
+    if(document.getElementById("mf-testkit-js"))return;
+    const s=document.createElement("script");
+    s.id="mf-testkit-js";
+    s.src="testkit.js?cb="+Date.now();
+    s.onerror=()=>{/* absent locally — fine */};
+    document.head.appendChild(s);
+  }catch(e){/* no-op */}
 }
 
 function applySeedData(){

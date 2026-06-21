@@ -2,3 +2,6 @@
 .claude/
 node_modules/
 npm-debug.log*
+
+# Local-only dev test kit (Fill/Clear sidebar buttons) — never shipped
+testkit.js

@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 157 — Local test kit loader (dev only)
+- `seed.js` now pulls in a **gitignored, localhost-only `testkit.js`** (`loadTestkit`) when seeding. The
+  kit adds two sidebar buttons under a "Testing · local" block — **Fill** (populate the bestiary +
+  adventures + party with placeholder data via `applySeedData`) and **Clear** (wipe the bestiary,
+  adventures and shared roster in-memory; a reload re-seeds). Never runs on the live site (only reached
+  from the localhost branch of `maybeApplySeed`) and the buttons/logic are not shipped.
+
 ## Batch 156 — Party rework (21/n): Class field chevron dropdown
 - The **Class** field (the default 2nd property) keeps its free-text input but now has a **chevron that appears
   on hover/focus** and opens a **custom dropdown of the 13 D&D classes** (current value marked), replacing the
