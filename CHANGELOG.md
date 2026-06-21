@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 154 — Party rework (19/n): roster header tweaks + main-ability save tint
+- **"Level Up" text** beside the level-up button. The **member count moved back next to the "Party roster"
+  label** (dim, no border) — removed from the adventure title.
+- A **main-flagged ability's Save toggle carries a faint ability tint even when unselected** (`.is-main .svtog`),
+  so the main cell reads as a unit.
+
 ## Batch 153 — Party rework (18/n): property template
 - **"Save as template"** button next to ＋ Add a property in the character detail. It stores the current
   character's **property structure** (fields + flags + preset entries, with scalar values and ATK/DC

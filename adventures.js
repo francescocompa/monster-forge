@@ -155,7 +155,7 @@ function renderAdvDetail(){
   setCrumbs(["Adventures",advDName(a)]);
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
     <div class="adv-detail-body"${a.color?` style="--sel-accent:${a.color}"`:""}>
-    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2>${a.party.length?`<span class="adv-pc-count" title="${a.party.length} player character${a.party.length>1?"s":""}">${a.party.length}</span>`:""}</div>
+    <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
       <button id="advToggleNotes">${a.notesOn?"Remove notes":"Add notes"}</button>
@@ -168,7 +168,7 @@ function renderAdvDetail(){
     </div></div></div>
     <div id="advInfoWrap">
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
-    <div class="section-label" id="partyHead">Party roster <button class="lvlup-btn" id="partyLvlUp" title="Level up the party" aria-label="Level up the party">${ARROW_TREND_UP}</button></div>
+    <div class="section-label" id="partyHead"><span>Party roster${a.party.length?` <span class="pc-count2">${a.party.length}</span>`:""}</span><button class="lvlup-btn" id="partyLvlUp" title="Level up the party">${ARROW_TREND_UP}<span class="lvlup-txt">Level Up</span></button></div>
     <div id="partyWrap"></div>
     </div>
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>

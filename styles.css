@@ -286,6 +286,7 @@ select::-ms-expand{display:none}
 .abil .cell .svtog{background:var(--panel2);border:1px solid var(--line);color:var(--faint);border-radius:5px;padding:4px 2px;font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:4px}
 .abil .cell .svtog b{font-size:11px;font-variant-numeric:tabular-nums}
 .abil .cell .svtog:hover{border-color:var(--accent);color:var(--dim)}
+.abil .cell.is-main .svtog{border-color:color-mix(in srgb,var(--abc) 30%,var(--line));color:color-mix(in srgb,var(--abc) 32%,var(--faint))}
 .abil .cell .svtog.active{background:color-mix(in srgb,var(--abc) 10%,var(--panel2));border-color:color-mix(in srgb,var(--abc) 38%,var(--faint));color:color-mix(in srgb,var(--abc) 38%,var(--dim))}
 .abil .cell .svtog.active b{color:var(--txt)}
 
@@ -803,9 +804,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pc-lvl-in::-webkit-inner-spin-button,.pc-lvl-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .pc-lvl-roll{color:var(--accent)}
 .pc-lvl-roll .nf-col{transition:transform .55s cubic-bezier(.2,.8,.2,1)}
-.lvlup-btn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:none;border-radius:6px;color:var(--dim);cursor:pointer;padding:0}
+.pc-count2{font-size:11px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+.lvlup-btn{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:24px;background:none;border:none;border-radius:6px;color:var(--dim);cursor:pointer;padding:0 6px;text-transform:none;letter-spacing:0}
+.lvlup-btn .lvlup-txt{font-size:11px;font-weight:600}
 .lvlup-btn:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
-.adv-pc-count{flex:none;display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--in);border:1px solid var(--line);color:var(--dim);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 .pc-name{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
 .pc-nm{flex:0 1 auto;min-width:0;max-width:190px;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cls{flex:none;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap}
