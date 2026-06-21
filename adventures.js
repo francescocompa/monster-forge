@@ -232,7 +232,7 @@ const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
 const PC_ABILS=["str","dex","con","int","wis","cha"];
 const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
-function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"ac",v:""},{k:"hp",v:""},{k:"level",v:""}]};}
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"level",v:""},{k:"ac",v:""},{k:"hp",v:""}]};}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
   fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
     main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
@@ -255,7 +255,7 @@ function charDerivedChips(c){const out=[];(c.fields||[]).forEach(f=>{const d=fie
   out.push({kind:"atk",v:effAtk(c,f)});out.push({kind:"dc",v:effDc(c,f)});});return out;}
 // Never a party-row chip: hidden fields, initiative (combat rolls it) and abilities (they live in the grid;
 // the row instead shows their derived ATK/DC chips when flagged main).
-function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||!!(d&&d.abil);}
+function chipHidden(f){const d=PC_FIELD[f.k];return !!f.hide||f.k==="init"||f.k==="level"||!!(d&&d.abil);}
 // The adventures a roster character is in (membership = the ordered id lists in each a.party).
 function rosterAdventures(rid){return state.adv.filter(a=>(a.party||[]).includes(rid));}
 function addPartyMember(a){const c=newRosterChar("");state.roster.push(c);a.party.push(c.id);saveRoster();saveAdv();renderAdvDetail();openCharacterDetail(c.id,a.id);}
@@ -275,11 +275,13 @@ function pcChipHTML(rid,f){const d=fieldDef(f);const lbl=d&&d.icon?d.icon:`<span
 function renderParty(a){
   const box=$("#partyWrap");if(!box)return;
   const rows=(a.party||[]).map(rid=>{const c=rosterById(rid);if(!c)return "";
+    const lv=charFieldVal(c,"level"),lvSet=lv!==""&&lv!=null;
     const chips=(c.fields||[]).filter(f=>!chipHidden(f)&&f.k&&PC_FIELD[f.k]&&f.v!==""&&f.v!=null).map(f=>pcChipHTML(rid,f)).join("");
     const derived=charDerivedChips(c).map(x=>x.kind==="atk"
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
       :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
     return `<div class="pc-row" data-pcopen="${rid}">
+      <span class="pc-lvl${lvSet?"":" dim"}" title="Level">${lvSet?esc(String(lv)):"1"}</span>
       <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
       <span class="pc-chips">${chips}${derived}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
@@ -338,10 +340,9 @@ function openCharacterDetail(rid,curAdvId,ui){
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
     return `<div class="cd-prop" data-cdrow="${i}">${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
-  // Abilities live in the reused Forge ability grid (B139); level is the big number by the name (B141) —
-  // both are kept out of the plain property rows.
-  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if((d&&d.abil)||f.k==="level")return;(chipHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
-  const lvlVal=(()=>{const f=(c.fields||[]).find(x=>x.k==="level");return f?f.v:"";})();
+  // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
+  // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
+  let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(chipHidden(f)&&f.k!=="level"?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
   // Ability-score grid appended at the foot — star a cell to make it "main" (derives ATK/save), with override
   // inputs (computed value as a dimmed placeholder) for each flagged ability. More than one can be main.
   const abilEntries=(c.fields||[]).map((f,i)=>({f,i})).filter(x=>{const d=fieldDef(x.f);return d&&d.abil;});
@@ -361,7 +362,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-icons">${shared&&curAdv?`<button class="cd-gx" data-cdunsync title="Unsync from this adventure" aria-label="Unsync">${UNLINK_ICON}</button>`:""}<button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
     </div>
     <div class="cd-scroll">
-      <div class="cd-namerow"><label class="cd-lvl" title="Level"><span class="cd-lvl-cap">LVL</span><input class="cd-lvl-in" type="number" min="1" max="20" data-cdlvl value="${esc(String(lvlVal))}" placeholder="1"></label><input class="cd-title" placeholder="Character name" value="${esc(c.name)}"></div>
+      <input class="cd-title" placeholder="Character name" value="${esc(c.name)}">
       <div class="cd-props">${visHTML}${hidBlock}<button class="cd-addprop" data-cdaddprop>＋ Add a property</button>${abilBlock}</div>
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
@@ -369,7 +370,9 @@ function openCharacterDetail(rid,curAdvId,ui){
     <div class="cd-foot"><span style="flex:1"></span><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="width:auto;min-width:120px">Done</button></div>
   </div>`);
   $("#modal").classList.add("cd-host");
-  const m=$("#modal"),re=u=>openCharacterDetail(rid,curAdv,u),close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
+  // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
+  // the user back to the top (B143).
+  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>{closeModal();if(state.selAdv)renderAdvDetail();};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
   // Field name menu — standard popover (group toggle / rename / remove), matching every other menu (B138).
   const fieldMenu=(i,anchor)=>{const f=c.fields[i];if(!f)return;
@@ -391,8 +394,6 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelector("[data-cdclose]").addEventListener("click",close);
   m.querySelector("[data-cddone]").addEventListener("click",close);
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
-  // Level commits on change → re-render so the derived ATK/save placeholders (which use PB from level) refresh.
-  {const lv=m.querySelector("[data-cdlvl]");if(lv)lv.addEventListener("change",()=>{let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.push(f);}f.v=lv.value;saveRoster();re({});});}
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
   m.querySelectorAll("[data-cdsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,i]=el.dataset.cdsub.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
   // Ability score commits on change (re-render refreshes the mod + derived placeholders without stealing focus mid-type).

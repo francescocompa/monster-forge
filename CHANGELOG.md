@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 143 — Party rework (8/n): Level placement fix + scroll-preserving re-render
+- **Level is back to a regular field** at the **top** of the character detail's property list (new characters
+  get it first), not the big number by the name. Instead the **party-roster row shows the level as a number
+  before the name** (initiative-sized, 17px), bright when set and a dimmed `1` when unset. `chipHidden` keeps
+  Level out of the row chips since the number now represents it.
+- **Editing in the detail no longer bounces you to the top.** `re()` preserves the `.cd-scroll` position
+  across its full re-render, so toggling Save proficiency / main / hiding a field keeps your place.
+
 ## Batch 142 — Party rework (7/n): roster drives the budget; adventure top trimmed
 The party roster is now the single source of truth for encounter scaling.
 - **Encounter XP budget is derived from the roster.** Party size = number of members; each member's level
