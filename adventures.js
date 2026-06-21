@@ -224,15 +224,33 @@ const UNLINK_ICON='<svg viewBox="0 0 640 512" width="14" height="14" fill="curre
 // ability + the Level (proficiency). Abilities carry `abil:true` so they can be grouped + flagged.
 const PC_FIELDS=[
   {k:"ac",label:"AC",icon:PC_AC_ICON},{k:"hp",label:"HP",icon:PC_HP_ICON},
-  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},
+  {k:"init",label:"Initiative",short:"init",mod:true},{k:"level",label:"Level",short:"lvl"},{k:"class",label:"Class",short:"class"},
   {k:"pp",label:"Passive Perception",short:"PP"},{k:"prof",label:"Proficiency",short:"prof",mod:true},{k:"speed",label:"Speed",short:"spd"},
   {k:"str",label:"Strength",short:"STR",abil:true},{k:"dex",label:"Dexterity",short:"DEX",abil:true},{k:"con",label:"Constitution",short:"CON",abil:true},
   {k:"int",label:"Intelligence",short:"INT",abil:true},{k:"wis",label:"Wisdom",short:"WIS",abil:true},{k:"cha",label:"Charisma",short:"CHA",abil:true}];
 const PC_FIELD={};PC_FIELDS.forEach(f=>{PC_FIELD[f.k]=f;});
 const PC_ABILS=["str","dex","con","int","wis","cha"];
 const PC_LEGACY={dc:"Spell save DC",spellatk:"Spell attack"}; // dropped standard keys → label fallback only
+const D5_CLASSES=["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"];
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
-function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"level",v:""},{k:"ac",v:""},{k:"hp",v:""}]};}
+function newRosterChar(name){return {id:uid(),name:name||"",notes:"",fields:[{k:"level",v:""},{k:"class",v:""},{k:"ac",v:""},{k:"hp",v:""},{k:"speed",v:""}]};}
+// Ability helpers that tolerate a missing field (ability grid is always shown; fields are created lazily).
+function abilFieldOf(c,k){return (c.fields||[]).find(f=>f.k===k)||null;}
+function abilScoreOf(c,k){const f=abilFieldOf(c,k);return f?abilScore(f):10;}
+function hasAbilScores(c){return PC_ABILS.some(k=>{const f=abilFieldOf(c,k);return f&&f.v!==""&&f.v!=null;});}
+function ensureAbilField(c,k){let f=abilFieldOf(c,k);if(!f){f={k,v:"",hide:true};c.fields.push(f);}return f;}
+// The prevailing party level — the first member with a set Level, else 1 (B145: new-member level default).
+function partyDefaultLevel(advId){const a=state.adv.find(x=>x.id===advId);if(a)for(const rid of (a.party||[])){const v=charFieldVal(rosterById(rid),"level");if(v!==""&&v!=null)return clamp(Number(v)||1,1,20);}return 1;}
+// Dimmed default shown as a field's placeholder (empty value falls back to it): speed 30 ft.; level = the
+// party's level; init = DEX mod and passive perception = 10 + WIS mod once any ability score is filled.
+function fieldDefault(c,f,advId){switch(f.k){
+  case "speed":return "30 ft.";
+  case "level":return String(partyDefaultLevel(advId));
+  case "init":return hasAbilScores(c)?sgn(abilMod(abilScoreOf(c,"dex"))):"";
+  case "pp":return hasAbilScores(c)?String(10+abilMod(abilScoreOf(c,"wis"))):"";
+  default:return "";}}
+// Effective initiative modifier for combat — the set value, else the DEX-mod default when abilities exist.
+function effInit(c){const v=charFieldVal(c,"init");if(v!==""&&v!=null)return Number(v)||0;return hasAbilScores(c)?abilMod(abilScoreOf(c,"dex")):0;}
 function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",notes:p.notes||"",
   fields:Array.isArray(p.fields)?p.fields.map(f=>({k:f.k||"",label:f.label||"",v:f.v??"",hide:!!f.hide,
     main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""})):[{k:"ac",v:""},{k:"hp",v:""}]};}
@@ -303,7 +321,7 @@ function renderParty(a){
       ?`<span class="pc-dchip"><span class="pc-cl">atk</span>${sgn(x.v)}</span>`
       :`<span class="pc-dchip dc"><span class="pc-cl">DC</span>${x.v}</span>`).join("");
     return `<div class="pc-row" data-pcopen="${rid}">
-      <span class="pc-lvl${lvSet?"":" dim"}" title="Level">${lvSet?esc(String(lv)):"1"}</span>
+      <span class="pc-lvl${lvSet?"":" dim"}" title="Level">${lvSet?esc(String(lv)):partyDefaultLevel(a.id)}</span>
       <span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>
       <span class="pc-chips">${chips}${derived}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
@@ -361,22 +379,21 @@ function openCharacterDetail(rid,curAdvId,ui){
   const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
     const nameEl=(ui.rename===i&&!f.k)?`<input class="cd-pn-edit" data-cdrenval="${i}" value="${esc(f.label)}" placeholder="Field name">`
       :`<button class="cd-pn" data-cdname="${i}">${ico}${esc(fieldLabel(f))}</button>`;
-    return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="Empty"></div>`;};
+    const ph=fieldDefault(c,f,curAdv)||"Empty";
+    const list=f.k==="class"?` list="pcClassList"`:"";
+    return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}<input class="cd-pv" data-cdval="${i}"${list} value="${esc(String(f.v))}" placeholder="${esc(ph)}"></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field
   // at the top) renders as property rows. chipHidden keeps Level/init/abilities off the party row only.
   let visHTML="",hidHTML="";(c.fields||[]).forEach((f,i)=>{const d=fieldDef(f);if(d&&d.abil)return;(cdRowHidden(f)?hidHTML+=propRow(f,i):visHTML+=propRow(f,i));});
-  // Ability-score grid appended at the foot — star a cell to make it "main" (derives ATK/save), with override
-  // inputs (computed value as a dimmed placeholder) for each flagged ability. More than one can be main.
-  const abilEntries=(c.fields||[]).map((f,i)=>({f,i})).filter(x=>{const d=fieldDef(x.f);return d&&d.abil;});
-  let abilBlock="";
-  if(abilEntries.length){
-    const cells=PC_ABILS.map(k=>{const x=abilEntries.find(y=>y.f.k===k);if(!x)return"";const {f,i}=x,on=!!f.main;
-      return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdmain="${i}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabval="${i}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(abilScore(f)))}</div><button type="button" class="svtog${f.prof?" active":""}" data-cdsave="${i}" aria-pressed="${f.prof?"true":"false"}">Save <b>${sgn(abilSave(c,f))}</b></button></div>`;}).join("");
-    const mains=abilEntries.filter(x=>x.f.main);
-    const spell=mains.length?`<div class="cd-spell">${mains.map(({f,i})=>{const cv=abilDerived(c,f);
-      return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdsub="atk:${i}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdsub="dc:${i}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
-    abilBlock=`<div class="cd-grpdiv"><span>Ability scores</span></div><div class="abil cd-abilgrid">${cells}</div>${spell}`;
-  }
+  // Ability-score grid is ALWAYS shown (B145) — cells bind by ability key and the field is created lazily on
+  // first edit. Star a cell to make it "main" (derives ATK/save), with override inputs per flagged ability.
+  const abilCell=k=>{const f=abilFieldOf(c,k)||{k,v:"",main:false,prof:false},on=!!f.main;
+    return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdabmain="${k}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabkey="${k}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(abilScore(f)))}</div><button type="button" class="svtog${f.prof?" active":""}" data-cdabsave="${k}" aria-pressed="${f.prof?"true":"false"}">Save <b>${sgn(abilSave(c,f))}</b></button></div>`;};
+  const cells=PC_ABILS.map(abilCell).join("");
+  const mains=PC_ABILS.map(k=>abilFieldOf(c,k)).filter(f=>f&&f.main);
+  const spell=mains.length?`<div class="cd-spell">${mains.map(f=>{const cv=abilDerived(c,f);
+    return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdabsub="atk:${f.k}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdabsub="dc:${f.k}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
+  const abilBlock=`<div class="cd-grpdiv"><span>Ability scores</span></div><div class="abil cd-abilgrid">${cells}</div>${spell}`;
   const hidBlock=hidHTML?`<div class="cd-grpdiv" data-cdhiddiv><span>Hidden from the party row</span></div>${hidHTML}`:"";
   openModalRaw(`<div class="char-detail">
     <div class="cd-top">
@@ -390,6 +407,7 @@ function openCharacterDetail(rid,curAdvId,ui){
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
     <div class="cd-foot"><button class="cd-del" data-cddelete>Delete</button><button class="btn primary sm" data-cddone style="flex:1">Done</button></div>
+    <datalist id="pcClassList">${D5_CLASSES.map(x=>`<option value="${x}">`).join("")}</datalist>
   </div>`);
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
@@ -420,11 +438,12 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelector("[data-cddone]").addEventListener("click",close);
   m.querySelector(".cd-title").addEventListener("input",e=>{c.name=e.target.value;saveRoster();});
   m.querySelectorAll("[data-cdval]").forEach(el=>el.addEventListener("input",()=>{const f=c.fields[+el.dataset.cdval];if(f){f.v=el.value;saveRoster();}}));
-  m.querySelectorAll("[data-cdsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,i]=el.dataset.cdsub.split(":"),f=c.fields[+i];if(!f)return;if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
-  // Ability score commits on change (re-render refreshes the mod + derived placeholders without stealing focus mid-type).
-  m.querySelectorAll("[data-cdabval]").forEach(el=>el.addEventListener("change",()=>{const f=c.fields[+el.dataset.cdabval];if(f){f.v=el.value;saveRoster();re({});}}));
-  m.querySelectorAll("[data-cdmain]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdmain];if(!f)return;f.main=!f.main;saveRoster();re({});}));
-  m.querySelectorAll("[data-cdsave]").forEach(el=>el.addEventListener("click",()=>{const f=c.fields[+el.dataset.cdsave];if(!f)return;f.prof=!f.prof;saveRoster();re({});}));
+  m.querySelectorAll("[data-cdabsub]").forEach(el=>el.addEventListener("input",()=>{const[kind,k]=el.dataset.cdabsub.split(":"),f=ensureAbilField(c,k);if(kind==="atk")f.atkV=el.value;else f.dcV=el.value;saveRoster();}));
+  // Ability grid binds by key (the field is created on demand). Score commits on change so the mod + derived
+  // placeholders refresh without stealing focus mid-type.
+  m.querySelectorAll("[data-cdabkey]").forEach(el=>el.addEventListener("change",()=>{ensureAbilField(c,el.dataset.cdabkey).v=el.value;saveRoster();re({});}));
+  m.querySelectorAll("[data-cdabmain]").forEach(el=>el.addEventListener("click",()=>{const f=ensureAbilField(c,el.dataset.cdabmain);f.main=!f.main;saveRoster();re({});}));
+  m.querySelectorAll("[data-cdabsave]").forEach(el=>el.addEventListener("click",()=>{const f=ensureAbilField(c,el.dataset.cdabsave);f.prof=!f.prof;saveRoster();re({});}));
   // Drag-to-reorder properties (B143b): grip handles drag; dropping onto a row reorders + joins that row's
   // group, dropping on the "Hidden" divider moves into the hidden group.
   const clearDM=()=>m.querySelectorAll(".cd-prop.drop-before,.cd-prop.drop-after,.cd-grpdiv.drop-into").forEach(x=>x.classList.remove("drop-before","drop-after","drop-into"));

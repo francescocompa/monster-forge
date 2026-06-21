@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 146 — Party rework (11/n): field defaults, Class dropdown, abilities always open
+- **New characters** start with **Level · Class · AC · HP · Speed**. **Dimmed editable defaults** show as
+  placeholders (empty value falls back to them): **Speed 30 ft.**, **Level = the party's level** (first set
+  member, so a new PC inherits it), and once any ability score is filled, **Initiative = DEX mod** and
+  **Passive Perception = 10 + WIS mod** (no prof assumed). `fieldDefault` drives the placeholders; combat
+  reads `effInit` so an unset initiative uses the DEX-mod default.
+- **Class field** value is a combobox over the 13 D&D classes (`<datalist>`), still free-text.
+- **Ability-score grid is always shown** (no longer behind an "Add" action) — cells bind by ability key and
+  the field is created lazily on first edit (`abilFieldOf` / `ensureAbilField`).
+
 ## Batch 145 — Party rework (10/n): add-menu cleanup + footer + roster label
 - **Add-a-property menu** no longer suggests **Proficiency** (derived from Level) or **Ability scores** (always
   shown in the grid now), and **hides any option already present** — by key *or* by a matching custom label

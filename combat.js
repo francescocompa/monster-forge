@@ -172,8 +172,8 @@ function autoRollOn(){return !(state.settings.combat&&state.settings.combat.init
 function rollPartyOn(){return !(state.settings.combat&&state.settings.combat.rollParty===false);}
 // A party member is a shared-roster id (B136); pull AC/HP/Initiative from its typed fields.
 function pcInstance(rid){const c=rosterById(rid);if(!c)return null;
-  const iv=charFieldVal(c,"init"),av=charFieldVal(c,"ac"),hv=charFieldVal(c,"hp");
-  const im=iv===""||iv==null?0:(Number(iv)||0),man=!rollPartyOn();
+  const av=charFieldVal(c,"ac"),hv=charFieldVal(c,"hp");
+  const im=effInit(c),man=!rollPartyOn();
   const acN=av===""||av==null?null:Number(av),hpN=hv===""||hv==null?null:Number(hv);
   return {id:uid(),kind:"pc",srcId:rid,srcEntry:"pc:"+rid,name:c.name||"PC",init:man?null:rollOrAvgInit(im),initMod:im,initRolled:man?false:autoRollOn(),initManual:man,dex:0,
     ac:acN!=null&&!isNaN(acN)?acN:null,hpMax:hpN!=null&&!isNaN(hpN)?hpN:null,hpCur:hpN!=null&&!isNaN(hpN)?hpN:null,
