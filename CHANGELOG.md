@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 199 — Split the roster/character subsystem out of adventures.js → roster.js
+- **New `roster.js` (387 lines), carved from `adventures.js` (1138 → 754 lines).** A clean, contiguous
+  extraction of the whole player-character subsystem: the shared roster store accessors, the PC field /
+  ability / skill model, the party row (`renderParty`), and the character-detail modal
+  (`charDetailHTML` / `openCharacterDetail`). No code changed — the block moved verbatim (lines 219–602),
+  so behavior is identical; it's purely a file boundary for legibility (the encounter/scene/budget code
+  stays in `adventures.js`). Mirrors the B131 combat.js split.
+- **Load order updated in all four sync points** (`index.html`, `test/harness.js`, `eslint.config.js`,
+  `package.json` check+lint): `roster.js` loads right after `adventures.js`, before `combat.js`. Every
+  cross-file reference is a runtime call, and the file has no eager top-level statements, so the move is
+  load-order-safe — the smoke test (which boots the real page with all scripts) confirms zero init errors.
+- Verified live: party roster renders, character-detail modal opens with property + ability rows, combat
+  builds PC instances and the PC sheet — all driven by roster.js helpers, zero console errors. `npm run
+  verify` green (12 tests, lint 0/0); `npm run lint:css` still clean.
+
 ## Batch 198 — Refactor: split the two longest functions (no behavior change)
 - **`openCharacterDetail` (was ~146 lines) → `charDetailHTML(c,curAdv,ui,advs)` + the binding block.** The
   pure modal-body builder (tags / property rows / preset rows / ability grid / template) is now a named
