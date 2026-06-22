@@ -819,24 +819,27 @@ function combatHTML(e,c){
   // Count leads on the left as a large ghost number with a trailing dim × (default 1 shows dimmed); the
   // statblock / CR control drops to a quiet subtitle under the name; XP sits right with a hover-only remove.
   const cnt=`<div class="cbt-cnt"><input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count" aria-label="Count"><span class="cbt-x">×</span></div>`;
-  // Per-row actions live in a hover kebab (turn into minion / edit in Forge / duplicate / delete) — B172.
-  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="cbt-kebab" data-emenu="${c.id}" aria-label="Combatant actions">⋯</button></div>`;
+  const xpv=`<span class="xpv">${xp.toLocaleString()} XP</span>`;
+  // Per-row actions live in a hover kebab pinned full-height to the right (turn into minion / edit / duplicate
+  // / delete) — B172. Main is two lines: name + faction on top, statblock + XP below (XP in line with the
+  // statblock), so a narrow card stacks cleanly instead of dropping the XP to its own left-aligned line (B179).
+  const kebab=`<button class="cbt-kebab" data-emenu="${c.id}" aria-label="Combatant actions">⋯</button>`;
   if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
-      <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><button type="button" class="cbt-pick" data-cropen="${c.id}" aria-label="Challenge rating"><span class="cbt-pick-lbl">CR ${esc(c.cr)}${combatIsMinion(c)?" · minion":""}</span><span class="cbt-pick-chev">▾</span></button></div>
+      <div class="cbt-l1"><input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">${facSel}</div>
+      <div class="cbt-sb"><button type="button" class="cbt-pick" data-cropen="${c.id}" aria-label="Challenge rating"><span class="cbt-pick-lbl">CR ${esc(c.cr)}${combatIsMinion(c)?" · minion":""}</span><span class="cbt-pick-chev">▾</span></button>${xpv}</div>
     </div>
-    ${facSel}${xpcell}</div>`;
+    ${kebab}</div>`;
   const m=monOf(c);
   const sbLabel=m?`${esc(m.name)} (CR ${m.cr})${combatIsMinion(c)?" · minion":""}`:"Pick a statblock…";
   return `<div class="cbt ${fc}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
-      <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><button type="button" class="cbt-pick${m?"":" empty"}" data-sbopen="${c.id}" aria-label="Statblock"><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button></div>
+      <div class="cbt-l1"><input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">${facSel}</div>
+      <div class="cbt-sb"><button type="button" class="cbt-pick${m?"":" empty"}" data-sbopen="${c.id}" aria-label="Statblock"><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button>${xpv}</div>
     </div>
-    ${facSel}${xpcell}</div>`;
+    ${kebab}</div>`;
 }
 // Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
 // then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.

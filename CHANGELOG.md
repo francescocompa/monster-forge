@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 179 — Combatant row reflow + party-name shrink
+- **Combatant row reflows cleanly when narrow.** `.cbt-main` is two rows: name + faction chip on top
+  (`.cbt-l1`), statblock/CR + XP below (`.cbt-sb`) — so the **XP sits in line with the statblock** instead of
+  dropping to its own left-aligned line. Name/statblock fields shrink (ellipsis) at low width without overflow.
+- **Per-row kebab is pinned full-height to the right.** `.cbt-kebab` is absolute (`right:0;top:0;bottom:0`),
+  vertically centred, and its row-bg gradient covers the whole row height, fading the faction/XP beneath the ⋯.
+- **Party-row names stay complete (real fix).** The previous attempt left the name at exactly its content width,
+  so it still clipped at the borderline. Now the name has growth priority (`.pc-name{flex:3 1 auto}`) and the
+  chip cluster claims a small basis + very high shrink (`.pc-chips{flex:1 100 30px}`), so the name always keeps
+  a margin and only truncates at very low width; chips scroll/yield first and still show fully when there's room.
+  The class label yields before the name (`.pc-cls{flex:0 8 auto}`).
+
 ## Batch 178 — Focused-encounter bg, scroll preservation, party-name truncation
 - **Focused encounter has no tinted background** anymore — `.enc.focused` is just the accent border. A loose
   encounter used to get a coral-tinted bg while one inside a scene (overridden by `.scene-body .enc`) did not;

@@ -819,11 +819,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lvlup-btn:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
 /* Name takes its content (chips shrink first); the chip cluster is right-anchored (row-reverse so AC sits
    rightmost) and overflows toward the name, faded ONLY when it actually overflows (B169). */
-.pc-name{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
-.pc-nm{flex:0 1 auto;min-width:0;max-width:240px;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pc-cls{flex:none;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap}
+/* Name gets growth priority (so it claims free space and is never starved); the chip cluster takes the rest
+   and shrinks/scrolls first (very high flex-shrink), so the name only truncates at genuinely tiny widths. */
+.pc-name{flex:3 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
+.pc-nm{flex:0 1 auto;min-width:0;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-cls{flex:0 8 auto;min-width:0;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-unnamed{color:var(--faint);font-weight:500}
-.pc-chips{flex:1 100 auto;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.pc-chips{flex:1 100 30px;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 .pc-chips.ov{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24px);mask-image:linear-gradient(90deg,transparent 0,#000 24px)}
 .pc-chips::-webkit-scrollbar{display:none}
 .pc-chip,.pc-dchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:3px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -1506,7 +1508,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt.enemy{border-left-color:var(--bad)}
 .cbt.ally{border-left-color:#4a78b0}
 .cbt.setting{border-left-color:var(--faint)}
-.cbt:not(.ev){display:flex;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:3px}
+.cbt:not(.ev){display:flex;align-items:center;column-gap:10px}
 /* count cell — large ghost number, trailing dim × (default 1 shows dimmed via placeholder) */
 .cbt-cnt{flex:none;width:54px;display:flex;align-items:center;justify-content:center;gap:2px;padding-left:11px}
 .cbt-cnt .cnt{width:30px;text-align:right;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:0;color-scheme:dark;-moz-appearance:textfield}
@@ -1516,8 +1518,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-cnt .cnt::placeholder{color:var(--faint)}
 .cbt-cnt .cbt-x{flex:none;color:var(--faint);font-size:12px}
 /* main column — name (ghost) over a quiet statblock / CR subtitle */
-.cbt-main{flex:1 1 140px;min-width:120px;display:flex;flex-direction:column;gap:2px}
-.cbt .nick{width:100%;min-width:0;font-size:14px;font-weight:600;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:3px 6px;margin-left:-6px}
+.cbt-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;padding-right:6px}
+/* Row 1 = name + faction chip (right); the faction is pushed right by the name field taking the slack. */
+.cbt-l1{display:flex;align-items:baseline;gap:8px;min-width:0}
+.cbt .nick{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:3px 6px;margin-left:-6px}
 .cbt .nick:hover{border-color:var(--line)}
 .cbt .nick:focus{background:var(--in);border-color:var(--accent);outline:none}
 /* The statblock/monster name shows full-strength at rest (placeholder = the creature name); it dims to a
@@ -1550,10 +1554,11 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt select.fac.ally{background:rgba(74,120,176,.16);color:#7fa8d4;border-color:#355370}
 .cbt select.fac.setting{background:var(--panel2);color:var(--dim);border-color:var(--line)}
 .cbt select.fac option{background:var(--panel);color:var(--txt);text-transform:none;font-weight:400;letter-spacing:0}
-/* XP + hover-only kebab: the ⋯ actions menu fades in over the XP via a row-bg gradient */
-.cbt-xp{position:relative;flex:none;min-width:66px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px}
-.cbt-xp .xpv{font-size:12px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
-.cbt-kebab{position:absolute;right:0;top:0;bottom:0;width:120%;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;border:none;background:linear-gradient(90deg,rgba(27,29,34,0),var(--panel) 48%);color:var(--dim);opacity:0;pointer-events:none;transition:opacity .12s;cursor:pointer;font-size:16px;line-height:1}
+/* XP sits at the right of the statblock line (in line with it); the amber readout is the same as before. */
+.cbt-sb .xpv{flex:none;margin-left:auto;font-size:12px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+/* Hover kebab: a direct child of the row, pinned full-height to the right and vertically centred; its
+   gradient (the row bg) covers the whole row height and fades the faction/XP cluster beneath the ⋯ (B179). */
+.cbt-kebab{position:absolute;right:0;top:0;bottom:0;width:120px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;border:none;background:linear-gradient(90deg,rgba(27,29,34,0),var(--panel) 55%);color:var(--dim);opacity:0;pointer-events:none;transition:opacity .12s;cursor:pointer;font-size:16px;line-height:1}
 .cbt:hover .cbt-kebab{opacity:1;pointer-events:auto}
 .cbt-kebab:hover{color:var(--txt)}
 .popitem-q{position:relative;margin-left:auto;flex:none;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--faint);border:1px solid var(--line);border-radius:50%;cursor:help}
