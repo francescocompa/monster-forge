@@ -139,6 +139,7 @@ function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.typ
 function combatIsMinion(c){if(c.minion!=null)return !!c.minion;return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):false;}
 function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return combatIsMinion(c)?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
 function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
+const MINION_NOTE="MCDM minion — a weak foe that drops at any damage and counts as reduced “minion XP” toward the budget.";
 function encBudget(adv,e){
   const base=baseBudget(adv);const add=[0,0,0];
   // Ally creatures raise the party's budget ≈ a PC of level round(CR). A minion ally contributes
@@ -819,15 +820,16 @@ function combatHTML(e,c){
     ${cnt}
     <div class="cbt-main">
       <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><select class="crsel" data-cf="${c.id}:cr" aria-label="Challenge rating">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}${combatIsMinion(c)?" · minion":""}</option>`).join("")}</select></div>
+      <div class="cbt-sb"><button type="button" class="cbt-pick" data-cropen="${c.id}" aria-label="Challenge rating"><span class="cbt-pick-lbl">CR ${esc(c.cr)}${combatIsMinion(c)?" · minion":""}</span><span class="cbt-pick-chev">▾</span></button></div>
     </div>
     ${facSel}${xpcell}</div>`;
   const m=monOf(c);
+  const sbLabel=m?`${esc(m.name)} (CR ${m.cr})${combatIsMinion(c)?" · minion":""}`:"Pick a statblock…";
   return `<div class="cbt ${fc}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
       <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><select class="sbsel" data-cf="${c.id}:monsterId" aria-label="Statblock">${monsterOptionsHTML(c.monsterId,combatIsMinion(c))}</select></div>
+      <div class="cbt-sb"><button type="button" class="cbt-pick${m?"":" empty"}" data-sbopen="${c.id}" aria-label="Statblock"><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button></div>
     </div>
     ${facSel}${xpcell}</div>`;
 }
@@ -850,8 +852,7 @@ function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.fin
 // explained by the inline ?), edit the statblock in the Forge, duplicate, or delete.
 function openEncCombatantMenu(a,e,c,anchor){
   const isMin=combatIsMinion(c),m=c.type==="monster"?monOf(c):null;
-  const minQ="MCDM minion — a weak foe that drops at any damage and counts as reduced “minion XP” toward the budget.";
-  let html=`<button class="popitem" data-emi="minion">${isMin?"Remove minion":"Turn into minion"}<span class="popitem-q" data-mintip title="${esc(minQ)}">?</span></button>`;
+  let html=`<button class="popitem" data-emi="minion">${isMin?"Remove minion":"Turn into minion"}<span class="popitem-q" data-mintip title="${esc(MINION_NOTE)}">?</span></button>`;
   if(m)html+=`<button class="popitem" data-emi="forge">Edit in Forge</button>`;
   html+=`<button class="popitem" data-emi="dupe">Duplicate</button>`;
   html+=`<div class="popsep"></div><button class="popitem danger" data-emi="del">Delete</button>`;
@@ -864,6 +865,43 @@ function openEncCombatantMenu(a,e,c,anchor){
     else if(k==="dupe"){const i=e.combatants.findIndex(x=>x.id===c.id);e.combatants.splice(i+1,0,{...c,id:uid()});saveAdv();renderEncList(a);}
     else if(k==="del"){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderEncList(a);}
   }));
+}
+// Custom type-to-search statblock picker (B173) — replaces the native <select> on a monster row. Grouped
+// "Last edited" + by-CR, filtered by the search field (per [[custom-dropdown-rule]], never a native datalist).
+function monPickListHTML(selId,q){
+  q=(q||"").trim().toLowerCase();
+  const match=m=>!q||(m.name||"").toLowerCase().includes(q)||("cr "+m.cr).includes(q);
+  const item=m=>`<button class="popitem${m.id===selId?" on":""}" data-mid="${m.id}"><span class="mp-nm">${esc(m.name)}</span><span class="mp-cr">CR ${m.cr}${m.minion?" · minion":""}</span></button>`;
+  let html="";
+  const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
+  if(recent&&match(recent))html+=`<div class="pop-grp-lbl">Last edited</div>${item(recent)}`;
+  const byCR={};state.lib.filter(match).forEach(m=>{(byCR[m.cr]=byCR[m.cr]||[]).push(m);});
+  Object.keys(byCR).sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0)).forEach(cr=>{
+    const list=byCR[cr].slice().sort((a,b)=>a.name.localeCompare(b.name));
+    html+=`<div class="pop-grp-lbl">CR ${cr}</div>${list.map(item).join("")}`;});
+  return html||`<div class="cl-empty">No creature matches.</div>`;
+}
+function openStatblockDropdown(a,c,anchor){
+  if(!state.lib.length){openBestiaryPicker(a,findCombat(a,c.id).e);return;} // no saved creatures → the full picker
+  const p=showPopover(anchor,`<input class="popinput sb-pick-in" placeholder="Search creatures…" autocomplete="off"><div class="popscroll sb-pick-list">${monPickListHTML(c.monsterId)}</div>`);
+  const inp=p.querySelector(".sb-pick-in"),list=p.querySelector(".sb-pick-list");inp.focus();
+  const bind=()=>list.querySelectorAll("[data-mid]").forEach(b=>b.addEventListener("click",()=>{closePopover();c.monsterId=b.dataset.mid;saveAdv();renderEncList(a);}));
+  bind();
+  inp.addEventListener("input",()=>{list.innerHTML=monPickListHTML(c.monsterId,inp.value);bind();});
+  inp.addEventListener("keydown",ev=>{if(ev.key==="Escape")closePopover();else if(ev.key==="Enter"){const f=list.querySelector("[data-mid]");if(f){ev.preventDefault();f.click();}}});
+}
+// Custom type-to-search CR picker for quick combatants (B173) — with the minion toggle + ? explainer inside.
+function openCRDropdown(a,c,anchor){
+  const crItems=q=>{q=(q||"").trim().toLowerCase();const list=CR_LIST.filter(x=>!q||("cr "+x).includes(q)||String(x).toLowerCase().includes(q));
+    return list.map(x=>`<button class="popitem${x===c.cr?" on":""}" data-cr="${x}">CR ${x}</button>`).join("")||`<div class="cl-empty">No CR matches.</div>`;};
+  const minRow=()=>`<div class="popsep"></div><button class="popitem popcheck${combatIsMinion(c)?" on":""}" data-crmin><span class="ck">${combatIsMinion(c)?"✓":""}</span>Minion<span class="popitem-q" data-mintip title="${esc(MINION_NOTE)}">?</span></button>`;
+  const p=showPopover(anchor,`<input class="popinput cr-pick-in" placeholder="Search CR…" autocomplete="off"><div class="popscroll cr-pick-list">${crItems("")}</div>${minRow()}`);
+  const inp=p.querySelector(".cr-pick-in"),list=p.querySelector(".cr-pick-list");inp.focus();
+  const bind=()=>list.querySelectorAll("[data-cr]").forEach(b=>b.addEventListener("click",()=>{closePopover();c.cr=b.dataset.cr;saveAdv();renderEncList(a);}));
+  bind();
+  inp.addEventListener("input",()=>{list.innerHTML=crItems(inp.value);bind();});
+  inp.addEventListener("keydown",ev=>{if(ev.key==="Escape")closePopover();else if(ev.key==="Enter"){const f=list.querySelector("[data-cr]");if(f){ev.preventDefault();f.click();}}});
+  p.querySelector("[data-crmin]").addEventListener("click",ev=>{if(ev.target.closest("[data-mintip]")){ev.stopPropagation();return;}closePopover();c.minion=!combatIsMinion(c);saveAdv();renderEncList(a);});
 }
 function bindEncEvents(a){
   const q=sel=>$$("#advDetail "+sel);
@@ -895,6 +933,8 @@ function bindEncEvents(a){
   q("[data-encclear]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encclear);if(!e||!e.combatants.length)return;
     confirmModal(`Clear all combatants from "${e.name||"this encounter"}"?`,()=>{e.combatants=[];saveAdv();renderEncList(a);});}));
   q("[data-emenu]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.emenu);if(c)openEncCombatantMenu(a,e,c,el);}));
+  q("[data-sbopen]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.sbopen);if(c)openStatblockDropdown(a,c,el);}));
+  q("[data-cropen]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.cropen);if(c)openCRDropdown(a,c,el);}));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
     if(el.tagName==="SELECT"){

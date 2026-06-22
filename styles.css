@@ -1532,6 +1532,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-sb .mini-chip{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:3px 7px;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
 .cbt-sb .mini-chip:hover{border-color:var(--accent);color:var(--txt)}
 .cbt-sb .mini-chip.on{color:var(--brand-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
+/* Statblock / CR trigger — a ghost button opening a type-to-search custom dropdown (B173) */
+.cbt-sb .cbt-pick{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-width:0;font-size:12px;color:var(--dim);background:none;border:1px solid transparent;border-radius:5px;padding:2px 6px;margin-left:-6px;cursor:pointer;text-align:left}
+.cbt-sb .cbt-pick:hover{border-color:var(--line);color:var(--txt)}
+.cbt-sb .cbt-pick.empty{color:var(--faint)}
+.cbt-pick-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cbt-pick-chev{flex:none;font-size:9px;color:var(--faint)}
+.sb-pick-list .popitem,.cr-pick-list .popitem{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sb-pick-list .mp-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-pick-list .mp-cr{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.sb-pick-list,.cr-pick-list{max-height:240px;overflow-y:auto}
 /* faction chip — native select styled like the app's pills, faction-tinted (consistent chip language) */
 .cbt select.fac{flex:none;width:auto;margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:20px;padding:3px 10px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);cursor:pointer;-webkit-appearance:none;appearance:none;text-align:center}
 .cbt select.fac:hover{filter:brightness(1.18)}

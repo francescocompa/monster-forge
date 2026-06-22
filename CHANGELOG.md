@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 173 — Type-to-search statblock & CR dropdowns
+- **Statblock picker is now a custom type-to-search dropdown** (`openStatblockDropdown`), replacing the native
+  `<select>` on monster rows: a search field over the creatures grouped "Last edited" + by CR, the current pick
+  highlighted, Enter selects the top match (per the project's custom-dropdown rule — never a native datalist).
+  An empty bestiary falls back to the full `openBestiaryPicker`.
+- **Quick-CR is a custom dropdown too** (`openCRDropdown`): searchable CR list **plus the minion toggle inside
+  it** (with the same `?` explainer), so a quick combatant's minion flag lives where you set its CR.
+- Both triggers are ghost buttons (`.cbt-pick`) that match the row's quiet-field language; the shared minion
+  copy lives in `MINION_NOTE`.
+
 ## Batch 172 — Encounter card polish round
 - **Combatant name shows full-strength at rest.** The statblock/quick name placeholder now renders in `--txt`
   (looks like the creature's name) and only **dims on focus** to act as an editable placeholder.
