@@ -749,16 +749,6 @@ function budMarksHTML(bud){
     +m("Moderate",bud[1],"bm-mid","left:"+budModPct(bud)+"%")
     +m("High",bud[2],"bm-end","right:0");
 }
-function encTargetActive(e){return e.target!=null;}
-function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
-function combCount(e){return e.combatants.filter(c=>c.type!=="event").reduce((s,c)=>s+Number(c.count||1),0);}
-function encReadHTML(a,e,bud,spent){
-  const extra=e.combatants.some(c=>c.faction==="Ally")?` · <span style="color:var(--ok)">allies raised budget</span>`:"";
-  if(!encTargetActive(e))return `Spent <b>${spent.toLocaleString()} XP</b> · <span style="color:var(--faint)">drag the marker to set a target</span>${extra}`;
-  const tgt=encTargetVal(e,bud),d=spent-tgt;
-  const dtxt=d===0?`<span style="color:var(--ok)">on target</span>`:d>0?`<span style="color:var(--accent)">+${d.toLocaleString()} over target</span>`:`<span style="color:var(--dim)">${Math.abs(d).toLocaleString()} under target</span>`;
-  return `Spent <b>${spent.toLocaleString()} XP</b> · target ${tgt.toLocaleString()} · ${dtxt}${extra}`;
-}
 // Patch an encounter's derived numbers (difficulty pill, budget bar, target marker, read-out, and
 // each combatant's XP) in place — used on count/target edits so we never rebuild (and refocus) the input.
 function updateEncMeta(a,e){
@@ -841,19 +831,6 @@ function combatHTML(e,c){
       <div class="cbt-sb"><button type="button" class="cbt-pick${m?"":" empty"}" data-sbopen="${c.id}" aria-label="Statblock"><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button></div>
     </div>
     ${right}${kebab}</div>`;
-}
-// Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
-// then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
-function monsterOptionsHTML(selId,minion){
-  if(!state.lib.length)return"";
-  const opt=m=>`<option value="${m.id}" ${m.id===selId?"selected":""}>${esc(m.name)} (CR ${m.cr})${m.id===selId&&minion?" · minion":""}</option>`;
-  const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
-  let html=recent?`<optgroup label="Last edited">${opt(recent)}</optgroup>`:"";
-  const byCR={};state.lib.forEach(m=>{(byCR[m.cr]=byCR[m.cr]||[]).push(m);});
-  Object.keys(byCR).sort((x,y)=>(CR_NUM[x]??0)-(CR_NUM[y]??0)).forEach(cr=>{
-    const list=byCR[cr].slice().sort((a,b)=>a.name.localeCompare(b.name));
-    html+=`<optgroup label="CR ${cr}">${list.map(opt).join("")}</optgroup>`;});
-  return html;
 }
 function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
 function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
@@ -995,7 +972,7 @@ function moveEncToScene(a,encId,sceneId){
 let dragEncId=null,dropTarget=null;
 // Skip drag-init when the press starts on an interactive control inside the card so editing
 // inputs / clicking the menu / dragging the XP-target marker never triggers a card-drag.
-function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[data-enctgt],[contenteditable="true"]'));}
+function dragInert(t){return !!(t&&t.closest('input,textarea,select,button,a,label,[contenteditable="true"]'));}
 let dragSceneId=null,dropScene=null;
 function clearDropMarks(){$$("#advDetail .enc.drop-before,#advDetail .enc.drop-after,#advDetail .scene.drop-before,#advDetail .scene.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));$$("#advDetail [data-scenedrop].scene-drop").forEach(x=>x.classList.remove("scene-drop"));}
 // Reorder a scene within a.scenes (active scenes among active, archived among archived).

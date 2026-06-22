@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 185 — Maintenance: dead-code + CSS audit, zero lint warnings
+- **Removed dead JS functions** (verified zero callers): `monsterOptionsHTML` (unused since the B173 custom
+  dropdowns), and the orphaned XP-target cluster `encTargetActive`/`encTargetVal`/`combCount`/`encReadHTML`
+  (left over from the B171 draggable-target removal). Dropped the dead `[data-enctgt]` from `dragInert`'s
+  selector.
+- **Cleared both ESLint advisory warnings** → lint is now 0 errors / 0 warnings: removed an empty `if(){}`
+  no-op in `bestiary.js`'s group-head handler (the toggle ran regardless) and an unused `pr` rect in
+  `engine.js`'s `bindRollLogDrag`.
+- **CSS dead-rule audit** — removed 45 selectors whose class never appears (even as a fragment) in any JS/HTML
+  and isn't built dynamically, all leftovers from reworked features: old combat header (`combat-head`/
+  `ch-title`/`ch-sub`/`combat-ctrls`), old scene nav (`scene-strip`/`scene-nav`/`scene-pos`/`scene-enc-name`),
+  load-combat popup bits (`lc-ctrls`/`lc-ctrl`/`lc-add`/`lc-adds`/`lc-cnt`), old combat header chevrons/turn
+  buttons (`ct-encpos`/`ct-turnbtn`/`ghost-chev`), the B173-retired `crsel`/`mini-chip`, the removed
+  `cbt-grip` drag handle, the B163 free-text class field (`cd-class-wrap`/`cd-class-chev`), the dropped
+  `cd-foot`/`cd-del` footer, plus `splitbtn`/`save-row`/`forge-actions`/`dmg-grid`/`hover-tog`/`card-ctl`/
+  `chassis-tools`/`preset-list`/`g3`/`g4` and more. Dynamically-built classes (`cc-ab-*`, `st-*`, `ds-*`,
+  `pcs-*`, `rl-tag-*`, `nf-*`) were identified and kept. Visually regression-checked Adventures, Combat,
+  Bestiary, Forge, and the character-detail modal — no changes.
+
 ## Batch 184 — preserveScroll helper (de-duplicate re-render scroll save/restore)
 - **New `preserveScroll(sel,fn)` helper** (core.js, beside `$`/`$$`): captures a scroll container's scrollTop,
   runs a wholesale re-render `fn`, re-queries the (rebuilt) element by selector and restores the position.

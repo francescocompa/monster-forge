@@ -739,7 +739,7 @@ function bindRollLogDrag(el,head){
   if(!head)return;head.classList.add("rl-drag-h");
   head.addEventListener("pointerdown",e=>{
     if(e.target.closest("button,[data-rollmode]"))return; // let header controls work
-    const parent=el.offsetParent||document.body,pr=parent.getBoundingClientRect();
+    const parent=el.offsetParent||document.body;
     const startX=e.clientX,startY=e.clientY,ox=el.offsetLeft,oy=el.offsetTop;
     el.style.bottom="auto";el.style.right="auto";el.classList.add("dragging");
     const move=ev=>{let nx=ox+(ev.clientX-startX),ny=oy+(ev.clientY-startY);

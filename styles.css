@@ -80,8 +80,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;font-size:13.5px;color:var(--txt);cursor:pointer}
 .set-row.sub{padding:5px 0 5px 14px;font-size:13px;color:var(--dim);border-left:2px solid var(--line);margin-left:2px}
 .set-row .set-lbl{flex:1}
-.set-subs{margin-top:2px;transition:opacity .15s}
-.set-subs.off{opacity:.4;pointer-events:none}
 .set-note{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.45}
 .set-grid{display:flex;flex-wrap:wrap;gap:12px}
 .set-grid .f{flex:1;min-width:150px}
@@ -147,7 +145,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* Untitled adventure: show the default label as a placeholder so there's nothing to clear (B66). */
 #advName:empty::before{content:attr(data-ph);color:var(--faint);font-weight:600}
 .ch-left{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
-.forge-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* CR-target guidance: a small ? next to the CR field opens a popover (was an always-on block). */
 .cr-lbl{display:inline-flex;align-items:center;gap:5px}
 .cr-help{width:15px;height:15px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--faint);font-size:10px;line-height:1;cursor:pointer;display:inline-grid;place-items:center;padding:0}
@@ -190,7 +187,7 @@ fieldset.fieldset{border:1px solid var(--line);border-radius:9px;padding:14px 15
 .fs-sub{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:14px 0 7px}
 .grid{display:grid;gap:10px;align-items:end}
 /* minmax(0,1fr) so a nowrap child (e.g. a chip field) can't force a column wider than its share (B82). */
-.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .g-name{grid-template-columns:1.5fr .8fr 1fr .9fr}
 .g-core{grid-template-columns:1fr 1.1fr 1fr auto}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim);min-width:0}
@@ -257,10 +254,6 @@ select::-ms-expand{display:none}
 .libsel-wrap:hover .libsel-btn{border-color:var(--accent);color:var(--txt)}
 .libsel-btn svg{width:14px;height:14px;fill:currentColor;display:block}
 .libsel{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0;appearance:none;background:none}
-.save-row{display:flex;gap:8px;align-items:stretch}
-.save-row .btn{flex:1}
-.save-row .menu-wrap{display:flex}
-.save-row .kebab{height:auto;width:auto;aspect-ratio:1;padding:0}
 .shortcuts{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px}
 .shortcuts td{padding:5px 6px;border-top:1px solid var(--line);vertical-align:top;color:var(--dim)}
 .shortcuts tr:first-child td{border-top:none}
@@ -331,9 +324,7 @@ select::-ms-expand{display:none}
 
 .spd-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .spd-grid label.f input{text-align:center}
-.hover-tog{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);margin-top:9px}
 
-.dmg-grid{display:flex;flex-wrap:wrap;gap:6px}
 .dchip{display:flex;align-items:center;gap:7px;background:var(--in);border:1px solid var(--line);border-radius:20px;padding:4px 11px;font-size:12px;color:var(--dim)}
 .dchip .st{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--panel2);color:var(--faint)}
 .dchip.res{border-color:#2f5e3a;color:#8fce9a}.dchip.res .st{background:rgba(95,168,115,.2);color:#8fce9a;border-color:#2f5e3a}
@@ -431,8 +422,6 @@ select::-ms-expand{display:none}
 .dchip2{background:#15171b;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--dim);flex:1;min-width:84px;text-align:center}
 .dchip2 b{display:block;color:var(--txt);font-size:14px;font-weight:600;margin-top:2px}
 .dchip2 .dabil{color:var(--faint);font-weight:600;font-size:.78em;letter-spacing:.04em}
-.cr-targets{background:rgba(217,169,65,.08);border:1px solid #5c4d24;border-radius:7px;padding:8px 11px;font-size:11px;color:var(--amber-soft)}
-.cr-targets b{color:var(--amber)}
 
 .sb-wrap{flex:none;position:relative}
 .derived:empty{display:none}
@@ -794,10 +783,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .scene-h input.scene-name:focus{background:var(--in);border-color:var(--accent);outline:none}
 .scene-h .scene-count{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 /* ── Party roster (Combat Tracker, B80) ── */
-.section-label.section-toggle{cursor:pointer;user-select:none}
 .section-label .st-chev{display:inline-flex;width:14px;height:14px;color:var(--faint);transition:transform .15s}
 .section-label .st-chev.closed{transform:rotate(-90deg)}
-.section-label .party-count{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;font-weight:600;margin-left:auto}
 #partyWrap{margin-bottom:6px}
 /* Party roster (B137): a compact clickable row — name + enabled-stat chips (+ derived ATK/DC) + a ghost ✕.
    Click a chip to quick-edit; click the row to open the Notion character detail; ✕ removes from the adventure. */
@@ -930,11 +917,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-pv{flex:1;min-width:0;font-size:14px;background:none;border:none;color:var(--txt);padding:6px 8px;border-radius:6px;outline:none}
 .cd-pv::placeholder{color:var(--faint)}
 .cd-pv:hover,.cd-pv:focus{background:var(--in)}
-.cd-class-wrap{flex:1;min-width:0;display:flex;align-items:center}
-.cd-class-wrap .cd-pv{flex:1;min-width:0}
-.cd-class-chev{flex:none;opacity:0;background:none;border:none;color:var(--faint);cursor:pointer;padding:4px 6px;font-size:11px;line-height:1;transition:opacity .12s}
-.cd-class-wrap:hover .cd-class-chev,.cd-class-wrap:focus-within .cd-class-chev{opacity:1}
-.cd-class-chev:hover{color:var(--txt)}
 .cd-prop-pop{min-width:0}
 .cd-prop-pop .cd-pn,.cd-prop-pop .cd-pn.static{min-width:0;padding:6px 4px}
 .cd-prop-pop .cd-pn-edit{min-width:0;width:120px}
@@ -948,13 +930,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cd-savetpl svg{width:11px;height:11px;opacity:.85}
 .popover .cd-add-in{width:100%;box-sizing:border-box;margin-bottom:4px}
 .cd-add-list{max-height:210px;overflow-y:auto}
-.cd-add-list .popitem svg,.cd-grp-ico svg{width:13px;height:13px;margin-right:7px;vertical-align:-2px;color:var(--faint)}
+.cd-add-list .popitem svg{width:13px;height:13px;margin-right:7px;vertical-align:-2px;color:var(--faint)}
 .cd-divider{border-top:1px solid var(--line);margin:14px 0 11px}
 .cd-notes{width:100%;box-sizing:border-box;background:none;border:none;color:var(--dim);font-size:13px;line-height:1.65;resize:none;overflow:hidden;min-height:60px;outline:none;font-family:inherit;padding:0 2px}
 .cd-notes::placeholder{color:var(--faint)}
-.cd-foot{flex:none;display:flex;align-items:center;gap:8px;margin-top:13px}
-.cd-del{font-size:12px;color:var(--faint);background:none;border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
-.cd-del:hover{color:var(--bad);border-color:#6e2929}
 /* The global input[type=text]/:not([type]) rule outranks the bare classes — scope these to win so detail
    values stay transparent (hover only), and the custom inputs keep their intended fills (B137). */
 .char-detail .cd-title,.char-detail .cd-pv,.cd-prop-pop .cd-pv{background:none;border:none;padding:6px 8px;width:100%}
@@ -966,11 +945,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* ── Combat Tracker view (B80) ── */
 .combat-wrap{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0}
 .combat-wrap>.combat-notstarted,.combat-wrap>.combat-empty{flex:1;min-height:0}
-.combat-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.combat-head .ch-title{flex:1;min-width:0}
-.combat-head .ch-title h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
-.combat-head .ch-sub{font-size:12px;color:var(--faint);margin-top:2px}
-.combat-ctrls{display:flex;gap:8px;flex-wrap:wrap}
 /* CT7b — rebalanced grid (more room for the statblock/trackers), Forge-style divider between the
    initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
 /* CT9 — Forge-style two-pane split: each pane scrolls internally, a draggable divider between them. */
@@ -997,9 +971,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-group-n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
 .cbt-grp-ico{display:inline-flex;width:13px;height:13px;color:var(--dim)}.cbt-grp-ico svg{width:13px;height:13px}
 .cbt-grp-ico.st-dead{color:var(--faint)}
-.cbt-grip{flex:none;align-self:stretch;display:grid;place-items:center;width:15px;color:var(--faint);cursor:grab;border-radius:4px;margin:-8px 0 -8px -2px}
-.cbt-grip:hover{color:var(--dim)}
-.cbt-grip:active{cursor:grabbing}
 .cbt-row.dragging{opacity:.45}
 .cbt-row.drop-before{box-shadow:0 -2px 0 0 var(--accent)}
 .cbt-row.drop-after{box-shadow:0 2px 0 0 var(--accent)}
@@ -1131,7 +1102,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-status{flex:none;width:20px;height:20px;display:grid;place-items:center;border:none;background:none;border-radius:50%;color:var(--dim)} /* read-only indicator (B120) */
 .ci-status svg{width:13px;height:13px}
 .ci-status.st-dead{color:var(--faint)} /* status reads from the icon shape, not colour (was clashing with faction colours) */
-.ci-status-sp{flex:none;width:20px}
 .ci-id{min-width:0}
 .ci-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
@@ -1165,7 +1135,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-hpbar{display:block;width:54px;height:3px;background:var(--in);border-radius:2px;overflow:hidden}
 .ci-hpbar i{display:block;height:100%;transition:width .15s}
 .ci-noh{color:var(--faint);align-self:center}
-.ca-tmp{font-size:11px;color:#7fa8d4;font-weight:600}
 .cbt-add{width:100%;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;margin-top:1px}
 .cbt-add:hover{border-color:var(--accent);color:var(--txt)}
 .combat-active{display:flex;flex-direction:column;min-height:0;overflow:hidden;border-left:1px solid var(--line)}
@@ -1196,7 +1165,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-addnote svg{flex:none}
 .ca-noteblock{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .ca-note-txt{font-size:12px;color:var(--dim);white-space:pre-wrap;min-width:0}
-.ca-hp{font-size:15px;margin-top:10px}.ca-hp b{color:var(--txt)}
 .ca-note{font-size:12px;color:var(--dim);margin-top:8px;white-space:pre-wrap}
 .ca-soon{font-size:11px;color:var(--faint);font-style:italic;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
 /* PC character sheet in the combat panel (display-only — the PC counterpart to the monster statblock) */
@@ -1219,7 +1187,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT3 — condition chips, per-combatant menu, inline note edit */
 .cbt-row .ci-menu{flex:none;width:26px;height:26px;border:1px solid transparent;background:none;color:var(--faint);border-radius:6px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .cbt-row .ci-menu:hover{border-color:var(--line);color:var(--txt);background:var(--panel2)}
-.ci-conds,.ca-conds{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
+.ca-conds{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
 .ca-conds{margin-top:12px}
 .cc-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(180,140,230,.1);border:1px solid rgba(180,140,230,.32);border-radius:13px;padding:2px 5px 2px 9px;font-size:11px;line-height:1.4;white-space:nowrap}
 .cc-chip .reflink{color:#b48ce6;font-weight:600;cursor:help}
@@ -1314,10 +1282,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .combat-empty p{max-width:360px;margin:0}
 .combat-notstarted{display:flex;flex-direction:column;align-items:center;gap:14px;padding:48px 20px;text-align:center}
 .combat-notstarted .btn{display:inline-flex;align-items:center;gap:8px}.combat-notstarted .btn svg{width:18px;height:18px}
-.scene-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-bottom:16px}
-.scene-enc-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0}
-.scene-nav{display:flex;align-items:center;gap:8px;flex:none}
-.scene-pos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .load-combat{max-height:60vh}
 .lc-adv{margin-bottom:14px}
 .lc-adv-h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--txt);margin-bottom:6px}
@@ -1334,7 +1298,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lc-enc:hover{border-color:var(--accent);background:var(--panel2)}
 .lc-enc-nm{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-enc-meta{display:flex;align-items:center;gap:8px;flex:none}
-.lc-cnt{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
 /* CT7 — menu-item icon, budget pill on bar line, combat-tab header restructure, FAB, picker footer */
 .menu button .mi-ico{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
 .budget-top{display:flex;align-items:center;gap:10px}
@@ -1360,10 +1323,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-encdrop svg{width:13px;height:13px}
 .ct-loadbtn{flex:none;width:auto;display:inline-flex;align-items:center;gap:6px}
 .ct-loadbtn svg{flex:none}
-.ct-encpos{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
-.ghost-chev{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);background:none;color:var(--dim);border-radius:7px;cursor:pointer;padding:0}
-.ghost-chev:hover:not(:disabled){border-color:var(--accent);color:var(--txt)}
-.ghost-chev:disabled{opacity:.3;pointer-events:none}
 .ct-notes-wrap{margin:-4px 0 10px;padding:0 20px}
 .ct-notes{font-size:12px;color:var(--faint);white-space:pre-wrap}
 .ct-notes.clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1376,8 +1335,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-roundbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;border:none;background:none;cursor:pointer;padding:3px 7px;border-radius:6px}
 .ct-roundbar .ct-round:hover{background:var(--panel2)}
 .ct-turnline{flex:1;height:1px;background:var(--line)}
-.ct-turnbtn{width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
-.ct-turnbtn:hover{color:var(--txt);background:var(--panel2)}
 .ct-toolsbtn{position:relative;flex:none;width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
 .ct-toolsbtn:hover{color:var(--txt);background:var(--panel2)}
 .ct-toolsbtn.on{color:var(--txt)}
@@ -1411,9 +1368,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lc-enc-l{display:flex;align-items:center;gap:7px;min-width:0}
 .lc-empty-cap{font-size:10px;color:var(--faint);font-style:italic;flex:none}
 .picker-foot .pf-done{flex:none}
-.lc-ctrls{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
-.lc-ctrl{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}
-.lc-ctrl select{background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);color-scheme:dark;padding:4px 6px;font-size:12px}
 .lc-scene-wrap{margin:4px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
 .lc-scene-wrap.running{border-color:var(--accent)}
 .lc-scene-h{display:flex;align-items:center;background:var(--panel2);color:var(--txt);font-size:13px;font-weight:600}
@@ -1430,9 +1384,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lc-scene-encs[hidden]{display:none}
 .lc-enc.running{border-color:var(--accent);background:rgba(226,101,77,.08)}
 .lc-enc-adv{font-size:10.5px;color:var(--faint);font-weight:400;margin-left:4px}
-.lc-adds{display:flex;gap:6px;margin-top:6px}
-.lc-add{flex:1;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:7px;padding:6px;font-size:11.5px;cursor:pointer}
-.lc-add:hover{border-color:var(--accent);color:var(--txt)}
 .lc-statgrp{margin-bottom:12px}
 .lc-stat-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;margin:6px 0 5px 2px}
 .lc-empty{font-size:11px;color:var(--faint);padding:4px 2px}
@@ -1471,8 +1422,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .imp-row .imp-k.enc{color:var(--info);background:rgba(91,155,213,.14);border-color:#345168}
 .imp-row .imp-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .imp-row .imp-n{flex:none;font-size:11px;color:var(--faint)}
-.kebab.addc-plus{font-size:18px;font-weight:600;line-height:1}
-.menu .menu-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:4px 10px 2px}
 .menu .submenu-wrap{position:relative}
 .menu .submenu-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .menu .submenu-arrow{color:var(--faint);font-size:10px}
@@ -1530,11 +1479,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-sb select{width:auto;min-width:0;max-width:100%;font-size:12px;color:var(--dim);background:none;border:1px solid transparent;border-radius:5px;padding:2px 5px;margin-left:-5px;text-overflow:ellipsis}
 .cbt-sb select:hover{border-color:var(--line);color:var(--txt)}
 .cbt-sb select:focus{border-color:var(--accent);outline:none;color:var(--txt)}
-.cbt-sb .crsel{flex:none}
 .cbt-sb .minion-tag{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
-.cbt-sb .mini-chip{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:3px 7px;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
-.cbt-sb .mini-chip:hover{border-color:var(--accent);color:var(--txt)}
-.cbt-sb .mini-chip.on{color:var(--brand-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
 /* Statblock / CR trigger — a ghost button opening a type-to-search custom dropdown (B173) */
 .cbt-sb .cbt-pick{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-width:0;font-size:12px;color:var(--dim);background:none;border:1px solid transparent;border-radius:5px;padding:2px 6px;margin-left:-6px;cursor:pointer;text-align:left}
 .cbt-sb .cbt-pick:hover{border-color:var(--line);color:var(--txt)}
@@ -1613,10 +1558,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lib-head::before{content:"";position:absolute;top:-20px;left:0;right:0;height:20px;background:var(--bg)}
 .lib-head .col-head{margin-bottom:8px}
 .toolbar select.filt{width:auto;flex:none;padding:7px 30px 7px 10px;font-size:12px;color:var(--dim)}
-.splitbtn{display:inline-flex;align-items:stretch}
-.splitbtn .btn.primary.sm{border-radius:7px 0 0 7px}
-.splitbtn .kebab.split-caret{background:var(--accent);color:#fff;border:none;border-left:1px solid rgba(0,0,0,.25);border-radius:0 7px 7px 0;width:28px;height:auto;font-size:13px}
-.splitbtn .kebab.split-caret:hover{background:var(--accent-hover);color:#fff}
 .card.archived{opacity:.5}
 .card.archived:hover{opacity:.8}
 .card.selected{border-color:var(--sel-accent);background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel))}
@@ -1636,15 +1577,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .tag.st-Ready{color:var(--ok);border-color:#2f5e3f}
 .tag.st-Draft{color:var(--dim)}
 .tag.st-Archived{color:var(--faint)}
-.card-ctl{display:flex;gap:6px;margin-top:auto;padding-top:8px}
-.card-ctl .card-status{width:auto;flex:none;font-size:11px;padding:5px 6px}
-.card-ctl .card-tag{flex:1;min-width:0;font-size:11px;padding:5px 7px}
-.chassis-tools{margin-bottom:14px}
 .src-badge{align-self:flex-start;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
 .src-badge.built{color:var(--accent-soft);border-color:#6e3329}
 .src-badge.srcdrop{cursor:pointer;font-family:inherit;line-height:1.2}
 .src-badge.srcdrop:hover{border-color:var(--accent);color:var(--txt)}
-.preset-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .preset-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
 .preset-row .hint{display:inline}
 .kind-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 6px;border:1px solid var(--line);color:var(--faint);margin-left:4px}
