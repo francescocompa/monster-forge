@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 180 — Combatant faction/XP side-by-side + always-visible kebab
+- **Faction + XP are side by side at full width again** (a `.cbt-right` cluster), and only **stack** (faction
+  over XP) when the row is narrow — a container query on `.cbt` (`@container (max-width:340px)` flips
+  `.cbt-right` to a column). The B179 always-stacked layout is gone.
+- **The `⋯` row menu is always visible with no gradient** (styled like the combat init-row's `.ci-menu`),
+  so the faction chip and XP are never covered and stay clickable. Removed the full-height hover gradient.
+
 ## Batch 179 — Combatant row reflow + party-name shrink
 - **Combatant row reflows cleanly when narrow.** `.cbt-main` is two rows: name + faction chip on top
   (`.cbt-l1`), statblock/CR + XP below (`.cbt-sb`) — so the **XP sits in line with the statblock** instead of
