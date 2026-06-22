@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 172 — Encounter card polish round
+- **Combatant name shows full-strength at rest.** The statblock/quick name placeholder now renders in `--txt`
+  (looks like the creature's name) and only **dims on focus** to act as an editable placeholder.
+- **Per-row actions moved into a hover kebab** (`⋯`, replaces the inline `✕`): **Turn into minion** (a
+  per-combatant override with an inline `?` explainer), **Edit in Forge**, **Duplicate**, **Delete**.
+- **Minion is now an override, not a chip.** Dropped the separate minion chip/tag; a minion statblock shows
+  `· minion` next to its CR in the statblock select, and `c.minion` (set via the kebab) overrides the
+  inherited flag for both monster and quick combatants (`combatIsMinion`/`combatXPEach`).
+- **"Clear encounter"** added to the encounter `⋯` menu (confirm → empties the combatant list).
+- **Difficulty pill is fixed-width** (82px, its "Over High" max) so the bar end no longer shifts as difficulty changes.
+- **Bug: difficulty pill now updates on count edits.** `updateEncMeta` looked for the pill in `.eh`, but in an
+  expanded card it lives in `.budget-top` — now found in either.
+- **Encounters use the global accent**, not the adventure's colour (dropped the `--sel-accent:<a.color>`
+  override on `.adv-detail-body`).
+- **No scroll jump on delete.** Combatant delete (and the kebab actions) re-render via `renderEncList`
+  (which only rebuilds `#encList`) instead of the whole `renderAdvDetail`, so the page keeps its scroll position.
+- Count cell vertically centred with the rest of the row.
+- **Deferred:** turning the statblock + quick-CR selects into type-to-search custom dropdowns (with the minion
+  toggle inside the CR dropdown) — a larger change, next.
+
 ## Batch 171 — Encounter card redesign (combatant rows + budget bar)
 - **Combatant rows are now hairline rows** on the encounter card instead of nested dark boxes: a faction
   stripe + thin dividers, no per-row surface (they already sit inside the encounter/scene surfaces).

@@ -134,8 +134,10 @@ function addMonsterCombatant(enc,monsterId){
 function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.type==="quick"?c.cr:null;}
 // Per-creature XP for the budget. MCDM minions use the special low minion-XP table (so a horde
 // counts fairly); everyone else uses standard CR XP. `count` multiplies either way.
-function combatIsMinion(c){return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):c.type==="quick"?!!c.minion:false;}
-function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return m.minion?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
+// `c.minion` is a per-combatant override (set via the row kebab "Turn into minion", B172) — when present it
+// wins; otherwise a monster inherits its statblock's minion flag and a quick combatant defaults to non-minion.
+function combatIsMinion(c){if(c.minion!=null)return !!c.minion;return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):false;}
+function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return combatIsMinion(c)?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
 function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
 function encBudget(adv,e){
   const base=baseBudget(adv);const add=[0,0,0];
@@ -154,7 +156,7 @@ function renderAdvDetail(){
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
   setCrumbs(["Adventures",advDName(a)]);
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
-    <div class="adv-detail-body"${a.color?` style="--sel-accent:${a.color}"`:""}>
+    <div class="adv-detail-body">
     <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>
     <div class="menu-wrap" style="flex:none"><button class="kebab" data-menu="adv-opts" title="Adventure options">⋯</button>
     <div class="menu" id="menu-adv-opts">
@@ -755,7 +757,7 @@ function updateEncMeta(a,e){
   const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
   const pct=budSpentPct(spent,bud);
-  const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
+  const pill=root.querySelector(".budget-top .pill")||root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
   const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=budFillColor(cls);} // colour rides the fill; notches stay neutral
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
@@ -777,6 +779,7 @@ function encHTML(a,e){
           <button data-encnotes-tog="${e.id}">${e.notesOn?"Remove notes":"Add notes"}</button>
           <button data-pushenc="${e.id}">Copy encounter for Claude</button>
           <div class="sep"></div>
+          <button${e.combatants.length?"":" disabled"} data-encclear="${e.id}">Clear encounter</button>
           <button class="danger" data-encdel="${e.id}">Delete</button>
         </div>
       </div>
@@ -810,12 +813,13 @@ function combatHTML(e,c){
   // Count leads on the left as a large ghost number with a trailing dim × (default 1 shows dimmed); the
   // statblock / CR control drops to a quiet subtitle under the name; XP sits right with a hover-only remove.
   const cnt=`<div class="cbt-cnt"><input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count" aria-label="Count"><span class="cbt-x">×</span></div>`;
-  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn cbt-del" data-cdel="${c.id}" aria-label="Remove combatant">✕</button></div>`;
+  // Per-row actions live in a hover kebab (turn into minion / edit in Forge / duplicate / delete) — B172.
+  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn cbt-kebab" data-emenu="${c.id}" aria-label="Combatant actions">⋯</button></div>`;
   if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
       <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><select class="crsel" data-cf="${c.id}:cr" aria-label="Challenge rating">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select><button type="button" class="mini-chip${c.minion?" on":""}" data-minion="${c.id}" aria-pressed="${c.minion?"true":"false"}" title="MCDM minion — counts as minion XP toward the budget">minion</button></div>
+      <div class="cbt-sb"><select class="crsel" data-cf="${c.id}:cr" aria-label="Challenge rating">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}${combatIsMinion(c)?" · minion":""}</option>`).join("")}</select></div>
     </div>
     ${facSel}${xpcell}</div>`;
   const m=monOf(c);
@@ -823,15 +827,15 @@ function combatHTML(e,c){
     ${cnt}
     <div class="cbt-main">
       <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><select class="sbsel" data-cf="${c.id}:monsterId" aria-label="Statblock">${monsterOptionsHTML(c.monsterId)}</select>${m&&m.minion?`<span class="minion-tag" title="MCDM minion — counts as ${(MINION_XP[m.cr]??0).toLocaleString()} XP each toward the budget">minion</span>`:""}</div>
+      <div class="cbt-sb"><select class="sbsel" data-cf="${c.id}:monsterId" aria-label="Statblock">${monsterOptionsHTML(c.monsterId,combatIsMinion(c))}</select></div>
     </div>
     ${facSel}${xpcell}</div>`;
 }
 // Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
 // then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
-function monsterOptionsHTML(selId){
+function monsterOptionsHTML(selId,minion){
   if(!state.lib.length)return"";
-  const opt=m=>`<option value="${m.id}" ${m.id===selId?"selected":""}>${esc(m.name)} (CR ${m.cr})</option>`;
+  const opt=m=>`<option value="${m.id}" ${m.id===selId?"selected":""}>${esc(m.name)} (CR ${m.cr})${m.id===selId&&minion?" · minion":""}</option>`;
   const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
   let html=recent?`<optgroup label="Last edited">${opt(recent)}</optgroup>`:"";
   const byCR={};state.lib.forEach(m=>{(byCR[m.cr]=byCR[m.cr]||[]).push(m);});
@@ -842,6 +846,25 @@ function monsterOptionsHTML(selId){
 }
 function findEnc(a,id){return a.encounters.find(e=>e.id===id);}
 function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.find(x=>x.id===cid);if(c)return{e,c};}return{};}
+// Per-row actions (B172) — the combatant row's hover kebab. Turn into minion (a per-combatant override,
+// explained by the inline ?), edit the statblock in the Forge, duplicate, or delete.
+function openEncCombatantMenu(a,e,c,anchor){
+  const isMin=combatIsMinion(c),m=c.type==="monster"?monOf(c):null;
+  const minQ="MCDM minion — a weak foe that drops at any damage and counts as reduced “minion XP” toward the budget.";
+  let html=`<button class="popitem" data-emi="minion">${isMin?"Remove minion":"Turn into minion"}<span class="popitem-q" data-mintip title="${esc(minQ)}">?</span></button>`;
+  if(m)html+=`<button class="popitem" data-emi="forge">Edit in Forge</button>`;
+  html+=`<button class="popitem" data-emi="dupe">Duplicate</button>`;
+  html+=`<div class="popsep"></div><button class="popitem danger" data-emi="del">Delete</button>`;
+  const p=showPopover(anchor,html);
+  p.querySelectorAll("[data-emi]").forEach(b=>b.addEventListener("click",ev=>{
+    if(ev.target.closest("[data-mintip]")){ev.stopPropagation();return;} // the ? just carries its own tooltip
+    const k=b.dataset.emi;closePopover();
+    if(k==="minion"){c.minion=!combatIsMinion(c);saveAdv();renderEncList(a);}
+    else if(k==="forge"){if(m){loadMonster(m);switchView("forge");}}
+    else if(k==="dupe"){const i=e.combatants.findIndex(x=>x.id===c.id);e.combatants.splice(i+1,0,{...c,id:uid()});saveAdv();renderEncList(a);}
+    else if(k==="del"){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderEncList(a);}
+  }));
+}
 function bindEncEvents(a){
   const q=sel=>$$("#advDetail "+sel);
   q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
@@ -869,9 +892,9 @@ function bindEncEvents(a){
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-startcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.startcombat))));
   q("[data-encstatus]").forEach(el=>el.addEventListener("click",()=>openEncStatusMenu(a,findEnc(a,el.dataset.encstatus),el)));
-  // Minion flag on a quick combatant is a toggle chip (was a cramped checkbox). Flipping it changes
-  // the combatant's XP, so re-render the list to refresh budget bars + the chip state.
-  q("[data-minion]").forEach(el=>el.addEventListener("click",()=>{const{c}=findCombat(a,el.dataset.minion);if(!c)return;c.minion=!c.minion;saveAdv();renderEncList(a);}));
+  q("[data-encclear]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encclear);if(!e||!e.combatants.length)return;
+    confirmModal(`Clear all combatants from "${e.name||"this encounter"}"?`,()=>{e.combatants=[];saveAdv();renderEncList(a);});}));
+  q("[data-emenu]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.emenu);if(c)openEncCombatantMenu(a,e,c,el);}));
   q("[data-cf]").forEach(el=>{
     const[cid,f]=el.dataset.cf.split(":");
     if(el.tagName==="SELECT"){
@@ -884,7 +907,7 @@ function bindEncEvents(a){
       el.addEventListener("input",()=>{const{c}=findCombat(a,cid);if(!c)return;c[f]=el.value;saveAdv();}); // free-text: no re-render
     }
   });
-  q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderAdvDetail();}}));
+  q("[data-cdel]").forEach(el=>el.addEventListener("click",()=>{const{e,c}=findCombat(a,el.dataset.cdel);if(e){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderEncList(a);}})); // renderEncList preserves the page scroll (only #encList re-renders)
 }
 // Encounters share one array but render in two groups (active / archived). Reorder within a group,
 // then write the regrouped order back into the slots that group occupied so the other group is untouched.
