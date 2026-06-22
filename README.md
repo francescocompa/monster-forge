@@ -11,19 +11,29 @@ It's a single static page with **no build step and no dependencies**. Open
 
 - **Locally:** double-click `index.html`, or serve the folder with any static
   server (`python3 -m http.server`, `npx serve`, etc.) and visit it.
-- **Hosted:** it's a static site — drop the three files on GitHub Pages or any
+- **Hosted:** it's a static site — drop the files on GitHub Pages or any
   static host.
 
 ## Project layout
 
-The page is intentionally split into three plain files, loaded with ordinary
-`<link>` / `<script src>` tags (no modules, no bundler — still works from `file://`):
+The page is `index.html` + `styles.css` + a set of plain JavaScript files, loaded with
+ordinary `<link>` / `<script src>` tags. The scripts are **not** modules: they load in order and
+share one global scope (a function in `data.js` is callable from `app.js` with no imports), so there's
+no bundler and no build step — it still works from `file://`. See `DEVELOPMENT.md` for the dev workflow.
 
 | File | What's in it |
 |------|--------------|
-| `index.html` | Markup for the three views (Forge / Bestiary / Adventures). |
-| `styles.css` | All styling and the dark theme tokens. |
-| `app.js` | All application logic, the chassis library, and CR/XP tables. |
+| `index.html` | Markup for the four views (Forge / Bestiary / Adventures / Combat). |
+| `styles.css` | All styling and the dark-theme design tokens. |
+| `data.js` | Lookup tables (CR/XP, budgets), pure helpers, snippet libraries, and the chassis bases. |
+| `parsers.js` | 5etools text / JSON / `.zip` importers (statblocks, spells, conditions, rules). |
+| `core.js` | App state, storage (JSONBin cloud + IndexedDB ref libs), settings, the monster model, and field wiring. |
+| `forge.js` | Statblock-entry editing, the bracket-token expander, and `loadMonster`. |
+| `engine.js` | Statblock preview rendering, the colour/roll engine, and reference popovers. |
+| `bestiary.js` | The Bestiary view, library controls, and the chassis/preset pickers. |
+| `adventures.js` | Adventures, scenes, encounters, the party roster, and the XP budget. |
+| `combat.js` | The live combat tracker (initiative order, HP, conditions, death saves). |
+| `app.js` | App shell: settings UI, modal/popover primitives, the preset-library manager, and the init bootstrap (loaded last). |
 
 ## Features
 
