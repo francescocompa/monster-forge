@@ -164,6 +164,23 @@ function refPopOn(){return ruleFinder||!(state.settings&&state.settings.refPopov
 document.addEventListener("mouseover",e=>{if(!ruleFinder)return;const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);}});
 document.addEventListener("mouseout",e=>{if(!ruleFinder)return;const r=e.target.closest&&e.target.closest(".reflink");if(r)hideRefpopFrom(refLevelOf(r));});
 document.addEventListener("click",e=>{const r=e.target.closest&&e.target.closest(".reflink");if(r&&refPopOn()){e.stopPropagation();clearTimeout(_refTimer);showRefpop(r,r.dataset.ref,r.dataset.name);return;}if(!(e.target.closest&&e.target.closest(".refpop")))hideRefpopNow(0);},true);
+// Truncated-text hover tooltip: any element whose text is clipped (ellipsis / line-clamp / overflowing input)
+// reveals its full text in the app's tail tooltip on hover. Generic — covers every truncating field (party,
+// combatant, scene & statblock names, etc.) with no maintained selector list. Reuses tailPopover/closeTipPop.
+let _truncEl=null;
+function _truncFull(el){const t=(el.tagName==="INPUT"||el.tagName==="TEXTAREA")?el.value:el.textContent;return (t||"").trim();}
+function _isTruncated(el){if(!el||el.nodeType!==1)return false;
+  const cs=getComputedStyle(el),clamp=cs.webkitLineClamp&&cs.webkitLineClamp!=="none";
+  if(cs.textOverflow!=="ellipsis"&&!clamp&&el.tagName!=="INPUT"&&el.tagName!=="TEXTAREA")return false;
+  return el.scrollWidth>el.clientWidth+1||(clamp&&el.scrollHeight>el.clientHeight+1);}
+document.addEventListener("mouseover",e=>{
+  if((_pop&&!_pop.classList.contains("tail-pop"))||document.querySelector(".menu.open"))return; // don't fight an open menu/popover
+  let n=e.target,hit=null,d=0;while(n&&n.nodeType===1&&d<4){if(_isTruncated(n)){hit=n;break;}n=n.parentElement;d++;}
+  if(!hit||hit===_truncEl||hit===document.activeElement)return; // skip the field you're editing
+  const full=_truncFull(hit);if(!full)return;
+  _truncEl=hit;tailPopover(hit,`<div class="cr-pop trunc-pop">${esc(full)}</div>`);});
+document.addEventListener("mouseout",e=>{if(!_truncEl)return;
+  if(!e.relatedTarget||!_truncEl.contains(e.relatedTarget)){closeTipPop();_truncEl=null;}});
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target

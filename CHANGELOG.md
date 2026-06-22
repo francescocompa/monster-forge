@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 186 — Hover-to-reveal full text on truncated fields
+- **Any clipped text field now shows its full text in a hover tooltip.** A single global handler (engine.js)
+  detects truncation generically — `text-overflow:ellipsis`, `-webkit-line-clamp`, or an overflowing
+  input/textarea, checked by `scrollWidth/clientWidth` — and reveals the full value in the app's tail
+  tooltip (`.trunc-pop`). Covers party-row names, combatant/scene/statblock names, the statblock picker
+  label, etc., with no maintained selector list, so new truncating fields are covered automatically.
+- Suppressed while a menu/popover is open and while you're editing the field (skips `document.activeElement`),
+  and dismissed on mouse-out. Reuses `tailPopover`/`closeTipPop`.
+
 ## Batch 185 — Maintenance: dead-code + CSS audit, zero lint warnings
 - **Removed dead JS functions** (verified zero callers): `monsterOptionsHTML` (unused since the B173 custom
   dropdowns), and the orphaned XP-target cluster `encTargetActive`/`encTargetVal`/`combCount`/`encReadHTML`

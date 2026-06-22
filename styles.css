@@ -151,6 +151,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .cr-help:hover{border-color:var(--accent);color:var(--txt)}
 .cr-pop{font-size:11.5px;line-height:1.55;color:var(--dim);max-width:230px} /* custom tooltips / (?) bodies: neutral, not yellow (B125) */
 .cr-pop b{color:var(--txt)}
+.trunc-pop{color:var(--txt);max-width:280px;white-space:normal;overflow-wrap:anywhere} /* full text of a clipped field (hover) */
 /* Tail-pop tooltips fit their content (drop the .popover min-width floor) (B167). */
 .popover.tail-pop{min-width:0}
 /* Title + right-aligned, coloured status (Reaction / Concentration) tooltips (B167). */
