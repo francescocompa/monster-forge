@@ -14,7 +14,16 @@ npm run lint       # eslint — blocks on errors, warnings are advisory
 npm test           # init smoke test + pure-function maths (jsdom)
 npm run verify     # all three, in order
 npm run lint:css   # advisory: classes in styles.css with no JS/HTML match (dead-CSS guide; never blocks)
+npm run typecheck  # advisory: tsc --checkJs on parsers.js (catches typos/signature drift; never blocks)
 ```
+
+`typecheck` (B201) runs `// @ts-check` over `parsers.js` — the pure 5etools-import layer, where a shape bug
+actually bites. The shared scripts run in one global scope, which tsc's `checkJs` can't see across files,
+so `scripts/gen-globals.mjs` regenerates `globals.d.ts` (ambient `declare const` for every cross-file global,
+parsed with espree — the same trick `eslint.config.js` uses) before tsc runs. It's advisory (not in
+`verify`) and editor-friendly: `globals.d.ts` is gitignored and regenerated on each run; open `parsers.js`
+in an editor after one `npm run typecheck` for inline checking. To extend coverage, add `// @ts-check` to
+another file and a matching `include` entry in `tsconfig.json` (drop its own globals from the generator).
 
 `lint:css` automates the periodic manual dead-selector sweep (B185 removed 45 by hand). It's advisory —
 not part of `verify` — because it can't see classes built from string fragments; the documented dynamic

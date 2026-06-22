@@ -1,0 +1,18 @@
+{
+  "//": "Advisory type-check (B201). Dev-only — the shipped site stays no-build. Run via `npm run typecheck`,",
+  "//2": "which regenerates globals.d.ts first. Scoped to parsers.js (the pure 5etools-import layer, where a",
+  "//3": "shape bug actually bites); loose settings catch real mistakes without fighting the terse JS style.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["parsers.js", "globals.d.ts"]
+}

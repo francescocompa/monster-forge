@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 201 — Advisory type-check on parsers.js (npm run typecheck, P3)
+- **`// @ts-check` on `parsers.js`** (the pure 5etools-import layer — where a shape/typo bug actually
+  bites) + a new advisory `npm run typecheck`. Dev-only `typescript` devDependency; the shipped site stays
+  no-build. Catches things ESLint can't: wrong arg counts / signature drift on local functions, and typos
+  with suggestions (verified: a deliberate `parseSpeed(1,2,3)` → TS2554, `richStripp` → TS2552 "Did you mean
+  'richStrip'?"). Clean baseline: **0 errors**.
+- **Cross-file globals solved like the lint config.** tsc's `checkJs` treats each script's top-level
+  `const`/`let` as file-local, so `scripts/gen-globals.mjs` parses every *other* shared file's top-level
+  declarations with espree and emits `globals.d.ts` (ambient `declare const … : any;` × 909). Self-
+  maintaining — `npm run typecheck` regenerates it before running `tsc`. `globals.d.ts` is gitignored
+  (generated artifact). Advisory only — NOT part of `verify`. `tsconfig.json` is scoped to `parsers.js`
+  with loose settings; documented in `DEVELOPMENT.md` (incl. how to extend coverage to another file).
+
 ## Batch 200 — First-run nudge on the Forge (P3)
 - **A one-time, dismissable welcome tip** at the top of the Forge form (`maybeShowOnboarding`, app.js):
   points a newcomer at the live preview and the faster starting points ("open the ⋯ menu — load a chassis

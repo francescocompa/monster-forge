@@ -1,3 +1,4 @@
+// @ts-check
 // ── parsers.js — markdown / 5etools statblock & reference importers ───────────
 // Pure parsing layer, extracted from app.js (Batch 26). Loaded after data.js,
 // before app.js. Functions are called at runtime, so cross-file globals
