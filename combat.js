@@ -145,7 +145,7 @@ function detectResources(m){
 // Build the order instance(s) for one encounter combatant entry (event = 1, monster/quick = its count;
 // identical monsters share one rolled initiative via groupId = the combatant entry id).
 // The display base name for an entry (nickname, else statblock name) — drives the merged numbering.
-function combatBaseName(c){if(c.type==="event")return c.name||"Event";if(c.nickname)return c.nickname;const m=c.type==="monster"?monOf(c):null;return m?m.name:(c.type==="quick"?"Combatant":"?");}
+function combatBaseName(c){if(c.type==="event")return c.name||"Event";if(c.nickname)return c.nickname;const m=c.type==="monster"?monOf(c):null;return m?m.name:(c._lostName||(c.type==="quick"?"Combatant":"?"));}
 // Group initiative for identical-monster groups? (Settings combat.groupInit) — on = one shared roll per
 // entry; off = each instance rolls its own initiative (kept separate in the order).
 function groupInitOn(){return !state.settings.combat||state.settings.combat.groupInit!==false;}

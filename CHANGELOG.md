@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 195 — Unresolved-combatant repair (deleted statblock)
+- **A combatant whose statblock was deleted now reads as broken instead of blank.** Previously an
+  orphaned monster combatant (its `monsterId` points at a since-deleted Bestiary creature) was
+  indistinguishable from a never-picked one — both said "Pick a statblock…" and silently scored 0 XP.
+  Now the row flags itself: **"⚠ {name} — deleted"** in amber (`.cbt-pick.orphan` / `--warn`), with a
+  tooltip explaining you can pick another statblock to re-link or remove it from the ⋯ menu.
+- **The deleted creature's name is captured at delete time.** `markOrphanedCombatants(id, name)` stamps
+  `_lostName` onto every referencing combatant just before the Bestiary delete, so the orphan row (and the
+  combat tracker, via `combatBaseName`) can show *what it was* rather than a bare "?". Re-linking through
+  the statblock picker clears `_lostName`. The delete confirm wording softened from "those combatants will
+  break" to "…will show as unresolved until you re-link or remove them" (the breakage is now recoverable).
+- Verified live: deleting a seeded monster used in 4 combatants flags all four amber with the right label,
+  the encounter budget recomputes (orphans = 0 XP), and re-linking clears the flag. verify green (12 tests).
+
 ## Batch 194 — Coalesced statblock render + faster boot fallback
 - **`renderPreview` now coalesces a burst of edits into one rebuild.** It used to do a full
   `#statblock` `innerHTML` rebuild + colorize TreeWalker on *every* keystroke. The work moved to

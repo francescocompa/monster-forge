@@ -1490,6 +1490,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cbt-sb .cbt-pick{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-width:0;font-size:12px;color:var(--dim);background:none;border:1px solid transparent;border-radius:5px;padding:2px 6px;margin-left:-6px;cursor:pointer;text-align:left}
 .cbt-sb .cbt-pick:hover{border-color:var(--line);color:var(--txt)}
 .cbt-sb .cbt-pick.empty{color:var(--faint)}
+.cbt-sb .cbt-pick.orphan{color:var(--warn)} /* B195: monsterId points at a deleted statblock — flag for re-link/remove */
+.cbt-sb .cbt-pick.orphan:hover{border-color:var(--warn);color:var(--warn)}
 .cbt-pick-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .cbt-pick-chev{flex:none;font-size:9px;color:var(--faint)}
 .sb-pick-list .popitem,.cr-pick-list .popitem{display:flex;align-items:center;justify-content:space-between;gap:12px}

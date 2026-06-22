@@ -122,6 +122,9 @@ function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
 // How many encounters (across every adventure) reference this bestiary monster — used to warn before a delete
 // would orphan those combatants (they'd resolve to "?" / 0 XP).
 function monsterUsage(id){let n=0;(state.adv||[]).forEach(a=>(a.encounters||[]).forEach(e=>{if((e.combatants||[]).some(c=>c.type==="monster"&&c.monsterId===id))n++;}));return n;}
+// Before a bestiary monster is deleted, stamp its name onto every combatant that references it so the
+// now-orphaned rows can show what they were ("⚠ Goblin — deleted") and stay re-linkable (B195).
+function markOrphanedCombatants(id,lostName){(state.adv||[]).forEach(a=>(a.encounters||[]).forEach(e=>(e.combatants||[]).forEach(c=>{if(c.type==="monster"&&c.monsterId===id&&!c._lostName)c._lostName=lostName||"";})));}
 function addMonsterCombatant(enc,monsterId){
   const cid=uid();
   enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:state.settings.defaults.faction});
@@ -826,12 +829,16 @@ function combatHTML(e,c){
     </div>
     ${right}${kebab}</div>`;
   const m=monOf(c);
-  const sbLabel=m?`${esc(m.name)} (CR ${m.cr})${combatIsMinion(c)?" · minion":""}`:"Pick a statblock…";
-  return `<div class="cbt ${fc}" data-cid="${c.id}">
+  const orphan=!m&&!!c.monsterId; // had a statblock that has since been deleted from the Bestiary (B195)
+  const sbLabel=m?`${esc(m.name)} (CR ${m.cr})${combatIsMinion(c)?" · minion":""}`
+    :orphan?`⚠ ${esc(c._lostName||"Statblock")} — deleted`:"Pick a statblock…";
+  const pickCls=m?"":orphan?" orphan":" empty";
+  const pickTitle=orphan?' title="This statblock was deleted — pick another to re-link, or remove the combatant from its ⋯ menu"':"";
+  return `<div class="cbt ${fc}${orphan?" cbt-orphan":""}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
-      <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-      <div class="cbt-sb"><button type="button" class="cbt-pick${m?"":" empty"}" data-sbopen="${c.id}" aria-label="Statblock"><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button></div>
+      <input class="nick" placeholder="${esc(m?m.name:(c._lostName||"(missing)"))}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+      <div class="cbt-sb"><button type="button" class="cbt-pick${pickCls}" data-sbopen="${c.id}" aria-label="Statblock"${pickTitle}><span class="cbt-pick-lbl">${sbLabel}</span><span class="cbt-pick-chev">▾</span></button></div>
     </div>
     ${right}${kebab}</div>`;
 }
@@ -874,7 +881,7 @@ function openStatblockDropdown(a,c,anchor){
   if(!state.lib.length){openBestiaryPicker(a,findCombat(a,c.id).e);return;} // no saved creatures → the full picker
   const p=showPopover(anchor,`<input class="popinput sb-pick-in" placeholder="Search creatures…" autocomplete="off"><div class="popscroll sb-pick-list">${monPickListHTML(c.monsterId)}</div>`);
   const inp=p.querySelector(".sb-pick-in"),list=p.querySelector(".sb-pick-list");inp.focus();
-  const bind=()=>list.querySelectorAll("[data-mid]").forEach(b=>b.addEventListener("click",()=>{closePopover();c.monsterId=b.dataset.mid;saveAdv();renderEncList(a);}));
+  const bind=()=>list.querySelectorAll("[data-mid]").forEach(b=>b.addEventListener("click",()=>{closePopover();c.monsterId=b.dataset.mid;delete c._lostName;saveAdv();renderEncList(a);}));
   bind();
   inp.addEventListener("input",()=>{list.innerHTML=monPickListHTML(c.monsterId,inp.value);bind();});
   inp.addEventListener("keydown",ev=>{if(ev.key==="Escape")closePopover();else if(ev.key==="Enter"){const f=list.querySelector("[data-mid]");if(f){ev.preventDefault();f.click();}}});

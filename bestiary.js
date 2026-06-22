@@ -198,9 +198,9 @@ function wireLibCards(body){
   body.querySelectorAll("[data-preview]").forEach(b=>b.addEventListener("click",()=>showStatPreview(b,find(b.dataset.preview))));
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>guardedLoad(()=>{loadMonster(find(b.dataset.edit));switchView("forge");})));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
-  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.del,used=monsterUsage(id);
-    const msg=`Delete “${find(id).name}”?`+(used?` It's used in ${used} encounter${used>1?"s":""} — those combatants will break.`:"");
-    confirmModal(msg,()=>{state.lib=state.lib.filter(x=>x.id!==id);saveLib();renderLibrary();toast("Deleted.");});}));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.del,used=monsterUsage(id),nm=(find(id)||{}).name||"";
+    const msg=`Delete “${nm}”?`+(used?` It's used in ${used} encounter${used>1?"s":""} — those combatants will show as unresolved until you re-link or remove them.`:"");
+    confirmModal(msg,()=>{if(used)markOrphanedCombatants(id,nm);state.lib=state.lib.filter(x=>x.id!==id);saveLib();if(used)saveAdv();renderLibrary();toast("Deleted.");});}));
   body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
   body.querySelectorAll("[data-pinlib]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.pinlib);if(m){m.pinned=!m.pinned;saveLib();renderLibrary();}}));
   body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
