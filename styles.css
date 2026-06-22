@@ -1,6 +1,6 @@
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
-  --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
+  --txt:#e7e9ee; --dim:#aaaaaa; --faint:#757575; /* muted text greys are true neutral (no cool-blue tint), matched to the old lightness (B174) */
   --accent:#e2654d; --brand:#e2654d; --brand-soft:#ef8470; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;

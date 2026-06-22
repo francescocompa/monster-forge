@@ -735,9 +735,9 @@ function renderEncList(a){
 // proportionally between them. The three threshold notches are neutral + clear; colour rides the fill only.
 function budModPct(bud){const span=bud[2]-bud[0];return span>0?clamp((bud[1]-bud[0])/span*100,0,100):50;}
 function budSpentPct(spent,bud){const span=bud[2]-bud[0];return span>0?clamp((spent-bud[0])/span*100,0,100):(spent>=bud[2]?100:0);}
-// Neutral grey ramp (lightening as the encounter fills up) — no accent/warm tinge; only over-budget goes
-// warm (it's the one genuinely alarming state). The difficulty pill carries the Low/Mod/High reading (B173).
-function budFillColor(cls){return {trivial:"#41454d",low:"#4e535c",moderate:"#5d636e",high:"#6e7580",over:"#a8503e"}[cls]||"#41454d";}
+// Difficulty-tinted fill: a desaturated hue per band (slate→green→amber→coral→red) so the bar colour agrees
+// with the difficulty pill; the threshold notches stay neutral (B173).
+function budFillColor(cls){return {trivial:"#39495c",low:"#4a6b52",moderate:"#6e5a36",high:"#8a4d42",over:"#a8503e"}[cls]||"#39495c";}
 function budMarksHTML(bud){
   const m=(lbl,xp,cls,style)=>`<div class="bud-mark ${cls}" style="${style}" data-budtip="${lbl} · ${xp.toLocaleString()} XP"></div>`;
   return m("Low",bud[0],"bm-start","left:0")
