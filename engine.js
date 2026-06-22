@@ -284,6 +284,7 @@ function renderPreview(){
   linkSpellFeatures($("#statblock"));
   if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
   persistForgeDraft(); // remember what's being edited so a reload restores it (B78)
+  if(typeof scheduleForgeHistory==="function")scheduleForgeHistory(); // B193: coalesce edits into the undo history
   if(typeof refreshSaveState==="function")refreshSaveState(); // reflect unsaved-changes state on the save controls
 }
 // Re-link spell names mentioned in spellcasting-derived feature bodies (reactions, hidden bonus

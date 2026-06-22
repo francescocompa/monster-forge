@@ -419,7 +419,37 @@ $$("[data-add]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.ad
 $$("[data-addatk]").forEach(b=>b.addEventListener("click",()=>{const best=mod(M.str)>=mod(M.dex)?"str":"dex";M.actions.push(ATK({ability:best}));renderEntries();renderPreview();}));
 $$("[data-addspell]").forEach(b=>b.addEventListener("click",()=>{const best=["int","wis","cha"].reduce((p,a)=>mod(M[a])>mod(M[p])?a:p,"cha");M.actions.push(SPELL({ability:best}));renderEntries();renderPreview();}));
 
-function loadMonster(m){
+// ── Forge draft undo/redo (B193) ───────────────────────────────────────────────
+// Whole-draft snapshot history (JSON of M). A burst of edits coalesces into one step via a debounced
+// recorder hooked off renderPreview; Cmd/Ctrl+Z steps back, Cmd/Ctrl+Shift+Z (or Ctrl+Y) forward. A
+// genuine loadMonster (new / clear / chassis / paste / bestiary) RESETS the history — undo never
+// crosses creatures. Restores replay through loadMonster(snapshot, true), which skips re-recording and
+// the scroll-to-top so the form just reverts in place.
+let _forgeHist=[],_forgeHi=-1,_forgeHistTimer=null,_forgeRestoring=false;
+const FORGE_HIST_CAP=80;
+function _forgeSnap(){try{return JSON.stringify(M);}catch(e){return null;}}
+function resetForgeHistory(){clearTimeout(_forgeHistTimer);_forgeHistTimer=null;const s=_forgeSnap();_forgeHist=s==null?[]:[s];_forgeHi=_forgeHist.length-1;_forgeRestoring=false;}
+function scheduleForgeHistory(){if(_forgeRestoring||_forgeHi<0)return;clearTimeout(_forgeHistTimer);_forgeHistTimer=setTimeout(recordForgeHistory,500);}
+function recordForgeHistory(){clearTimeout(_forgeHistTimer);_forgeHistTimer=null;
+  if(_forgeHi<0){resetForgeHistory();return;}
+  const cur=_forgeSnap();if(cur==null||cur===_forgeHist[_forgeHi])return; // unchanged since the last entry
+  _forgeHist=_forgeHist.slice(0,_forgeHi+1);_forgeHist.push(cur);_forgeHi=_forgeHist.length-1; // drop the redo branch
+  if(_forgeHist.length>FORGE_HIST_CAP){_forgeHist.shift();_forgeHi--;}}
+function _forgeRestore(i){_forgeRestoring=true;_forgeHi=i;loadMonster(JSON.parse(_forgeHist[i]),true);_forgeRestoring=false;}
+function forgeUndo(){recordForgeHistory(); // settle any pending burst first (keeps it redoable)
+  if(_forgeHi>0){_forgeRestore(_forgeHi-1);toast("Undo.");}else toast("Nothing to undo.");}
+function forgeRedo(){recordForgeHistory();
+  if(_forgeHi<_forgeHist.length-1){_forgeRestore(_forgeHi+1);toast("Redo.");}else toast("Nothing to redo.");}
+document.addEventListener("keydown",e=>{
+  if(typeof _curView!=="undefined"&&_curView!=="forge")return; // draft undo only on the Forge tab
+  const mb=document.getElementById("modalBg");if(mb&&mb.classList.contains("show"))return; // a modal owns the keys
+  if(!(e.metaKey||e.ctrlKey)||e.altKey)return;
+  const k=(e.key||"").toLowerCase();
+  if(k==="z"&&!e.shiftKey){e.preventDefault();forgeUndo();}
+  else if((k==="z"&&e.shiftKey)||k==="y"){e.preventDefault();forgeRedo();}
+});
+
+function loadMonster(m,_restoring){
   M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
   $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
   $("#f_size").value=M.size;updateCRDisplay();
@@ -438,7 +468,8 @@ function loadMonster(m){
   if(M._fromChassis&&!M._chassisSig)M._chassisSig=contentSig(M); // capture the pristine chassis baseline (B43)
   refreshAbil();renderDmg();renderSkills();renderTools();renderCimm();renderGear();renderEntries();renderPreview();
   expandAllFsBlocks(); // every fresh edit opens with all sections expanded (B64)
-  requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top
+  if(!_restoring)requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top (undo/redo keeps scroll)
+  if(!_restoring)resetForgeHistory(); // a genuine load begins a fresh undo history (B193); restores keep it
 }
 
 function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];

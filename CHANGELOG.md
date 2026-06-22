@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 193 — Forge draft undo/redo (Ctrl/Cmd+Z)
+- **Full undo/redo on the Forge draft.** A snapshot history of the whole draft `M` (forge.js): edits
+  coalesce into one undo step via a 500 ms debounced recorder hooked off `renderPreview`, so a burst of
+  typing is one step rather than per-keystroke. **Cmd/Ctrl+Z** steps back, **Cmd/Ctrl+Shift+Z** (or
+  **Ctrl+Y**) forward, each with a toast. Undo flushes any pending burst first, so the in-progress edit
+  stays redoable.
+- **History boundaries.** A genuine `loadMonster` (New / Clear / Load chassis / Paste 5etools / open from
+  Bestiary / forge-for-encounter) **resets** the history — undo never carries you back into a different
+  creature. Restores replay through `loadMonster(snapshot, true)`, a new second arg that skips both the
+  re-record and the scroll-to-top, so the form reverts in place. Stack capped at 80; a new edit after an
+  undo drops the redo branch.
+- **Scope guard.** The key handler is active only on the Forge tab and is suppressed while a modal is open
+  (so the paste/character dialogs keep their own keys). Verified live: undo/redo, keyboard shortcuts,
+  reset-on-load, branch truncation, and the view guard all behave. `npm run verify` green (12 tests, 0/0 lint).
+
 ## Batch 192 — Audit P1 fixes (chipfield ＋, faint contrast, mobile combat FAB, parser tests)
 - **Character-detail chipfield add control trimmed to `＋`.** The per-row add button (`cd-chip-addbtn`,
   `adventures.js`) read "＋ Add" on every preset row (Class / Subclass / Skills & expertise / Passive skills /
