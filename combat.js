@@ -341,8 +341,12 @@ function removeCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.
 // popover). Resolution order: a parsed condition, then the curated effect library (masteries + common
 // buffs/debuffs, CT10), then a parsed spell — so masteries and tracked spell-effects get a description too.
 function condChipHTML(itId,c,i){
-  const ref=findCondition(c.name)?"condition":findCuratedEffect(c.name)?"effect":(findSpell(c.name)?"spell":null);
-  const label=ref?`<span class="reflink reflink-plain" data-ref="${ref}" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
+  const eff=findCuratedEffect(c.name);
+  const ref=findCondition(c.name)?"condition":eff?"effect":(findSpell(c.name)?"spell":null);
+  // Show the state-adjective on the chip (Haste → "Hasted") so the combatant reads as the state it's in; the
+  // popover (data-name) keeps the canonical effect name.
+  const disp=(eff&&eff.adj)||c.name;
+  const label=ref?`<span class="reflink reflink-plain" data-ref="${ref}" data-name="${esc(c.name)}">${esc(disp)}</span>`:`<span>${esc(disp)}</span>`;
   return `<span class="cc-chip cc-cond${ref?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
 }
 // A chip's hover tooltip and a click-popover (e.g. the add-effect popover) share the single `_pop`

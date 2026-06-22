@@ -59,26 +59,28 @@ const MINION_GROUP_TEXT="Minions of the same kind can occupy the same space and 
 // CT10 — curated combat-effect library: hand-authored mechanical reminders for effects the parsed reference
 // libraries don't describe (the 3 weapon masteries) and for the common combat buffs/debuffs whose full spell
 // card is more than you want on a tracker chip. `group` feeds the add-effect dropdown's sections; `text` is the
-// chip's definition popover. Standard conditions still come from the parsed conditions library (findCondition).
+// chip's definition popover; `adj` (optional) is the state-adjective shown ON the chip (e.g. Haste → "Hasted")
+// so a tracked combatant reads as the state it's in — the popover keeps the proper `name`. Standard conditions
+// still come from the parsed conditions library (findCondition).
 const CURATED_EFFECTS=[
-  {name:"Sap",group:"mastery",text:"On a hit, the target has disadvantage on its next attack roll before the start of your next turn."},
-  {name:"Slow",group:"mastery",text:"On a hit, reduce the target's speed by 10 feet until the start of your next turn. Once per turn."},
-  {name:"Vex",group:"mastery",text:"On a hit, you have advantage on your next attack roll against the target before the end of your next turn."},
-  {name:"Bless",group:"spell",text:"+1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
-  {name:"Bane",group:"spell",text:"−1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
-  {name:"Haste",group:"spell",text:"+2 AC, advantage on Dexterity saving throws, doubled speed, and one extra limited action each turn. When it ends, the target can't move or take actions until the end of its next turn. Concentration."},
-  {name:"Hex",group:"spell",text:"Your attacks deal an extra 1d6 necrotic to the target, and it has disadvantage on ability checks made with one chosen ability. Concentration."},
-  {name:"Hunter's Mark",group:"spell",text:"Your weapon attacks deal an extra 1d6 damage to the marked target. Concentration."},
-  {name:"Faerie Fire",group:"spell",text:"Attack rolls against the target have advantage, and it can't benefit from being Invisible. Concentration, up to 1 minute."},
-  {name:"Blur",group:"spell",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration."},
-  {name:"Shield of Faith",group:"spell",text:"+2 AC. Concentration, up to 10 minutes."},
-  {name:"Heroism",group:"spell",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
-  {name:"Invisibility",group:"spell",text:"The target is Invisible — attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
-  {name:"Hold Person",group:"spell",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
-  {name:"Guidance",group:"spell",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
+  {name:"Sap",group:"mastery",adj:"Sapped",text:"On a hit, the target has disadvantage on its next attack roll before the start of your next turn."},
+  {name:"Slow",group:"mastery",adj:"Slowed",text:"On a hit, reduce the target's speed by 10 feet until the start of your next turn. Once per turn."},
+  {name:"Vex",group:"mastery",adj:"Vexed",text:"On a hit, you have advantage on your next attack roll against the target before the end of your next turn."},
+  {name:"Bless",group:"spell",adj:"Blessed",text:"+1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
+  {name:"Bane",group:"spell",adj:"Baned",text:"−1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
+  {name:"Haste",group:"spell",adj:"Hasted",text:"+2 AC, advantage on Dexterity saving throws, doubled speed, and one extra limited action each turn. When it ends, the target can't move or take actions until the end of its next turn. Concentration."},
+  {name:"Hex",group:"spell",adj:"Hexed",text:"Your attacks deal an extra 1d6 necrotic to the target, and it has disadvantage on ability checks made with one chosen ability. Concentration."},
+  {name:"Hunter's Mark",group:"spell",adj:"Marked",text:"Your weapon attacks deal an extra 1d6 damage to the marked target. Concentration."},
+  {name:"Faerie Fire",group:"spell",adj:"Outlined",text:"Attack rolls against the target have advantage, and it can't benefit from being Invisible. Concentration, up to 1 minute."},
+  {name:"Blur",group:"spell",adj:"Blurred",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration."},
+  {name:"Shield of Faith",group:"spell",adj:"Shielded",text:"+2 AC. Concentration, up to 10 minutes."},
+  {name:"Heroism",group:"spell",adj:"Emboldened",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
+  {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible — attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
+  {name:"Hold Person",group:"spell",adj:"Held",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
+  {name:"Guidance",group:"spell",adj:"Guided",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
   {name:"Resistance",group:"spell",text:"+1d4 to one saving throw of the target's choice. Concentration. (Cantrip.)"},
-  {name:"Sanctuary",group:"spell",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature attacks or casts a spell at an enemy."},
-  {name:"Aid",group:"spell",text:"The target's hit point maximum and current hit points increase by 5 (or more at higher levels) for 8 hours."}
+  {name:"Sanctuary",group:"spell",adj:"Warded",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature attacks or casts a spell at an enemy."},
+  {name:"Aid",group:"spell",adj:"Aided",text:"The target's hit point maximum and current hit points increase by 5 (or more at higher levels) for 8 hours."}
 ];
 const CURATED_EFFECT_GROUP_LABEL={mastery:"Weapon masteries",spell:"Spell effects"};
 // Case-insensitive lookup into the curated library (matches on the bare name, ignoring any "(…)" qualifier).

@@ -4,6 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 183 — Effect chips show state-adjectives + refpop fade fix
+- **Curated effect chips read as a state.** Each `CURATED_EFFECTS` entry gained an optional `adj` (Haste →
+  "Hasted", Bless → "Blessed", Hex → "Hexed", Hunter's Mark → "Marked", Invisibility → "Invisible", Hold
+  Person → "Held", etc.). `condChipHTML` shows the adjective on the chip while the reflink's `data-name` keeps
+  the canonical name, so the definition popover still titles itself "Haste". Entries with no clean adjective
+  (Resistance) keep the name.
+- **Reference popover bottom line is readable + scrolls clean.** The sticky scroll-fade was 26px tall over
+  only 12px of bottom padding, so the final line of a long effect/spell/condition always sat half-faded and
+  clipped. Bumped `.refpop` bottom padding to 22px and matched the `::after` fade height/margins, so at max
+  scroll the last line clears the gradient.
+
 ## Batch 182 — CT10 curated effect library + refined spell group
 - **Curated combat-effect library (CT10).** New hand-authored `CURATED_EFFECTS` set in `data.js` — the 3
   weapon masteries (Sap/Slow/Vex) plus ~15 common combat buffs/debuffs (Bless, Bane, Haste, Hex, Hunter's
