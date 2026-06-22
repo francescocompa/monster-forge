@@ -56,6 +56,33 @@ const VILLAIN_INTRO="[C] has three villain actions. [C] can take each one once p
 // MCDM (Flee Mortals!) minion ruleset — applied as traits when a stat block is flagged a minion.
 const MINION_TRAIT_TEXT="If [c] takes damage from an attack or as the result of a failed saving throw, its hit points are reduced to 0. If [c] takes damage from an effect that allows a saving throw, it takes no damage on a success and is reduced to 0 hit points on a failure.";
 const MINION_GROUP_TEXT="Minions of the same kind can occupy the same space and act as a group. When several minions in a group make the same attack, resolve it once and total the fixed damage of every minion that hit.";
+// CT10 — curated combat-effect library: hand-authored mechanical reminders for effects the parsed reference
+// libraries don't describe (the 3 weapon masteries) and for the common combat buffs/debuffs whose full spell
+// card is more than you want on a tracker chip. `group` feeds the add-effect dropdown's sections; `text` is the
+// chip's definition popover. Standard conditions still come from the parsed conditions library (findCondition).
+const CURATED_EFFECTS=[
+  {name:"Sap",group:"mastery",text:"On a hit, the target has disadvantage on its next attack roll before the start of your next turn."},
+  {name:"Slow",group:"mastery",text:"On a hit, reduce the target's speed by 10 feet until the start of your next turn. Once per turn."},
+  {name:"Vex",group:"mastery",text:"On a hit, you have advantage on your next attack roll against the target before the end of your next turn."},
+  {name:"Bless",group:"spell",text:"+1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
+  {name:"Bane",group:"spell",text:"−1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
+  {name:"Haste",group:"spell",text:"+2 AC, advantage on Dexterity saving throws, doubled speed, and one extra limited action each turn. When it ends, the target can't move or take actions until the end of its next turn. Concentration."},
+  {name:"Hex",group:"spell",text:"Your attacks deal an extra 1d6 necrotic to the target, and it has disadvantage on ability checks made with one chosen ability. Concentration."},
+  {name:"Hunter's Mark",group:"spell",text:"Your weapon attacks deal an extra 1d6 damage to the marked target. Concentration."},
+  {name:"Faerie Fire",group:"spell",text:"Attack rolls against the target have advantage, and it can't benefit from being Invisible. Concentration, up to 1 minute."},
+  {name:"Blur",group:"spell",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration."},
+  {name:"Shield of Faith",group:"spell",text:"+2 AC. Concentration, up to 10 minutes."},
+  {name:"Heroism",group:"spell",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
+  {name:"Invisibility",group:"spell",text:"The target is Invisible — attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
+  {name:"Hold Person",group:"spell",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
+  {name:"Guidance",group:"spell",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
+  {name:"Resistance",group:"spell",text:"+1d4 to one saving throw of the target's choice. Concentration. (Cantrip.)"},
+  {name:"Sanctuary",group:"spell",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature attacks or casts a spell at an enemy."},
+  {name:"Aid",group:"spell",text:"The target's hit point maximum and current hit points increase by 5 (or more at higher levels) for 8 hours."}
+];
+const CURATED_EFFECT_GROUP_LABEL={mastery:"Weapon masteries",spell:"Spell effects"};
+// Case-insensitive lookup into the curated library (matches on the bare name, ignoring any "(…)" qualifier).
+function findCuratedEffect(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return n?CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n):null;}
 // Gear self-suggestion (B38): manufactured weapons matched against attack names, armor against the AC note.
 const GEAR_WEAPONS=["Club","Dagger","Greatclub","Handaxe","Javelin","Light Hammer","Mace","Quarterstaff","Sickle","Spear","Dart","Light Crossbow","Shortbow","Sling","Battleaxe","Flail","Glaive","Greataxe","Greatsword","Halberd","Lance","Longsword","Maul","Morningstar","Pike","Rapier","Scimitar","Shortsword","Trident","War Pick","Warhammer","Whip","Blowgun","Hand Crossbow","Heavy Crossbow","Longbow","Net","Musket","Pistol","Scythe","Crossbow"];
 const GEAR_ARMOR=["Padded Armor","Studded Leather Armor","Leather Armor","Hide Armor","Chain Shirt","Scale Mail","Breastplate","Half Plate Armor","Ring Mail","Chain Mail","Splint Armor","Plate Armor","Shield"];

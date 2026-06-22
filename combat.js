@@ -225,8 +225,6 @@ function changeHP(it,amt){if(it.hpMax==null)return;
   applyDownState(it);}
 // Adjust max HP by a signed delta (e.g. Aid: +5 raises max AND current); reductions clamp current.
 function adjustMaxHP(it,delta){if(it.hpMax==null)return;it.hpMax=Math.max(1,it.hpMax+delta);if(delta>0)it.hpCur=Math.min(it.hpCur+delta,it.hpMax);else it.hpCur=Math.min(it.hpCur,it.hpMax);}
-// 2024 weapon masteries that leave a tracked effect on the struck enemy (offered in the add-effect dropdown).
-const WEAPON_MASTERIES=["Sap","Slow","Vex"];
 const CI_STATUSES=["active","waiting","dead"];
 const CI_STATUS_LABEL={active:"Active",waiting:"Waiting",dead:"Dead"};
 // FA Free solid status icons (B118) — shapes convey status so it no longer relies on colour (which clashed
@@ -339,11 +337,13 @@ function ungroupCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx
 function removeCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,idx=cb.order.findIndex(x=>x.id===itId);if(idx<0)return;
   cb.order.splice(idx,1);if(idx<cb.turnIndex)cb.turnIndex--;
   cb.turnIndex=Math.max(0,Math.min(cb.turnIndex,cb.order.length-1));saveAdv();renderCombat();}
-// Condition chip: known conditions become reflinks (global hover/click → definition popover).
+// Condition/effect chip: anything the app can describe becomes a reflink (global hover/click → definition
+// popover). Resolution order: a parsed condition, then the curated effect library (masteries + common
+// buffs/debuffs, CT10), then a parsed spell — so masteries and tracked spell-effects get a description too.
 function condChipHTML(itId,c,i){
-  const known=findCondition(c.name);
-  const label=known?`<span class="reflink reflink-plain" data-ref="condition" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
-  return `<span class="cc-chip cc-cond${known?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
+  const ref=findCondition(c.name)?"condition":findCuratedEffect(c.name)?"effect":(findSpell(c.name)?"spell":null);
+  const label=ref?`<span class="reflink reflink-plain" data-ref="${ref}" data-name="${esc(c.name)}">${esc(c.name)}</span>`:`<span>${esc(c.name)}</span>`;
+  return `<span class="cc-chip cc-cond${ref?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
 }
 // A chip's hover tooltip and a click-popover (e.g. the add-effect popover) share the single `_pop`
 // instance, so a bare mouseleave→closePopover would slam the click-popover shut the moment the cursor
@@ -380,9 +380,18 @@ function openCondAdd(itId,anchor,targets){
   // non-instantaneous — effects) as headed sections in a single scrollable list, filtered by the search field.
   // The list lives in the popover (not a separate floating dropdown), so the cursor can move onto it freely.
   const condNames=()=>enConditions().filter(c=>(c.category||"Conditions")==="Conditions").map(c=>c.name).sort((a,b)=>a.localeCompare(b));
-  const masteryNames=()=>WEAPON_MASTERIES.slice();
-  const spellNames=()=>[...new Set(enSpells().filter(s=>{const d=s.duration||"";return /concentration/i.test(d)||(/\d/.test(d)&&!/instant/i.test(d));}).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
-  const GROUPS=[["Conditions",condNames],["Masteries",masteryNames],["Spells",spellNames]];
+  const curatedNames=g=>()=>CURATED_EFFECTS.filter(e=>e.group===g).map(e=>e.name).sort((a,b)=>a.localeCompare(b));
+  const curatedSet=new Set(CURATED_EFFECTS.map(e=>e.name.toLowerCase()));
+  // "An effect you'd track on a combatant": concentration, or a short timed duration (rounds/minutes) — NOT
+  // instantaneous, and NOT the long hour+/permanent/until-dispelled durations that are almost all utility
+  // (Alarm, wards, etc.). Curated entries are excluded — they have their own Spell effects group above.
+  const spellNames=()=>[...new Set(enSpells().filter(s=>{const d=s.duration||"";
+    if(curatedSet.has(s.name.toLowerCase()))return false;
+    if(/concentration/i.test(d))return true;
+    if(/instant|until dispelled|permanent|special/i.test(d))return false;
+    return /\b(?:round|minute)s?\b/i.test(d);
+  }).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
+  const GROUPS=[["Conditions",condNames],["Weapon masteries",curatedNames("mastery")],["Spell effects",curatedNames("spell")],["Spells",spellNames]];
   const chev=p.querySelector(".cond-combo-chev");
   const renderList=()=>{const q=inp.value.trim().toLowerCase();
     const html=GROUPS.map(([label,fn])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));

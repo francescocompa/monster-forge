@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 182 — CT10 curated effect library + refined spell group
+- **Curated combat-effect library (CT10).** New hand-authored `CURATED_EFFECTS` set in `data.js` — the 3
+  weapon masteries (Sap/Slow/Vex) plus ~15 common combat buffs/debuffs (Bless, Bane, Haste, Hex, Hunter's
+  Mark, Faerie Fire, Blur, Shield of Faith, Heroism, Invisibility, Hold Person, Guidance, Resistance,
+  Sanctuary, Aid) with concise 2024 mechanical reminders. Standard conditions still come from the parsed
+  conditions library.
+- **Every recognized effect chip now has a description popover.** `condChipHTML` resolves a chip's reflink in
+  order: parsed condition → curated effect (`data-ref="effect"`) → parsed spell. So masteries and tracked
+  spell-effects — which previously had no definition — now get a hover/click popover. New `refContent`
+  branch for `kind:"effect"` (via `findCuratedEffect`, `CURATED_EFFECT_GROUP_LABEL`).
+- **Add-effect dropdown groups** are now Conditions / Weapon masteries / Spell effects / Spells. The first
+  three are curated/parsed; the curated names are excluded from the parsed Spells group (no duplicates).
+- **Refined the parsed "Spells" heuristic** (the smaller task). Was: any non-instantaneous duration — which
+  swept in utility spells like Alarm. Now: concentration, OR a *short* timed duration (rounds/minutes);
+  excludes instantaneous, permanent, until-dispelled, special, and the long hour+/utility durations.
+- Removed the now-unused `WEAPON_MASTERIES` const (folded into `CURATED_EFFECTS`).
+
 ## Batch 181 — Level Up keeps scroll position
 - **Clicking "Level Up" no longer jumps the page to the top.** `levelUpParty` still re-renders the whole
   adventure detail (a level change recomputes every encounter's budget), but it now captures the

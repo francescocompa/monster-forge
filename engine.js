@@ -75,6 +75,8 @@ function refContent(kind,name){
     return `<div class="refcard-h">${esc(s.name)}${srcBadge(s)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   if(kind==="rule"){const r=findRule(name);if(!r)return "";
     return `<div class="refcard-h">${esc(r.name)}${srcBadge(r)}</div><div class="refcard-meta">${esc(r.category||"Rule")}</div>${r.text?`<div class="refcard-body">${fmtBlock(r.text)}</div>`:""}`;}
+  if(kind==="effect"){const e=findCuratedEffect(name);if(!e)return "";
+    return `<div class="refcard-h">${esc(e.name)}</div><div class="refcard-meta">${esc(CURATED_EFFECT_GROUP_LABEL[e.group]||"Effect")}</div><div class="refcard-body">${fmtBlock(e.text)}</div>`;}
   const c=findCondition(name);if(!c)return "";
   return `<div class="refcard-h">${esc(c.name)}${srcBadge(c)}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
 // Source-id badge (e.g. XPHB) with the full book title as a hover tooltip when known.
