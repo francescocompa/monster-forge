@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 190 — Kebab (⋯) buttons centred
+- **The ⋯ menu buttons sat ~1–1.7px right of centre.** Cause: the UA default button padding (`1px 6px`)
+  shrank the content box below the wide `⋯` glyph advance, so the glyph overflowed right and the
+  `place-items:center` couldn't centre it. Zeroing the padding (`.kebab,.ai-kbtn,.rr-kebab,.cd-gx,.cbt-kebab
+  {padding:0}`) lets it centre exactly — verified the adventure-card, adventure-detail, scene and encounter
+  kebabs all measure dX 0. (Found via the icon-centring audit; the user flagged the adventure-card kebab.)
+
 ## Batch 189 — Loading-screen + dice-cursor animation rework
 - **Boot screen: calm pulse, no dots.** The d20 now gently breathes (`bootPulse` — a scale + opacity pulse)
   instead of the old jerky `ease-in-out` tumble-with-scale-swell. The three bouncing dots under the wordmark

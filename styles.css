@@ -307,6 +307,10 @@ select::-ms-expand{display:none}
 .menu-wrap{position:relative;flex:none}
 .kebab{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:5px;width:30px;height:32px;flex:none;display:grid;place-items:center;font-size:17px;line-height:1}
 .kebab:hover{border-color:var(--accent);color:var(--txt)}
+/* Kebab/icon-glyph buttons: zero the UA button padding. The default 6px side padding shrinks the content box
+   below the wide "⋯" advance, so the glyph overflows right and reads off-centre; padding:0 lets place-items
+   centre it exactly (icon-centring audit). */
+.kebab,.ai-kbtn,.rr-kebab,.cd-gx,.cbt-kebab{padding:0}
 /* z-index above the floating sidebar drawer (.app.sidebar-open .rail = 48) so menus/popovers never
    sit behind / get clipped by the sidebar (B79). Popovers are 60. */
 .menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:5px;min-width:178px;z-index:52;box-shadow:var(--shadow-pop)}
