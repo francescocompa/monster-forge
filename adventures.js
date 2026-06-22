@@ -735,7 +735,9 @@ function renderEncList(a){
 // proportionally between them. The three threshold notches are neutral + clear; colour rides the fill only.
 function budModPct(bud){const span=bud[2]-bud[0];return span>0?clamp((bud[1]-bud[0])/span*100,0,100):50;}
 function budSpentPct(spent,bud){const span=bud[2]-bud[0];return span>0?clamp((spent-bud[0])/span*100,0,100):(spent>=bud[2]?100:0);}
-function budFillColor(cls){return {trivial:"#39495c",low:"#4a6b52",moderate:"#6e5a36",high:"#8a4d42",over:"#a8503e"}[cls]||"#39495c";}
+// Neutral grey ramp (lightening as the encounter fills up) — no accent/warm tinge; only over-budget goes
+// warm (it's the one genuinely alarming state). The difficulty pill carries the Low/Mod/High reading (B173).
+function budFillColor(cls){return {trivial:"#41454d",low:"#4e535c",moderate:"#5d636e",high:"#6e7580",over:"#a8503e"}[cls]||"#41454d";}
 function budMarksHTML(bud){
   const m=(lbl,xp,cls,style)=>`<div class="bud-mark ${cls}" style="${style}" data-budtip="${lbl} · ${xp.toLocaleString()} XP"></div>`;
   return m("Low",bud[0],"bm-start","left:0")
@@ -815,7 +817,7 @@ function combatHTML(e,c){
   // statblock / CR control drops to a quiet subtitle under the name; XP sits right with a hover-only remove.
   const cnt=`<div class="cbt-cnt"><input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count" aria-label="Count"><span class="cbt-x">×</span></div>`;
   // Per-row actions live in a hover kebab (turn into minion / edit in Forge / duplicate / delete) — B172.
-  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn cbt-kebab" data-emenu="${c.id}" aria-label="Combatant actions">⋯</button></div>`;
+  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="cbt-kebab" data-emenu="${c.id}" aria-label="Combatant actions">⋯</button></div>`;
   if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
@@ -852,7 +854,7 @@ function findCombat(a,cid){for(const e of a.encounters){const c=e.combatants.fin
 // explained by the inline ?), edit the statblock in the Forge, duplicate, or delete.
 function openEncCombatantMenu(a,e,c,anchor){
   const isMin=combatIsMinion(c),m=c.type==="monster"?monOf(c):null;
-  let html=`<button class="popitem" data-emi="minion">${isMin?"Remove minion":"Turn into minion"}<span class="popitem-q" data-mintip title="${esc(MINION_NOTE)}">?</span></button>`;
+  let html=`<button class="popitem" data-emi="minion">${isMin?"Remove minion":"Turn into minion"}<span class="popitem-q" data-mintip data-note="${esc(MINION_NOTE)}" aria-label="What is a minion?">?</span></button>`;
   if(m)html+=`<button class="popitem" data-emi="forge">Edit in Forge</button>`;
   html+=`<button class="popitem" data-emi="dupe">Duplicate</button>`;
   html+=`<div class="popsep"></div><button class="popitem danger" data-emi="del">Delete</button>`;
@@ -871,7 +873,7 @@ function openEncCombatantMenu(a,e,c,anchor){
 function monPickListHTML(selId,q){
   q=(q||"").trim().toLowerCase();
   const match=m=>!q||(m.name||"").toLowerCase().includes(q)||("cr "+m.cr).includes(q);
-  const item=m=>`<button class="popitem${m.id===selId?" on":""}" data-mid="${m.id}"><span class="mp-nm">${esc(m.name)}</span><span class="mp-cr">CR ${m.cr}${m.minion?" · minion":""}</span></button>`;
+  const item=m=>`<button class="popitem${m.id===selId?" on":""}" data-mid="${m.id}"><span class="mp-nm">${esc(m.name)}</span>${m.minion?`<span class="mp-cr">minion</span>`:""}</button>`;
   let html="";
   const recent=state.lib.reduce((a,b)=>((b._savedAt||0)>((a&&a._savedAt)||0)?b:a),null);
   if(recent&&match(recent))html+=`<div class="pop-grp-lbl">Last edited</div>${item(recent)}`;
@@ -894,7 +896,7 @@ function openStatblockDropdown(a,c,anchor){
 function openCRDropdown(a,c,anchor){
   const crItems=q=>{q=(q||"").trim().toLowerCase();const list=CR_LIST.filter(x=>!q||("cr "+x).includes(q)||String(x).toLowerCase().includes(q));
     return list.map(x=>`<button class="popitem${x===c.cr?" on":""}" data-cr="${x}">CR ${x}</button>`).join("")||`<div class="cl-empty">No CR matches.</div>`;};
-  const minRow=()=>`<div class="popsep"></div><button class="popitem popcheck${combatIsMinion(c)?" on":""}" data-crmin><span class="ck">${combatIsMinion(c)?"✓":""}</span>Minion<span class="popitem-q" data-mintip title="${esc(MINION_NOTE)}">?</span></button>`;
+  const minRow=()=>`<div class="popsep"></div><button class="popitem popcheck${combatIsMinion(c)?" on":""}" data-crmin><span class="ck">${combatIsMinion(c)?"✓":""}</span>Minion<span class="popitem-q" data-mintip data-note="${esc(MINION_NOTE)}" aria-label="What is a minion?">?</span></button>`;
   const p=showPopover(anchor,`<input class="popinput cr-pick-in" placeholder="Search CR…" autocomplete="off"><div class="popscroll cr-pick-list">${crItems("")}</div>${minRow()}`);
   const inp=p.querySelector(".cr-pick-in"),list=p.querySelector(".cr-pick-list");inp.focus();
   const bind=()=>list.querySelectorAll("[data-cr]").forEach(b=>b.addEventListener("click",()=>{closePopover();c.cr=b.dataset.cr;saveAdv();renderEncList(a);}));

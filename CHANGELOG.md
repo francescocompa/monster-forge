@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 174 — Encounter card micro-fixes
+- **Statblock dropdown drops the per-item "CR x"** (the list is already grouped by CR); minion creatures keep a
+  small `minion` tag.
+- **Budget fill is a neutral grey ramp** again (Trivial→High lighten through the app's neutral greys, no
+  green/amber/coral tinge); only **Over High** stays warm — the difficulty pill carries the reading.
+- **Minion `?` now has a styled note popover** (CSS hover tooltip with the `MINION_NOTE` text, right-aligned in
+  the menu item) instead of relying on the native `title`.
+- **Row kebab `⋯` is vertically centred** — it was inheriting `.iconbtn`'s `height:32px` and overflowing the
+  22px XP cell; dropped the class so it fills the cell.
+
 ## Batch 173 — Type-to-search statblock & CR dropdowns
 - **Statblock picker is now a custom type-to-search dropdown** (`openStatblockDropdown`), replacing the native
   `<select>` on monster rows: a search field over the creatures grouped "Last edited" + by CR, the current pick
