@@ -1,13 +1,13 @@
 :root{
-  --bg:#131313; --panel:#1d1d1d; --panel2:#262626; --panel3:#2e2e2e; --line:#343434;
-  --txt:#e9e9e9; --dim:#aaaaaa; --faint:#757575; /* the whole grey scale is true neutral — no cool-blue tint — each matched to its old luminance (B175) */
+  --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
+  --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
   --accent:#e2654d; --brand:#e2654d; --brand-soft:#ef8470; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
-  --sb:#1b1b1b; --sb2:#212121; --sb-edge:#313131;
+  --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
   /* Radius scale (B1 design-system pass). --r = default control radius (kept at 7px, the dominant value);
      applied to the structural component families (cards, CTA buttons, popups). Nested micro-radii left as-is. */
   --r-sm:5px; --r:7px; --r-lg:9px; --r-xl:11px;
-  --accent-hover:#e87964; --in:#0f0f0f; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
+  --accent-hover:#e87964; --in:#0e0f12; --shadow-pop:0 10px 28px rgba(0,0,0,.55);
   /* Unified "selected" card state (B1 design-system pass): 1px coloured border + faint tint, no glow.
      --sel-accent defaults to the global accent; a coloured card (adventure / faction) overrides it inline so
      the border AND tint follow the local colour. NB: custom props resolve at their declaring element, so we
@@ -202,7 +202,7 @@ label.f .f-lbl{display:flex;align-items:center;justify-content:space-between;gap
 label.f .req{color:var(--accent-soft)}
 input:not([type]),input[type=text],input[type=number],select,textarea{background:var(--in);border:1px solid var(--line);border-radius:5px;padding:8px 9px;width:100%;transition:border-color .12s}
 input:not([type]):hover,input:not([type]):focus{border-color:var(--accent);outline:none}
-input:hover,select:hover,textarea:hover{border-color:#424242}
+input:hover,select:hover,textarea:hover{border-color:#3c424c}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{resize:vertical;min-height:60px;line-height:1.45}
 /* Dark-theme resize grip (B65): the UA default rendered as white/light diagonal lines that read as a
@@ -340,7 +340,7 @@ select::-ms-expand{display:none}
 .dchip.imm{border-color:#2c4d6e;color:#86b6e0}.dchip.imm .st{background:rgba(91,155,213,.2);color:#86b6e0;border-color:#2c4d6e}
 .dchip.vuln{border-color:#6e3329;color:#e89784}.dchip.vuln .st{background:rgba(210,96,74,.22);color:#e89784;border-color:#6e3329}
 
-.entry{border:1px solid var(--line);border-radius:7px;padding:10px;margin-bottom:9px;background:#171717;transition:border-color .12s;position:relative}
+.entry{border:1px solid var(--line);border-radius:7px;padding:10px;margin-bottom:9px;background:#15171b;transition:border-color .12s;position:relative}
 .entry:focus-within{border-color:var(--accent-soft)}
 .entry[data-drag]{cursor:grab}
 .entry[data-drag]:active{cursor:grabbing}
@@ -405,13 +405,14 @@ select::-ms-expand{display:none}
 .enc.focused{border-color:var(--sel-accent);background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel))}
 /* On a selected card the whole accent (hovers, focus rings) follows the card's local colour, and the muted
    greys are tinted toward it too so they blend on the tint instead of clashing as cool grey-on-colour.
-   Solid CTAs keep --brand (see .start-combat below). Greys stay light enough to read on every ADV_COLOR. */
-.card.selected,.adv-list .ai.sel,.enc.focused,.cbt-row.active{
+   Solid CTAs keep --brand (see .start-combat below). Greys stay light enough to read on every ADV_COLOR.
+   NB: a focused encounter is deliberately excluded (B177) — its muted text keeps the plain greyscale palette. */
+.card.selected,.adv-list .ai.sel,.cbt-row.active{
   --accent:var(--sel-accent);
   --accent-soft:color-mix(in srgb,var(--sel-accent) 72%,#fff);
   --accent-hover:color-mix(in srgb,var(--sel-accent) 84%,#fff);
-  --dim:color-mix(in srgb,var(--sel-accent) 15%,#c7c7c7);
-  --faint:color-mix(in srgb,var(--sel-accent) 15%,#909090);
+  --dim:color-mix(in srgb,var(--sel-accent) 15%,#c4c7cd);
+  --faint:color-mix(in srgb,var(--sel-accent) 15%,#8c9099);
 }
 .enc.focused .start-combat{background:var(--brand)}.enc.focused .start-combat:hover{background:var(--brand);filter:brightness(1.1)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
@@ -427,7 +428,7 @@ select::-ms-expand{display:none}
 .toggle{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600}
 
 .derived{display:flex;flex-wrap:wrap;gap:6px}
-.dchip2{background:#171717;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--dim);flex:1;min-width:84px;text-align:center}
+.dchip2{background:#15171b;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--dim);flex:1;min-width:84px;text-align:center}
 .dchip2 b{display:block;color:var(--txt);font-size:14px;font-weight:600;margin-top:2px}
 .dchip2 .dabil{color:var(--faint);font-weight:600;font-size:.78em;letter-spacing:.04em}
 .cr-targets{background:rgba(217,169,65,.08);border:1px solid #5c4d24;border-radius:7px;padding:8px 11px;font-size:11px;color:var(--amber-soft)}
@@ -540,8 +541,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .dice-help code{font-family:"JetBrains Mono",monospace;background:var(--in);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--amber-soft);font-size:11px;white-space:nowrap}
 .dice-help a{color:var(--info)}
 /* Roll-log panel */
-.roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #494949;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden;font-size:12.5px}
-.roll-log .rl-head{display:flex;align-items:center;gap:6px;padding:7px 9px;background:#1c1c1c;border-bottom:1px solid #494949;cursor:grab;touch-action:none}
+.roll-log{position:absolute;left:18px;bottom:18px;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #434956;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden;font-size:12.5px}
+.roll-log .rl-head{display:flex;align-items:center;gap:6px;padding:7px 9px;background:#1a1c21;border-bottom:1px solid #434956;cursor:grab;touch-action:none}
 .roll-log.dragging{cursor:grabbing;user-select:none}
 .roll-log.dragging .rl-head{cursor:grabbing}
 .roll-log .rl-grow{flex:1}
@@ -610,7 +611,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .roll-log .rl-advlbl{flex:none;font-size:8px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:1px 4px;border:1px solid}
 .roll-log .rl-advlbl.adv{color:var(--ok);border-color:var(--ok)}
 .roll-log .rl-advlbl.dis{color:var(--bad);border-color:var(--bad)}
-.roll-log .rl-crit{flex:none;font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#1c1c1c;background:var(--amber);border-radius:3px;padding:0 4px}
+.roll-log .rl-crit{flex:none;font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#1a1c21;background:var(--amber);border-radius:3px;padding:0 4px}
 .roll-log .rl-src{display:block;margin-bottom:1px;background:none;border:none;padding:0;font-size:10px;color:#fff;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;order:-1;text-decoration:underline dashed rgba(255,255,255,.45);text-underline-offset:2px}
 .roll-log .rl-src:hover{text-decoration:underline solid #fff}
 /* Grouped rolls: shared source + name once, then each sub-roll. The group adds NO horizontal
@@ -1482,7 +1483,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .budget .bartrack{position:relative;padding:5px 0}
 .budget .bar{height:8px;background:var(--in);border:1px solid var(--line);border-radius:5px;overflow:hidden}
 .budget .fill{height:100%;border-radius:4px;background:var(--budfill);transition:width .2s,background .2s}
-.budget .bud-mark{position:absolute;top:50%;margin-top:-7px;width:2px;height:14px;background:#c9c9c9;border-radius:1px;z-index:2;cursor:help}
+.budget .bud-mark{position:absolute;top:50%;margin-top:-7px;width:2px;height:14px;background:#c4c9d1;border-radius:1px;z-index:2;cursor:help}
 .budget .bud-mark.bm-mid{transform:translateX(-50%)}
 .budget .bud-mark:hover{background:#fff}
 .bud-pop{font-size:11px;color:var(--txt);white-space:nowrap;font-variant-numeric:tabular-nums}
