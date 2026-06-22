@@ -4,6 +4,38 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 192 — Audit P1 fixes (chipfield ＋, faint contrast, mobile combat FAB, parser tests)
+- **Character-detail chipfield add control trimmed to `＋`.** The per-row add button (`cd-chip-addbtn`,
+  `adventures.js`) read "＋ Add" on every preset row (Class / Subclass / Skills & expertise / Passive skills /
+  Damage modifiers); now it's just `＋`, with `title`/`aria-label="Add"` kept so screen readers still announce
+  it. One shared builder, so all five preset rows update together; the section-level buttons (Add character,
+  Add a property, Add combatant) are untouched.
+- **`--faint` bumped #6e7580 → #7e858f to clear WCAG AA.** The old faint grey was ~3.8:1 on `--bg` (under the
+  4.5:1 floor for small text — hints, placeholders, separators); the new value is ~5:1 on `--bg` and ~4.5:1 on
+  `--panel`, a minimal nudge that preserves the faint/`--dim` hierarchy. Single-token change.
+- **Mobile combat: "Add note" no longer sits under the turn FAB.** On the stacked layout (`@media
+  max-width:1080px`) the active panel reaches the bottom of the viewport, under the fixed `.combat-fab-turn`.
+  Added `.combat-wrap{padding-bottom:60px}` in that breakpoint to reserve a gutter, so the active panel clips
+  above the FAB band and its bottom controls clear it (verified at 375px: scrolled-to-bottom gap +92px, no
+  overlap). Desktop (tall full-height active panel + existing 84px `.ca-scroll` pad) was already fine.
+- **New `test/parsers.test.js` — round-trip coverage for the importers.** Three tests through the jsdom harness:
+  `parse5etools` (text block → monster fields + action), `mapMonsterJSON` (5etools JSON → monster, incl.
+  `{@atkr}`/`{@hit}` tag stripping), and `parseBestiaryJSON` (a `_copy` variant inheriting its base). Covers the
+  most complex, previously-untested code. `npm run verify` now runs 12 tests, all green; lint 0/0.
+
+## Batch 191 — Holistic project audit + README architecture refresh
+- **New `AUDIT.md`** — full diagnostic across code structure, engineering practice/metrics, performance,
+  security, design, UX flows, and content, with prioritized P1–P3 recommendations. No runtime behaviour
+  was changed (report + safe doc fix only). Headlines: code is clean (lint 0/0, no `console.`/`TODO` debt,
+  XSS-safe via `esc()`-before-markup + TreeWalker colorize); main costs are line density + a few 100–150-line
+  functions + the re-render-the-world UI pattern (fine at personal scale). Logged findings: `--faint` (#6e7580)
+  is sub-AA (~3.8:1); parser layer has no direct tests; no undo anywhere; mobile combat "Add note" overlaps the
+  Next-turn FAB. Locked decisions (JSONBin/embedded key, no build step) left as-is by design.
+- **`README.md` was stale → corrected.** It still described "three plain files" with all logic in `app.js`
+  and "three views". Replaced the layout section with the real 9-file table (data/parsers/core/forge/engine/
+  bestiary/adventures/combat + app) and the four views (Forge/Bestiary/Adventures/Combat); fixed "drop the
+  three files" → "drop the files". Docs only; `npm run verify` green.
+
 ## Batch 190 — Kebab (⋯) buttons centred
 - **The ⋯ menu buttons sat ~1–1.7px right of centre.** Cause: the UA default button padding (`1px 6px`)
   shrank the content box below the wide `⋯` glyph advance, so the glyph overflowed right and the

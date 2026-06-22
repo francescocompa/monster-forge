@@ -464,7 +464,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
     const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):(f.k==="class"||f.k==="subclass")?plainChipHTML(e,j):skillChipHTML(c,e,j)).join("");
     const addAttr=f.k==="dmgmod"?"data-cddmgadd":f.k==="passives"?"data-cdpassadd":f.k==="class"?"data-cdclassadd":f.k==="subclass"?"data-cdsubadd":"data-cdskilladd";
-    const addCtrl=`<button class="cd-chip-addbtn" ${addAttr}="${i}">＋ Add</button>`;
+    const addCtrl=`<button class="cd-chip-addbtn" ${addAttr}="${i}" title="Add" aria-label="Add">＋</button>`;
     // Add control sits BEFORE the chips (B168); chips scroll horizontally after it.
     return `<div class="cd-prop cd-preset" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span><button class="cd-pn" data-cdname="${i}">${esc(fieldLabel(f))}</button>${addCtrl}<div class="cd-chipfield" data-cdchips="${i}">${chips}</div></div>`;};
   // Abilities live in the reused Forge ability grid (B139); everything else (incl. Level — a regular field

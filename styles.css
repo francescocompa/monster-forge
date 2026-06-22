@@ -1,6 +1,6 @@
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
-  --txt:#e7e9ee; --dim:#a4aab4; --faint:#6e7580;
+  --txt:#e7e9ee; --dim:#a4aab4; --faint:#7e858f;
   --accent:#e2654d; --brand:#e2654d; --brand-soft:#ef8470; --accent-soft:#ef8470; --amber:#d9a441; --amber-soft:#e7c070;
   --ok:#5fa873; --warn:#d7a93f; --bad:#d2604a; --info:#5b9bd5;
   --sb:#191b20; --sb2:#1f2127; --sb-edge:#2d313a;
@@ -1399,6 +1399,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
   .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,46%)}
   .combat-order{padding:14px 20px 24px}
   .combat-active{border-left:none;border-top:1px solid var(--line)}
+  /* Stacked layout puts the active panel at the bottom of the viewport, under the fixed turn FAB.
+     Reserve a bottom gutter so no interactive content (e.g. "Add note") sits beneath it. */
+  .combat-wrap{padding-bottom:60px}
   .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,46%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
   .combat-resizer::before{width:46px;height:3px}
 }
