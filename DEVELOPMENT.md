@@ -13,7 +13,12 @@ npm run check      # node --check on all three scripts (syntax / smart-quote bre
 npm run lint       # eslint — blocks on errors, warnings are advisory
 npm test           # init smoke test + pure-function maths (jsdom)
 npm run verify     # all three, in order
+npm run lint:css   # advisory: classes in styles.css with no JS/HTML match (dead-CSS guide; never blocks)
 ```
+
+`lint:css` automates the periodic manual dead-selector sweep (B185 removed 45 by hand). It's advisory —
+not part of `verify` — because it can't see classes built from string fragments; the documented dynamic
+families are allowlisted in `scripts/lint-css.mjs` (add a prefix there if it flags a known-dynamic class).
 
 Enable the commit gate once (runs `verify` before every commit):
 

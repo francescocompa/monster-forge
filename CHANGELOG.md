@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 197 — Advisory dead-CSS-class linter (npm run lint:css)
+- **New `scripts/lint-css.mjs` + `npm run lint:css`.** Lists classes defined in `styles.css` that have no
+  literal match in any JS file or `index.html` — automating the periodic manual sweep (B185 removed 45 dead
+  selectors by hand). **Advisory only:** it never fails the build and is NOT part of `verify`, because it
+  can't see classes assembled from string fragments. The documented dynamic families are allowlisted
+  (`cc-ab-`, `st-`, `ds-`, `pcs-`, `rl-tag-`, `nf-`, plus `dchip-` and `k-` confirmed this pass). Current
+  baseline: **0 dead of 829 classes checked** — the stylesheet is clean. Documented in `DEVELOPMENT.md`.
+
 ## Batch 196 — Definition-popover scroll-fade fix (stationary overlay)
 - **The reference-popover bottom fade no longer drifts onto a mid-content line.** The fade was a
   `position:sticky` strip *inside* the scrolling box with triple negative margins (`-22px -14px -22px`) —

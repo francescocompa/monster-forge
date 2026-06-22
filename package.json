@@ -8,7 +8,8 @@
     "check": "for f in data.js parsers.js core.js forge.js engine.js bestiary.js adventures.js combat.js seed.js app.js; do node --check \"$f\" || exit 1; done",
     "lint": "eslint data.js parsers.js core.js forge.js engine.js bestiary.js adventures.js combat.js seed.js app.js",
     "test": "node --test test/*.test.js",
-    "verify": "npm run check && npm run lint && npm test"
+    "verify": "npm run check && npm run lint && npm test",
+    "lint:css": "node scripts/lint-css.mjs"
   },
   "devDependencies": {
     "eslint": "^9.13.0",
