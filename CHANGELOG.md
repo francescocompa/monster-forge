@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 189 — Loading-screen + dice-cursor animation rework
+- **Boot screen: calm pulse, no dots.** The d20 now gently breathes (`bootPulse` — a scale + opacity pulse)
+  instead of the old jerky `ease-in-out` tumble-with-scale-swell. The three bouncing dots under the wordmark
+  (a dated trope) are gone (markup + CSS removed). Sleeker, less busy.
+- **Dice cursor + sync spinner: smooth even spin.** Rewrote the shared `diceSpin` keyframe from a
+  dwell-and-swell tumble to a constant-speed `rotate(360deg)`, and switched both consumers (`#diceCursor`,
+  `.loading-spin`) to `linear` timing — no more accelerate/decelerate stutter.
+- Reduced-motion still disables the boot animation.
+
 ## Batch 188 — Checkbox tick recentred, lighter, group-aligned
 - **The checked tick is now perfectly centred.** Replaced the hand-positioned rotated-border tick (`left:5px;
   top:1px`, visibly off-centre) with a centred SVG check used as an alpha mask (`--mf-check`,
