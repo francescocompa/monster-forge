@@ -265,7 +265,25 @@ function sbEntriesHTML(m){
 }
 // Update the chrome around the statblock (legacy derived chips, CR-target tip, title, status), then
 // build the statblock HTML from the section builders, commit it, and run the link/colour post-pass.
+// Coalesce a burst of edits into ONE statblock rebuild (B194). renderPreview() runs on every keystroke;
+// each call used to do a full innerHTML rebuild + colorize TreeWalker + persist/history side effects.
+// We now defer + dedupe: an animation frame paints once per frame in the foreground, and a setTimeout
+// fallback guarantees the render (and its persist/undo side effects) still flushes if rAF is paused —
+// e.g. a backgrounded tab. No caller reads #statblock synchronously after renderPreview(), so the
+// sub-frame defer is safe.
+let _previewRAF=null,_previewTO=null;
+function _flushPreview(){
+  if(_previewRAF==null&&_previewTO==null)return;
+  if(_previewRAF!=null&&typeof cancelAnimationFrame!=="undefined")cancelAnimationFrame(_previewRAF);
+  clearTimeout(_previewTO);_previewRAF=null;_previewTO=null;
+  renderPreviewNow();
+}
 function renderPreview(){
+  if(_previewRAF!=null||_previewTO!=null)return; // a paint is already queued — coalesce into it
+  if(typeof requestAnimationFrame!=="undefined")_previewRAF=requestAnimationFrame(_flushPreview);
+  _previewTO=setTimeout(_flushPreview,100);
+}
+function renderPreviewNow(){
   const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
   const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
   const ab=mainAttackBonus(m),dc=mainSaveDC(m);

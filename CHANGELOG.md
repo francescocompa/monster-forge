@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 194 — Coalesced statblock render + faster boot fallback
+- **`renderPreview` now coalesces a burst of edits into one rebuild.** It used to do a full
+  `#statblock` `innerHTML` rebuild + colorize TreeWalker on *every* keystroke. The work moved to
+  `renderPreviewNow`; `renderPreview` defers + dedupes it via `requestAnimationFrame` (one paint per
+  frame in the foreground) with a 100 ms `setTimeout` fallback so it still flushes when rAF is paused
+  (a backgrounded tab) — which also keeps the persist-draft + undo-history side effects firing. No caller
+  reads `#statblock` synchronously after `renderPreview()`, so the sub-frame defer is safe. Verified: a
+  3-keystroke burst queues a single paint and lands on the latest value, no stale frames.
+- **Boot fallback 9 s → 5 s.** The safety timeout that reveals the app if init hangs (`index.html`) was a
+  sluggish 9 s; 5 s recovers faster while staying well clear of a normal ~1 s init (init still reveals the
+  app itself the instant it finishes, and on any error).
+
 ## Batch 193 — Forge draft undo/redo (Ctrl/Cmd+Z)
 - **Full undo/redo on the Forge draft.** A snapshot history of the whole draft `M` (forge.js): edits
   coalesce into one undo step via a 500 ms debounced recorder hooked off `renderPreview`, so a burst of
