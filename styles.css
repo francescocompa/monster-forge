@@ -1818,12 +1818,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Condition-immunity links: keep the dotted-underline popover affordance but no blue tint (B58). */
 .sb .reflink.reflink-plain{color:inherit}
 .sb .reflink.reflink-plain:hover{color:inherit}
-.refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;overflow-y:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px 22px;box-shadow:var(--shadow-pop);font-size:12.5px;line-height:1.5;display:none}
-.refpop.show{display:block}
-/* Scroll-fade: a sticky strip pinned to the bottom of the scroll viewport, spanning to the card's edges,
-   hinting there's more below (B133). The 22px bottom padding gives the last line room to clear the fade at
-   max scroll; the strip's bottom margin reaches into that padding so it still hugs the card's bottom edge. */
-.refpop::after{content:"";position:sticky;bottom:0;display:block;height:22px;margin:-22px -14px -22px;background:linear-gradient(transparent,var(--panel2));pointer-events:none;border-radius:0 0 var(--r-lg) var(--r-lg)}
+.refpop{position:fixed;z-index:70;width:320px;max-width:86vw;max-height:60vh;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);font-size:12.5px;line-height:1.5;display:none;overflow:hidden;flex-direction:column}
+.refpop.show{display:flex}
+/* The body scrolls within .refpop's (often inline-clamped) height; .refpop itself doesn't — so the
+   scroll-fade below can be a stationary overlay. The 22px bottom padding gives the last line room to
+   clear the fade at max scroll. (B196) */
+.refpop-body{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 22px}
+/* Scroll-fade: a NON-scrolling overlay pinned to the popover's bottom edge (B196 — was a sticky strip with
+   negative margins that drifted off the scroll edge and faded a mid-content line). Absolute against the
+   fixed .refpop, so it always sits at the true bottom, hinting there's more below. */
+.refpop::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22px;background:linear-gradient(transparent,var(--panel2));pointer-events:none;border-radius:0 0 var(--r-lg) var(--r-lg)}
 /* Subtle ghost dismiss in the popover's top-right; sticks while the body scrolls (B68). */
 .refpop-x{position:sticky;top:-2px;float:right;margin:-4px -6px 0 6px;display:flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;border-radius:5px;background:none;color:var(--faint);opacity:.5;cursor:pointer;transition:opacity .12s,color .12s,background .12s;z-index:1}
 .refpop-x:hover{opacity:1;color:var(--txt);background:var(--in)}

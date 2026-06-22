@@ -115,7 +115,9 @@ function refLevelOf(node){const pop=node&&node.closest&&node.closest(".refpop");
 function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
   const html=refContent(kind,name);if(!html)return;
   hideRefpopNow(level); // drop this level + any deeper before re-showing
-  const p=refpopAt(level);p.innerHTML=`<button class="refpop-x" type="button" aria-label="Close" title="Close">${REFPOP_X_SVG}</button>`+html;p.dataset.refname=name;p.classList.add("show");
+  // Content scrolls inside .refpop-body; the bottom scroll-fade is a non-scrolling overlay on .refpop
+  // itself (see CSS), so it always sits at the true bottom edge instead of drifting with the scroll.
+  const p=refpopAt(level);p.innerHTML=`<div class="refpop-body"><button class="refpop-x" type="button" aria-label="Close" title="Close">${REFPOP_X_SVG}</button>`+html+`</div>`;p.dataset.refname=name;p.classList.add("show");
   const xb=p.querySelector(".refpop-x");if(xb)xb.addEventListener("click",e=>{e.stopPropagation();hideRefpopNow(level);});
   const body=p.querySelector(".refcard-body");
   if(body&&ruleFinder){ruleFindRoot(body);} // rule-finder: highlight rules/conditions inside the popover too (B66)

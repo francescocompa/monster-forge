@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 196 — Definition-popover scroll-fade fix (stationary overlay)
+- **The reference-popover bottom fade no longer drifts onto a mid-content line.** The fade was a
+  `position:sticky` strip *inside* the scrolling box with triple negative margins (`-22px -14px -22px`) —
+  a brittle combo (re-tuned once in B183) that, when the popover's height was inline-clamped by
+  `showRefpop`, ended up fading a line in the middle while the true last line stayed sharp (the bug in the
+  capture). Rebuilt as the textbook pattern: content scrolls in an inner `.refpop-body` and the fade is a
+  **non-scrolling absolute overlay** on `.refpop` (now a flex column so the inline `max-height` clamp still
+  drives the scroll). The overlay always sits at the true bottom edge.
+- Verified live (overflowing popover, height-clamped): scrolled to top the **bottom** line fades (more-
+  below hint), scrolled to the end the last line is fully clear, content scrolls within the clamp (no
+  clipping), and no mid-content line is faded. `npm run verify` green (12 tests, lint 0/0).
+
 ## Batch 195 — Unresolved-combatant repair (deleted statblock)
 - **A combatant whose statblock was deleted now reads as broken instead of blank.** Previously an
   orphaned monster combatant (its `monsterId` points at a since-deleted Bestiary creature) was
