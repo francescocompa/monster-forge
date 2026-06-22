@@ -15,6 +15,9 @@
      the root accent and never pick up the per-card override. */
   --sel-accent:var(--accent);
   --budfill:#39495c; /* XP-spent bar — neutral bluish slate from the bg family, lighter than the bar track; risk reads from the pill */
+  /* Checkbox tick: a centred SVG check used as an alpha mask, so it's perfectly centred and its weight is set
+     by stroke-width (lighter than the old 2px rotated-border tick). See input[type=checkbox]:checked::after. */
+  --mf-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5 6.8 11.2 12 5.2' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -28,7 +31,7 @@ input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus
 input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:1px solid var(--line);border-radius:4px;background:var(--in);position:relative;cursor:pointer;flex:none;transition:border-color .12s,background .12s;vertical-align:middle}
 input[type=checkbox]:hover{border-color:var(--accent)}
 input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
-input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+input[type=checkbox]:checked::after{content:"";position:absolute;inset:0;background:#fff;-webkit-mask:var(--mf-check) center/11px no-repeat;mask:var(--mf-check) center/11px no-repeat}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .stepper{position:relative;display:block}
@@ -1640,7 +1643,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .switch input:indeterminate+.sl::after{transform:translateX(8px);background:var(--accent-soft)}
 .lib-scroll{flex:1 1 auto;overflow-y:auto;min-height:80px;margin:0 -2px;padding:2px;display:flex;flex-direction:column;gap:13px}
 .lib-grp{display:flex;flex-direction:column;gap:5px}
-.lib-grp-head{display:flex;align-items:center;gap:8px;padding:0 2px}
+.lib-grp-head{display:flex;align-items:center;gap:8px;padding:0 12px 0 2px} /* right pad = preset-row border(1)+pad(11) so the select-all aligns with row checkboxes */
 .lib-grp-name{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
 .lib-grp-head .grp-n{font-size:10px;color:var(--faint);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 7px;line-height:16px}
 .lib-grp-head .lib-check{margin:0 0 0 auto} /* beats the generic .grp{margin-bottom:18px} the "grp" class otherwise picks up */

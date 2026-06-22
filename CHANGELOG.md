@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 188 — Checkbox tick recentred, lighter, group-aligned
+- **The checked tick is now perfectly centred.** Replaced the hand-positioned rotated-border tick (`left:5px;
+  top:1px`, visibly off-centre) with a centred SVG check used as an alpha mask (`--mf-check`,
+  `mask:… center/11px`), so it sits dead-centre in the 16px box regardless of sub-pixel rounding.
+- **Lighter weight, in line with the system.** The tick's stroke is `2` in a 16-unit viewBox rendered at
+  11px (~1.4px effective), down from the old 2px border — less heavy.
+- **Group select-all aligns with the row checkboxes.** `.lib-grp-head` got a right pad matching the
+  preset-row's border+padding (12px), so the group checkbox and the per-row checkboxes share a vertical line
+  (verified: both right edges at the same x).
+
 ## Batch 187 — Forge→Bestiary save-flow hardening (audit fixes ①–④)
 - **① No more silent loss of unsaved edits when switching creatures.** New `guardedLoad(fn)` helper routes
   every path that REPLACES the Forge draft `M` — bestiary card click & Edit, paste-import, "Edit in Forge"
