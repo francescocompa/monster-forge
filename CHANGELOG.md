@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 198 — Refactor: split the two longest functions (no behavior change)
+- **`openCharacterDetail` (was ~146 lines) → `charDetailHTML(c,curAdv,ui,advs)` + the binding block.** The
+  pure modal-body builder (tags / property rows / preset rows / ability grid / template) is now a named
+  function; `openCharacterDetail` keeps only the setup + `openModalRaw(charDetailHTML(…))` + the event
+  bindings. The closure web around `re()` was left intact (it's the risky part) — only the pure HTML moved.
+- **`renderCombat` (was ~124 lines) → render + `bindCombatTracker(body,a,e,cb)`.** The markup was already
+  built by the `combat*HTML` helpers; the ~80-line event-binding pass is now its own function, leaving
+  `renderCombat` as setup + `innerHTML` + scroll-restore + one `bindCombatTracker(…)` call.
+- Pure extractions, no logic change. Verified live: combat (rows select, Next-turn advances, HP popover,
+  menus) and the character modal (name sync, ability-star re-render, field menu) all work, zero console
+  errors. `npm run verify` green (12 tests, lint 0/0).
+
 ## Batch 197 — Advisory dead-CSS-class linter (npm run lint:css)
 - **New `scripts/lint-css.mjs` + `npm run lint:css`.** Lists classes defined in `styles.css` that have no
   literal match in any JS file or `index.html` — automating the periodic manual sweep (B185 removed 45 dead

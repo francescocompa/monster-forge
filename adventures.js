@@ -449,11 +449,10 @@ const PC_TUNE_ICON='<svg viewBox="0 0 512 512" width="14" height="14" fill="curr
 // title, typed properties and notes scroll together between them. Properties are split into two groups —
 // shown in the party row vs hidden — by a divider; a property's name menu toggles the group, flags an
 // ability as the spell ATK/DC source, renames a custom field, or removes it. `curAdvId` = where it opened.
-function openCharacterDetail(rid,curAdvId,ui){
-  ui=ui||{};const c=rosterById(rid);if(!c){closeModal();return;}
-  const curAdv=curAdvId!==undefined?curAdvId:state.selAdv;
+// Build the character-detail modal body (B198 — extracted from openCharacterDetail so the binding block
+// below reads as one piece). Pure: the character, current-adventure id, ui flags, and its adventures (tags).
+function charDetailHTML(c,curAdv,ui,advs){
   // Current adventure's tag always leads (B138).
-  const advs=rosterAdventures(rid).slice().sort((x,y)=>(x.id===curAdv?-1:y.id===curAdv?1:0)),shared=advs.length>1;
   const tag=ad=>`<span class="cd-tag${ad.id===curAdv?" cur":""}" style="--tagc:${ad.color||"var(--accent)"}">${esc(advDName(ad))}</span>`;
   const tagsHTML=advs.length?advs.map(tag).join(""):`<span class="cd-tag empty">Not in any adventure</span>`;
   const propRow=(f,i)=>{const d=fieldDef(f),ico=d&&d.icon?d.icon:"";
@@ -483,7 +482,7 @@ function openCharacterDetail(rid,curAdvId,ui){
     return `<div class="cd-spellrow"><span class="cd-spell-ab cc-ab-${f.k}">${f.k.toUpperCase()}</span><div class="cd-sub"><span class="cd-sub-l">atk</span><input class="cd-sub-v" data-cdabsub="atk:${f.k}" value="${esc(f.atkV==null?"":String(f.atkV))}" placeholder="${sgn(cv.atk)}"></div><div class="cd-sub"><span class="cd-sub-l">save DC</span><input class="cd-sub-v" data-cdabsub="dc:${f.k}" value="${esc(f.dcV==null?"":String(f.dcV))}" placeholder="${cv.dc}"></div></div>`;}).join("")}</div>`:"";
   const abilBlock=`<div class="cd-grpdiv"><span>Ability scores</span></div><div class="abil cd-abilgrid">${cells}</div>${spell}`;
   const hidBlock=hidHTML?`<div class="cd-grpdiv" data-cdhiddiv><span>Hidden from the party row</span></div>${hidHTML}`:"";
-  openModalRaw(`<div class="char-detail">
+  return `<div class="char-detail">
     <div class="cd-top">
       <div class="cd-tags">${tagsHTML}</div>
       <div class="cd-icons"><button class="cd-gx" data-cdmenu title="More" aria-label="More">⋯</button><button class="cd-gx" data-cdclose aria-label="Close">✕</button></div>
@@ -494,7 +493,13 @@ function openCharacterDetail(rid,curAdvId,ui){
       <div class="cd-divider"></div>
       <textarea class="cd-notes" placeholder="Notes & backstory…">${esc(c.notes||"")}</textarea>
     </div>
-  </div>`);
+  </div>`;
+}
+function openCharacterDetail(rid,curAdvId,ui){
+  ui=ui||{};const c=rosterById(rid);if(!c){closeModal();return;}
+  const curAdv=curAdvId!==undefined?curAdvId:state.selAdv;
+  const advs=rosterAdventures(rid).slice().sort((x,y)=>(x.id===curAdv?-1:y.id===curAdv?1:0)),shared=advs.length>1;
+  openModalRaw(charDetailHTML(c,curAdv,ui,advs));
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
   // the user back to the top (B143).

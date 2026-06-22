@@ -1070,6 +1070,11 @@ function renderCombat(){
   // Animate the statblock peek only when the previewed combatant actually changes — not on every re-render
   // (toggling reaction, marking a death save, etc. shouldn't visibly refresh the preview) (B128).
   {const pk=body.querySelector(".ca-peek"),pid=pk?pk.dataset.peek:null;if(pk&&pid!==_caPeekId)pk.classList.add("ca-anim");_caPeekId=pid;}
+  bindCombatTracker(body,a,e,cb);
+}
+// Wire every combat-tracker event handler onto the freshly-rendered DOM (B198 — extracted from
+// renderCombat; the markup is built by the combat*HTML helpers, this is purely the binding pass).
+function bindCombatTracker(body,a,e,cb){
   bindCombatResizer();
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
