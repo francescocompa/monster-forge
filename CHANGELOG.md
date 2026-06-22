@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 170 — Combat preview polish + roll-init fixes
+- **Add-effect dropdown headers align when sticky.** The first group (`.cl-grp:first-child`) had a tighter
+  `padding-top` (2px vs 7px), so once it pinned to the top it sat closer to the divider than Masteries /
+  Spells. Dropped the `:first-child` override — all headers now share a uniform `padding:5px 7px 3px`, so
+  every stuck header is equidistant from the divider.
+- **Edit button moved in line with the name** (character + statblock preview). For monsters it's "Edit in
+  Forge", for PCs "Edit", both pushed to the right of `.ca-name` (`.ca-name-edit{margin-left:auto}`) — the
+  old `.ca-sbbar` / `.pcs-head` edit rows are gone.
+- **Tighter preview spacing.** Reduced the gap between the stat boxes and the statblock/character details:
+  `.ca-pcsheet` margin/padding 12/11 → 7/8, `.ca-sb` 0/14 → 7/8. The PC sheet's **"Character details"
+  placeholder title is removed** — only a slim "Level N" line shows when a level is set.
+- **Roll-initiative reel no longer drops numbers.** The reel column was vertically centred in the full
+  ~30px cell box, so neighbouring numbers bled through / vanished mid-spin. It's now clipped to a single
+  1em window (`.nf-digit`) centred in the cell, matching the roll-log / level-up reels.
+- **"Roll initiative" label on the round-bar d20.** The button now carries its text when there's room and
+  collapses to the icon-only 28px button (tooltip kept) below 440px — `.ct-roundbar` is now a size container.
+
 ## Batch 169 — Party-row chip fixes + live combat edits
 - **Party-row chips no longer clip.** They were right-aligned with `justify-content:flex-end`, which (the
   classic flexbox bug) pushed the leftmost chips (atk/DC) off-screen to negative positions. Now the cluster

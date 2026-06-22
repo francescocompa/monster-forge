@@ -1197,8 +1197,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ca-note{font-size:12px;color:var(--dim);margin-top:8px;white-space:pre-wrap}
 .ca-soon{font-size:11px;color:var(--faint);font-style:italic;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
 /* PC character sheet in the combat panel (display-only — the PC counterpart to the monster statblock) */
-.ca-pcsheet{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
-.pcs-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.ca-pcsheet{margin-top:7px;padding-top:8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+.pcs-head{display:flex;align-items:center;gap:8px;margin-bottom:1px}
+.ca-name .ca-name-edit{margin-left:auto;align-self:center}
 .pcs-sub{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.02em}
 .pcs-sub.dim{color:var(--dim);font-weight:500}
 .pcs-edit{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);background:none;border:none;border-radius:6px;padding:2px 6px;cursor:pointer}
@@ -1210,7 +1211,6 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pcs-txt{font-size:12.5px;color:var(--txt);line-height:1.7;flex:1;min-width:0}
 .ca-pcsheet .pchip{cursor:default}
 /* Monster statblock "Edit in Forge" bar (mirrors the PC sheet's edit pencil). */
-.ca-sbbar{display:flex;justify-content:flex-end;margin:10px 0 -2px}
 .ca-pcsheet .pcs-roll{cursor:pointer}
 .ca-pcsheet .pcs-roll:hover{border-color:var(--abc);box-shadow:0 0 0 1px color-mix(in srgb,var(--abc) 40%,transparent)}
 /* CT3 — condition chips, per-combatant menu, inline note edit */
@@ -1239,8 +1239,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Inline grouped effect list inside the popover (B129): headed Conditions / Masteries / Spells sections,
    filtered by the search field. Lives in the popover so the cursor can travel onto it without it closing. */
 .cond-list{margin-top:8px;max-height:230px;overflow-y:auto;border-top:1px solid var(--line);display:flex;flex-direction:column}
-.cl-grp{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:7px 7px 3px;position:sticky;top:0;background:var(--panel2);z-index:2}
-.cl-grp:first-child{padding-top:2px}
+.cl-grp{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:5px 7px 3px;position:sticky;top:0;background:var(--panel2);z-index:2}
 .cl-item{text-align:left;background:none;border:none;color:var(--txt);padding:5px 9px;border-radius:5px;font-size:12.5px;cursor:pointer}
 .cl-item:hover{background:var(--panel3)}
 .cl-empty{font-size:11.5px;color:var(--faint);padding:8px 9px}
@@ -1289,7 +1288,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .res-pip{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:var(--in);cursor:pointer;padding:0}
 .res-pip.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(226,101,77,.4)}
 .res-pip:hover{border-color:var(--accent)}
-.ca-sb{margin-top:0;border-top:1px solid var(--line);padding-top:14px}
+.ca-sb{margin-top:7px;border-top:1px solid var(--line);padding-top:8px}
 /* CT5/CT6 — encounter status chip, start-combat sword button, combat-tab empty/not-started + scene nav + load popup */
 .enc-status{flex:none;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer}
 .enc-status.sm{font-size:9px;padding:2px 7px;cursor:default}
@@ -1367,7 +1366,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-notes-more:hover{text-decoration:underline}
 .pop-val{margin-left:auto;color:var(--faint);font-size:11px}
 /* Full-width round bar above the grid; its bottom border is the header divider. */
-.ct-roundbar{display:flex;align-items:center;gap:3px;padding:2px 20px 9px;border-bottom:1px solid var(--line)}
+.ct-roundbar{display:flex;align-items:center;gap:3px;padding:2px 20px 9px;border-bottom:1px solid var(--line);container-type:inline-size}
 .ct-roundbar .ct-turnline{margin:0 7px}
 .ct-roundbar .ct-round{font-size:13px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;border:none;background:none;cursor:pointer;padding:3px 7px;border-radius:6px}
 .ct-roundbar .ct-round:hover{background:var(--panel2)}
@@ -1378,10 +1377,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ct-toolsbtn:hover{color:var(--txt);background:var(--panel2)}
 .ct-toolsbtn.on{color:var(--txt)}
 .ct-toolsbtn.on::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(11px,-10px)}
-.ct-d20{flex:none;width:28px;height:26px;display:grid;place-items:center;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0}
+.ct-d20{flex:none;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0 9px;font-size:12px;font-weight:500;white-space:nowrap}
 .ct-d20:hover{background:var(--panel2);color:var(--accent)}
-.ct-d20 svg{width:17px;height:17px}
+.ct-d20 svg{width:17px;height:17px;flex:none}
 .ct-d20.rolling svg{animation:croSpin .55s linear infinite}
+/* The round bar is its own size container so the roll label collapses to an icon-only button (tooltip kept) when narrow. */
+@container (max-width:440px){.ct-d20-lbl{display:none}.ct-d20{width:28px;padding:0}}
 .combat-fab{display:inline-flex;align-items:center;gap:7px}
 .combat-fab svg{width:13px;height:13px;fill:none;stroke:currentColor;flex:none}
 /* Turn-control FAB: a unified split pill — previous-turn chevron divided from the primary "Next turn"

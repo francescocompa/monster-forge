@@ -641,7 +641,9 @@ function animateInitRoll(byGroup,done){
     // pane's own overflow clips any cell that's half-hidden under the statblock panel. The reel inherits the
     // cell's own font-size so it matches whether the init is full-size (wide) or the small narrow-card number.
     ov.style.cssText=`left:${r.left-pr.left+pane.scrollLeft}px;top:${r.top-pr.top+pane.scrollTop}px;width:${r.width}px;height:${r.height}px;font-size:${getComputedStyle(inp).fontSize}`;
-    ov.innerHTML=rollReelHTML(target,1+(it.initMod||0),20+(it.initMod||0));pane.appendChild(ov);overlays.push(ov);
+    // Clip the reel to a single 1em-tall window centred in the cell (.nf-digit) — without it the tall
+    // column was vertically centred in the full cell box, so adjacent numbers showed through / vanished mid-spin.
+    ov.innerHTML=`<span class="nf-digit">${rollReelHTML(target,1+(it.initMod||0),20+(it.initMod||0))}</span>`;pane.appendChild(ov);overlays.push(ov);
     inp.classList.add("nf-hide"); // hide the old number behind the (transparent) reel while it scrolls (B128)
     requestAnimationFrame(()=>ov.querySelectorAll(".nf-col").forEach(col=>{col.style.transform=`translateY(-${(Number(col.style.getPropertyValue("--nf-len"))||1)-1}em)`;}));
   });
@@ -816,10 +818,10 @@ function pcSheetHTML(it){
     if(!f.k&&/^(class|level)$/i.test((f.label||"").trim()))return; // legacy class/level live in the subtitle
     lines.push(line(esc(fieldLabel(f)),esc(String(f.v)),true));
   });
-  // Class(es) live in the identity line now (combatPanelInnerHTML); the sheet subtitle just shows level.
+  // Class(es) live in the identity line; the Edit button moved up to the name (B170). A slim level line
+  // only shows when a level is set — the old "Character details" placeholder title is gone.
   const lv=charFieldVal(c,"level");
-  const sub=(lv!==""&&lv!=null)?`Level ${esc(String(lv))}`:"";
-  const head=`<div class="pcs-head"><span class="pcs-sub${sub?"":" dim"}">${sub||"Character details"}</span><button class="pcs-edit" data-pcedit="${esc(it.srcId)}" title="Edit character">${PEN_ICON} Edit</button></div>`;
+  const head=(lv!==""&&lv!=null)?`<div class="pcs-head"><span class="pcs-sub dim">Level ${esc(String(lv))}</span></div>`:"";
   if(!lines.length)return `<div class="ca-pcsheet">${head}<div class="ca-soon">No character details yet — add abilities, skills or passives to ${esc(c.name||"this PC")}.</div></div>`;
   return `<div class="ca-pcsheet">${head}${lines.join("")}</div>`;
 }
@@ -845,16 +847,19 @@ function combatPanelInnerHTML(it,isTurn){
       stats.push(chip("DC",effDc(pc,dcF),"Save DC",dcF.k));}}
   if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
-  const monEdit=(m&&monById(it.srcId))?`<div class="ca-sbbar"><button class="pcs-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button></div>`:"";
+  // The edit affordance sits inline with the name (B170) — "Edit in Forge" for monsters, "Edit" for PCs.
+  const editBtn=(m&&monById(it.srcId))
+    ?`<button class="pcs-edit ca-name-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button>`
+    :it.kind==="pc"?`<button class="pcs-edit ca-name-edit" data-pcedit="${esc(it.srcId)}" title="Edit character">${PEN_ICON} Edit</button>`:"";
   const sb=m
-    ?`${monEdit}<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
+    ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :it.kind==="pc"?pcSheetHTML(it)
     :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
   const note=it.comment
     ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note" aria-label="Edit note">${PEN_ICON}</button></div>`
     :`<button class="ca-addnote" data-cinote="${it.id}">${PEN_ICON} Add note</button>`;
   return `<div class="ca-head">
-      <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span></div>
+      <div class="ca-name">${esc(it.name)}<span class="ca-faction">${esc(who)}</span>${editBtn}</div>
       ${conds}
       ${statRow}
       ${resourcePipsHTML(it)}
@@ -941,7 +946,7 @@ function combatRoundBarHTML(cb){
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
     ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
-    ${canRoll?`<button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}</button>`:""}
+    ${canRoll?`<button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}<span class="ct-d20-lbl">Roll initiative</span></button>`:""}
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
