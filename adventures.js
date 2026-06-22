@@ -728,9 +728,16 @@ function renderEncList(a){
 // budget, renders dimmed, and the target/delta read-out is hidden (e.target stays null).
 // Fixed Low/Moderate/High threshold markers on the XP bar (High pinned to the right end; Low/Mod scaled
 // to the High cap). Each carries its XP for a hover popover. The draggable target marker snaps to these.
+// Budget bar uses a Low→High scale (B170): Low pinned at the left edge, High at the right, Moderate placed
+// proportionally between them. The three threshold notches are neutral + clear; colour rides the fill only.
+function budModPct(bud){const span=bud[2]-bud[0];return span>0?clamp((bud[1]-bud[0])/span*100,0,100):50;}
+function budSpentPct(spent,bud){const span=bud[2]-bud[0];return span>0?clamp((spent-bud[0])/span*100,0,100):(spent>=bud[2]?100:0);}
+function budFillColor(cls){return {trivial:"#39495c",low:"#4a6b52",moderate:"#6e5a36",high:"#8a4d42",over:"#a8503e"}[cls]||"#39495c";}
 function budMarksHTML(bud){
-  const m=(cls,lbl,xp)=>{const pct=bud[2]?clamp(xp/bud[2]*100,0,100):0;return `<div class="bud-mark ${cls}" style="left:${pct}%" data-budtip="${lbl} · ${xp.toLocaleString()} XP"></div>`;};
-  return m("bm-low","Low",bud[0])+m("bm-mod","Moderate",bud[1])+m("bm-high","High",bud[2]);
+  const m=(lbl,xp,cls,style)=>`<div class="bud-mark ${cls}" style="${style}" data-budtip="${lbl} · ${xp.toLocaleString()} XP"></div>`;
+  return m("Low",bud[0],"bm-start","left:0")
+    +m("Moderate",bud[1],"bm-mid","left:"+budModPct(bud)+"%")
+    +m("High",bud[2],"bm-end","right:0");
 }
 function encTargetActive(e){return e.target!=null;}
 function encTargetVal(e,bud){return e.target!=null?clamp(e.target,0,bud[2]):bud[0];}
@@ -747,17 +754,14 @@ function encReadHTML(a,e,bud,spent){
 function updateEncMeta(a,e){
   const root=document.querySelector(`#advDetail .enc[data-enc="${e.id}"]`);if(!root)return;
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
-  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
+  const pct=budSpentPct(spent,bud);
   const pill=root.querySelector(".eh .pill");if(pill){pill.className="pill "+cls;pill.textContent=label;}
-  const f=root.querySelector(".budget .fill");if(f)f.style.width=pct+"%"; // fill is neutral (--budfill) — the pill conveys risk
-  const tgt=root.querySelector(".budget .tgt");if(tgt){tgt.style.left=(encTargetActive(e)?(bud[2]?encTargetVal(e,bud)/bud[2]*100:0):0)+"%";tgt.classList.toggle("inactive",!encTargetActive(e));}
-  const read=root.querySelector(".budget .read");if(read)read.innerHTML=encReadHTML(a,e,bud,spent);
+  const f=root.querySelector(".budget .fill");if(f){f.style.width=pct+"%";f.style.background=budFillColor(cls);} // colour rides the fill; notches stay neutral
   e.combatants.forEach(c=>{const x=root.querySelector(`.cbt[data-cid="${c.id}"] .xpv`);if(x)x.textContent=combatXP(c).toLocaleString()+" XP";});
 }
 function encHTML(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[cls,label]=diffOf(spent,bud);
-  const pct=Math.min(100,bud[2]?spent/bud[2]*100:0);
-  const tgt=encTargetVal(e,bud),tgtPct=encTargetActive(e)?(bud[2]?tgt/bud[2]*100:0):0;
+  const pct=budSpentPct(spent,bud);
   const head=`<div class="eh">
       <button class="enc-collapse ${e.collapsed?"closed":""}" data-enccollapse="${e.id}" title="${e.collapsed?"Expand":"Collapse"}" aria-label="${e.collapsed?"Expand":"Collapse"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input class="enm" value="${esc(e.name)}" data-encname="${e.id}" placeholder="New Encounter">
@@ -784,9 +788,8 @@ function encHTML(a,e){
     <div class="budget">
       <div class="budget-top">
         <div class="bartrack">
-          <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+          <div class="bar"><div class="fill" style="width:${pct}%;background:${budFillColor(cls)}"></div></div>
           ${budMarksHTML(bud)}
-          <div class="tgt ${encTargetActive(e)?"":"inactive"}" data-enctgt="${e.id}" style="left:${tgtPct}%" title="Drag to set XP target"><span class="tgt-tip">${encTargetActive(e)?tgt.toLocaleString()+" XP":"set target"}</span></div>
         </div>
         <span class="pill ${cls}">${label}</span>
       </div>
@@ -802,22 +805,27 @@ function encHTML(a,e){
 function combatHTML(e,c){
   if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
   const fc=facClass(c.faction);const xp=combatXP(c);
-  const facSel=`<select class="fac ${fc}" data-cf="${c.id}:faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>`;
-  if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
-    <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-    <select class="crsel" data-cf="${c.id}:cr">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select>
-    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
-    ${facSel}
-    <button type="button" class="mini-chip${c.minion?" on":""}" data-minion="${c.id}" aria-pressed="${c.minion?"true":"false"}" title="MCDM minion — counts as minion XP toward the budget">minion</button>
-    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
-    <div class="sec"><span class="lab">no statblock — budget only</span></div></div>`;
+  // Faction reads as a chip (the native select is styled like the app's pills — consistent chip language, B170).
+  const facSel=`<select class="fac ${fc}" data-cf="${c.id}:faction" aria-label="Faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>`;
+  // Count leads on the left as a large ghost number with a trailing dim × (default 1 shows dimmed); the
+  // statblock / CR control drops to a quiet subtitle under the name; XP sits right with a hover-only remove.
+  const cnt=`<div class="cbt-cnt"><input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count" aria-label="Count"><span class="cbt-x">×</span></div>`;
+  const xpcell=`<div class="cbt-xp"><span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn cbt-del" data-cdel="${c.id}" aria-label="Remove combatant">✕</button></div>`;
+  if(c.type==="quick")return `<div class="cbt ${fc}" data-cid="${c.id}">
+    ${cnt}
+    <div class="cbt-main">
+      <input class="nick" placeholder="Combatant name" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+      <div class="cbt-sb"><select class="crsel" data-cf="${c.id}:cr" aria-label="Challenge rating">${CR_LIST.map(x=>`<option value="${x}" ${x===c.cr?"selected":""}>CR ${x}</option>`).join("")}</select><button type="button" class="mini-chip${c.minion?" on":""}" data-minion="${c.id}" aria-pressed="${c.minion?"true":"false"}" title="MCDM minion — counts as minion XP toward the budget">minion</button></div>
+    </div>
+    ${facSel}${xpcell}</div>`;
   const m=monOf(c);
-  return `<div class="cbt ${fc}" data-cid="${c.id}"><div class="top">
-    <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
-    <input class="cnt" type="number" min="1" placeholder="1" value="${c.count===1?"":c.count}" data-cf="${c.id}:count">
-    ${facSel}
-    <span class="xpv">${xp.toLocaleString()} XP</span><button class="iconbtn" data-cdel="${c.id}">✕</button></div>
-    <div class="sec"><span class="lab">statblock:</span><select data-cf="${c.id}:monsterId">${monsterOptionsHTML(c.monsterId)}</select>${m&&m.minion?`<span class="minion-tag" title="MCDM minion — counts as ${(MINION_XP[m.cr]??0).toLocaleString()} XP each toward the budget">minion</span>`:""}</div></div>`;
+  return `<div class="cbt ${fc}" data-cid="${c.id}">
+    ${cnt}
+    <div class="cbt-main">
+      <input class="nick" placeholder="${esc(m?m.name:"(missing)")}" data-cf="${c.id}:nickname" value="${esc(c.nickname||"")}">
+      <div class="cbt-sb"><select class="sbsel" data-cf="${c.id}:monsterId" aria-label="Statblock">${monsterOptionsHTML(c.monsterId)}</select>${m&&m.minion?`<span class="minion-tag" title="MCDM minion — counts as ${(MINION_XP[m.cr]??0).toLocaleString()} XP each toward the budget">minion</span>`:""}</div>
+    </div>
+    ${facSel}${xpcell}</div>`;
 }
 // Statblock <select> options for a combatant: the most-recently-saved creature is pinned at the top,
 // then the rest grouped by CR (ascending). The current pick stays selected wherever it sits.
@@ -1001,30 +1009,12 @@ function bindEncDrag(a,q){
     scene.addEventListener("drop",ev=>{if(!dragSceneId)return;ev.preventDefault();ev.stopPropagation();const dt=dropScene,id=dragSceneId;clearDropMarks();if(dt)reorderScene(a,id,dt.id,dt.after);});
   });
 }
+// The draggable XP target was dropped in the budget redesign (B170); the bar now just shows the Low/Mod/High
+// notches (hover → the XP each represents) + a difficulty-tinted fill.
 function bindEncTarget(a,q){
-  q("[data-enctgt]").forEach(handle=>{
-    const enc=handle.closest(".enc"),e=findEnc(a,enc.dataset.enctgt||handle.dataset.enctgt);if(!e)return;
-    const track=handle.parentElement,tip=handle.querySelector(".tgt-tip");let dragging=false;
-    // Ring the draggable marker in a threshold's colour when it sits exactly on that threshold (CT7c).
-    const ring=()=>{const bud=encBudget(a,e),THR=[["#5fa873",bud[0]],["var(--warn)",bud[1]],["var(--bad)",bud[2]]];
-      const hit=encTargetActive(e)&&THR.find(t=>encTargetVal(e,bud)===t[1]);
-      handle.style.boxShadow=hit?`0 0 0 2px ${hit[0]}, 0 1px 3px rgba(0,0,0,.6)`:"";};
-    const apply=clientX=>{const r=track.getBoundingClientRect(),bud=encBudget(a,e);
-      let frac=clamp((clientX-r.left)/r.width,0,1),val=clamp(Math.round(frac*bud[2]/25)*25,0,bud[2]);
-      // Snap to a Low/Mod/High threshold when the marker is dragged within ~3% of it.
-      [bud[0],bud[1],bud[2]].forEach(thr=>{if(bud[2]&&Math.abs(frac-thr/bud[2])<0.03)val=thr;});
-      e.target=val;handle.style.left=(bud[2]?val/bud[2]*100:0)+"%";if(tip)tip.textContent=val.toLocaleString()+" XP";ring();updateEncMeta(a,e);};
-    ring();
-    handle.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();dragging=true;closePopover();handle.classList.add("drag");try{handle.setPointerCapture(ev.pointerId);}catch(_){}apply(ev.clientX);});
-    handle.addEventListener("pointermove",ev=>{if(dragging)apply(ev.clientX);});
-    handle.addEventListener("pointerup",ev=>{if(!dragging)return;dragging=false;handle.classList.remove("drag");try{handle.releasePointerCapture(ev.pointerId);}catch(_){}saveAdv();});
-    // Hover the draggable marker → spent / on-target comment (replaces the old text read-out).
-    handle.addEventListener("mouseenter",()=>{if(!dragging)tailPopover(handle,`<div class="bud-pop">${encReadHTML(a,e,encBudget(a,e),encSpent(e))}</div>`);});
-    handle.addEventListener("mouseleave",()=>{if(!dragging)closePopover();});
-    // Hover a fixed threshold marker → the XP it represents.
-    track.querySelectorAll("[data-budtip]").forEach(mk=>{
-      mk.addEventListener("mouseenter",()=>tailPopover(mk,`<div class="bud-pop">${esc(mk.dataset.budtip)}</div>`));
-      mk.addEventListener("mouseleave",()=>closePopover());});
+  q(".budget [data-budtip]").forEach(mk=>{
+    mk.addEventListener("mouseenter",()=>tailPopover(mk,`<div class="bud-pop">${esc(mk.dataset.budtip)}</div>`));
+    mk.addEventListener("mouseleave",()=>closePopover());
   });
 }
 function openBestiaryPicker(a,e){

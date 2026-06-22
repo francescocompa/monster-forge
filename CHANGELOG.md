@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 171 — Encounter card redesign (combatant rows + budget bar)
+- **Combatant rows are now hairline rows** on the encounter card instead of nested dark boxes: a faction
+  stripe + thin dividers, no per-row surface (they already sit inside the encounter/scene surfaces).
+- **Count leads on the left** as a large tabular number with a trailing dim `×` (e.g. `4×`); the default `1`
+  shows dimmed via the placeholder — mirrors the initiative / party-level number styling.
+- **Ghost fields, no underline.** Name, count and both selects read as clean text at rest and only grow an
+  input/select border on hover/focus. The statblock (or CR) control drops to a quiet dim subtitle under the name.
+- **One chip language.** Faction is now a `.pill`-styled chip (native `<select>` restyled, faction-tinted) so
+  status / difficulty / faction all share the same rounded translucent chip.
+- **Remove on hover.** The `✕` is hidden at rest and fades in over the XP total via a row-background gradient
+  (`.cbt-del`, `pointer-events` gated), freeing horizontal space.
+- **Rows wrap gracefully** on narrow cards (`flex-wrap` + a `min-width` floor on the name column) so the
+  faction/XP cluster drops to a second line instead of crushing the name.
+- **XP budget bar reworked.** New **Low→High scale** — Low pinned at the left, High at the right, Moderate
+  placed proportionally (`budModPct`); the fill only grows between Low and High (`budSpentPct`) and carries a
+  **difficulty-tinted colour** (`budFillColor`) while the three threshold notches stay neutral + clear. No text
+  labels. **The draggable XP target was dropped** (and its pointer-drag binding removed); `bindEncTarget` now
+  only wires the notch hover tooltips.
+
 ## Batch 170 — Combat preview polish + roll-init fixes
 - **Add-effect dropdown headers align when sticky.** The first group (`.cl-grp:first-child`) had a tighter
   `padding-top` (2px vs 7px), so once it pinned to the top it sat closer to the divider than Masteries /

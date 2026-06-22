@@ -1473,27 +1473,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .menu .submenu-arrow{color:var(--faint);font-size:10px}
 .menu .submenu{right:calc(100% + 5px);left:auto;top:-5px;bottom:auto}
 .menu .submenu.flip-right{left:calc(100% + 5px);right:auto}
+/* XP budget bar (B170): a Low→High scale — Low pinned left, High right, Moderate proportional. The fill
+   carries the (difficulty-tinted) colour and only grows between Low and High; the three threshold notches
+   stay neutral + clear. No labels, no draggable target. */
 .budget{margin:8px 0}
-.budget .bartrack{position:relative;padding:4px 0}
-.budget .bar{height:10px;background:var(--in);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.budget .fill{height:100%;transition:width .2s;background:var(--budfill)}
-.budget .tgt{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:var(--txt);border:2px solid var(--panel);border-radius:50%;cursor:ew-resize;touch-action:none;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.6);transition:background .12s,transform .12s}
-.budget .tgt:hover{background:var(--accent);transform:scale(1.15)}
-.budget .tgt.drag{background:var(--info);transform:scale(1.2);box-shadow:0 0 0 4px color-mix(in srgb,var(--info) 30%,transparent),0 1px 3px rgba(0,0,0,.6)}
-/* Inactive (never-dragged) target marker: dim, smaller, hollow — clearly "off" until set. */
-.budget .tgt.inactive{background:var(--faint);opacity:.45;box-shadow:none} /* same size as placed (B59) */
-.budget .tgt.inactive:hover{opacity:.85;background:var(--dim);transform:scale(1.15)}
-.budget .tgt .tgt-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--in);border:1px solid var(--line);color:var(--txt);font-size:10px;padding:2px 6px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-variant-numeric:tabular-nums}
-.budget .tgt.drag .tgt-tip{opacity:1}
-.budget .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px}
-.budget .read{font-size:11px;margin-top:4px;color:var(--faint);font-weight:400;letter-spacing:.01em}
-.budget .read b{color:var(--dim);font-weight:600}
-/* Fixed Low/Mod/High threshold markers on the XP bar (snap targets for the draggable marker). */
-.budget .bud-mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;border:1.5px solid var(--in);background:var(--faint);z-index:1;cursor:help}
-.budget .bud-mark.bm-low{background:#5fa873}
-.budget .bud-mark.bm-mod{background:var(--warn)}
-.budget .bud-mark.bm-high{background:var(--bad)}
-.budget .bud-mark:hover{width:12px;height:12px}
+.budget .bartrack{position:relative;padding:5px 0}
+.budget .bar{height:8px;background:var(--in);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.budget .fill{height:100%;border-radius:4px;background:var(--budfill);transition:width .2s,background .2s}
+.budget .bud-mark{position:absolute;top:50%;margin-top:-7px;width:2px;height:14px;background:#c4c9d1;border-radius:1px;z-index:2;cursor:help}
+.budget .bud-mark.bm-mid{transform:translateX(-50%)}
+.budget .bud-mark:hover{background:#fff}
 .bud-pop{font-size:11px;color:var(--txt);white-space:nowrap;font-variant-numeric:tabular-nums}
 .bud-pop b{color:var(--txt)}
 /* Menu-item leading icon (chassis / paste / etc.) */
@@ -1505,30 +1494,57 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pill.over{background:rgba(210,96,74,.3);color:#f0a08c;border:1px solid #8d4233}
 .pill.trivial{background:var(--panel2);color:var(--faint);border:1px solid var(--line)}
 .encnotes{margin:9px 0}
-.cbt{border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-bottom:7px;background:#15171b}
-.cbt.ev{border-left:3px solid var(--info)}
-.cbt.enemy{border-left:3px solid var(--bad)}
-.cbt.ally{border-left:3px solid #4a78b0}
-.cbt.setting{border-left:3px solid var(--faint)}
-.cbt .top select.fac.enemy{color:var(--brand-soft)}
-.cbt .top select.fac.ally{color:#7fa8d4}
-.cbt .top select.fac.setting{color:var(--dim)}
-.cbt .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.cbt .top input.nick{min-width:130px}
-.cbt .top input.nick{flex:1;font-weight:600}
-.cbt .top input.cnt{width:54px;text-align:center;flex:none}
-.cbt .top select.fac{width:104px;flex:none}
-.cbt .top select.crsel{width:96px;flex:none}
-.cbt .xpv{font-size:11px;color:var(--faint);min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
-.cbt .sec{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:11px;color:var(--faint)}
-.cbt .sec select{flex:1;font-size:12px}
-.cbt .sec .lab{flex:none}
-.cbt .sec .minion-tag{flex:none;margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
-.cbt .top .mini-chip{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:4px 8px;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
-.cbt .top .mini-chip:hover{border-color:var(--accent);color:var(--txt)}
-.cbt .top .mini-chip.on{color:var(--brand-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
-.cbt .top .mini-chip.on:hover{border-color:var(--accent)}
-.cbt textarea{margin-top:6px;min-height:42px;font-size:12px}
+/* Combatant rows (encounter builder, B170): hairline rows on the encounter card — no nested box — with a
+   faction stripe + ghost fields that read as clean text and firm up on hover/focus. Count leads on the left
+   as a large number; the statblock/CR control drops to a quiet subtitle; XP holds a hover-only remove. */
+.cbt{position:relative;padding:9px 4px 9px 0;border-left:3px solid var(--line);border-bottom:1px solid var(--panel2)}
+.cbt:last-child{border-bottom:none}
+.cbt.ev{border-left-color:var(--info)}
+.cbt.enemy{border-left-color:var(--bad)}
+.cbt.ally{border-left-color:#4a78b0}
+.cbt.setting{border-left-color:var(--faint)}
+.cbt:not(.ev){display:flex;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:3px}
+/* count cell — large ghost number, trailing dim × (default 1 shows dimmed via placeholder) */
+.cbt-cnt{flex:none;width:54px;display:flex;align-items:baseline;justify-content:center;gap:2px;padding-left:11px}
+.cbt-cnt .cnt{width:30px;text-align:right;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:0;color-scheme:dark;-moz-appearance:textfield}
+.cbt-cnt .cnt::-webkit-inner-spin-button,.cbt-cnt .cnt::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cbt-cnt .cnt:hover{border-color:var(--line)}
+.cbt-cnt .cnt:focus{border-color:var(--accent);outline:none}
+.cbt-cnt .cnt::placeholder{color:var(--faint)}
+.cbt-cnt .cbt-x{flex:none;color:var(--faint);font-size:12px}
+/* main column — name (ghost) over a quiet statblock / CR subtitle */
+.cbt-main{flex:1 1 140px;min-width:120px;display:flex;flex-direction:column;gap:2px}
+.cbt .nick{width:100%;min-width:0;font-size:14px;font-weight:600;color:var(--txt);background:none;border:1px solid transparent;border-radius:5px;padding:3px 6px;margin-left:-6px}
+.cbt .nick:hover{border-color:var(--line)}
+.cbt .nick:focus{background:var(--in);border-color:var(--accent);outline:none}
+.cbt .nick::placeholder{color:var(--faint)}
+.cbt-sb{display:flex;align-items:center;gap:7px;min-width:0}
+.cbt-sb select{width:auto;min-width:0;max-width:100%;font-size:12px;color:var(--dim);background:none;border:1px solid transparent;border-radius:5px;padding:2px 5px;margin-left:-5px;text-overflow:ellipsis}
+.cbt-sb select:hover{border-color:var(--line);color:var(--txt)}
+.cbt-sb select:focus{border-color:var(--accent);outline:none;color:var(--txt)}
+.cbt-sb .crsel{flex:none}
+.cbt-sb .minion-tag{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-soft);background:rgba(226,101,77,.16);border:1px solid #6e3329;border-radius:4px;padding:1px 5px;cursor:help}
+.cbt-sb .mini-chip{flex:none;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:4px;padding:3px 7px;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
+.cbt-sb .mini-chip:hover{border-color:var(--accent);color:var(--txt)}
+.cbt-sb .mini-chip.on{color:var(--brand-soft);background:rgba(226,101,77,.16);border-color:#6e3329}
+/* faction chip — native select styled like the app's pills, faction-tinted (consistent chip language) */
+.cbt select.fac{flex:none;width:auto;margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:20px;padding:3px 10px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);cursor:pointer;-webkit-appearance:none;appearance:none;text-align:center}
+.cbt select.fac:hover{filter:brightness(1.18)}
+.cbt select.fac.enemy{background:rgba(210,96,74,.16);color:var(--brand-soft);border-color:#6e3329}
+.cbt select.fac.ally{background:rgba(74,120,176,.16);color:#7fa8d4;border-color:#355370}
+.cbt select.fac.setting{background:var(--panel2);color:var(--dim);border-color:var(--line)}
+.cbt select.fac option{background:var(--panel);color:var(--txt);text-transform:none;font-weight:400;letter-spacing:0}
+/* XP + hover-only remove: ✕ fades in over the XP via a row-bg gradient */
+.cbt-xp{position:relative;flex:none;min-width:66px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px}
+.cbt-xp .xpv{font-size:12px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.cbt-del{position:absolute;right:0;top:0;bottom:0;width:120%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;border:none;background:linear-gradient(90deg,rgba(27,29,34,0),var(--panel) 48%);color:var(--dim);opacity:0;pointer-events:none;transition:opacity .12s;cursor:pointer;font-size:13px}
+.cbt:hover .cbt-del{opacity:1;pointer-events:auto}
+.cbt-del:hover{color:var(--txt)}
+/* event row stays a stacked block (name/init on top, description below) */
+.cbt.ev{padding:9px 6px 10px 13px}
+.cbt.ev .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cbt.ev .top input.nick{flex:1;min-width:130px;margin-left:0}
+.cbt.ev textarea{margin-top:6px;min-height:42px;font-size:12px;width:100%}
 
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--in);color:var(--txt);border:1px solid var(--accent);padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
