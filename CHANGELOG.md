@@ -4,12 +4,17 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
-## Batch 175 — Neutral muted-text greys
-- **`--dim` and `--faint` are now true neutral greys** (`#aaaaaa` / `#757575`, matched to the old lightness)
-  instead of the cool-blue-tinted `#a4aab4` / `#6e7580`. Fixes the slight tint on muted/secondary text app-wide
-  (statblock-name subtitle, "Add combatant", hints, etc.). Primary text and surfaces unchanged.
-- **Reverted the B174 budget-fill experiment** — the difficulty-tinted fill (slate→green→amber→coral→red) was
-  the intended look; only the *text* greys needed neutralizing.
+## Batch 176 — Neutral grey scale (whole palette)
+- **The entire grey scale is now true neutral** — the cool-blue tint is removed from every grey token, each
+  matched to its old luminance: `--txt` `#e9e9e9`, `--dim` `#aaaaaa`, `--faint` `#757575`, `--bg` `#131313`,
+  `--panel` `#1d1d1d`, `--panel2` `#262626`, `--panel3` `#2e2e2e`, `--line` `#343434`, `--in` `#0f0f0f`, and the
+  statblock surfaces `--sb`/`--sb2`/`--sb-edge` `#1b1b1b`/`#212121`/`#313131`.
+- **Hardcoded tinted near-greys neutralized too** — `.entry`/`.dchip2` surface, roll-log chrome, input-hover
+  border, the coloured-card `--dim`/`--faint` mix bases, and the budget notch (`#c4c9d1`→`#c9c9c9`).
+- Colours (accent, faction/difficulty pills, adventure dots) and the difficulty-tinted budget fill are untouched.
+
+## Batch 175 — Neutral muted-text greys (first pass)
+- First step: neutralized just `--dim`/`--faint`; superseded by B176 which neutralizes the whole grey scale.
 
 ## Batch 174 — Encounter card micro-fixes
 - **Statblock dropdown drops the per-item "CR x"** (the list is already grouped by CR); minion creatures keep a
