@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 200 — First-run nudge on the Forge (P3)
+- **A one-time, dismissable welcome tip** at the top of the Forge form (`maybeShowOnboarding`, app.js):
+  points a newcomer at the live preview and the faster starting points ("open the ⋯ menu — load a chassis
+  or paste a 5etools block"). Coral-accented card (`.forge-onboard`) with a ✕; dismissing sets
+  `localStorage.mf_onboarded` so it never shows again. Inserted in the init IIFE; degrades silently if
+  localStorage is unavailable. Verified live: shows once, dismiss removes it + persists, stays gone.
+
 ## Batch 199 — Split the roster/character subsystem out of adventures.js → roster.js
 - **New `roster.js` (387 lines), carved from `adventures.js` (1138 → 754 lines).** A clean, contiguous
   extraction of the whole player-character subsystem: the shared roster store accessors, the PC field /

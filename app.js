@@ -355,8 +355,20 @@ function wrapStepper(input,step,min){
   combatCtx=readCombatCtx(); // restore an in-progress combat so a reload returns to it (B80)
   let savedView="forge";try{savedView=localStorage.getItem("mf_view")||"forge";}catch(e){}
   if(VIEW_LABELS[savedView]&&savedView!=="forge"&&savedView!=="settings")switchView(savedView);
+  maybeShowOnboarding(); // first-run nudge on the Forge (B200)
   hideBootLoader(); // correct tab is set — reveal the app (no Forge flash)
 })();
+// First-run nudge (B200): a one-time, dismissable tip at the top of the Forge form pointing newcomers at
+// the faster starting points (chassis / paste). Shown once, then never again (localStorage mf_onboarded).
+function maybeShowOnboarding(){
+  try{if(localStorage.getItem("mf_onboarded"))return;}catch(e){return;}
+  const col=document.getElementById("formCol");if(!col||col.querySelector(".forge-onboard"))return;
+  const tip=document.createElement("div");tip.className="forge-onboard";
+  tip.innerHTML=`<button class="fo-x" type="button" aria-label="Dismiss">✕</button><div class="fo-h">Welcome to Monster Forge</div><div class="fo-b">Fill in the fields and the statblock updates live as you go. To start faster, open the <b>⋯</b> menu — load a ready-made chassis or paste a 5etools block.</div>`;
+  const dismiss=()=>{try{localStorage.setItem("mf_onboarded","1");}catch(e){}tip.remove();};
+  tip.querySelector(".fo-x").addEventListener("click",dismiss);
+  col.insertBefore(tip,col.firstChild);
+}
 // Remove the boot loader once the app is ready (or on a fatal init error so the page isn't stuck).
 function hideBootLoader(){const b=document.getElementById("bootLoader");if(!b)return;requestAnimationFrame(()=>{b.classList.add("hide");setTimeout(()=>b.remove(),450);});}
 window.addEventListener("error",hideBootLoader);
