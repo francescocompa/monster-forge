@@ -119,6 +119,9 @@ function advPartyLevels(a){return (a.party||[]).map(rid=>{const c=rosterById(rid
 function baseBudget(a){const lv=advPartyLevels(a);return [0,1,2].map(di=>lv.reduce((s,l)=>s+(BUDGET[clamp(l,1,20)]||[0,0,0])[di],0));}
 function advPartyLabel(a){const lv=advPartyLevels(a);if(!lv.length)return "no party";const set=[...new Set(lv)];return set.length===1?`${lv.length}× lvl ${set[0]}`:`${lv.length} PCs`;}
 function monOf(c){return state.lib.find(x=>x.id===c.monsterId);}
+// How many encounters (across every adventure) reference this bestiary monster — used to warn before a delete
+// would orphan those combatants (they'd resolve to "?" / 0 XP).
+function monsterUsage(id){let n=0;(state.adv||[]).forEach(a=>(a.encounters||[]).forEach(e=>{if((e.combatants||[]).some(c=>c.type==="monster"&&c.monsterId===id))n++;}));return n;}
 function addMonsterCombatant(enc,monsterId){
   const cid=uid();
   enc.combatants.push({type:"monster",id:cid,monsterId,nickname:"",count:1,faction:state.settings.defaults.faction});
@@ -847,7 +850,7 @@ function openEncCombatantMenu(a,e,c,anchor){
     if(ev.target.closest("[data-mintip]")){ev.stopPropagation();return;} // the ? just carries its own tooltip
     const k=b.dataset.emi;closePopover();
     if(k==="minion"){c.minion=!combatIsMinion(c);saveAdv();renderEncList(a);}
-    else if(k==="forge"){if(m){loadMonster(m);switchView("forge");}}
+    else if(k==="forge"){if(m)guardedLoad(()=>{loadMonster(m);switchView("forge");});}
     else if(k==="dupe"){const i=e.combatants.findIndex(x=>x.id===c.id);e.combatants.splice(i+1,0,{...c,id:uid()});saveAdv();renderEncList(a);}
     else if(k==="del"){e.combatants=e.combatants.filter(x=>x.id!==c.id&&x.lairFor!==c.id);saveAdv();renderEncList(a);}
   }));
@@ -1109,7 +1112,7 @@ function openBestiaryPicker(a,e){
   $("#bpChassis").addEventListener("click",()=>{closeModal();openChassisForEncounter(a,e,true);});
 }
 // "Forge new →" from anywhere: park a pendingForge target, load a blank monster, jump to the Forge.
-function forgeForEncounter(a,e){pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");}
+function forgeForEncounter(a,e){guardedLoad(()=>{pendingForge={advId:a.id,encId:e.id};loadMonster(blankMonster());showBanner(`Forging a new monster for “${e.name}”. Save to add it to that encounter.`,()=>{pendingForge=null;hideBanner();});switchView("forge");});}
 function pushEncounter(a,e){
   const bud=encBudget(a,e),spent=encSpent(e),[,label]=diffOf(spent,bud);
   const payload={forge:"encounter",v:2,adventure:a.name,encounter_tag:`${a.name} / ${e.name}`,

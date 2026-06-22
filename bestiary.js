@@ -3,7 +3,10 @@
 // Loaded as a classic <script> sharing ONE global scope with the other files (data.js, parsers.js,
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
-function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;if(v!=="library"&&libSel.size)clearLibSel();$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");
+function switchView(v){if(_curView!=="settings")_prevView=_curView;_curView=v;if(v!=="library"&&libSel.size)clearLibSel();
+  // Leaving the Forge abandons a "forge a monster for this encounter" flow — drop the pending link + banner so
+  // a later, unrelated Save can't be mis-routed into that encounter.
+  if(v!=="forge"&&typeof pendingForge!=="undefined"&&pendingForge){pendingForge=null;hideBanner();}$$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$$(".view").forEach(s=>s.classList.toggle("active",s.id==="view-"+v));const gear=$("#settingsBtn");if(gear)gear.classList.toggle("active",v==="settings");
   // Rule finder only applies to statblock surfaces (Forge + Combat) — hide its button elsewhere, and exit
   // the mode if leaving while it's on (B167).
   {const rf=$("#ruleFinderBtn");if(rf){const ok=(v==="forge"||v==="combat");rf.style.display=ok?"":"none";if(!ok&&ruleFinder){ruleFinder=false;document.body.classList.remove("rule-finder");rf.classList.remove("active");rf.innerHTML=RF_Q_ICON;rf.title="Rule finder";closePopover();}}}
@@ -191,11 +194,13 @@ function wireLibCards(body){
     if(e.metaKey||e.ctrlKey){e.preventDefault();toggleLibSel(id);libSelAnchor=id;return;}
     if(e.shiftKey){e.preventDefault();selectLibRange(id,body);return;}
     if(libSel.size)clearLibSel();
-    loadMonster(find(id));switchView("forge");}));
+    guardedLoad(()=>{loadMonster(find(id));switchView("forge");});}));
   body.querySelectorAll("[data-preview]").forEach(b=>b.addEventListener("click",()=>showStatPreview(b,find(b.dataset.preview))));
-  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{loadMonster(find(b.dataset.edit));switchView("forge");}));
+  body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>guardedLoad(()=>{loadMonster(find(b.dataset.edit));switchView("forge");})));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
-  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>confirmModal(`Delete “${find(b.dataset.del).name}”?`,()=>{state.lib=state.lib.filter(x=>x.id!==b.dataset.del);saveLib();renderLibrary();toast("Deleted.");})));
+  body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.del,used=monsterUsage(id);
+    const msg=`Delete “${find(id).name}”?`+(used?` It's used in ${used} encounter${used>1?"s":""} — those combatants will break.`:"");
+    confirmModal(msg,()=>{state.lib=state.lib.filter(x=>x.id!==id);saveLib();renderLibrary();toast("Deleted.");});}));
   body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
   body.querySelectorAll("[data-pinlib]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.pinlib);if(m){m.pinned=!m.pinned;saveLib();renderLibrary();}}));
   body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
@@ -353,8 +358,15 @@ bindCtrlIcons($("#libCtrlIcons"),libCtrl,LIB_DESC,renderLibrary);
 // True when the Forge holds content that differs from its saved Bestiary copy (or was never saved).
 // An unedited chassis/preset load doesn't count — loading another over it loses no real work (B66).
 function forgeUnsaved(){if(!monsterDirty())return false;if(originOf(M).kind==="chassis")return false;const saved=state.lib.find(x=>x.id===M.id);return !saved||contentSig(M)!==contentSig(saved);}
-function startFreshMonster(){const go=()=>{loadMonster(blankMonster());switchView("forge");};
-  if(forgeUnsaved())confirmModal("Start a new creature? The current Forge has unsaved changes that will be lost.",go);else go();}
+// Any action that REPLACES the Forge draft M (open another creature, paste-import, edit-in-forge, forge a
+// new one) must route through this so unsaved work isn't silently discarded — the same forgeUnsaved() guard
+// "New" and "Load chassis" already use. `fn` performs the actual load/switch once confirmed.
+function guardedLoad(fn){if(forgeUnsaved())confirmModal("The Forge has unsaved changes that will be lost. Continue?",fn);else fn();}
+function startFreshMonster(){guardedLoad(()=>{loadMonster(blankMonster());switchView("forge");});}
+// Subtle "unsaved changes" affordance on the save controls — reflects forgeUnsaved() after each edit/save.
+function refreshSaveState(){const dirty=typeof M!=="undefined"&&M&&forgeUnsaved();
+  $("#forgeSaveFab")&&$("#forgeSaveFab").classList.toggle("is-dirty",!!dirty);
+  $("#saveMonster")&&$("#saveMonster").classList.toggle("is-dirty",!!dirty);}
 $("#libNew").addEventListener("click",startFreshMonster);
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
@@ -369,7 +381,7 @@ function saveCurrentToBestiary(){
   const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
   const i=state.lib.findIndex(x=>x.id===rec.id);
   if(i>=0)state.lib[i]=rec;else state.lib.unshift(rec);
-  saveLib();return true;
+  saveLib();refreshSaveState();return true;
 }
 $("#saveMonster").addEventListener("click",async()=>{
   if(!validName())return;
@@ -379,8 +391,8 @@ $("#saveMonster").addEventListener("click",async()=>{
   await saveLib();
   if(pendingForge){const a=state.adv.find(x=>x.id===pendingForge.advId);const e=a&&a.encounters.find(x=>x.id===pendingForge.encId);
     if(e){a._focusEnc=e.id;addMonsterCombatant(e,rec.id);await saveAdv();}
-    const pf=pendingForge;pendingForge=null;hideBanner();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
-  toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
+    const pf=pendingForge;pendingForge=null;hideBanner();refreshSaveState();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
+  refreshSaveState();toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
 });
 $("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat — I build the Notion page in MM25 format and set its properties.");});
 $("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});

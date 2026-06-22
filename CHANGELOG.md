@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 187 — Forge→Bestiary save-flow hardening (audit fixes ①–④)
+- **① No more silent loss of unsaved edits when switching creatures.** New `guardedLoad(fn)` helper routes
+  every path that REPLACES the Forge draft `M` — bestiary card click & Edit, paste-import, "Edit in Forge"
+  from combat and the encounter combatant menu, and "forge a monster for this encounter" — through the same
+  `forgeUnsaved()` confirm that "New"/"Load chassis" already used. Previously those paths called
+  `loadMonster()` directly and discarded edits with no prompt.
+- **② Unsaved-changes indicator.** A subtle white/accent dot appears on the Save FAB and the toolbar Save
+  button (`.is-dirty`) whenever the draft differs from its saved copy; `refreshSaveState()` runs after each
+  edit (in `renderPreview`) and after a save clears it. (The `#forgeStatus` chip only ever showed the
+  Bestiary *status*, which was easy to mistake for save-state.)
+- **③ `pendingForge` no longer dangles.** Leaving the Forge via `switchView` clears a pending
+  "forge-for-encounter" link + hides its banner, so an abandoned flow can't mis-route a later, unrelated Save
+  into that encounter.
+- **④ Delete warns when a monster is in use.** Deleting a Bestiary creature now counts referencing encounters
+  (`monsterUsage(id)`) and says "It's used in N encounter(s) — those combatants will break" in the confirm.
+- (⑤ JSONBin whole-blob last-write-wins is by-design for single-user use — left as-is.)
+
 ## Batch 186 — Hover-to-reveal full text on truncated fields
 - **Any clipped text field now shows its full text in a hover tooltip.** A single global handler (engine.js)
   detects truncation generically — `text-overflow:ellipsis`, `-webkit-line-clamp`, or an overflowing

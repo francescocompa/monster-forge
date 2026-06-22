@@ -1117,7 +1117,7 @@ function renderCombat(){
   // PC sheet "Edit" → open the full character detail (closing it re-renders combat — see openCharacterDetail).
   body.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const ctx=loadedCtx();openCharacterDetail(el.dataset.pcedit,ctx?ctx.a.id:null);}));
   // Monster statblock "Edit in Forge" → load the creature in the Forge and switch there.
-  body.querySelectorAll("[data-monedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const mon=monById(el.dataset.monedit);if(mon){loadMonster(mon);switchView("forge");}}));
+  body.querySelectorAll("[data-monedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const mon=monById(el.dataset.monedit);if(mon)guardedLoad(()=>{loadMonster(mon);switchView("forge");});}));
   // PC sheet chips (ability checks / saves / skills / spell attack) roll like the monster quick-ref chips,
   // attributed to the shown PC via combatRollSrc. Alt-click / right-click opens roll options.
   body.querySelectorAll(".pcs-roll[data-roll]").forEach(el=>{

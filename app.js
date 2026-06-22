@@ -306,7 +306,7 @@ function openImportModal(){
   $("#impGo").addEventListener("click",()=>{const raw=$("#impArea").value;if(!raw.trim()){toast("Paste a statblock first.");return;}
     let m;try{m=parse5etools(raw);}catch(e){m=null;}
     if(!m||!m.name){toast("Couldn't parse that — is it a 5etools block?");return;}
-    closeModal();loadMonster(m);switchView("forge");toast("Imported — review and Save to Bestiary.");});
+    closeModal();guardedLoad(()=>{loadMonster(m);switchView("forge");toast("Imported — review and Save to Bestiary.");});});
 }
 
 document.addEventListener("click",e=>{

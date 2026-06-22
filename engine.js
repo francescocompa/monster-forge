@@ -284,6 +284,7 @@ function renderPreview(){
   linkSpellFeatures($("#statblock"));
   if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
   persistForgeDraft(); // remember what's being edited so a reload restores it (B78)
+  if(typeof refreshSaveState==="function")refreshSaveState(); // reflect unsaved-changes state on the save controls
 }
 // Re-link spell names mentioned in spellcasting-derived feature bodies (reactions, hidden bonus
 // actions, etc.). Scoped to each block's own [data-spells] list — so only genuine spells link, no
