@@ -217,6 +217,10 @@ let _cloudWarned=false; // show the cloud-failure banner once, not on every debo
 if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// Run a wholesale re-render that rebuilds a scroll container, preserving its scroll position. `sel` is a CSS
+// selector resolved both BEFORE and AFTER fn() (the element is typically replaced, so we re-query it). Use this
+// instead of hand-rolling scrollTop save/restore around renderAdvDetail / re-opened modals etc. Returns fn()'s value.
+function preserveScroll(sel,fn){const top=(s=>s?s.scrollTop:0)($(sel));const r=fn();const ns=$(sel);if(ns)ns.scrollTop=top;return r;}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const clone=o=>JSON.parse(JSON.stringify(o));

@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 184 — preserveScroll helper (de-duplicate re-render scroll save/restore)
+- **New `preserveScroll(sel,fn)` helper** (core.js, beside `$`/`$$`): captures a scroll container's scrollTop,
+  runs a wholesale re-render `fn`, re-queries the (rebuilt) element by selector and restores the position.
+  Replaces the hand-rolled save/restore that had been copied per call site (B181 level-up, B143 character
+  modal). The pattern that kept producing scroll-jump bugs now lives in one place.
+- Adopted at both sites: `levelUpParty` (`.adv-detail-body`) and the character-detail modal's `re()`
+  (`.cd-scroll`). Behaviour unchanged; verified scroll is preserved through both re-renders.
+
 ## Batch 183 — Effect chips show state-adjectives + refpop fade fix
 - **Curated effect chips read as a state.** Each `CURATED_EFFECTS` entry gained an optional `adj` (Haste →
   "Hasted", Bless → "Blessed", Hex → "Hexed", Hunter's Mark → "Marked", Invisibility → "Invisible", Hold

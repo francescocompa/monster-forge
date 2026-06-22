@@ -267,8 +267,8 @@ function levelUpParty(a){const box=$("#partyWrap"),inputs=box?[...box.querySelec
     let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=String(to);
     moves.push({inp:inputs.find(el=>el.dataset.pclvl===rid),from,to});});
   // Level-up recomputes party budgets so it must re-render the whole detail (renderAdvDetail), but that
-  // rebuilds .adv-detail-body and would jump scroll to the top — capture and restore its scrollTop.
-  if(!moves.length)return;saveRoster();animateLevelUp(moves,()=>{const sc=$(".adv-detail-body"),top=sc?sc.scrollTop:0;renderAdvDetail();const ns=$(".adv-detail-body");if(ns)ns.scrollTop=top;});}
+  // rebuilds .adv-detail-body and would jump scroll to the top — preserveScroll keeps the position.
+  if(!moves.length)return;saveRoster();animateLevelUp(moves,()=>preserveScroll(".adv-detail-body",renderAdvDetail));}
 function nfStepHTML(from,to){return `<span class="nf-digit"><span class="nf-col"><span class="nf-n">${from}</span><span class="nf-n">${to}</span></span></span>`;}
 function animateLevelUp(moves,done){const ovs=[];
   moves.forEach(({inp,from,to})=>{if(!inp)return;const r=inp.getBoundingClientRect();
@@ -492,7 +492,7 @@ function openCharacterDetail(rid,curAdvId,ui){
   $("#modal").classList.add("cd-host");
   // re() re-renders the whole modal; preserve the scroll position so toggling Save/main/etc. doesn't bounce
   // the user back to the top (B143).
-  const m=$("#modal"),re=u=>{const sc=m.querySelector(".cd-scroll"),top=sc?sc.scrollTop:0;openCharacterDetail(rid,curAdv,u);const ns=$("#modal").querySelector(".cd-scroll");if(ns)ns.scrollTop=top;},close=()=>closeModal();
+  const m=$("#modal"),re=u=>preserveScroll(".cd-scroll",()=>openCharacterDetail(rid,curAdv,u)),close=()=>closeModal();
   // Refresh on ANY close path (✕, kebab action, or backdrop click) so edits made during combat show up (B169).
   _onModalClose=()=>{if(state.selAdv)renderAdvDetail();if(typeof _curView!=="undefined"&&_curView==="combat"){resyncPcInstances();renderCombat();}};
   const grow=t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";};
