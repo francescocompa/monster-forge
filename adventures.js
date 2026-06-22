@@ -266,7 +266,9 @@ function levelUpParty(a){const box=$("#partyWrap"),inputs=box?[...box.querySelec
   (a.party||[]).forEach((rid,i)=>{const c=rosterById(rid),from=snap[i];if(!c||from==null||from>=20)return;const to=from+1;
     let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=String(to);
     moves.push({inp:inputs.find(el=>el.dataset.pclvl===rid),from,to});});
-  if(!moves.length)return;saveRoster();animateLevelUp(moves,()=>renderAdvDetail());}
+  // Level-up recomputes party budgets so it must re-render the whole detail (renderAdvDetail), but that
+  // rebuilds .adv-detail-body and would jump scroll to the top — capture and restore its scrollTop.
+  if(!moves.length)return;saveRoster();animateLevelUp(moves,()=>{const sc=$(".adv-detail-body"),top=sc?sc.scrollTop:0;renderAdvDetail();const ns=$(".adv-detail-body");if(ns)ns.scrollTop=top;});}
 function nfStepHTML(from,to){return `<span class="nf-digit"><span class="nf-col"><span class="nf-n">${from}</span><span class="nf-n">${to}</span></span></span>`;}
 function animateLevelUp(moves,done){const ovs=[];
   moves.forEach(({inp,from,to})=>{if(!inp)return;const r=inp.getBoundingClientRect();

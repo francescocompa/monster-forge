@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 181 — Level Up keeps scroll position
+- **Clicking "Level Up" no longer jumps the page to the top.** `levelUpParty` still re-renders the whole
+  adventure detail (a level change recomputes every encounter's budget), but it now captures the
+  `.adv-detail-body` scrollTop before `renderAdvDetail()` and restores it after — same pattern as the
+  character-detail modal's `re()`.
+
 ## Batch 180 — Combatant faction/XP side-by-side + always-visible kebab
 - **Faction + XP are side by side at full width again** (a `.cbt-right` cluster), and only **stack** (faction
   over XP) when the row is narrow — a container query on `.cbt` (`@container (max-width:340px)` flips
