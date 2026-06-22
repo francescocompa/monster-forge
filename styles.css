@@ -402,7 +402,7 @@ select::-ms-expand{display:none}
 .modal-back{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;width:26px;height:26px;display:grid;place-items:center;padding:0;border-radius:5px;flex:none;transition:border-color .12s,color .12s}
 .modal-back:hover{border-color:var(--accent);color:var(--txt)}
 /* Last-edited encounter highlight. */
-.enc.focused{border-color:var(--sel-accent);background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel))}
+.enc.focused{border-color:var(--sel-accent)} /* focus = accent border only; no tinted bg, so loose + in-scene focused encounters match (B177) */
 /* On a selected card the whole accent (hovers, focus rings) follows the card's local colour, and the muted
    greys are tinted toward it too so they blend on the tint instead of clashing as cool grey-on-colour.
    Solid CTAs keep --brand (see .start-combat below). Greys stay light enough to read on every ADV_COLOR.
@@ -823,7 +823,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .pc-nm{flex:0 1 auto;min-width:0;max-width:240px;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cls{flex:none;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap}
 .pc-unnamed{color:var(--faint);font-weight:500}
-.pc-chips{flex:1 1 auto;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.pc-chips{flex:1 100 auto;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 .pc-chips.ov{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24px);mask-image:linear-gradient(90deg,transparent 0,#000 24px)}
 .pc-chips::-webkit-scrollbar{display:none}
 .pc-chip,.pc-dchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:3px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}

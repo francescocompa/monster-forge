@@ -201,7 +201,7 @@ function renderAdvDetail(){
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
   $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
   {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}
-  $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();});
+  $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderEncList(a);revealFocusedEnc();});
   $("#encAddScene").addEventListener("click",()=>addScene(a));
   $("#encImport").addEventListener("click",()=>openImportEnc(a));
   $("#encArchiveAll").addEventListener("click",()=>{const live=a.encounters.filter(e=>!encArchived(a,e));if(!live.length)return;confirmModal(`Archive all ${live.length} active encounter${live.length>1?"s":""}?`,()=>{live.forEach(e=>e.archived=true);saveAdv();renderAdvDetail();});});
@@ -594,7 +594,7 @@ function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:
 // else the stored status. (CT7)
 function encStatus(e){return e.archived?"archived":(e.combat&&e.combat.active?"active":(e.status||"draft"));}
 function applyEncStatus(e,st){if(st==="archived"){e.archived=true;}else{e.archived=false;e.status=st;}}
-function setEncStatus(a,e,st){applyEncStatus(e,st);saveAdv();renderAdvDetail();}
+function setEncStatus(a,e,st){applyEncStatus(e,st);saveAdv();renderEncList(a);} // renderEncList (not renderAdvDetail) so the page keeps its scroll position (B177)
 // `after` (optional) overrides the default re-render — the load popup passes its own redraw (CT7c).
 function openEncStatusMenu(a,e,anchor,after){
   if(!e)return;const cur=encStatus(e);
@@ -605,7 +605,7 @@ function openEncStatusMenu(a,e,anchor,after){
 // Quick / event combatant adds (moved off the encounter card into the Add-combatant picker footer, CT6).
 function addQuickCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"quick",id:uid(),nickname:"",cr:"1",count:1,faction:state.settings.defaults.faction});afterCombatantAdded(a,e);}
 function addEventCombatant(a,e){if(!e)return;a._focusEnc=e.id;e.combatants.push({type:"event",id:uid(),name:"",init:"",text:""});afterCombatantAdded(a,e);}
-function addScene(a){a.scenes.push({id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false});saveAdv();renderAdvDetail();}
+function addScene(a){const s={id:uid(),name:"",collapsed:false,notes:"",notesOn:notesDefault("scene"),archived:false};a.scenes.push(s);saveAdv();renderEncList(a);document.querySelector(`#advDetail .scene[data-scene="${s.id}"]`)?.scrollIntoView({block:"nearest"});}
 // Display name: an empty (untitled) item shows its default label everywhere except its own input,
 // which keeps the placeholder so there's nothing to clear (B66).
 function advDName(a){return (a&&a.name&&a.name.trim())||"New Adventure";}
@@ -617,6 +617,9 @@ function encDName(e){return (e&&e.name&&e.name.trim())||"New Encounter";}
 function setEncFocus(a,encId){if(!a||a._focusEnc===encId&&document.querySelector("#advDetail .enc.focused"))return;a._focusEnc=encId;
   $$("#advDetail .enc.focused").forEach(x=>x.classList.remove("focused"));
   const el=document.querySelector(`#advDetail .enc[data-enc="${encId}"]`);if(el)el.classList.add("focused");}
+// After an add (which re-renders via renderEncList to keep scroll), bring the new — focused — encounter
+// into view so it isn't left off-screen below the fold (B177).
+function revealFocusedEnc(){const el=document.querySelector("#advDetail .enc.focused");if(el)el.scrollIntoView({block:"nearest"});}
 // ---- Encounter list controls (search / filter / sort) — manual order is the default (no sort). ----
 let encCtrl={q:"",filters:{},sort:{key:"manual",dir:1},group:null};
 const ENC_DESC={search:true,icons:["search","sort"],defaultSortKey:"manual",params:[],
@@ -909,22 +912,22 @@ function bindEncEvents(a){
   const q=sel=>$$("#advDetail "+sel);
   q("[data-encname]").forEach(el=>el.addEventListener("change",()=>{findEnc(a,el.dataset.encname).name=el.value;saveAdv();}));
   q("[data-encnotes]").forEach(el=>el.addEventListener("input",()=>{findEnc(a,el.dataset.encnotes).notes=el.value;saveAdv();}));
-  q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderAdvDetail();}));
-  q("[data-encnotes-tog]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encnotesTog);if(e){e.notesOn=!e.notesOn;if(!e.notesOn)e.notes="";saveAdv();renderAdvDetail();}}));
+  q("[data-encdel]").forEach(el=>el.addEventListener("click",()=>{a.encounters=a.encounters.filter(e=>e.id!==el.dataset.encdel);saveAdv();renderEncList(a);}));
+  q("[data-encnotes-tog]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encnotesTog);if(e){e.notesOn=!e.notesOn;if(!e.notesOn)e.notes="";saveAdv();renderEncList(a);}}));
   q("[data-enccollapse]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.enccollapse);e.collapsed=!e.collapsed;saveAdv();renderEncList(a);}));
   q("[data-encmove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.encmove.split(":");moveEncTo(a,id,where);}));
-  q("[data-encpin]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encpin);if(e){e.pinned=!e.pinned;saveAdv();renderAdvDetail();}}));
-  q("[data-scenepin]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenepin);if(s){s.pinned=!s.pinned;saveAdv();renderAdvDetail();}}));
+  q("[data-encpin]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encpin);if(e){e.pinned=!e.pinned;saveAdv();renderEncList(a);}}));
+  q("[data-scenepin]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenepin);if(s){s.pinned=!s.pinned;saveAdv();renderEncList(a);}}));
   q("[data-scenemove]").forEach(el=>el.addEventListener("click",()=>{const[id,where]=el.dataset.scenemove.split(":");moveSceneTo(a,id,where);}));
   q("#addScene").forEach(el=>el.addEventListener("click",()=>addScene(a)));
   q("[data-scenename]").forEach(el=>el.addEventListener("change",()=>{const s=sceneOf(a,el.dataset.scenename);if(s){s.name=el.value.trim()||"Scene";saveAdv();}}));
   q("[data-scenenotes]").forEach(el=>el.addEventListener("input",()=>{const s=sceneOf(a,el.dataset.scenenotes);if(s){s.notes=el.value;saveAdv();}}));
   q("[data-scenecollapse]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenecollapse);if(s){s.collapsed=!s.collapsed;saveAdv();renderEncList(a);}}));
-  q("[data-scenearch]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenearch);if(s){s.archived=!s.archived;saveAdv();renderAdvDetail();}}));
-  q("[data-scenenotes-tog]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenenotesTog);if(s){s.notesOn=!s.notesOn;if(!s.notesOn)s.notes="";saveAdv();renderAdvDetail();}}));
-  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const e=blankEncounter(el.dataset.sceneadd);a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderAdvDetail();}));
+  q("[data-scenearch]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenearch);if(s){s.archived=!s.archived;saveAdv();renderEncList(a);}}));
+  q("[data-scenenotes-tog]").forEach(el=>el.addEventListener("click",()=>{const s=sceneOf(a,el.dataset.scenenotesTog);if(s){s.notesOn=!s.notesOn;if(!s.notesOn)s.notes="";saveAdv();renderEncList(a);}}));
+  q("[data-sceneadd]").forEach(el=>el.addEventListener("click",()=>{const e=blankEncounter(el.dataset.sceneadd);a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderEncList(a);revealFocusedEnc();}));
   q("[data-scenedel]").forEach(el=>el.addEventListener("click",()=>{const sid=el.dataset.scenedel,s=sceneOf(a,sid);if(!s)return;const n=a.encounters.filter(e=>e.sceneId===sid).length;
-    const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderAdvDetail();};
+    const go=()=>{a.encounters.forEach(e=>{if(e.sceneId===sid)e.sceneId=null;});a.scenes=a.scenes.filter(x=>x.id!==sid);saveAdv();renderEncList(a);};
     n?confirmModal(`Delete scene "${s.name}"? Its ${n} encounter${n>1?"s":""} will become ungrouped.`,go):go();}));
   bindEncDrag(a,q);
   bindEncTarget(a,q);
@@ -959,7 +962,7 @@ function moveEncTo(a,id,where){
   const group=pinSort(a.encounters.filter(x=>x.archived===e.archived)),pos=group.indexOf(e);
   let tgt=where==="up"?pos-1:where==="down"?pos+1:where==="top"?0:group.length-1;
   tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
-  group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderAdvDetail();
+  group.splice(pos,1);group.splice(tgt,0,e);setGroupOrder(a,e.archived,group);saveAdv();renderEncList(a);
 }
 function reorderEncRel(a,fromId,toId,after){
   if(!fromId||!toId||fromId===toId)return;
@@ -970,7 +973,7 @@ function reorderEncRel(a,fromId,toId,after){
   let idx=group.indexOf(to);if(after)idx++;
   group.splice(idx,0,from);
   from.sceneId=to.sceneId||null; // dropping onto an encounter adopts that encounter's scene
-  setGroupOrder(a,from.archived,group);saveAdv();renderAdvDetail();
+  setGroupOrder(a,from.archived,group);saveAdv();renderEncList(a);
 }
 // Move an encounter into a scene (or out of all scenes when sceneId is null/""), placing it after the
 // scene's last current member so it lands at the end of that group.
@@ -983,7 +986,7 @@ function moveEncToScene(a,encId,sceneId){
   group.splice(group.indexOf(e),1);
   let last=-1;group.forEach((x,i)=>{if((x.sceneId||null)===sceneId)last=i;});
   group.splice(last+1,0,e);
-  setGroupOrder(a,false,group);saveAdv();renderAdvDetail();
+  setGroupOrder(a,false,group);saveAdv();renderEncList(a);
 }
 let dragEncId=null,dropTarget=null;
 // Skip drag-init when the press starts on an interactive control inside the card so editing
@@ -997,7 +1000,7 @@ function reorderScene(a,fromId,toId,after){
   const arr=a.scenes,from=arr.find(s=>s.id===fromId),to=arr.find(s=>s.id===toId);
   if(!from||!to||!!from.archived!==!!to.archived)return;
   arr.splice(arr.indexOf(from),1);let idx=arr.indexOf(to);if(after)idx++;arr.splice(idx,0,from);
-  saveAdv();renderAdvDetail();
+  saveAdv();renderEncList(a);
 }
 // Scene reorder by menu (top/up/down/bottom), within the active or archived group. Pinned scenes
 // still float to the top at render. Mirrors moveEncTo (B78).
@@ -1007,7 +1010,7 @@ function moveSceneTo(a,id,where){
   const group=pinSort((a.scenes||[]).filter(x=>!!x.archived===!!s.archived)),pos=group.indexOf(s);
   let tgt=where==="up"?pos-1:where==="down"?pos+1:where==="top"?0:group.length-1;
   tgt=clamp(tgt,0,group.length-1);if(tgt===pos)return;
-  group.splice(pos,1);group.splice(tgt,0,s);setSceneGroupOrder(a,s.archived,group);saveAdv();renderAdvDetail();
+  group.splice(pos,1);group.splice(tgt,0,s);setSceneGroupOrder(a,s.archived,group);saveAdv();renderEncList(a);
 }
 function bindEncDrag(a,q){
   q(".enc[data-enc]").forEach(enc=>{

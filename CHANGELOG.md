@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 178 — Focused-encounter bg, scroll preservation, party-name truncation
+- **Focused encounter has no tinted background** anymore — `.enc.focused` is just the accent border. A loose
+  encounter used to get a coral-tinted bg while one inside a scene (overridden by `.scene-body .enc`) did not;
+  now both match the no-tint scene look.
+- **No more scroll-jump on status change (and friends).** `setEncStatus` and every other encounter/scene
+  *list* operation — pin, notes-toggle, archive, delete, menu moves, and drag-reorders — now re-render via
+  `renderEncList` (rebuilds only `#encList`) instead of `renderAdvDetail`, so the page keeps its scroll position.
+  Adds (`#addEnc`, scene `＋`, new scene) also use `renderEncList` + scroll the new item into view rather than
+  jumping to the top. (Party-roster/header/modal-close re-renders still use `renderAdvDetail` — they sit at the
+  top and a level change must recompute every budget.)
+- **Party-row names stay complete.** The chip cluster now absorbs almost all the row's shrink
+  (`.pc-chips{flex:1 100 auto}`), so the name only truncates at very low width instead of clipping as soon as
+  the row gets tight; chips scroll under their fade first.
+
 ## Batch 177 — Encounter muted text uses the plain greyscale
 - **Reverted the whole-palette neutralization (B175/B176).** Globally retuning every grey token was the wrong
   call — all grey tokens (`--txt`/`--dim`/`--faint`, `--bg`/`--panel*`/`--line`/`--in`, `--sb*`) and the
