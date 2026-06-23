@@ -633,6 +633,8 @@ function doRoll(formula,opts,meta){
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
+  // Player mode (B204 stage 4): mirror the roll to the DM's roll log via the write-back bin.
+  if(PLAYER_MODE&&!meta.silent&&typeof playerPushRoll==="function")playerPushRoll({label:meta.label,type:meta.type,total:r.total,parts:r.parts,abil:meta.abil,dmgType:meta.dmgType,crit});
   rollLogOpen=true;renderRollLog(true); // renderRollLog spins the new group's totals (B133)
   // Fire the notification as the digits land (B129).
   if(!meta.silent)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);

@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 207 — In-app player mode, stage 4 (character preview + dice rolling → DM roll log)
+- **Tap-to-open character preview.** Tapping an editable PC's name opens a bottom-sheet overlay (`pm-sheet`)
+  that reuses the real active-panel content (`combatPanelInnerHTML`) — the full sheet with its rollable
+  ability/skill/ATK chips. It's preview + roll only (the row stays the edit surface): edit/HP-manage/note/
+  resource affordances are suppressed in the overlay.
+- **Dice rolling runs locally and mirrors to the DM.** Roll chips use the real engine (`quickRoll`/`doRoll`),
+  so a player sees the result + roll log on their phone. `doRoll` now also pushes the roll to the write-back
+  bin's new `rolls[]` channel in player mode (`playerPushRoll`, attributed via `combatRollSrc`); the DM poller
+  folds new roll events into the DM `rollLog` (dedup via `_shareRollSeen`) and re-renders it — so the DM sees
+  e.g. "Lyra Vance · Arcana 16". All player write-backs (edits + rolls) now serialize through one
+  read-modify-write queue (`pmQueueWrite`) so concurrent pushes can't clobber each other.
+- Verified end-to-end in preview: preview overlay opens and renders the panel; a roll mirrored to the bin and
+  surfaced in the DM roll log attributed to the PC. (Seed PCs carry no ability fields, so the sandbox preview
+  has few chips — real characters render the full rollable sheet.) **Next (4b): character-SHEET field editing
+  via the detail modal** (write-back → DM applies to the roster char). Then stage 5 toggles + stage 6 redirect.
+
 ## Batch 206 — In-app player mode, stage 3 (PC combat-row editing)
 - **Players edit their PC through the real combat row.** In player mode, editable PC rows (`.pm-edit`) keep
   the full DM controls — editable initiative, HP-manage popover, add/remove conditions, reaction &

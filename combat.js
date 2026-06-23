@@ -1149,6 +1149,7 @@ async function setShareEditMode(mode){
 // mode queues it for DM approval. `_shareApplied` tracks the last-seen ts per PC id so nothing reapplies.
 let _sharePoll=null,_sharePollBusy=false,_shareApplied={};
 const _shareSuggest=new Map(); // pcId → {id,name,by,edit,ts} pending DM approval (suggest mode)
+const _shareRollSeen=new Set(); // roll-event ids already folded into the DM roll log (B204 stage 4)
 function startSharePoll(){if(_sharePoll)return;_sharePoll=setInterval(pollShareEdits,3000);pollShareEdits();}
 function stopSharePoll(){if(_sharePoll){clearInterval(_sharePoll);_sharePoll=null;}}
 async function pollShareEdits(){
@@ -1166,8 +1167,14 @@ async function pollShareEdits(){
       if(mode==="suggest"){_shareSuggest.set(id,{id,name:it.name,by:e.by||"",edit:e,ts:e.ts});queued=true;}
       else{if(e.init!=null&&Number(e.init)!==it.init)reorder=true;applyPlayerEdit(it,e);applied=true;}
     });
+    // Player dice rolls → fold new ones into the DM roll log (B204 stage 4).
+    let rollNew=false;
+    if(Array.isArray(rec.rolls)){rec.rolls.forEach(ev=>{if(!ev||!ev.id||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
+      rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
+      if(rollLog.length>60)rollLog.length=60;}
     if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();renderCombat();}
     else if(queued)renderCombat(); // refresh the round-bar suggestion badge
+    if(rollNew)renderRollLog(true);
   }finally{_sharePollBusy=false;}
 }
 // Apply one player edit to a combat instance: HP/temp clamp to the instance's max; conditions are reconciled
@@ -1301,7 +1308,7 @@ function hydratePlayerCombat(rec){
 // ── Player editing (B204 stage 3) ────────────────────────────────────────────
 // The shared edit mode + write-back bin/key ride along in the snapshot. Editability per mode: own = the
 // claimed PC only; all/suggest = any PC. The claim (own mode) is a localStorage pick keyed by the bin.
-let _pmBaseline={},_pmPending={},_pmPushTimer=null;
+let _pmBaseline={},_pmPending={},_pmPushTimer=null,_pmWrite=Promise.resolve();
 function playerEditMode(){return (PLAYER_MODE&&state.__pmEdit)||"off";}
 function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+PLAYER_BIN):null;}catch(e){return null;}}
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
@@ -1319,17 +1326,28 @@ function pmReconcile(order){const now=Date.now();
     applyEditFields(it,p.fields);});}
 // Debounced write-back: push the editable PCs that differ from the DM's snapshot to the write-back bin.
 function playerScheduleEdits(){if(!PLAYER_MODE)return;clearTimeout(_pmPushTimer);_pmPushTimer=setTimeout(playerPushEdits,500);}
-async function playerPushEdits(){
-  const wbin=state.__pmWbin,wkey=state.__pmWkey;if(!wbin||!wkey)return;
+// Serialize every player write-back (edits + rolls) through one read-modify-write queue so concurrent
+// pushes can't clobber each other's slice of the bin.
+function pmQueueWrite(mutate){
+  const wbin=state.__pmWbin,wkey=state.__pmWkey;if(!wbin||!wkey)return Promise.resolve();
+  _pmWrite=_pmWrite.then(async()=>{const rec=(await jbinReadBin(wbin))||{v:1,edits:{}};mutate(rec);
+    try{await fetch(`${JBIN_BASE}/b/${wbin}`,{method:"PUT",headers:{"Content-Type":"application/json","X-Access-Key":wkey},body:JSON.stringify(rec)});}catch(e){}}).catch(()=>{});
+  return _pmWrite;
+}
+function playerPushEdits(){
   const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
   const suggest=playerEditMode()==="suggest",changes={},now=Date.now();
   ctx.e.combat.order.forEach(it=>{if(!playerCanEdit(it))return;const cur=instEditFields(it);
     if(sameEdit(_pmBaseline[it.id],cur))return; // unchanged from the DM's confirmed state
     changes[it.id]=Object.assign({},cur,{ts:now,by:it.name,suggest});_pmPending[it.id]={fields:cur,ts:now};});
-  const ids=Object.keys(changes);if(!ids.length)return;
-  const rec=(await jbinReadBin(wbin))||{v:1,edits:{}};if(!rec.edits)rec.edits={};
-  ids.forEach(id=>rec.edits[id]=changes[id]);
-  try{await fetch(`${JBIN_BASE}/b/${wbin}`,{method:"PUT",headers:{"Content-Type":"application/json","X-Access-Key":wkey},body:JSON.stringify(rec)});}catch(e){}
+  if(!Object.keys(changes).length)return;
+  pmQueueWrite(rec=>{rec.edits=rec.edits||{};Object.keys(changes).forEach(id=>rec.edits[id]=changes[id]);});
+}
+// A dice roll the player made → append to the write-back bin's rolls[] so the DM's poller surfaces it in
+// the roll log (attributed to the previewed PC via combatRollSrc).
+function playerPushRoll(ev){
+  const evt={id:uid(),by:(combatRollSrc&&combatRollSrc.name)||"Player",label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",abil:ev.abil||null,dmgType:ev.dmgType||null,crit:!!ev.crit,ts:Date.now()};
+  pmQueueWrite(rec=>{rec.rolls=rec.rolls||[];rec.rolls.push(evt);if(rec.rolls.length>20)rec.rolls=rec.rolls.slice(-20);});
 }
 // A thin banner above the order: the "playing as" picker (own mode) or an editing-scope note (all/suggest).
 function playerModeChrome(body){
@@ -1345,7 +1363,27 @@ function playerModeChrome(body){
     bar.innerHTML=`<span class="pm-bar-l">${mode==="suggest"?"Suggesting changes — your DM approves each":"You can edit any character below"}</span>`;
     body.insertBefore(bar,body.firstChild);
   }
+  // Tapping an editable PC's name opens its character preview (read + roll) — B204 stage 4.
+  body.querySelectorAll(".cbt-row.pm-edit .ci-id").forEach(el=>{el.classList.add("pm-tap");
+    el.addEventListener("click",e=>{e.stopPropagation();const row=el.closest(".cbt-row");if(row)openPlayerSheet(row.dataset.ci);});});
 }
+// Character preview overlay (B204 stage 4): reuses the real active-panel content (sheet + rollable chips).
+// Edit affordances are suppressed (the row is the edit surface); rolling runs locally + mirrors to the DM.
+function openPlayerSheet(pcId){
+  const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;const it=ctx.e.combat.order.find(o=>o.id===pcId);if(!it||it.kind!=="pc")return;
+  closePlayerSheet();
+  const isTurn=ctx.e.combat.order[ctx.e.combat.turnIndex]&&ctx.e.combat.order[ctx.e.combat.turnIndex].id===pcId;
+  const setSrc=()=>{combatRollSrc={name:it.name,id:null};};setSrc();
+  const bg=document.createElement("div");bg.className="pm-sheet-bg";bg.id="pmSheetBg";
+  bg.innerHTML=`<div class="pm-sheet"><button class="pm-sheet-x" id="pmSheetX" aria-label="Close">✕</button><div class="pm-sheet-body">${combatPanelInnerHTML(it,isTurn)}</div></div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener("click",e=>{if(e.target===bg)closePlayerSheet();});
+  bg.querySelector("#pmSheetX").addEventListener("click",closePlayerSheet);
+  bg.querySelectorAll(".pcs-roll[data-roll],.ca-stat-roll[data-roll]").forEach(el=>{
+    el.addEventListener("click",e=>{if(!clickRollOn())return;e.stopPropagation();setSrc();if(e.altKey){openRollMenu(el);return;}quickRoll(el);});
+    el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();setSrc();openRollMenu(el);});});
+}
+function closePlayerSheet(){const b=document.getElementById("pmSheetBg");if(b)b.remove();}
 function playerModeMessage(title,sub){
   document.body.classList.add("player-mode");
   const app=document.getElementById("app");
