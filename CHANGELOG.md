@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 205 — In-app player mode, stage 2 (publish character sheets)
+- **Snapshot now carries PC sheets.** `buildCombatShareSnapshot` adds `snap.chars` = each editable PC's
+  roster record keyed by `srcId`, deep-copied with **notes/backstory stripped** (`playerSafeChar`) — the one
+  part of the sheet kept private from players. `hydratePlayerCombat` populates `state.roster` from it (run
+  through `normalizeRosterPC`), so `rosterById` resolves and `pcSheetHTML` / the active panel render the full
+  sheet (abilities, saves, skills, passives, defenses, ATK/DC) instead of "linked record not found".
+- Foundational/plumbing stage (sheet surfaces + becomes editable in stages 3–4). Verified in preview: 4
+  sheets published with notes stripped, roster hydrated, `pcSheetHTML` returns real content, zero errors.
+
 ## Batch 204 — In-app player mode, stage 1 (locked-down read-only shared tracker)
 - **First stage of the parity rework** (the player view becomes the *real* tracker, not the standalone
   page). `index.html?share=<bin>` boots a new **player mode**: init skips loading the DM's library/adventures

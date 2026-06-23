@@ -1081,8 +1081,16 @@ function buildCombatShareSnapshot(cb){
   const porder=[];let pturn=0;
   cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it));});
   snap.combat={round:cb.round,turnIndex:pturn,order:porder};
+  // Character sheets (B204 stage 2): each editable PC's roster record, notes stripped, keyed by srcId. In
+  // player mode these hydrate state.roster so the real pcSheet/active-panel render with full data.
+  const chars={};
+  cb.order.forEach(it=>{if(it.kind==="pc"&&it.srcId&&!chars[it.srcId]){const c=rosterById(it.srcId);if(c)chars[it.srcId]=playerSafeChar(c);}});
+  snap.chars=chars;
   return snap;
 }
+// A roster character sanitized for the shared payload — a deep copy with the notes/backstory stripped
+// (the one part of the sheet the user keeps private from players).
+function playerSafeChar(c){const o=JSON.parse(JSON.stringify(c));o.notes="";return o;}
 // One combat instance, sanitized for the shared payload. PCs keep their fields (the DM note is dropped);
 // enemies are obscured to a faction label + health band with no statblock id, HP numbers, or note.
 function playerSafeInstance(it){
@@ -1277,6 +1285,8 @@ function hydratePlayerCombat(rec){
     encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
   combatCtx={advId:"share",encId:"enc"};
+  // Hydrate the published PC sheets into the roster so pcSheetHTML / the active panel render with full data.
+  state.roster=(rec.chars?Object.keys(rec.chars).map(k=>rec.chars[k]):[]).map(p=>typeof normalizeRosterPC==="function"?normalizeRosterPC(p):p);
 }
 function playerModeMessage(title,sub){
   document.body.classList.add("player-mode");
