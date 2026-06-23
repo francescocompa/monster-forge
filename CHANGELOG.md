@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 219 — combat: drop the monster save stat box (malformed alert)
+- **Removed the monster "best saving throw" stat box.** The active panel's monster stat row is now just
+  AC · ATK · DC · HP — only the attack-roll modifier and the save DC, as intended. That box also produced a
+  malformed roll alert ("DEX save Saving Throw: X") because its label already contained "save"; removing the
+  box removes the bug.
+- **Wording audit:** `naturalRollText` is correct everywhere else — every other save roll (the ability table,
+  PC saves) passes the full ability name, so they read "Dexterity Saving Throw: X". Only that one box fed it a
+  bad label. Dropped the now-unused `combatMainSave` helper.
+
 ## Batch 218 — 3D dice: cursor-die tuning + retire the 2D d20 cursor
 - **Held cursor-die now matches the spike** — it was too big and shivered too hard. Capped its size to a
   rolled die's (the held R had no upper bound), nudged the scale 0.42→0.4, and softened the shiver to the

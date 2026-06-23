@@ -787,8 +787,6 @@ function combatRowHTML(it,active,drag){
 function combatAtkBonus(m){const pb=pbForCR(m.cr);let best=null;
   [].concat(m.actions||[],m.bonus||[],(m.legend&&m.legend.items)||[]).forEach(en=>{if(en&&en.mode==="attack"){const b=(en.atk!==""&&en.atk!=null)?Number(en.atk):pb+mod(m[en.ability||"str"]);if(best==null||b>best)best=b;}});
   return best!=null?best:pb+Math.max(mod(m.str),mod(m.dex));}
-function combatMainSave(m){if(!m.saves||!m.saves.length)return null;const pb=pbForCR(m.cr);let best=null,ab=null;
-  m.saves.forEach(a=>{const b=mod(m[a])+pb;if(best==null||b>best){best=b;ab=a;}});return {ab,bonus:best};}
 // Highest save DC the creature imposes (spellcasting etc.) — explicit when present, else 8+PB+ability.
 function combatMainDC(m){let best=null;
   [].concat(m.actions||[],m.bonus||[],m.traits||[],(m.legend&&m.legend.items)||[]).forEach(en=>{if(en&&en.mode==="spell"){const pb=pbForCR(m.cr);const dc=(en.dc!==""&&en.dc!=null)?Number(en.dc):8+pb+mod(m[en.ability||"int"]);if(best==null||dc>best)best=dc;}});
@@ -858,8 +856,7 @@ function combatPanelInnerHTML(it,isTurn){
   const stats=[];
   if(it.ac!=null)stats.push(chip("AC",it.ac));
   if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus — click to roll"));
-    const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));
-    const sv=combatMainSave(m);if(sv)stats.push(rollChip(sv.ab.toUpperCase(),sv.bonus,"save",sv.ab.toUpperCase()+" save","Best saving throw — click to roll",sv.ab));}
+    const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));}
   if(pc){const mains=(pc.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
     if(mains.length){const atkF=mains.reduce((b,f)=>(!b||effAtk(pc,f)>effAtk(pc,b))?f:b,null),dcF=mains.reduce((b,f)=>(!b||effDc(pc,f)>effDc(pc,b))?f:b,null);
       stats.push(rollChip("ATK",effAtk(pc,atkF),"attack","Attack","Attack bonus — click to roll",atkF.k));
