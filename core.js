@@ -227,7 +227,7 @@ async function loadAll(){
 let _saveTimer=null,_pend={lib:false,adv:false,roster:false};
 function saveLib(){_pend.lib=true;_schedule();}
 function saveAdv(){if(PLAYER_MODE){if(typeof playerScheduleEdits==="function")playerScheduleEdits();return;}_pend.adv=true;_schedule();}
-function saveRoster(){_pend.roster=true;_schedule();}
+function saveRoster(){if(PLAYER_MODE){if(typeof playerScheduleCharPush==="function")playerScheduleCharPush();return;}_pend.roster=true;_schedule();}
 function _schedule(){if(PLAYER_MODE)return;clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);} // player mode never writes to the DM's cloud (B204)
 async function _flush(){
   // local mirror first — this write cannot fail to a network, so work is never lost

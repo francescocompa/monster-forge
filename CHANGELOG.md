@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 208 — In-app player mode, stage 4b (character-sheet editing)
+- **Players edit the full character sheet** from the preview's Edit pencil — the real character-detail modal,
+  locked down in player mode (notes/backstory, adventure tags, the kebab and "save as template" hidden). Every
+  field change routes through `saveRoster`, intercepted in player mode → debounced `playerPushChars` diffs the
+  editable PCs' sheets against the published baseline (`charSig`) and writes changed ones (notes stripped) to a
+  `charEdits` channel on the write-back bin.
+- **DM applies sheet edits, keeping private notes.** The poller folds new `charEdits` into the roster char via
+  `applyCharEdit` (replaces name/fields, **preserves the DM's notes**) then `resyncPcInstances`; in suggest mode
+  they queue in the inbox ("updated their character sheet"). The roster now hydrates **in place**
+  (`hydratePlayerRoster`) so an open edit modal keeps a live reference, and a player's unconfirmed sheet edits
+  survive incoming snapshots (15s reconcile) until the DM confirms them.
+- Verified in preview: the Edit pencil opens the locked-down modal, a name/ability edit wrote to `charEdits`
+  (notes stripped) and pended through a poll, and `applyCharEdit` applied it while keeping the DM's notes.
+  **Remaining: stage 5** (Show-bloodied + Enemy-conditions toggles) and **stage 6** (point the share link at
+  `index.html?share=` and retire `player.html`).
+
 ## Batch 207 — In-app player mode, stage 4 (character preview + dice rolling → DM roll log)
 - **Tap-to-open character preview.** Tapping an editable PC's name opens a bottom-sheet overlay (`pm-sheet`)
   that reuses the real active-panel content (`combatPanelInnerHTML`) — the full sheet with its rollable

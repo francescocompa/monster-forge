@@ -1150,6 +1150,7 @@ async function setShareEditMode(mode){
 let _sharePoll=null,_sharePollBusy=false,_shareApplied={};
 const _shareSuggest=new Map(); // pcId → {id,name,by,edit,ts} pending DM approval (suggest mode)
 const _shareRollSeen=new Set(); // roll-event ids already folded into the DM roll log (B204 stage 4)
+const _shareCharApplied={}; // srcId → last-applied sheet-edit ts (B204 stage 4b)
 function startSharePoll(){if(_sharePoll)return;_sharePoll=setInterval(pollShareEdits,3000);pollShareEdits();}
 function stopSharePoll(){if(_sharePoll){clearInterval(_sharePoll);_sharePoll=null;}}
 async function pollShareEdits(){
@@ -1167,13 +1168,21 @@ async function pollShareEdits(){
       if(mode==="suggest"){_shareSuggest.set(id,{id,name:it.name,by:e.by||"",edit:e,ts:e.ts});queued=true;}
       else{if(e.init!=null&&Number(e.init)!==it.init)reorder=true;applyPlayerEdit(it,e);applied=true;}
     });
+    // Player character-SHEET edits (B204 stage 4b): apply to the roster char (keeping the DM's notes) +
+    // resync instances, or queue as a suggestion.
+    let charApplied=false;
+    if(rec.charEdits)Object.keys(rec.charEdits).forEach(srcId=>{const ce=rec.charEdits[srcId];if(!ce||!ce.ts)return;
+      if(_shareCharApplied[srcId]&&_shareCharApplied[srcId]>=ce.ts)return;_shareCharApplied[srcId]=ce.ts;
+      if(mode==="suggest"){_shareSuggest.set("char:"+srcId,{id:"char:"+srcId,name:ce.by||"Player",charEdit:ce.char,ts:ce.ts,isChar:true});queued=true;}
+      else{applyCharEdit(srcId,ce.char);charApplied=true;}});
+    if(charApplied){resyncPcInstances();saveRoster();}
     // Player dice rolls → fold new ones into the DM roll log (B204 stage 4).
     let rollNew=false;
     if(Array.isArray(rec.rolls)){rec.rolls.forEach(ev=>{if(!ev||!ev.id||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
       rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
       if(rollLog.length>60)rollLog.length=60;}
-    if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();renderCombat();}
-    else if(queued)renderCombat(); // refresh the round-bar suggestion badge
+    if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();}
+    if(applied||charApplied||queued)renderCombat();
     if(rollNew)renderRollLog(true);
   }finally{_sharePollBusy=false;}
 }
@@ -1192,17 +1201,23 @@ function applyPlayerEdit(it,e){
   if(e.status&&CI_STATUSES.indexOf(e.status)>=0)it.status=e.status;
   applyDownState(it);
 }
+// Apply a player's sheet edit to the DM's roster char — replace name/fields, KEEP the DM's private notes.
+function applyCharEdit(srcId,pchar){const c=rosterById(srcId);if(!c||!pchar)return;c.name=pchar.name;c.fields=pchar.fields;}
 // Approve / dismiss a pending suggestion, then strip it from the write-back bin so it isn't re-surfaced.
 async function resolveSuggestion(id,accept){
   const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
-  const s=_shareSuggest.get(id);_shareSuggest.delete(id);
-  if(accept&&s){const it=ctx.e.combat.order.find(o=>o.id===id);if(it){applyPlayerEdit(it,s.edit);saveAdv();}}
+  const s=_shareSuggest.get(id);_shareSuggest.delete(id);const isChar=s&&s.isChar,srcId=isChar?id.slice(5):null;
+  if(accept&&s){if(isChar){applyCharEdit(srcId,s.charEdit);resyncPcInstances();saveRoster();}
+    else{const it=ctx.e.combat.order.find(o=>o.id===id);if(it){applyPlayerEdit(it,s.edit);saveAdv();}}}
   const wid=combatShareWbId();
-  if(wid){const rec=await jbinReadBin(wid);if(rec&&rec.edits&&rec.edits[id]){delete rec.edits[id];await jbinSetPublic(wid,rec);}}
-  delete _shareApplied[id];renderCombat();
+  if(wid){const rec=await jbinReadBin(wid);if(rec){
+    if(isChar){if(rec.charEdits&&rec.charEdits[srcId]){delete rec.charEdits[srcId];await jbinSetPublic(wid,rec);}}
+    else if(rec.edits&&rec.edits[id]){delete rec.edits[id];await jbinSetPublic(wid,rec);}}}
+  if(isChar)delete _shareCharApplied[srcId];else delete _shareApplied[id];
+  renderCombat();
 }
 // Compact human description of a pending suggestion for the inbox row.
-function suggestDesc(s){const e=s.edit,parts=[];
+function suggestDesc(s){if(s.isChar)return "updated their character sheet";const e=s.edit,parts=[];
   if(e.hp!=null)parts.push("HP → "+e.hp);
   if(e.temp!=null)parts.push("temp "+e.temp);
   if(Array.isArray(e.conds))parts.push("conditions: "+(e.conds.length?e.conds.join(", "):"none"));
@@ -1298,8 +1313,8 @@ function hydratePlayerCombat(rec){
     encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
   combatCtx={advId:"share",encId:"enc"};
-  // Hydrate the published PC sheets into the roster so pcSheetHTML / the active panel render with full data.
-  state.roster=(rec.chars?Object.keys(rec.chars).map(k=>rec.chars[k]):[]).map(p=>typeof normalizeRosterPC==="function"?normalizeRosterPC(p):p);
+  // Hydrate the published PC sheets into the roster (in place; keeps unconfirmed local sheet edits — B204 s4b).
+  hydratePlayerRoster(rec);
   // Baseline = the DM's confirmed state; then re-apply any unconfirmed local edits on top (optimistic).
   const order=state.adv[0].encounters[0].combat.order;
   _pmBaseline={};order.forEach(it=>{if(it.kind==="pc")_pmBaseline[it.id]=instEditFields(it);});
@@ -1309,6 +1324,7 @@ function hydratePlayerCombat(rec){
 // The shared edit mode + write-back bin/key ride along in the snapshot. Editability per mode: own = the
 // claimed PC only; all/suggest = any PC. The claim (own mode) is a localStorage pick keyed by the bin.
 let _pmBaseline={},_pmPending={},_pmPushTimer=null,_pmWrite=Promise.resolve();
+let _pmCharBaseline={},_pmCharPending={},_pmCharPushTimer=null; // sheet-edit (B204 stage 4b) baseline + optimistic
 function playerEditMode(){return (PLAYER_MODE&&state.__pmEdit)||"off";}
 function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+PLAYER_BIN):null;}catch(e){return null;}}
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
@@ -1342,6 +1358,33 @@ function playerPushEdits(){
     changes[it.id]=Object.assign({},cur,{ts:now,by:it.name,suggest});_pmPending[it.id]={fields:cur,ts:now};});
   if(!Object.keys(changes).length)return;
   pmQueueWrite(rec=>{rec.edits=rec.edits||{};Object.keys(changes).forEach(id=>rec.edits[id]=changes[id]);});
+}
+// ── Player character-SHEET editing (B204 stage 4b) ───────────────────────────
+function charSig(c){return JSON.stringify({n:(c&&c.name)||"",f:(c&&c.fields)||[]});}
+function editableCharIds(){const ctx=loadedCtx(),s=new Set();if(ctx&&ctx.e.combat)ctx.e.combat.order.forEach(it=>{if(playerCanEdit(it)&&it.srcId)s.add(it.srcId);});return s;}
+function playerScheduleCharPush(){if(!PLAYER_MODE)return;clearTimeout(_pmCharPushTimer);_pmCharPushTimer=setTimeout(playerPushChars,500);}
+function playerPushChars(){
+  if(playerEditMode()==="off")return;
+  const editable=editableCharIds(),suggest=playerEditMode()==="suggest",now=Date.now(),changes={};
+  state.roster.forEach(c=>{if(!editable.has(c.id)||charSig(c)===_pmCharBaseline[c.id])return;
+    const copy=JSON.parse(JSON.stringify(c));copy.notes="";changes[c.id]={char:copy,ts:now,by:c.name,suggest};_pmCharPending[c.id]=now;});
+  if(!Object.keys(changes).length)return;
+  pmQueueWrite(rec=>{rec.charEdits=rec.charEdits||{};Object.keys(changes).forEach(id=>rec.charEdits[id]=changes[id]);});
+}
+// Rebuild the roster from the published sheets, MUTATING existing char objects in place so an open edit
+// modal keeps a live reference — and keeping a player's own unconfirmed edits until the DM confirms them.
+function hydratePlayerRoster(rec){
+  const pub=rec.chars||{},now=Date.now();
+  state.roster=state.roster.filter(c=>pub[c.id]||_pmCharPending[c.id]);
+  Object.keys(pub).forEach(id=>{
+    const np=typeof normalizeRosterPC==="function"?normalizeRosterPC(pub[id]):pub[id];
+    _pmCharBaseline[id]=charSig(np);
+    const c=state.roster.find(x=>x.id===id);
+    if(!c){state.roster.push(np);return;}
+    const pend=_pmCharPending[id];
+    if(pend&&now-pend<15000&&charSig(c)!==_pmCharBaseline[id])return; // keep the player's unconfirmed sheet edits
+    delete _pmCharPending[id];c.name=np.name;c.fields=np.fields; // notes stay stripped; mutate in place
+  });
 }
 // A dice roll the player made → append to the write-back bin's rolls[] so the DM's poller surfaces it in
 // the roll log (attributed to the previewed PC via combatRollSrc).
@@ -1379,6 +1422,8 @@ function openPlayerSheet(pcId){
   document.body.appendChild(bg);
   bg.addEventListener("click",e=>{if(e.target===bg)closePlayerSheet();});
   bg.querySelector("#pmSheetX").addEventListener("click",closePlayerSheet);
+  // Edit pencil → the real character-detail modal (sheet editing routes back to the DM — B204 stage 4b).
+  bg.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();closePlayerSheet();openCharacterDetail(el.dataset.pcedit,null);}));
   bg.querySelectorAll(".pcs-roll[data-roll],.ca-stat-roll[data-roll]").forEach(el=>{
     el.addEventListener("click",e=>{if(!clickRollOn())return;e.stopPropagation();setSrc();if(e.altKey){openRollMenu(el);return;}quickRoll(el);});
     el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();setSrc();openRollMenu(el);});});

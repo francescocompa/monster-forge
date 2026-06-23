@@ -1425,10 +1425,13 @@ body.player-mode .cbt-row.pm-edit .ci-id.pm-tap .ci-name:hover{text-decoration:u
 @media(min-width:760px){.pm-sheet{border-radius:14px;max-height:84vh}}
 .pm-sheet-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border:none;background:var(--panel2);border-radius:8px;color:var(--dim);font-size:15px;cursor:pointer;z-index:2}
 .pm-sheet-x:hover{color:var(--txt)}
-/* Preview-only: hide DM/edit affordances, keep roll chips live. */
-.pm-sheet .pcs-edit,.pm-sheet .ca-addnote,.pm-sheet .ca-noteedit,.pm-sheet .ca-conds .ci-addcond,.pm-sheet .ca-conds .cc-x{display:none!important}
+/* Preview + sheet-edit: keep the Edit pencil + roll chips; hide note/condition/HP edit (the row owns those). */
+.pm-sheet .ca-addnote,.pm-sheet .ca-noteedit,.pm-sheet .ca-conds .ci-addcond,.pm-sheet .ca-conds .cc-x{display:none!important}
 .pm-sheet [data-hpmanage],.pm-sheet [data-respip]{pointer-events:none}
-.pm-sheet .ca-name-edit{display:none!important}
+/* The character-detail modal in player mode: editable sheet, but notes (private), adventure tags, the
+   kebab (delete/etc.) and "save as template" are hidden. */
+body.player-mode .cd-notes,body.player-mode .cd-divider,body.player-mode .cd-tags,
+body.player-mode .cd-savetpl,body.player-mode .cd-gx[data-cdmenu]{display:none!important}
 .ci-band{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);font-weight:600;white-space:nowrap}
 .ci-band-pip{width:9px;height:9px;border-radius:50%;flex:none}
 .pm-msg{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px}
