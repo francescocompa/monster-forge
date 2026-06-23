@@ -774,7 +774,7 @@ function combatRowHTML(it,active,drag){
   const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
     <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
@@ -1157,27 +1157,32 @@ async function pollShareEdits(){
   _sharePollBusy=true;
   try{
     const rec=await jbinReadBin(wid);if(!rec||!rec.edits)return;
-    const cb=ctx.e.combat;let applied=false,queued=false;
+    const cb=ctx.e.combat;let applied=false,queued=false,reorder=false;
     Object.keys(rec.edits).forEach(id=>{
       const e=rec.edits[id];if(!e||!e.ts)return;
       if(_shareApplied[id]&&_shareApplied[id]>=e.ts)return; // already handled this edit
       const it=cb.order.find(o=>o.id===id);if(!it||it.kind!=="pc")return;
       _shareApplied[id]=e.ts;
       if(mode==="suggest"){_shareSuggest.set(id,{id,name:it.name,by:e.by||"",edit:e,ts:e.ts});queued=true;}
-      else{applyPlayerEdit(it,e);applied=true;}
+      else{if(e.init!=null&&Number(e.init)!==it.init)reorder=true;applyPlayerEdit(it,e);applied=true;}
     });
-    if(applied){saveAdv();renderCombat();}
+    if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();renderCombat();}
     else if(queued)renderCombat(); // refresh the round-bar suggestion badge
   }finally{_sharePollBusy=false;}
 }
 // Apply one player edit to a combat instance: HP/temp clamp to the instance's max; conditions are reconciled
-// by name so DM-set durations on kept conditions survive (only the player's removed ones drop).
+// by name so DM-set durations on kept conditions survive; initiative / reaction / concentration / status
+// follow the player too (B204 stage 3 — full combat-row parity).
 function applyPlayerEdit(it,e){
   if(it.hpMax!=null){
     if(e.hp!=null&&!isNaN(Number(e.hp)))it.hpCur=clamp(Number(e.hp),0,it.hpMax);
     if(e.temp!=null&&!isNaN(Number(e.temp)))it.hpTemp=Math.max(0,Number(e.temp));
   }
   if(Array.isArray(e.conds)){const cur=it.conditions||[];it.conditions=e.conds.map(n=>cur.find(c=>c.name===n)||{name:String(n)});}
+  if(e.init!=null&&!isNaN(Number(e.init)))it.init=Number(e.init);
+  if(typeof e.reaction==="boolean")it.reaction=e.reaction;
+  if(typeof e.concentration==="boolean")it.concentration=e.concentration;
+  if(e.status&&CI_STATUSES.indexOf(e.status)>=0)it.status=e.status;
   applyDownState(it);
 }
 // Approve / dismiss a pending suggestion, then strip it from the write-back bin so it isn't re-surfaced.
@@ -1281,12 +1286,65 @@ async function initPlayerMode(bin){
 // Build a one-adventure / one-encounter synthetic state from the shared payload so the real renderer works.
 function hydratePlayerCombat(rec){
   const c=rec.combat;
+  state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;
   state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
     encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
   combatCtx={advId:"share",encId:"enc"};
   // Hydrate the published PC sheets into the roster so pcSheetHTML / the active panel render with full data.
   state.roster=(rec.chars?Object.keys(rec.chars).map(k=>rec.chars[k]):[]).map(p=>typeof normalizeRosterPC==="function"?normalizeRosterPC(p):p);
+  // Baseline = the DM's confirmed state; then re-apply any unconfirmed local edits on top (optimistic).
+  const order=state.adv[0].encounters[0].combat.order;
+  _pmBaseline={};order.forEach(it=>{if(it.kind==="pc")_pmBaseline[it.id]=instEditFields(it);});
+  pmReconcile(order);
+}
+// ── Player editing (B204 stage 3) ────────────────────────────────────────────
+// The shared edit mode + write-back bin/key ride along in the snapshot. Editability per mode: own = the
+// claimed PC only; all/suggest = any PC. The claim (own mode) is a localStorage pick keyed by the bin.
+let _pmBaseline={},_pmPending={},_pmPushTimer=null;
+function playerEditMode(){return (PLAYER_MODE&&state.__pmEdit)||"off";}
+function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+PLAYER_BIN):null;}catch(e){return null;}}
+function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
+function playerCanEdit(it){if(!PLAYER_MODE||!it||it.kind!=="pc")return false;const m=playerEditMode();
+  if(m==="off"||!state.__pmWbin||!state.__pmWkey)return false;return m==="own"?it.id===playerClaimId():true;}
+// The editable slice of a combat instance + equality, for diffing against the DM's snapshot.
+function instEditFields(it){return {hp:it.hpCur,temp:it.hpTemp||0,conds:(it.conditions||[]).map(c=>c.name),init:it.init,reaction:it.reaction!==false,concentration:!!it.concentration,status:it.status||"active"};}
+function sameEdit(a,b){return !!a&&!!b&&a.hp===b.hp&&a.temp===b.temp&&a.init===b.init&&a.reaction===b.reaction&&a.concentration===b.concentration&&a.status===b.status&&JSON.stringify(a.conds||[])===JSON.stringify(b.conds||[]);}
+function applyEditFields(it,f){it.hpCur=f.hp;it.hpTemp=f.temp;it.init=f.init;it.reaction=f.reaction;it.concentration=f.concentration;it.status=f.status;
+  it.conditions=(f.conds||[]).map(n=>(it.conditions||[]).find(c=>c.name===n)||{name:n});applyDownState(it);}
+// Re-apply unconfirmed local edits over a fresh snapshot; clear ones the DM has now confirmed (or timed out).
+function pmReconcile(order){const now=Date.now();
+  Object.keys(_pmPending).forEach(id=>{const p=_pmPending[id],it=order.find(o=>o.id===id);
+    if(!it||sameEdit(_pmBaseline[id],p.fields)||now-p.ts>15000){delete _pmPending[id];return;}
+    applyEditFields(it,p.fields);});}
+// Debounced write-back: push the editable PCs that differ from the DM's snapshot to the write-back bin.
+function playerScheduleEdits(){if(!PLAYER_MODE)return;clearTimeout(_pmPushTimer);_pmPushTimer=setTimeout(playerPushEdits,500);}
+async function playerPushEdits(){
+  const wbin=state.__pmWbin,wkey=state.__pmWkey;if(!wbin||!wkey)return;
+  const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const suggest=playerEditMode()==="suggest",changes={},now=Date.now();
+  ctx.e.combat.order.forEach(it=>{if(!playerCanEdit(it))return;const cur=instEditFields(it);
+    if(sameEdit(_pmBaseline[it.id],cur))return; // unchanged from the DM's confirmed state
+    changes[it.id]=Object.assign({},cur,{ts:now,by:it.name,suggest});_pmPending[it.id]={fields:cur,ts:now};});
+  const ids=Object.keys(changes);if(!ids.length)return;
+  const rec=(await jbinReadBin(wbin))||{v:1,edits:{}};if(!rec.edits)rec.edits={};
+  ids.forEach(id=>rec.edits[id]=changes[id]);
+  try{await fetch(`${JBIN_BASE}/b/${wbin}`,{method:"PUT",headers:{"Content-Type":"application/json","X-Access-Key":wkey},body:JSON.stringify(rec)});}catch(e){}
+}
+// A thin banner above the order: the "playing as" picker (own mode) or an editing-scope note (all/suggest).
+function playerModeChrome(body){
+  const mode=playerEditMode();const old=body.querySelector(".pm-bar");if(old)old.remove();
+  if(mode==="off")return;const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const bar=document.createElement("div");bar.className="pm-bar";
+  if(mode==="own"){
+    const pcs=ctx.e.combat.order.filter(o=>o.kind==="pc"),claim=playerClaimId();
+    bar.innerHTML=`<span class="pm-bar-l">Playing as</span><select class="pm-claim"><option value="">— choose your character —</option>${pcs.map(p=>`<option value="${esc(p.id)}"${p.id===claim?" selected":""}>${esc(p.name)}</option>`).join("")}</select>`;
+    body.insertBefore(bar,body.firstChild);
+    bar.querySelector(".pm-claim").addEventListener("change",e=>{setPlayerClaim(e.target.value||null);renderCombat();});
+  }else{
+    bar.innerHTML=`<span class="pm-bar-l">${mode==="suggest"?"Suggesting changes — your DM approves each":"You can edit any character below"}</span>`;
+    body.insertBefore(bar,body.firstChild);
+  }
 }
 function playerModeMessage(title,sub){
   document.body.classList.add("player-mode");
@@ -1338,6 +1396,7 @@ function renderCombat(){
   // (toggling reaction, marking a death save, etc. shouldn't visibly refresh the preview) (B128).
   {const pk=body.querySelector(".ca-peek"),pid=pk?pk.dataset.peek:null;if(pk&&pid!==_caPeekId)pk.classList.add("ca-anim");_caPeekId=pid;}
   bindCombatTracker(body,a,e,cb);
+  if(PLAYER_MODE)playerModeChrome(body); // claim picker / editing-scope banner (B204 stage 3)
   publishCombatShareSoon(); // if sharing is on, push the updated snapshot to players (debounced; no-ops otherwise)
   if(combatShareOn()&&combatShareMode()!=="off"&&combatShareWbId())startSharePoll(); // resume the write-back poller after a reload
 }

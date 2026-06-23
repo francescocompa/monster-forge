@@ -226,7 +226,7 @@ async function loadAll(){
 // debounced writes: edits fire on every keystroke; coalesce them so we don't hit the rate limit
 let _saveTimer=null,_pend={lib:false,adv:false,roster:false};
 function saveLib(){_pend.lib=true;_schedule();}
-function saveAdv(){_pend.adv=true;_schedule();}
+function saveAdv(){if(PLAYER_MODE){if(typeof playerScheduleEdits==="function")playerScheduleEdits();return;}_pend.adv=true;_schedule();}
 function saveRoster(){_pend.roster=true;_schedule();}
 function _schedule(){if(PLAYER_MODE)return;clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);} // player mode never writes to the DM's cloud (B204)
 async function _flush(){

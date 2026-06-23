@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 206 — In-app player mode, stage 3 (PC combat-row editing)
+- **Players edit their PC through the real combat row.** In player mode, editable PC rows (`.pm-edit`) keep
+  the full DM controls — editable initiative, HP-manage popover, add/remove conditions, reaction &
+  concentration toggles — while enemies and non-controlled PCs stay inert and the ⋯ menu / DM chrome / "out
+  of order" chip stay hidden. Editability follows the mode: **own** = the claimed PC only (a "Playing as"
+  picker), **all/suggest** = any PC.
+- **Write-back via the existing transport.** `saveAdv` is intercepted in player mode → debounced
+  `playerPushEdits` diffs the editable PCs against the DM's snapshot baseline and writes the changed ones
+  (full field set: hp/temp/conditions/init/reaction/concentration/status, with `by`/`suggest`) to the
+  write-back bin. `applyPlayerEdit` (DM poller) now applies all those fields and re-sorts when a player's
+  initiative changes. Optimistic local edits (`_pmPending`) are re-applied over each incoming snapshot until
+  the DM confirms them (15s safety timeout) so they don't flicker.
+- Verified in preview: all-mode PC rows editable, an HP edit via the real popover wrote the full parity
+  payload to the bin, and `applyPlayerEdit` applied hp/temp/conds/init/reaction/concentration correctly.
+  Active panel stays hidden until stage 4 (tap-to-open preview + dice rolling).
+
 ## Batch 205 — In-app player mode, stage 2 (publish character sheets)
 - **Snapshot now carries PC sheets.** `buildCombatShareSnapshot` adds `snap.chars` = each editable PC's
   roster record keyed by `srcId`, deep-copied with **notes/backstory stripped** (`playerSafeChar`) — the one

@@ -1385,19 +1385,37 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sug-desc{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug-acts{display:flex;gap:6px;flex:none}
 .ct-sug-badge{position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;line-height:15px;text-align:center}
-/* ── In-app player mode (B204) — locked-down read-only shell ─────────────────── */
+/* ── In-app player mode (B204) — locked-down shell; PCs editable via the real row ── */
 body.player-mode .app{grid-template-columns:1fr}
+/* Always hidden: DM-only shell + combat chrome + the per-row ⋯ menu (players can't remove/reorder). */
 body.player-mode .rail,body.player-mode .rail-resizer,
 body.player-mode #navToggle,body.player-mode #settingsBtn,body.player-mode #ruleFinderBtn,
 body.player-mode .ct-loadbtn,body.player-mode .ct-diff,
-body.player-mode #combatShare,body.player-mode #combatTools,body.player-mode .ct-d20,
+body.player-mode #combatShare,body.player-mode #combatTools,body.player-mode .ct-d20,body.player-mode .ct-oop,
 body.player-mode .combat-fab-turn,body.player-mode .cbt-add,
-body.player-mode .ci-menu,body.player-mode .ci-addcond,
-body.player-mode .ci-react-chip,body.player-mode .ci-conc-chip,
-body.player-mode .combat-active,body.player-mode .combat-resizer{display:none!important}
+body.player-mode .ci-menu,body.player-mode .combat-resizer,
+body.player-mode .combat-active{display:none!important} /* active panel surfaces in stage 4 (tap-to-open) */
 body.player-mode .combat-grid{grid-template-columns:1fr!important}
-body.player-mode .ci-init-in{pointer-events:none;background:none;border:none;padding-left:0}
-body.player-mode .ci-hpbtn,body.player-mode .cbt-row{pointer-events:none;cursor:default}
+/* Non-editable rows (enemies, other PCs) are inert; their editing affordances are hidden. */
+body.player-mode .cbt-row:not(.pm-edit){pointer-events:none}
+body.player-mode .cbt-row:not(.pm-edit) .ci-init-in{background:none;border:none;padding-left:0}
+body.player-mode .cbt-row:not(.pm-edit) .ci-react-chip,
+body.player-mode .cbt-row:not(.pm-edit) .ci-conc-chip,
+body.player-mode .cbt-row:not(.pm-edit) .ci-addcond,
+body.player-mode .cbt-row:not(.pm-edit) .cc-x{display:none!important}
+/* The active panel is read-only in stage 3: hide sheet-edit + note affordances, disable rolling (stage 4). */
+body.player-mode .combat-active .pcs-edit,
+body.player-mode .combat-active .ca-addnote,
+body.player-mode .combat-active .ca-noteedit,
+body.player-mode .combat-active .ca-conds .ci-addcond,
+body.player-mode .combat-active .ca-conds .cc-x{display:none!important}
+body.player-mode .combat-active [data-hpmanage],
+body.player-mode .combat-active .ca-stat-roll,
+body.player-mode .combat-active .pcs-roll{pointer-events:none}
+/* "Playing as" / editing-scope banner. */
+.pm-bar{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:9px 13px;margin:0 20px 10px}
+.pm-bar-l{font-size:12.5px;color:var(--dim);font-weight:500}
+.pm-claim{flex:1;max-width:260px;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:13px;padding:6px 9px;color-scheme:dark}
 .ci-band{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);font-weight:600;white-space:nowrap}
 .ci-band-pip{width:9px;height:9px;border-radius:50%;flex:none}
 .pm-msg{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px}
