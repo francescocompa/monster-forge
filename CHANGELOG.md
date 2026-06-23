@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 217 — 3D dice: cursor-die pickup + slower exit
+- **Hover a roll → the die rides your cursor.** On desktop, hovering any rollable (`[data-roll]`) summons one
+  small die that follows the pointer, **logo face up, shivering** as if held aloft (the native cursor is hidden
+  via `body.dicing`); clicking rolls and the dice launch from the cursor. Touch/phones keep spawning from the
+  tap point. Mouse only (`hover:hover` + `pointer:fine`), skipped under reduced-motion or when dice rolling is
+  off. The held die's type is read from the roll's formula (`1d20+7` → a d20, `2d6` → a d6).
+- **Slower exit.** The dice + result alert linger longer before imploding (dwell 1300→2000 ms, vanish
+  300→520 ms) so a roll is easier to read.
+- **3D-dice settings card hidden for now** (the B216 material/colour/edges picker) — the engine (`d3dDieMat` +
+  the `dice3d.*` settings) stays; re-expose the card to bring the picker back.
+- `npm run verify` green.
+
 ## Batch 216 — 3D dice: materials + a settings panel
 - **The 3D dice look is now configurable.** New **Settings → 3D dice** card: a **material** picker (Stone /
   Smooth / Metal / Crystal / Ceramic), an **edges** toggle (Sharp / Rounded — affects the six-sided die), and a

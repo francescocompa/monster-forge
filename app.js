@@ -17,15 +17,9 @@ function renderSettings(){
       ${SW("clickRoll.on","Enable dice rolling")}
       <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options. Turn this off to disable every roll feature on the page — click-to-roll, the Alt-click custom roll, the dice cursor, and the roll log.</div>
     </div>
-    <div class="set-card">
-      <div class="set-head">3D dice</div>
-      <div class="set-grid">
-        <label class="f">Material<select data-set="dice3d.material">${[["stone","Stone"],["default","Smooth"],["metal","Metal"],["crystal","Crystal"],["ceramic","Ceramic"]].map(([v,l])=>`<option value="${v}" ${s.dice3d.material===v?"selected":""}>${l}</option>`).join("")}</select></label>
-        <label class="f">Edges<select data-set="dice3d.edges"><option value="sharp" ${s.dice3d.edges!=="round"?"selected":""}>Sharp</option><option value="round" ${s.dice3d.edges==="round"?"selected":""}>Rounded</option></select></label>
-        <label class="f">Colour<input type="color" data-set="dice3d.color" value="${esc(s.dice3d.color||"#e2654d")}"></label>
-      </div>
-      <div class="set-note">The physical dice that tumble across the screen when you roll. Colour tints all but <b>Stone</b> (a baked texture) and <b>Crystal</b> (a fixed gem). Edges affect the six-sided die. Respects reduced-motion.</div>
-    </div>
+    <!-- 3D dice look (material / colour / edges) settings card hidden for now (B217) — the engine (dice3d.js
+         d3dDieMat + the dice3d.* settings) stays; re-expose this card to bring the picker back. -->
+
     <div class="set-card">
       <div class="set-head">Definition popovers</div>
       ${SW("refPopovers.on","Spell &amp; condition popovers")}

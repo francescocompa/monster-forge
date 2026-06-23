@@ -15,6 +15,9 @@
 /* Vecna — D&D display face used on the 3D dice (B214). Pixel Sagas, free for personal use. */
 @font-face{ font-family:"Vecna"; font-weight:400; font-display:swap; src:url("vecna.otf") format("opentype"); }
 @font-face{ font-family:"Vecna"; font-weight:700; font-display:swap; src:url("vecna-bold.otf") format("opentype"); }
+/* While a 3D die rides the cursor (B217), hide the native cursor everywhere — rollables set cursor:pointer,
+   which would otherwise peek out from behind the held die. */
+body.dicing, body.dicing *{ cursor:none !important; }
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
   --txt:#e7e9ee; --dim:#a4aab4; --faint:#7e858f;

@@ -11,19 +11,25 @@
 // scaled to CSS px for rendering.
 
 const D3D_SCALE = 48, D3D_GRAV = 62, D3D_CAP = 20, D3D_BRAND = 0xe2654d;
-const D3D_DWELL = 1300, D3D_VANISH = 300;           // ms — dice linger after settling, then implode
+const D3D_DWELL = 2000, D3D_VANISH = 520;           // ms — dice linger after settling, then implode (B217: slower)
 let d3dReady = false, d3dDead = false, d3dRoll = null, d3dLooping = false;
 let d3dRenderer, d3dScene, d3dCamera, d3dWorld, d3dKey, d3dGround, d3dUP, d3dW = 0, d3dH = 0;
 let d3dMatDie, d3dMatFloor, d3dMatWall, d3dWalls = [];
-let d3dLogoTex = null, d3dStoneTex = null, d3dGemTex = null, d3dLive = [], d3dLiveMeshes = [], d3dCardEl = null;
+let d3dLogoTex = null, d3dStoneTex = null, d3dGemTex = null, d3dLive = [], d3dLiveMeshes = [], d3dCardEl = null, d3dHeld = null;
 // Read the user's dice look from settings (material / brand colour / cube edge style), with safe fallbacks.
 function d3dLook(){ const d = (typeof state === "object" && state.settings && state.settings.dice3d) || {}; return { material: d.material || "stone", color: d.color || "#e2654d", edges: d.edges || "sharp" }; }
 const d3dTexCache = new Map();
 const d3dDieFont = '"Vecna", "Copperplate", "Luminari", fantasy, serif';
 let d3dPX = 0, d3dPY = 0, d3dPrev = 0;
 const d3dCl = (v, a, b) => v < a ? a : v > b ? b : v;
-// Track the pointer so dice spawn from where the user clicked (safe in jsdom — just stores coords).
-if (typeof addEventListener === "function") addEventListener("pointerdown", e => { d3dPX = e.clientX; d3dPY = e.clientY; }, true);
+// Track the pointer so dice spawn from where the user clicked, and a held cursor-die follows the pointer
+// (all safe in jsdom — these just store coords / call guarded handlers that no-op without THREE+CANNON+WebGL).
+if (typeof addEventListener === "function"){
+  addEventListener("pointerdown", e => { d3dPX = e.clientX; d3dPY = e.clientY; }, true);
+  addEventListener("pointermove", e => { d3dPX = e.clientX; d3dPY = e.clientY; }, true);
+  addEventListener("pointerover", e => d3dHoverOver(e), true);   // hover a rollable → die rides the cursor
+  addEventListener("pointerout",  e => d3dHoverOut(e),  true);
+}
 
 // Parse the engine's r.parts string into the dice that physically rolled (values, not kept/dropped):
 //   "2d6:[3,5]"  "2d20kh1:[15,8]"  "d20(15,8)→15" (adv/dis).  Flat mods and d% are ignored (no 3D die).
@@ -393,6 +399,62 @@ function d3dApplyLook(){
   if (d3dRoll) d3dDimDropped();
   if (d3dRenderer && d3dScene && d3dCamera) d3dRenderer.render(d3dScene, d3dCamera);
 }
+
+// ---- cursor-die pickup (desktop hover) --------------------------------------------------------------
+// On hover over a rollable ([data-roll]), one small die rides the cursor — logo face up, shivering as if
+// held aloft. Clicking rolls (the existing engine path) and the dice launch from the cursor. Touch devices
+// have no hover, so they keep spawning from the tap point.
+const D3D_HELD_SCALE = 0.42;
+function d3dPrimaryDie(formula){ const m = /d(\d+)/i.exec(String(formula || "")); const s = m ? +m[1] : 0; return (s >= 4 && s <= 100) ? s : 0; } // first NdM → sides (d% → none)
+function d3dHoverOK(){
+  if (typeof clickRollOn === "function" && !clickRollOn()) return false;
+  try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
+  try { if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return false; } catch (e) {} // mouse only
+  return true;
+}
+function d3dHoverOver(e){
+  if (typeof THREE === "undefined" || typeof CANNON === "undefined" || d3dDead || d3dRoll) return;
+  const t = e.target && e.target.closest && e.target.closest("[data-roll]"); if (!t) return; // cheap test first
+  const sides = d3dPrimaryDie(t.dataset.roll); if (!sides || !d3dHoverOK()) return;
+  d3dPX = e.clientX; d3dPY = e.clientY; d3dHoldAt(sides);
+}
+function d3dHoverOut(e){
+  if (!d3dHeld) return;
+  const t = e.target && e.target.closest && e.target.closest("[data-roll]"); if (!t) return;
+  const to = e.relatedTarget; if (to && to.closest && to.closest("[data-roll]") === t) return; // still inside it
+  d3dClearHeld();
+}
+function d3dHoldAt(sides){
+  if (d3dRoll || !d3dEnsure()) return;
+  if (d3dHeld && d3dHeld.sides === sides) return;        // already holding this die type
+  d3dClearHeld();
+  const R = Math.max(22, Math.round(Math.min(d3dW, d3dH) / 11));
+  const die = d3dMakeDie(sides, sides, R, false);        // value === sides → logo on the up face
+  die.scale = 0; die.targetScale = D3D_HELD_SCALE;
+  const maxL = die.labels.find(L => L.value === sides) || die.labels[0];
+  die.heldQuat = new THREE.Quaternion().setFromUnitVectors(maxL.normal.clone().normalize(), d3dUP);
+  d3dHeld = { die, sides, t: 0 };
+  document.body.classList.add("dicing");
+  if (!d3dLooping){ d3dLooping = true; d3dPrev = performance.now(); requestAnimationFrame(d3dLoop); }
+}
+function d3dClearHeld(){
+  if (d3dHeld){
+    d3dScene.remove(d3dHeld.die.grp);
+    d3dLive = d3dLive.filter(L => d3dHeld.die.labels.indexOf(L) < 0);
+    d3dLiveMeshes = d3dLiveMeshes.filter(m => m !== d3dHeld.die.mesh);
+    document.body.classList.remove("dicing");
+  }
+  d3dHeld = null;
+}
+function d3dRenderHeld(dt){
+  const h = d3dHeld, d = h.die; h.t += dt;
+  d.scale += (d.targetScale - d.scale) * Math.min(1, dt * 12);
+  const c = d3dToWorld(d3dPX || d3dW/2, d3dPY || d3dH/2), j = h.t * 23;
+  d.grp.position.set(c.x + Math.sin(j) * d.R * 0.05, d.R * 1.5, c.z + Math.cos(j * 1.2) * d.R * 0.05); // lifted, jittering
+  const wob = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.sin(j * 0.9) * 0.06, Math.sin(j * 0.5) * 0.05, Math.cos(j * 1.1) * 0.06));
+  d.grp.quaternion.copy(d.heldQuat).multiply(wob);
+  const s = Math.max(0, d.scale); d.grp.scale.set(s, s, s);
+}
 function d3dSyncMeshes(){
   d3dRoll.dice.forEach(d => { if (d.body){ const p=d.body.position, q=d.body.quaternion; d.grp.position.set(p.x*D3D_SCALE,p.y*D3D_SCALE,p.z*D3D_SCALE); d.grp.quaternion.set(q.x,q.y,q.z,q.w); } });
 }
@@ -403,7 +465,7 @@ function rollDice3D(desc){
   try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
   const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;
   if (!d3dEnsure()) return false;
-  d3dClear();
+  d3dClear(); d3dClearHeld();                  // the held cursor-die (if any) launches into this roll
   const R = Math.max(20, Math.min(50, Math.round(Math.min(d3dW, d3dH) / (plan.length<=2?9:plan.length<=6?11:plan.length<=12?14:17))));
   const c = d3dToWorld(d3dPX || d3dW/2, d3dPY || d3dH/2);
   const dice = plan.map(p => d3dMakeDie(p.sides, p.value, R, p.dropped));
@@ -453,9 +515,13 @@ function d3dLoop(now){
     if (d3dRoll) d3dRoll.dice.forEach(d => { const s = Math.max(0, d.scale); d.grp.scale.set(s,s,s); });
     d3dRenderer.render(d3dScene, d3dCamera);
     requestAnimationFrame(d3dLoop);
+  } else if (d3dHeld){
+    d3dRenderHeld(dt);                         // a die rides the cursor between rolls
+    d3dRenderer.render(d3dScene, d3dCamera);
+    requestAnimationFrame(d3dLoop);
   } else {
     d3dRenderer.render(d3dScene, d3dCamera); // one last clear frame
-    d3dLooping = false;                       // idle → stop the loop until the next roll
+    d3dLooping = false;                       // idle → stop the loop until the next roll/hover
   }
 }
 
