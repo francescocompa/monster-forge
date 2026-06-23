@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 218 — 3D dice: cursor-die tuning + retire the 2D d20 cursor
+- **Held cursor-die now matches the spike** — it was too big and shivered too hard. Capped its size to a
+  rolled die's (the held R had no upper bound), nudged the scale 0.42→0.4, and softened the shiver to the
+  spike's gentle values (slower frequency, less lift and jitter).
+- **Retired the 2D spinning d20 cursor on hover.** Where the 3D held die engages (desktop, motion on, WebGL
+  ok), the old `#diceCursor` d20 is suppressed (`d3dPickupOn()`); it stays as the fallback on touch /
+  reduced-motion / no-WebGL and as the Alt-armed custom-roll indicator.
+- `npm run verify` green.
+
 ## Batch 217 — 3D dice: cursor-die pickup + slower exit
 - **Hover a roll → the die rides your cursor.** On desktop, hovering any rollable (`[data-roll]`) summons one
   small die that follows the pointer, **logo face up, shivering** as if held aloft (the native cursor is hidden

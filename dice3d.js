@@ -404,7 +404,10 @@ function d3dApplyLook(){
 // On hover over a rollable ([data-roll]), one small die rides the cursor — logo face up, shivering as if
 // held aloft. Clicking rolls (the existing engine path) and the dice launch from the cursor. Touch devices
 // have no hover, so they keep spawning from the tap point.
-const D3D_HELD_SCALE = 0.42;
+const D3D_HELD_SCALE = 0.4;
+// True when the desktop hover-pickup will engage — used by engine.js to suppress the old 2D d20 cursor
+// (the 3D held die replaces it), while keeping that cursor as the fallback on touch / reduced-motion / no-WebGL.
+function d3dPickupOn(){ return typeof THREE !== "undefined" && typeof CANNON !== "undefined" && !d3dDead && d3dHoverOK(); }
 function d3dPrimaryDie(formula){ const m = /d(\d+)/i.exec(String(formula || "")); const s = m ? +m[1] : 0; return (s >= 4 && s <= 100) ? s : 0; } // first NdM → sides (d% → none)
 function d3dHoverOK(){
   if (typeof clickRollOn === "function" && !clickRollOn()) return false;
@@ -428,7 +431,7 @@ function d3dHoldAt(sides){
   if (d3dRoll || !d3dEnsure()) return;
   if (d3dHeld && d3dHeld.sides === sides) return;        // already holding this die type
   d3dClearHeld();
-  const R = Math.max(22, Math.round(Math.min(d3dW, d3dH) / 11));
+  const R = Math.max(20, Math.min(50, Math.round(Math.min(d3dW, d3dH) / 9))); // same clamp as a rolled die (capped — was too big)
   const die = d3dMakeDie(sides, sides, R, false);        // value === sides → logo on the up face
   die.scale = 0; die.targetScale = D3D_HELD_SCALE;
   const maxL = die.labels.find(L => L.value === sides) || die.labels[0];
@@ -447,11 +450,11 @@ function d3dClearHeld(){
   d3dHeld = null;
 }
 function d3dRenderHeld(dt){
-  const h = d3dHeld, d = h.die; h.t += dt;
-  d.scale += (d.targetScale - d.scale) * Math.min(1, dt * 12);
-  const c = d3dToWorld(d3dPX || d3dW/2, d3dPY || d3dH/2), j = h.t * 23;
-  d.grp.position.set(c.x + Math.sin(j) * d.R * 0.05, d.R * 1.5, c.z + Math.cos(j * 1.2) * d.R * 0.05); // lifted, jittering
-  const wob = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.sin(j * 0.9) * 0.06, Math.sin(j * 0.5) * 0.05, Math.cos(j * 1.1) * 0.06));
+  const h = d3dHeld, d = h.die;
+  d.scale += (d.targetScale - d.scale) * Math.min(1, dt * 10);
+  const c = d3dToWorld(d3dPX || d3dW/2, d3dPY || d3dH/2), j = performance.now() * 0.006; // gentle shiver (matches the spike)
+  d.grp.position.set(c.x + Math.sin(j) * d.R * 0.025, d.R * 0.9 + Math.cos(j * 1.2) * d.R * 0.02, c.z + Math.cos(j) * d.R * 0.025);
+  const wob = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.sin(j * 0.8) * 0.045, Math.sin(j * 0.5) * 0.05, Math.cos(j * 1.1) * 0.045));
   d.grp.quaternion.copy(d.heldQuat).multiply(wob);
   const s = Math.max(0, d.scale); d.grp.scale.set(s, s, s);
 }
