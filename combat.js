@@ -240,7 +240,7 @@ const REACT_ICON='<svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="tr
 const SHIELD_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.5 31 38.4 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.4-57.2L242.6 2.9C246.8 1 251.4 0 256 0z"/></svg>';
 // Toggle in place (just flip the chip class) rather than re-rendering — a full render would refresh the
 // selected statblock preview, which is jarring (B128).
-function toggleReaction(itId){const it=combatItem(itId);if(!it)return;it.reaction=(it.reaction===false);saveAdv();
+function toggleReaction(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;it.reaction=(it.reaction===false);saveAdv();
   const el=document.querySelector(`[data-cireact="${itId}"]`);if(el)el.classList.toggle("used",it.reaction===false);else renderCombat();}
 // Concentration toggle (B125): a bullseye chip beside reaction — "on" = the creature is concentrating on a
 // spell. Manual (broken by failed CON saves, which the DM adjudicates); unlike reaction it doesn't auto-reset.
@@ -248,7 +248,7 @@ const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 // FA-free solid circle-check / circle-xmark — death-save success / failure pips in the HP popover (B127).
 const CIRCLE_CHECK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
 const CIRCLE_XMARK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
-function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;it.concentration=!it.concentration;saveAdv();
+function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;it.concentration=!it.concentration;saveAdv();
   const el=document.querySelector(`[data-ciconc="${itId}"]`);if(el)el.classList.toggle("on",it.concentration);else renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 let _caPeekId=null; // last previewed (peeked) combatant id — the peek only animates when this changes (B128)
@@ -296,7 +296,7 @@ function setDeathSave(itId,kind,n){const it=combatItem(itId);if(!it)return;if(!i
 // Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
 // ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
 // tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
-function combatAdvance(dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,n=cb.order.length;if(!n)return;
+function combatAdvance(dir){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,n=cb.order.length;if(!n)return;
   const prev=cb.order[cb.turnIndex];
   let ti=cb.turnIndex,round=cb.round,steps=0;
   do{ti+=dir;
@@ -326,15 +326,15 @@ function tickConditions(cb,turnIt,edge){
 }
 // Per-combatant edits (CT3): conditions, note, ungroup, remove.
 function combatItem(id){const ctx=combatOf();return ctx?ctx.e.combat.order.find(x=>x.id===id):null;}
-function addCombatCond(itId,name,rounds,timing){const it=combatItem(itId);if(!it||!name)return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
-function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;it.conditions.splice(i,1);saveAdv();renderCombat();}
+function addCombatCond(itId,name,rounds,timing){const it=combatItem(itId);if(!it||!name)return;if(!playerCondAllowed(it))return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
+function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;if(!playerCondAllowed(it))return;it.conditions.splice(i,1);saveAdv();renderCombat();}
 function setCombatNote(itId,text){const it=combatItem(itId);if(!it)return;it.comment=text;saveAdv();renderCombat();}
 // Split a count:N group into independent combatants — each re-rolls its own initiative.
-function ungroupCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
+function ungroupCombatant(itId){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
   const cur=cb.order[cb.turnIndex];
   cb.order.filter(x=>x.groupId===it.groupId).forEach(x=>{x.init=rollInit(x.initMod||0);x.groupId=x.id;});
   sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
-function removeCombatant(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,idx=cb.order.findIndex(x=>x.id===itId);if(idx<0)return;
+function removeCombatant(itId){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,idx=cb.order.findIndex(x=>x.id===itId);if(idx<0)return;
   cb.order.splice(idx,1);if(idx<cb.turnIndex)cb.turnIndex--;
   cb.turnIndex=Math.max(0,Math.min(cb.turnIndex,cb.order.length-1));saveAdv();renderCombat();}
 // Condition/effect chip: anything the app can describe becomes a reflink (global hover/click → definition
@@ -427,7 +427,7 @@ function openNoteEdit(itId,anchor){
   ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
 }
 // Set one combatant's status directly (kebab menu / selection bar) (B123).
-function setCombatStatus(itId,status){const it=combatItem(itId);if(!it)return;it.status=status;saveAdv();renderCombat();}
+function setCombatStatus(itId,status){if(PLAYER_MODE)return;const it=combatItem(itId);if(!it)return;it.status=status;saveAdv();renderCombat();}
 function openCombatRowMenu(itId,anchor){
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
   const groupN=cb.order.filter(x=>x.groupId===it.groupId).length;
@@ -465,7 +465,7 @@ function combatConSave(it){if(!it||it.kind!=="monster")return null;const m=monBy
 // Concentration save prompt for `lost` HP taken: DC = max(10, ⌊damage/2⌋), with the CON save bonus if known.
 function concCheckPrompt(it,lost){return {dc:Math.max(10,Math.floor(lost/2)),bonus:combatConSave(it)};}
 function openHPManage(itId,anchor,concPrompt){
-  const it=combatItem(itId);if(!it||it.hpMax==null)return;
+  const it=combatItem(itId);if(!it||it.hpMax==null)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
   const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
   const barFill=t=>{const r=t.hpMax?t.hpCur/t.hpMax:0;return `width:${clamp(r*100,0,100)}%;background:${r>.5?"var(--ok)":r>.25?"var(--warn)":"var(--bad)"}`;};
   const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b> — DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn primary sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
@@ -498,7 +498,7 @@ function openHPManage(itId,anchor,concPrompt){
     if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
 }
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
-function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;
+function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
   if(v===""){it.init=null;it.initRolled=false;} // cleared → blank again
   else{it.init=Number(v)||0;it.initRolled=true;it.initManual=false;} // typing commits it (not a placeholder / blank manual)
   // Re-sort on an init edit only in Initiative mode; in Manual mode the hand-set order is preserved
@@ -672,7 +672,7 @@ function reorderCombat(dragId,targetId,after){const ctx=combatOf();if(!ctx)retur
   const from=cb.order.findIndex(x=>x.id===dragId);if(from<0)return;const moved=cb.order.splice(from,1)[0];
   let to=cb.order.findIndex(x=>x.id===targetId);if(to<0)cb.order.push(moved);else{if(after)to++;cb.order.splice(to,0,moved);}
   combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
-function moveCombatant(itId,dir){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId),j=i+dir;
+function moveCombatant(itId,dir){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId),j=i+dir;
   if(i<0||j<0||j>=cb.order.length)return;const cur=cb.order[cb.turnIndex];
   const[m]=cb.order.splice(i,1);cb.order.splice(j,0,m);combatView(cb).sort="manual";cb.turnIndex=Math.max(0,cb.order.indexOf(cur));saveAdv();renderCombat();}
 // Move all `ids` (a multi-selection) as a block to just before/after targetId.
@@ -741,8 +741,8 @@ function combatSelBarHTML(){const n=combatSelInOrder().length;if(!n){_selPrevN=0
     <button class="csb-x" id="csbClear" title="Clear selection" aria-label="Clear selection">✕</button>
   </div>`;}
 // Jump the current turn to a combatant (selection-bar "Set current turn" + double-click a row) (B122).
-function setCurrentTurn(itId){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId);if(i<0)return;cb.turnIndex=i;saveAdv();renderCombat();}
-function setCombatStatusSel(status){combatSelInOrder().forEach(it=>{it.status=status;});saveAdv();renderCombat();}
+function setCurrentTurn(itId){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,i=cb.order.findIndex(x=>x.id===itId);if(i<0)return;cb.turnIndex=i;saveAdv();renderCombat();}
+function setCombatStatusSel(status){if(PLAYER_MODE)return;combatSelInOrder().forEach(it=>{it.status=status;});saveAdv();renderCombat();}
 // Positive = damage (temp absorbs first), negative = heal — applied to every selected HP-tracked combatant.
 function applyDmgSel(amt){amt=Number(amt)||0;if(!amt)return;combatSelInOrder().forEach(it=>{if(hpTracked(it)){changeHP(it,amt);applyDownState(it);}});saveAdv();renderCombat();}
 function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=>`<button class="popitem has-ico" data-selst="${s}"><span class="csb-ico">${CI_STATUS_ICON[s]}</span>${CI_STATUS_LABEL[s]}</button>`).join(""));
@@ -971,7 +971,7 @@ function combatRoundBarHTML(cb){
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
-function openRoundEdit(anchor){
+function openRoundEdit(anchor){if(PLAYER_MODE)return;
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
   const p=showPopover(anchor,`<div class="round-edit">Round <input type="number" class="round-in" min="1" value="${cb.round}"><button class="btn primary sm" style="width:auto">Set</button></div>`);
   const inp=p.querySelector(".round-in");inp.focus();inp.select();
@@ -1190,7 +1190,7 @@ async function pollShareEdits(){
     // Player dice rolls → fold new ones into the DM roll log (B204 stage 4).
     let rollNew=false;
     if(Array.isArray(rec.rolls)){rec.rolls.forEach(ev=>{if(!ev||!ev.id||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
-      rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
+      rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},fromPlayer:true,roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
       if(rollLog.length>60)rollLog.length=60;}
     if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();}
     if(applied||charApplied||queued)renderCombat();
@@ -1236,17 +1236,15 @@ function suggestDesc(s){if(s.isChar)return "updated their character sheet";const
 // The player-editing picker (segmented Off/Suggest/Own/All) — shown in both share-dialog states; the modes
 // are disabled with a setup hint until a player-edit key is set in Settings.
 function shareEditPickerHTML(){
-  const hasKey=!!playerEditKey(),mode=combatShareMode();
-  const opts=[["off","Off"],["suggest","Suggest"],["own","Own PC"],["all","All PCs"]];
-  const seg=opts.map(([v,l])=>`<button type="button" class="seg-btn${mode===v?" on":""}" data-emode="${v}"${(hasKey||v==="off")?"":" disabled"}>${l}</button>`).join("");
+  const hasKey=!!playerEditKey(),on=combatShareMode()!=="off";
+  const seg=`<button type="button" class="seg-btn${!on?" on":""}" data-emode="off">Off</button>`+
+    `<button type="button" class="seg-btn${on?" on":""}" data-emode="own"${hasKey?"":" disabled"}>On</button>`;
   const hint=!hasKey?`Add a <b>player edit key</b> in Settings → Combat to let players edit.`
-    :mode==="off"?`Players can only watch — read-only.`
-    :mode==="suggest"?`Players propose changes; you approve each before it applies.`
-    :mode==="own"?`Players claim their character by name and edit only its HP &amp; conditions, live.`
-    :`Any player can edit any character's HP &amp; conditions, live.`;
+    :!on?`Players can only watch — read-only.`
+    :`Each player claims their character and can edit its HP, conditions &amp; sheet (and roll), live.`;
   return `<div class="share-edit">
     <div class="share-edit-h">Player editing</div>
-    <div class="seg" role="group" aria-label="Player editing mode">${seg}</div>
+    <div class="seg" role="group" aria-label="Player editing">${seg}</div>
     <p class="share-edit-hint">${hint}</p>
   </div>`;
 }
@@ -1383,10 +1381,13 @@ let _pmPreviewOn=false; // DM tapped "Preview as player" → mirror the live sna
 function playerEditMode(){return (PLAYER_MODE&&state.__pmEdit)||"off";}
 function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+PLAYER_BIN):null;}catch(e){return null;}}
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
-function playerCanEdit(it){if(!PLAYER_MODE||!it||it.kind!=="pc")return false;const m=playerEditMode();
-  if(m==="off"||!state.__pmWbin||!state.__pmWkey)return false;return m==="own"?it.id===playerClaimId():true;}
-// Enemy CONDITIONS-only editing (B204 stage 5): any obscured combatant when the DM enabled it + an edit mode.
+// Editing is own-PC-only now (B213 — simplified to Off/On): a player may edit only their claimed character.
+function playerCanEdit(it){if(!PLAYER_MODE||!it||it.kind!=="pc")return false;
+  if(playerEditMode()==="off"||!state.__pmWbin||!state.__pmWkey)return false;return it.id===playerClaimId();}
+// Enemy CONDITIONS-only editing (B204 stage 5): any obscured combatant when the DM enabled it + editing on.
 function playerEnemyCondsEditable(it){return !!(PLAYER_MODE&&it&&it.kind!=="pc"&&it.kind!=="event"&&state.__pmEnemyConds&&playerEditMode()!=="off"&&state.__pmWbin&&state.__pmWkey);}
+// Phantom-input guard (B213): conditions may be edited on a player's own PC, or on enemies when permitted.
+function playerCondAllowed(it){return !PLAYER_MODE||playerCanEdit(it)||playerEnemyCondsEditable(it);}
 // The editable slice of a combat instance + equality, for diffing against the DM's snapshot.
 function instEditFields(it){return {hp:it.hpCur,temp:it.hpTemp||0,conds:(it.conditions||[]).map(c=>c.name),init:it.init,reaction:it.reaction!==false,concentration:!!it.concentration,status:it.status||"active"};}
 function sameEdit(a,b){return !!a&&!!b&&a.hp===b.hp&&a.temp===b.temp&&a.init===b.init&&a.reaction===b.reaction&&a.concentration===b.concentration&&a.status===b.status&&JSON.stringify(a.conds||[])===JSON.stringify(b.conds||[]);}
@@ -1456,17 +1457,15 @@ function playerPushRoll(ev){
 }
 // A thin banner above the order: the "playing as" picker (own mode) or an editing-scope note (all/suggest).
 function playerModeChrome(body){
-  const mode=playerEditMode();const old=body.querySelector(".pm-bar");if(old)old.remove();
-  if(mode==="off")return;const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
-  const bar=document.createElement("div");bar.className="pm-bar";
-  if(mode==="own"){
+  const old=body.querySelector(".pm-bar");if(old)old.remove();
+  const ctx=loadedCtx();
+  // Editing on → a "Playing as" picker so the player claims their character. No banner otherwise (B213).
+  if(playerEditMode()!=="off"&&ctx&&ctx.e.combat){
     const pcs=ctx.e.combat.order.filter(o=>o.kind==="pc"),claim=playerClaimId();
+    const bar=document.createElement("div");bar.className="pm-bar";
     bar.innerHTML=`<span class="pm-bar-l">Playing as</span><select class="pm-claim"><option value="">— choose your character —</option>${pcs.map(p=>`<option value="${esc(p.id)}"${p.id===claim?" selected":""}>${esc(p.name)}</option>`).join("")}</select>`;
     body.insertBefore(bar,body.firstChild);
     bar.querySelector(".pm-claim").addEventListener("change",e=>{setPlayerClaim(e.target.value||null);renderCombat();});
-  }else{
-    bar.innerHTML=`<span class="pm-bar-l">${mode==="suggest"?"Suggesting changes — your DM approves each":"You can edit any character below"}</span>`;
-    body.insertBefore(bar,body.firstChild);
   }
   // Tapping an editable PC's name opens its character preview (read + roll) — B204 stage 4.
   body.querySelectorAll(".cbt-row.pm-edit .ci-id").forEach(el=>{el.classList.add("pm-tap");
@@ -1491,6 +1490,16 @@ function openPlayerSheet(pcId){
     el.addEventListener("contextmenu",e=>{if(!clickRollOn())return;e.preventDefault();setSrc();openRollMenu(el);});});
 }
 function closePlayerSheet(){const b=document.getElementById("pmSheetBg");if(b)b.remove();}
+// Character-summary popover for a roll-log player name (B213) — the PC counterpart to the monster statblock
+// preview. Reuses pcSheetHTML (read-only) under a name/class header + AC/HP.
+function showPcPreview(anchor,c){
+  if(!c)return;const cls=(typeof charClasses==="function"?charClasses(c):[])||[];
+  const ac=charFieldVal(c,"ac"),hp=charFieldVal(c,"hp");
+  const stat=(k,v)=>(v==null||v==="")?"":`<span><b>${k}</b> ${esc(String(v))}</span>`;
+  const stats=(stat("AC",ac)+stat("HP",hp));
+  const head=`<div class="pcprev-h">${esc(c.name||"Character")}${cls.length?` <span class="pcprev-sub">${esc(cls.join(" / "))}</span>`:""}</div>`;
+  tailPopover(anchor,`<div class="pcprev">${head}${stats?`<div class="pcprev-stats">${stats}</div>`:""}${pcSheetHTML({id:"_pcprev",kind:"pc",srcId:c.id,name:c.name,conditions:[]})}</div>`);
+}
 function playerModeMessage(title,sub){
   document.body.classList.add("player-mode");
   const app=document.getElementById("app");

@@ -1,3 +1,20 @@
+/* 3D dice result alert (B214) — total + label + ghost reroll + auto-dismiss timer bar; hover pauses it.
+   z above the dice canvas (400) and the roll log. */
+#d3dCard{ position:fixed; left:50%; top:46px; transform:translate(-50%,-12px); z-index:600;
+  display:none; align-items:center; gap:10px; max-width:min(92vw,440px);
+  background:var(--in); backdrop-filter:blur(10px); border:1px solid var(--accent);
+  border-radius:8px; padding:11px 14px 13px 18px; overflow:hidden;
+  box-shadow:0 8px 24px rgba(0,0,0,.5); opacity:0; transition:opacity .18s, transform .18s; }
+#d3dCard.show{ display:flex; opacity:1; transform:translate(-50%,0); }
+#d3dCard .d3dc-text{ font-size:13px; color:var(--txt); white-space:nowrap; }
+#d3dCard .d3dc-text .toast-num{ font-weight:800; color:var(--brand-soft); }
+#d3dCard .d3dc-rr{ flex:none; width:26px; height:26px; display:grid; place-items:center; padding:0; cursor:pointer;
+  background:transparent; border:0; border-radius:7px; color:var(--dim); }
+#d3dCard .d3dc-rr:hover{ color:var(--txt); background:rgba(226,101,77,.14); }
+#d3dCard .d3dc-bar{ position:absolute; left:0; bottom:0; height:3px; width:100%; background:linear-gradient(90deg,var(--brand),var(--amber)); }
+/* Vecna — D&D display face used on the 3D dice (B214). Pixel Sagas, free for personal use. */
+@font-face{ font-family:"Vecna"; font-weight:400; font-display:swap; src:url("vecna.otf") format("opentype"); }
+@font-face{ font-family:"Vecna"; font-weight:700; font-display:swap; src:url("vecna-bold.otf") format("opentype"); }
 :root{
   --bg:#121317; --panel:#1b1d22; --panel2:#23262d; --panel3:#2a2e36; --line:#30343d;
   --txt:#e7e9ee; --dim:#a4aab4; --faint:#7e858f;
@@ -1430,6 +1447,22 @@ body.player-mode .combat-active .pcs-roll{pointer-events:none}
 .pm-bar{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:9px 13px;margin:0 20px 10px}
 .pm-bar-l{font-size:12.5px;color:var(--dim);font-weight:500}
 .pm-claim{flex:1;max-width:260px;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:13px;padding:6px 9px;color-scheme:dark}
+/* Roll-log "My rolls / Player rolls" tabs (B213) */
+.rl-tabs{display:flex;gap:4px;padding:6px 9px;border-bottom:1px solid #434956;background:#16181c}
+.rl-tab{flex:1;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:11px;font-weight:600;padding:4px 6px;cursor:pointer}
+.rl-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.rl-empty{padding:18px 12px;text-align:center;color:var(--faint);font-size:12px}
+/* Player mode: float the roll log top-left and above the preview overlay (B213) */
+body.player-mode #rollLog{position:fixed;top:8px;left:8px;right:auto;bottom:auto;z-index:130}
+/* Keep the in-overlay "Edit" pencil clear of the ✕ close button (B213) */
+.pm-sheet .ca-name{padding-right:42px}
+/* Roll-log player-name → character-summary popover (B213) */
+.pcprev{max-width:300px}
+.pcprev-h{font-size:14px;font-weight:700;color:var(--txt);margin-bottom:6px}
+.pcprev-sub{font-size:11px;font-weight:400;color:var(--dim)}
+.pcprev-stats{display:flex;gap:12px;font-size:12px;color:var(--dim);margin-bottom:8px}
+.pcprev-stats b{color:var(--txt)}
+.pcprev .pcs-roll{pointer-events:none}
 body.player-mode .cbt-row.pm-edit .ci-id.pm-tap{cursor:pointer}
 body.player-mode .cbt-row.pm-edit .ci-id.pm-tap .ci-name:hover{text-decoration:underline;text-underline-offset:2px}
 /* Character preview overlay — bottom sheet on phones, centred card on desktop. Preview + roll only. */

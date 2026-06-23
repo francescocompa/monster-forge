@@ -4,6 +4,57 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 214 — 3D dice (integration: stone, sharp edges)
+- **Physical 3D dice on every roll.** A new shared-scope `dice3d.js` renders real tumbling dice (three.js +
+  cannon.js, both vendored locally in `vendor/` — the site stays no-build/self-contained) that land on the
+  roll's actual values. `doRoll` (engine.js) passes the result to `rollDice3D()`; the dice are decided by the
+  engine, not the physics: a deterministic **pre-roll** simulates to rest off-screen, paints the value onto the
+  face that lands up, then resets & replays the identical fixed-step sim, so the shown number never changes on
+  settle. Spawns from the last pointer position.
+- **Stone material, sharp edges** (the look chosen from the spike): a procedural mottled-stone texture, a tiny
+  edge bevel (no drawn edge line), a soft environment map (matches the spike's lighter coral), **Vecna** font on
+  the faces (vendored `vecna.otf`/`vecna-bold.otf`, re-baked once the webfont loads), the **logo on the max
+  face**, sRGB colour. Numbers are **upright per face** (basis matrix).
+- **Standard d20 numbering** — opposite faces sum to 21 and **20 is adjacent to 2/8/14** (the canonical layout).
+  The rolled value is shown by an icosahedral **symmetry permutation** of the face textures (a value-shift can't
+  be a real d20 rotation, so it scrambled the arrangement); the layout stays intact and the value is exact.
+- **Result alert** (replaces the plain roll toast while dice show) — uses the **same wording as the old toast**
+  (`naturalRollText`, e.g. "Arcane Burst: 23 to hit") + a ghost **reroll** button + an auto-dismiss **timer
+  bar**; **hovering pauses** it so the dice persist as long as the alert. Above the dice canvas + roll log.
+- **Advantage/disadvantage** dims the dropped die (transparent, clearly unselected) and keeps the chosen one
+  solid (parsed from `r.parts` — `kh/kl/dh/dl` and the `d20(a,b)→keep` shorthand).
+- **Safety:** all THREE/CANNON/WebGL use is lazy + guarded, so page init and the jsdom smoke test (no libs, no
+  WebGL) never touch it; honours `prefers-reduced-motion`. `npm run verify` green (`dice3d.js` added to
+  check/lint/eslint-shared-globals + THREE/CANNON globals + the smoke-test injection list).
+- **Pending (next session):** the cursor-die pickup-on-hover interaction; optional material/colour/edge
+  settings; the other materials (crystal/metal/ceramic). The d20 middle-band arrangement is deterministic but
+  not a specific manufacturer's (there's no single universal one beyond the sum-21 + 20-neighbourhood rules).
+  See the dice-spike (`dice-spike.html`) for the full material set + cursor interaction reference.
+
+## Batch 213 — Share-feedback round 3 (player-mode polish + roll-log)
+- **Player editing simplified to Off / On.** The four-way picker (Off/Suggest/Own/All) collapsed to a
+  two-way **Off / On** segmented control; "On" means a player claims their own character and edits only that
+  PC (HP, conditions & sheet) plus rolls. Suggest/All are retired — they needed far more testing than the
+  feature warranted. `playerCanEdit` is now own-PC-only; the "You can edit any character below" banner is gone
+  (only the "Playing as" claim picker remains).
+- **Phantom-input bug fixed.** In player mode a double-click could momentarily change the turn (then revert on
+  the next poll); enemy conditions had the same optimistic-then-revert flicker. Player mode now hard-blocks the
+  DM-only mutations at the source — `setCurrentTurn`, `combatAdvance`, `moveCombatant`, `ungroupCombatant`,
+  `removeCombatant`, `setCombatStatus(Sel)`, `openRoundEdit` no-op; `addCombatCond`/`removeCombatCond`,
+  `setCombatInit`, `openHPManage`, `toggleReaction`/`toggleConcentration` gate on `playerCanEdit` /
+  `playerCondAllowed` — so the input never registers rather than registering and reverting.
+- **Player preview overlay.** The roll log now floats **top-left, above the overlay** (`position:fixed`,
+  z-index 130 over the backdrop's 120) so a player sees their result while the sheet is open; the in-overlay
+  **Edit** pencil is kept clear of the ✕ close button.
+- **DM roll log.** Title is now **"My Rolls"**. When the combat is shared, a second row of tabs (**My rolls /
+  Player rolls**) splits the log so the DM can isolate players' incoming rolls (`fromPlayer`).
+- **Roll-log player names are now previewable.** A player's name in the roll log opens a character-summary
+  popover (`showPcPreview` — name/class header + AC/HP + the read-only sheet), the PC counterpart to the
+  monster statblock preview, instead of underlining a dead link.
+- Verified in preview: Off/On picker; floating roll log above the overlay at top-left; Edit clear of ✕; the
+  banner note gone; double-click + enemy-condition edits blocked in player mode; "My Rolls" title with shared
+  tabs; player-name popover renders. `npm run verify` green.
+
 ## Batch 212 — Share-feedback round 2 (network-free preview + cropping)
 - **"Preview as player" is now network-free and reliable.** It no longer opens the real (origin/localhost-
   bound) link — it stashes the live combat snapshot to `localStorage` and opens `index.html?share=__preview__`,

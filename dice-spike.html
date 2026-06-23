@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3D dice spike — interaction prototype</title>
+<!--
+  THROWAWAY SPIKE (item 9, approach B). NOT part of the no-build app: standalone page,
+  isolated scope, safe to delete. Validates the FULL interaction the user specced:
+    1. dice bounce around the page, contained within the viewport bounds
+    2. cursor becomes the die(s) on hover of rollable text, shivering as if held aloft;
+       click → dice enlarge & shoot out from the cursor (touch → spawn from the tap point)
+    3. up to 20 dice at once
+    4. dice settle still → revised result card → (log update) → black-hole implosion vanish
+    5. brand-terracotta dice; the MAX face shows the site logo instead of the number
+  Top-down orthographic camera with world units = CSS px so bounds + cursor mapping are trivial.
+  three.js is loaded from a CDN for the spike; production (dice3d.js) would vendor a UMD build.
+-->
+<style>
+  /* Vecna — the D&D-style display face (Pixel Sagas, free for personal use). OTFs vendored in the project. */
+  @font-face{ font-family:"Vecna"; font-weight:400; font-display:swap; src:url("vecna.otf") format("opentype"); }
+  @font-face{ font-family:"Vecna"; font-weight:700; font-display:swap; src:url("vecna-bold.otf") format("opentype"); }
+  :root{
+    --bg:#16181c; --panel:#1a1d24; --line:#2a2f3a; --txt:#e7e9ee; --dim:#9aa3b2;
+    --brand:#e2654d; --brand-soft:#ef8470; --amber:#d9a441;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; color:var(--txt);
+    background:radial-gradient(1100px 620px at 50% -8%, #20242e, var(--bg));
+    font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .page{ position:absolute; inset:0; padding:54px 24px; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  .sub{ color:var(--dim); max-width:620px; margin:0 0 22px; }
+  .rolls{ display:flex; flex-wrap:wrap; gap:10px; max-width:680px; }
+  /* Rollable text — hovering one turns the cursor into the dice. */
+  .roll{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; user-select:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:9px 14px; font-weight:600; font-size:15px; color:var(--brand-soft); }
+  .roll:hover{ border-color:var(--brand); }
+  .roll .lbl{ color:var(--dim); font-weight:500; font-size:12.5px; }
+  .mats{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .mats-l{ color:var(--dim); font-size:12px; margin-right:2px; }
+  .mat{ background:var(--panel); border:1px solid var(--line); border-radius:8px; color:var(--dim);
+    font-size:12.5px; font-weight:600; padding:6px 12px; cursor:pointer; }
+  .mat.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+  .edge{ background:var(--panel); border:1px solid var(--line); border-radius:8px; color:var(--dim);
+    font-size:12.5px; font-weight:600; padding:6px 12px; cursor:pointer; }
+  .edge.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+  #diceColor{ width:34px; height:28px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; }
+  .hint{ margin-top:20px; color:#6b7484; font-size:12px; max-width:620px; }
+  #dice{ position:fixed; inset:0; z-index:50; pointer-events:none; }
+  /* While a die rides the cursor, hide the real cursor EVERYWHERE (the chips set cursor:pointer, which
+     would otherwise show the native cursor above the die). */
+  body.dicing, body.dicing *{ cursor:none !important; }
+  .hud{ position:fixed; z-index:60; top:10px; right:12px; font-variant-numeric:tabular-nums;
+    color:var(--dim); font-size:12px; background:rgba(20,23,30,.7); border:1px solid var(--line);
+    border-radius:8px; padding:5px 9px; }
+  .hud b{ color:var(--txt); }
+  /* Revised result card (the "alert" redesign). */
+  #card{ position:fixed; z-index:60; left:50%; top:46px; transform:translate(-50%,-12px);
+    display:none; align-items:center; gap:14px; background:rgba(26,29,36,.94); backdrop-filter:blur(10px);
+    border:1px solid var(--line); border-left:4px solid var(--brand); border-radius:14px;
+    padding:12px 40px 14px 16px; box-shadow:0 16px 40px rgba(0,0,0,.5); opacity:0; overflow:hidden;
+    transition:opacity .2s, transform .2s; }
+  #cX{ position:absolute; top:8px; right:8px; width:22px; height:22px; padding:0; border-radius:6px;
+    background:transparent; border:0; color:var(--dim); font-size:13px; cursor:pointer; line-height:1; }
+  #cX:hover{ background:rgba(255,255,255,.08); color:var(--txt); }
+  #card.show{ display:flex; opacity:1; transform:translate(-50%,0); }
+  #card .tot{ font-size:30px; font-weight:800; color:var(--brand-soft); line-height:1; min-width:40px; text-align:center; }
+  #card .meta .lab{ font-weight:700; font-size:14px; }
+  #card .meta .brk{ color:var(--dim); font-size:12px; margin-top:2px; }
+  /* Auto-dismiss timer bar — depletes over the dwell, syncs with the dice vanish; pauses on hover. */
+  #cBar{ position:absolute; left:0; bottom:0; height:3px; width:100%;
+    background:linear-gradient(90deg,var(--brand),var(--amber)); transform-origin:left; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Monster Forge — 3D dice interaction spike</h1>
+    <p class="sub">Hover a roll below: the cursor becomes the dice, held aloft and shivering. Click to
+       throw them — they bounce around the page, settle on their result, the card shows, then they get
+       sucked away. (On a touch screen, just tap a roll.) The <b>highest face shows the logo</b>.</p>
+    <div class="rolls">
+      <span class="roll" data-roll="1d20"><span class="v">1d20</span><span class="lbl">Initiative</span></span>
+      <span class="roll" data-roll="1d20+5"><span class="v">1d20+5</span><span class="lbl">Attack</span></span>
+      <span class="roll" data-roll="2d6"><span class="v">2d6</span><span class="lbl">Shortsword</span></span>
+      <span class="roll" data-roll="8d6"><span class="v">8d6</span><span class="lbl">Fireball</span></span>
+      <span class="roll" data-roll="4d8"><span class="v">4d8</span><span class="lbl">Healing</span></span>
+      <span class="roll" data-roll="20d6"><span class="v">20d6</span><span class="lbl">Nova (cap test)</span></span>
+    </div>
+    <div class="mats">
+      <span class="mats-l">Material</span>
+      <button class="mat on" data-mat="default">Default</button>
+      <button class="mat" data-mat="stone">Stony</button>
+      <button class="mat" data-mat="crystal">Crystal</button>
+      <button class="mat" data-mat="metal">Metal</button>
+      <button class="mat" data-mat="ceramic">Ceramic</button>
+    </div>
+    <div class="mats">
+      <span class="mats-l">Edges</span>
+      <button class="edge on" data-edge="sharp">Sharp</button>
+      <button class="edge" data-edge="round">Rounded</button>
+      <span class="mats-l" style="margin-left:14px">Colour</span>
+      <input type="color" id="diceColor" value="#e2654d">
+    </div>
+    <p class="hint">Spike only — validating feel + performance before integrating. Watch the FPS readout
+       (top-right) during the 20-dice throw.</p>
+  </div>
+
+  <canvas id="dice"></canvas>
+  <div class="hud">FPS <b id="fps">–</b> · dice <b id="dn">0</b></div>
+  <div id="card"><div class="tot" id="cTot">–</div><div class="meta"><div class="lab" id="cLab">Roll</div><div class="brk" id="cBrk"></div></div><button id="cX" title="Dismiss">✕</button><div id="cBar"></div></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+  <script>
+  (function(){
+    "use strict";
+    const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const HOVER = matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const BRAND = 0xe2654d, EDGE = 0x4a1f16, CAP = 20, HELD_SCALE = 0.4;
+    // Physics runs in SMALL units (cannon is tuned for ~metre scale; pixel-scale + large bodies makes the
+    // solver explode). 1 physics unit = SCALE css-px; bodies are ~1 unit, gravity ~60. Render = body·SCALE.
+    const SCALE = 48, GRAV = 62;
+    const DWELL = 2800, VANISH = 300;                    // ms — result card dwell, then implosion
+    const MIN_FLY = 450, MAX_FLY = 3000, REST_HOLD = 90; // ms — settle window + how long "at rest" before reading
+
+    const canvas = document.getElementById("dice");
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding; // proper colour management → saturated colours render true
+
+    const scene = new THREE.Scene();
+    // Top-down orthographic camera: world units == CSS pixels, so screen↔world is trivial and the play
+    // area is exactly the viewport. A tilted key light gives the dice readable side-shadows.
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 6000);
+    camera.position.set(0, 2000, 0); camera.up.set(0, 0, -1); camera.lookAt(0, 0, 0);
+
+    // Warm, near-neutral ambient (the old blue-ish ambient desaturated the coral). Moderate so unlit faces
+    // still read close to the true coral instead of washing to pale.
+    scene.add(new THREE.AmbientLight(0xfff1ea, 0.62));
+    const key = new THREE.DirectionalLight(0xffffff, 0.6);
+    key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+    key.shadow.bias = -0.0008; scene.add(key); scene.add(key.target);
+    const fill = new THREE.DirectionalLight(0xffd9c2, 0.28); fill.position.set(-400, 500, -300); scene.add(fill);
+
+    // A small prefiltered environment so metal / crystal / ceramic have something to reflect (a soft
+    // studio gradient with one bright highlight). Applied scene-wide → all PBR materials pick it up.
+    (function setupEnv(){
+      const c = document.createElement("canvas"); c.width = 256; c.height = 128; const g = c.getContext("2d");
+      const grd = g.createLinearGradient(0,0,0,128); grd.addColorStop(0,"#7c869c"); grd.addColorStop(0.55,"#aab1c2"); grd.addColorStop(1,"#2b303e");
+      g.fillStyle = grd; g.fillRect(0,0,256,128);
+      const rg = g.createRadialGradient(80,26,2,80,26,80); rg.addColorStop(0,"#ffffff"); rg.addColorStop(1,"rgba(255,255,255,0)");
+      g.fillStyle = rg; g.fillRect(0,0,256,128);
+      const tex = new THREE.CanvasTexture(c); tex.mapping = THREE.EquirectangularReflectionMapping;
+      const pmrem = new THREE.PMREMGenerator(renderer); pmrem.compileEquirectangularShader();
+      scene.environment = pmrem.fromEquirectangular(tex).texture; tex.dispose();
+    })();
+
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity:0.3 }));
+    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+    // --- cannon.js physics world ------------------------------------------------------------------
+    // Real rigid-body physics with convex colliders → dice tumble and settle on a face NATURALLY. The
+    // predetermined value is applied AFTER rest by relabelling the up-facing face (no motion rigging).
+    const world = new CANNON.World();
+    world.gravity.set(0, -GRAV, 0);
+    world.allowSleep = true;
+    world.broadphase = new CANNON.NaiveBroadphase();
+    world.solver.iterations = 14;
+    const matDie = new CANNON.Material("die"), matFloor = new CANNON.Material("floor"), matWall = new CANNON.Material("wall");
+    world.addContactMaterial(new CANNON.ContactMaterial(matFloor, matDie, { friction:0.45, restitution:0.18 }));
+    world.addContactMaterial(new CANNON.ContactMaterial(matWall, matDie, { friction:0.0, restitution:0.45 }));
+    world.addContactMaterial(new CANNON.ContactMaterial(matDie, matDie, { friction:0.06, restitution:0.16 }));
+    const floorBody = new CANNON.Body({ mass:0, material:matFloor, shape:new CANNON.Plane() });
+    floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2); // normal → +Y
+    world.addBody(floorBody);
+    // Four upright walls at the viewport edges, normals pointing inward. Repositioned on resize.
+    function wall(axisDeg){ const b = new CANNON.Body({ mass:0, material:matWall, shape:new CANNON.Plane() }); world.addBody(b); return b; }
+    // cannon's Plane keeps bodies on the +normal side, so each wall's normal must point INWARD (toward the
+    // play area where the dice are) — otherwise the dice sit on the solid side and get violently ejected.
+    const wL=wall(), wR=wall(), wF=wall(), wB=wall();
+    wL.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0),  Math.PI/2); // left  (x=-W/2) → normal +X
+    wR.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), -Math.PI/2); // right (x=+W/2) → normal -X
+    wF.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0),  Math.PI);   // front (z=+H/2) → normal -Z
+    // wB (back, z=-H/2) keeps default normal +Z
+
+    // --- viewport-driven sizing -------------------------------------------------------------------
+    let W = 0, H = 0;
+    function resize(){
+      W = innerWidth; H = innerHeight;
+      renderer.setSize(W, H);
+      camera.left = -W/2; camera.right = W/2; camera.top = H/2; camera.bottom = -H/2;
+      camera.updateProjectionMatrix();
+      ground.scale.set(W*2, H*2, 1);
+      const span = Math.max(W, H);
+      key.position.set(span*0.28, span*0.9, -span*0.2); key.target.position.set(0,0,0);
+      const s = key.shadow.camera; s.left=-span; s.right=span; s.top=span; s.bottom=-span; s.near=1; s.far=span*3; s.updateProjectionMatrix();
+      wL.position.set(-W/2/SCALE, 0, 0); wR.position.set(W/2/SCALE, 0, 0); wB.position.set(0, 0, -H/2/SCALE); wF.position.set(0, 0, H/2/SCALE);
+    }
+    addEventListener("resize", resize); resize();
+
+    // Screen px → world point on the dice plane (y=planeY), orientation-agnostic via raycast.
+    const ray = new THREE.Raycaster();
+    function toWorld(sx, sy, planeY){
+      ray.setFromCamera(new THREE.Vector2(sx/W*2-1, -(sy/H*2-1)), camera);
+      const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -planeY);
+      const out = new THREE.Vector3(); ray.ray.intersectPlane(plane, out); return out;
+    }
+
+    // --- texture cache (numbers + logo) -----------------------------------------------------------
+    const texCache = new Map();
+    const DIE_FONT = '"Vecna", "Copperplate", "Luminari", fantasy, serif'; // Vecna once vecna.* is in the folder
+    function numTex(n, sides){
+      const k = "n"+sides+":"+n; if (texCache.has(k)) return texCache.get(k);
+      const s = 160, cv = document.createElement("canvas"); cv.width = cv.height = s;
+      const g = cv.getContext("2d"); const str = String(n);
+      g.font = "700 118px "+DIE_FONT; g.textAlign = "center"; g.textBaseline = "alphabetic";
+      // Optically centre the glyph from its actual ink bounds (Vecna's metrics differ from the fallback,
+      // which is why a fixed offset looked off-centre).
+      const m = g.measureText(str), asc = m.actualBoundingBoxAscent||60, desc = m.actualBoundingBoxDescent||0;
+      const y = s/2 + (asc - desc)/2;
+      g.lineJoin = "round"; g.lineWidth = 13; g.strokeStyle = "rgba(58,16,9,0.92)"; g.strokeText(str, s/2, y);
+      g.fillStyle = "#fff4ee"; g.fillText(str, s/2, y);
+      if (n === 6 || n === 9){ const uy = y + desc + 10; g.fillRect(s*0.36, uy, s*0.28, 7); }
+      const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; t.encoding = THREE.sRGBEncoding; texCache.set(k, t); return t;
+    }
+    let logoTex = null, liveLabels = []; // liveLabels: current dice faces, so logo/font loads can retro-fill
+    function refreshLabels(){ liveLabels.forEach(L => { L.mat.map = (L.value===L.sides && logoTex) ? logoTex : numTex(L.value, L.sides); L.mat.needsUpdate = true; }); }
+    (function loadLogo(){
+      // The official, well-formed brand mark (logo-dice.svg) keeps its own white+dark fills — DON'T recolour.
+      fetch("logo-dice.svg").then(r=>r.text()).then(svg=>{
+        svg = svg.replace(/width="[^"]*"/, 'width="256"').replace(/height="[^"]*"/, 'height="256"');
+        const img = new Image();
+        img.onload = () => {
+          const s = 256, cv = document.createElement("canvas"); cv.width = cv.height = s;
+          cv.getContext("2d").drawImage(img, s*0.1, s*0.1, s*0.8, s*0.8);
+          logoTex = new THREE.CanvasTexture(cv); logoTex.anisotropy = 4; logoTex.encoding = THREE.sRGBEncoding; refreshLabels();
+        };
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      }).catch(()=>{});
+    })();
+    // When Vecna finishes loading, drop the fallback-font textures and rebuild.
+    if (document.fonts && document.fonts.load){
+      document.fonts.load("700 124px Vecna").then(()=>{ if (document.fonts.check("700 124px Vecna")){ texCache.clear(); refreshLabels(); } }).catch(()=>{});
+    }
+
+    // --- die geometry + faces ---------------------------------------------------------------------
+    const cl = (v,a,b) => v<a?a:v>b?b:v;
+    function roundedBoxGeo(size, radius, seg){
+      const geo = new THREE.BoxGeometry(size, size, size, seg, seg, seg);
+      const p = geo.attributes.position, h = size/2 - radius;
+      for (let i=0;i<p.count;i++){
+        const x=p.getX(i), y=p.getY(i), z=p.getZ(i);
+        const cx=cl(x,-h,h), cy=cl(y,-h,h), cz=cl(z,-h,h);
+        let dx=x-cx, dy=y-cy, dz=z-cz; const L=Math.hypot(dx,dy,dz)||1;
+        p.setXYZ(i, cx+dx/L*radius, cy+dy/L*radius, cz+dz/L*radius);
+      }
+      geo.computeVertexNormals(); return geo;
+    }
+    const isBoxDie = sides => sides===6 || ![4,8,12,20].includes(sides);
+    function buildDie(sides, R){
+      if (isBoxDie(sides)){
+        const size = R*1.4, hs = size/2;
+        const faces = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(n=>{
+          const normal = new THREE.Vector3(n[0],n[1],n[2]);
+          return { normal, centroid: normal.clone().multiplyScalar(hs) };
+        });
+        // "sharp" = a minuscule bevel so the edge catches light (real dice aren't razor-sharp) without a drawn
+        // dark line; "round" keeps the pronounced rounding.
+        const round = EDGE_STYLE === "round";
+        return { geo: roundedBoxGeo(size, round ? size*0.16 : size*0.04, round ? 5 : 3), faces, box:true, R };
+      }
+      const geo = sides===4 ? new THREE.TetrahedronGeometry(R)
+                : sides===8 ? new THREE.OctahedronGeometry(R)
+                : sides===12 ? new THREE.DodecahedronGeometry(R)
+                : new THREE.IcosahedronGeometry(R);
+      return { geo, faces: faceList(geo), box:false, R };
+    }
+    function faceList(geo){
+      const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, map = new Map();
+      const a=new THREE.Vector3(), b=new THREE.Vector3(), c=new THREE.Vector3(), n=new THREE.Vector3(), cb=new THREE.Vector3(), ab=new THREE.Vector3();
+      for (let i=0;i<p.count;i+=3){
+        a.fromBufferAttribute(p,i); b.fromBufferAttribute(p,i+1); c.fromBufferAttribute(p,i+2);
+        cb.subVectors(c,b); ab.subVectors(a,b); n.crossVectors(cb,ab).normalize();
+        const k = n.x.toFixed(2)+","+n.y.toFixed(2)+","+n.z.toFixed(2);
+        let e = map.get(k); if(!e){ e={ normal:n.clone(), sum:new THREE.Vector3(), c:0 }; map.set(k,e); }
+        e.sum.add(a).add(b).add(c); e.c += 3;
+      }
+      return [...map.values()].map(e=>({ normal:e.normal, centroid:e.sum.multiplyScalar(1/e.c) }));
+    }
+    // A cannon ConvexPolyhedron collider from a three geometry (deduped verts + triangular faces), scaled
+    // from px geometry into physics units (÷SCALE).
+    function convexShape(geo){
+      const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, map = new Map(), verts = [], idx = [];
+      for (let i=0;i<p.count;i++){
+        const x=+(p.getX(i)/SCALE).toFixed(4), y=+(p.getY(i)/SCALE).toFixed(4), z=+(p.getZ(i)/SCALE).toFixed(4), k=x+","+y+","+z;
+        let id = map.get(k); if (id===undefined){ id = verts.length; map.set(k, id); verts.push(new CANNON.Vec3(x,y,z)); }
+        idx.push(id);
+      }
+      const faces = []; for (let i=0;i<idx.length;i+=3) faces.push([idx[i], idx[i+1], idx[i+2]]);
+      return new CANNON.ConvexPolyhedron(verts, faces);
+    }
+
+    const UP = new THREE.Vector3(0,1,0);
+    // Swappable die materials (the picker sets MATERIAL). scene.environment gives metal/crystal/ceramic
+    // their reflections; flatShading matches the geometry (faceted polyhedra, smooth rounded cube).
+    let MATERIAL = "default", EDGE_STYLE = "sharp", DICE_COLOR = BRAND; const liveBodies = [];
+    // Gem MATCAP — bakes a cut-gem's shading (hot highlight → vibrant coral → deep ruby edge + a sparkle) into
+    // a sphere image. With flat-shaded facets each face samples a different part → reads as a real gem, no refraction.
+    let _gemMatcap = null;
+    function gemMatcap(){
+      if (_gemMatcap) return _gemMatcap;
+      const s = 256, c = document.createElement("canvas"); c.width = c.height = s; const g = c.getContext("2d");
+      g.fillStyle = "#1c0402"; g.fillRect(0,0,s,s);
+      const rg = g.createRadialGradient(s*0.4,s*0.36,s*0.02, s*0.5,s*0.5,s*0.52);
+      rg.addColorStop(0,"#ffe2d2"); rg.addColorStop(0.10,"#ff8a5c"); rg.addColorStop(0.42,"#e8331a"); rg.addColorStop(0.8,"#8c1207"); rg.addColorStop(1,"#360702");
+      g.fillStyle = rg; g.beginPath(); g.arc(s/2,s/2,s/2,0,7); g.fill();
+      const h = g.createRadialGradient(s*0.68,s*0.72,1, s*0.68,s*0.72,s*0.2); h.addColorStop(0,"rgba(255,225,205,0.85)"); h.addColorStop(1,"rgba(255,225,205,0)");
+      g.save(); g.beginPath(); g.arc(s/2,s/2,s/2,0,7); g.clip(); g.fillStyle = h; g.fillRect(0,0,s,s); g.restore();
+      _gemMatcap = new THREE.CanvasTexture(c); _gemMatcap.encoding = THREE.sRGBEncoding; return _gemMatcap;
+    }
+    // Procedural mottled-stone texture (vibrant terracotta base + dark/light speckle + soft blotches).
+    let _stoneTex = null;
+    function stoneTexture(){
+      if (_stoneTex) return _stoneTex;
+      const s = 512, c = document.createElement("canvas"); c.width = c.height = s; const g = c.getContext("2d");
+      g.fillStyle = "#c44a26"; g.fillRect(0,0,s,s);                      // vibrant coral-terracotta base
+      // ONLY fine, dense per-pixel grain (no big blobs — those read as "obvious imperfections" on a d6 face).
+      // The texture is tiled (RepeatWrapping below) so the grain stays fine on every die type regardless of UVs.
+      const img = g.getImageData(0,0,s,s), d = img.data;
+      for (let i=0;i<d.length;i+=4){ const n=(Math.random()-0.5)*26 + (Math.random()<0.04?(Math.random()-0.5)*60:0); d[i]+=n; d[i+1]+=n; d[i+2]+=n; }
+      g.putImageData(img,0,0);
+      _stoneTex = new THREE.CanvasTexture(c); _stoneTex.encoding = THREE.sRGBEncoding;
+      _stoneTex.wrapS = _stoneTex.wrapT = THREE.RepeatWrapping; _stoneTex.repeat.set(3,3); _stoneTex.anisotropy = 8;
+      return _stoneTex;
+    }
+    const sc = hex => new THREE.Color(hex).convertSRGBToLinear(); // sRGB hex → linear (so it round-trips correctly)
+    function makeMaterial(box){
+      let m;
+      switch (MATERIAL){
+        // Stone: mottled texture (vibrant terracotta baked in) + bump for a tactile rough rock.
+        case "stone":   m = new THREE.MeshStandardMaterial({ map:stoneTexture(), bumpMap:stoneTexture(), bumpScale:0.6, metalness:0.0, roughness:1.0 }); break;
+        // Metal: anodised-coral look — partial metalness so the coral diffuse still reads (full metalness
+        // just mirrored the bright env and went white), modest env reflections.
+        case "metal":   m = new THREE.MeshStandardMaterial({ color:sc(DICE_COLOR), metalness:0.7, roughness:0.32, envMapIntensity:1.0 }); break;
+        // Crystal: a baked gem MATCAP (vibrant, faceted, no refraction needed).
+        case "crystal": m = new THREE.MeshMatcapMaterial({ matcap:gemMatcap() }); break;
+        // Ceramic: glossy glaze in the chosen colour.
+        case "ceramic": m = new THREE.MeshPhysicalMaterial({ color:sc(DICE_COLOR), metalness:0.0, roughness:0.4, clearcoat:1.0, clearcoatRoughness:0.08, envMapIntensity:0.5 }); break;
+        default:        m = new THREE.MeshStandardMaterial({ color:sc(DICE_COLOR), metalness:0.1, roughness:0.6 });
+      }
+      m.flatShading = !box; return m;
+    }
+    // Build one die mesh of `sides` (faces 1..sides; max face = logo). No physics body yet (added on launch).
+    function makeDie(sides, value, R){
+      const { geo, faces, box } = buildDie(sides, R);
+      const grp = new THREE.Group();
+      const bodyMesh = new THREE.Mesh(geo, makeMaterial(box)); bodyMesh.userData.box = box; liveBodies.push(bodyMesh);
+      bodyMesh.castShadow = true; grp.add(bodyMesh);
+      // No EdgesGeometry overlay — it drew a faint dark line on every edge. Edges read from flat-shading on
+      // polyhedra and from the tiny bevel highlight on the cube.
+      const labelSize = R * (sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides<=12 ? 0.62 : 0.58); // larger numbers
+      const labels = [];
+      faces.forEach((f, idx) => {
+        const v = idx + 1, isMax = v === sides;
+        const mat = new THREE.MeshBasicMaterial({ transparent:true, depthWrite:false });
+        mat.map = (isMax && logoTex) ? logoTex : numTex(v, sides);
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(labelSize, labelSize), mat);
+        pl.position.copy(f.centroid).addScaledVector(f.normal, R*0.02);
+        pl.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), f.normal);
+        grp.add(pl);
+        const L = { mat, value:v, sides, normal:f.normal.clone() }; labels.push(L); liveLabels.push(L);
+      });
+      const maxFace = faces[sides-1] || faces[faces.length-1];
+      const maxQuat = new THREE.Quaternion().setFromUnitVectors(maxFace.normal, UP); // logo face up (held)
+      scene.add(grp);
+      return { grp, geo, box, R, value, sides, labels, maxQuat, body:null, scale:0, targetScale:HELD_SCALE };
+    }
+    // Cannon body for a die (Box for the cube, ConvexPolyhedron for polyhedra). Added to the world on launch.
+    function attachBody(d){
+      const hb = d.R*0.7/SCALE;
+      const shape = d.box ? new CANNON.Box(new CANNON.Vec3(hb, hb, hb)) : convexShape(d.geo);
+      const body = new CANNON.Body({ mass:1, material:matDie });
+      body.addShape(shape);
+      body.linearDamping = 0.1; body.angularDamping = 0.22;
+      body.allowSleep = true; body.sleepSpeedLimit = 0.6; body.sleepTimeLimit = 0.08;
+      d.body = body; world.addBody(body); return body;
+    }
+
+    // --- the roll state machine -------------------------------------------------------------------
+    let roll = null, _lock = false; // _lock: showcase mode ignores pointer events (for reliable verification)
+    function parse(formula){
+      const terms = [...formula.matchAll(/(\d+)d(\d+)/g)];
+      const mod = [...formula.matchAll(/([+-]\s*\d+)(?!d)/g)].reduce((s,m)=>s+parseInt(m[1].replace(/\s/g,""),10),0);
+      const sides = []; terms.forEach(t=>{ const n=+t[1], s=+t[2]; for(let i=0;i<n;i++) sides.push(s); });
+      return { sides, mod };
+    }
+    function dieSize(count){ return Math.max(20, Math.min(50, Math.round(Math.min(W,H) / (count<=2?9:count<=6?11:count<=12?14:17)))); }
+
+    function begin(formula, label, sx, sy){
+      clearRoll();
+      const { sides, mod } = parse(formula);
+      const capped = sides.length > CAP, list = sides.slice(0, CAP);
+      const values = list.map(s => 1 + Math.floor(Math.random()*s));
+      const R = dieSize(list.length);
+      const c = toWorld(sx, sy, R);
+      const first = makeDie(list[0], values[0], R); first.targetScale = HELD_SCALE;
+      const total = mod + values.reduce((a,b)=>a+b, 0);
+      roll = { plan:{ list, values, R }, dice:[first], total, mod, formula, label, capped,
+               state:"held", t:0, restT:0, paused:false, cursor:c.clone() };
+      document.getElementById("dn").textContent = list.length;
+      if (HOVER) document.body.classList.add("dicing");
+    }
+    function launch(){
+      if (!roll || roll.state !== "held") return;
+      const { list, values, R } = roll.plan, c = roll.cursor;
+      for (let i = 1; i < list.length; i++) roll.dice.push(makeDie(list[i], values[i], R));
+      // Spawn in a non-overlapping grid above the cursor (overlapping bodies make cannon explode), in
+      // physics units, clamped inside the walls. Then throw outward from the cursor.
+      const n = roll.dice.length, Rp = R/SCALE, cell = Rp*2.4, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
+      const cx = c.x/SCALE, cz = c.z/SCALE, bx = (W/2 - R)/SCALE, bz = (H/2 - R)/SCALE;
+      roll.dice.forEach((d, i) => {
+        attachBody(d); d.targetScale = 1;
+        const col = i % cols, rw = Math.floor(i / cols);
+        const gx = (col - (cols-1)/2) * cell, gz = (rw - (rows-1)/2) * cell;
+        const px = cl(cx + gx, -bx, bx), pz = cl(cz + gz, -bz, bz);
+        d.body.position.set(px, Rp*3 + rw*Rp*0.6 + Math.random()*Rp*0.4, pz);
+        d.body.quaternion.setFromEuler(Math.random()*6.28, Math.random()*6.28, Math.random()*6.28);
+        const ox = gx||(Math.random()-0.5), oz = gz||(Math.random()-0.5), ol = Math.hypot(ox,oz)||1;
+        const speed = 6 + Math.random()*5;                                       // a bit more throw force
+        d.body.velocity.set(ox/ol*speed, 1.5 + Math.random()*3, oz/ol*speed);
+        d.body.angularVelocity.set((Math.random()-0.5)*22, (Math.random()-0.5)*22, (Math.random()-0.5)*22);
+        d.body.wakeUp();
+        d.init = { p:d.body.position.clone(), q:d.body.quaternion.clone(), v:d.body.velocity.clone(), av:d.body.angularVelocity.clone() };
+      });
+      // DETERMINISTIC PRE-ROLL — simulate to rest off-screen, paint the predetermined value onto the face
+      // that WILL land up, then reset & replay the identical fixed-step sim. The dice therefore show the
+      // right value for the whole tumble and NOTHING changes when they settle (fixes the post-settle flip).
+      const N = preSimulate();
+      roll.dice.forEach(d => {
+        const off = d.value - upValueBody(d);
+        d.labels.forEach(L => {
+          const nv = ((L.value - 1 + off) % d.sides + d.sides) % d.sides + 1;
+          L.value = nv; L.mat.map = (nv===d.sides && logoTex) ? logoTex : numTex(nv, d.sides); L.mat.needsUpdate = true;
+        });
+        resetBody(d.body, d.init);
+      });
+      roll.replayN = N; roll.played = 0; roll.acc = 0;
+      roll.state = "fly"; roll.t = 0;
+      document.body.classList.remove("dicing");
+      if (REDUCE){ for (let k=0;k<N;k++) world.step(1/60); syncMeshes(); finalize(); }
+    }
+    // Step the world to rest off-screen; returns the step count to replay deterministically.
+    function preSimulate(){
+      const MAX = 320; let restRun = 0, n = 0;
+      for (; n < MAX; n++){ world.step(1/60); if (roll.dice.every(atRest)){ if (++restRun >= 8){ n++; break; } } else restRun = 0; }
+      return n;
+    }
+    function resetBody(b, s){
+      b.position.copy(s.p); b.quaternion.copy(s.q); b.velocity.copy(s.v); b.angularVelocity.copy(s.av);
+      ["previousPosition","interpolatedPosition","initPosition"].forEach(k=>{ if(b[k]) b[k].copy(s.p); });
+      ["previousQuaternion","interpolatedQuaternion","initQuaternion"].forEach(k=>{ if(b[k]) b[k].copy(s.q); });
+      b.force.set(0,0,0); b.torque.set(0,0,0); b.sleepState = 0; b.timeLastSleepy = 0;
+    }
+    // Up-facing value from the cannon body (off-screen pre-roll) and from the rendered mesh (result readout).
+    function upValueBody(d){
+      const q = d.body.quaternion; tmpQ.set(q.x,q.y,q.z,q.w);
+      let best = -2, val = d.labels[0].value;
+      d.labels.forEach(L => { tmpV.copy(L.normal).applyQuaternion(tmpQ); if (tmpV.y > best){ best = tmpV.y; val = L.value; } });
+      return val;
+    }
+    function upValue(d){
+      let best = -2, val = d.labels[0].value;
+      d.labels.forEach(L => { tmpV.copy(L.normal).applyQuaternion(d.grp.quaternion); if (tmpV.y > best){ best = tmpV.y; val = L.value; } });
+      return val;
+    }
+    function finalize(){
+      roll.dice.forEach(d => { if (d.body){ world.removeBody(d.body); d.body = null; } }); // freeze at rest
+      roll.state = "still"; roll.t = 0; showCard();
+    }
+    // Static, pointer-immune display of a material on a few dice — for verification (the preview harness's
+    // synthetic pointer events otherwise clear live rolls before a screenshot lands).
+    function showcase(mat){
+      _lock = false; clearRoll(); MATERIAL = mat;
+      document.querySelectorAll(".mat").forEach(b => b.classList.toggle("on", b.dataset.mat===mat));
+      const specs = [[6,-210,5],[20,0,14],[8,215,5]], dice = [];
+      specs.forEach(([sides,xo,val]) => {
+        const R = 62, d = makeDie(sides, val, R), L = d.labels[val-1];
+        const q = new THREE.Quaternion().setFromUnitVectors(L.normal, UP);          // chosen face up
+        const tilt = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, 0.45, 0.12)); // tip so sides show
+        d.grp.quaternion.copy(tilt.multiply(q)); d.grp.position.set(xo, R, 0); d.scale = 1; d.grp.scale.set(1,1,1);
+        dice.push(d);
+      });
+      roll = { dice, state:"show", total:0, mod:0, formula:"", label:"", capped:false, t:0, paused:false, plan:{R:62} };
+      document.getElementById("dn").textContent = dice.length; _lock = true;
+    }
+    function showCard(){
+      document.getElementById("cTot").textContent = roll.total;
+      document.getElementById("cLab").textContent = roll.label || roll.formula;
+      document.getElementById("cBrk").textContent = roll.formula + " → " + roll.dice.map(d=>d.value).join(" + ") + (roll.mod?` ${roll.mod>0?"+":""}${roll.mod}`:"") + (roll.capped?` (showing ${CAP} of more)`:"");
+      document.getElementById("cBar").style.width = "100%";
+      document.getElementById("card").classList.add("show");
+    }
+    function clearRoll(){
+      document.getElementById("card").classList.remove("show");
+      if (roll) roll.dice.forEach(d => { scene.remove(d.grp); if (d.body) world.removeBody(d.body); });
+      liveLabels = []; liveBodies.length = 0; roll = null; document.getElementById("dn").textContent = 0;
+      document.body.classList.remove("dicing");
+    }
+
+    // --- per-frame ---------------------------------------------------------------------------------
+    const tmpQ = new THREE.Quaternion(), tmpE = new THREE.Euler(), tmpV = new THREE.Vector3();
+    const clamp = (v,a,b) => v<a?a:v>b?b:v;
+    const easeOut = t => 1 - Math.pow(1-t, 3);
+    function syncMeshes(){ roll.dice.forEach(d => { if (d.body){ const p=d.body.position, q=d.body.quaternion; d.grp.position.set(p.x*SCALE, p.y*SCALE, p.z*SCALE); d.grp.quaternion.set(q.x,q.y,q.z,q.w); } }); }
+    // Rest = cannon asleep, OR slow AND grounded. The grounded check stops a die at a bounce apex (momentarily
+    // slow but airborne) from falsely ending the pre-roll early → which left dice frozen mid-air in weird poses.
+    function atRest(d){
+      if (!d.body) return true;
+      if (d.body.sleepState===CANNON.Body.SLEEPING) return true;
+      const grounded = d.body.position.y < (d.R/SCALE)*1.45;
+      return grounded && d.body.velocity.lengthSquared()<0.5 && d.body.angularVelocity.lengthSquared()<1.0;
+    }
+    function update(dt){
+      if (!roll) return;
+      const D = roll.dice;
+      if (roll.state === "held"){
+        const now = performance.now() * 0.006;
+        D.forEach((d,i) => {
+          d.scale += (d.targetScale - d.scale) * Math.min(1, dt*10);
+          const j = now + i*1.7;
+          d.grp.position.copy(roll.cursor).add(tmpV.set(Math.sin(j)*d.R*0.025, d.R*0.9 + Math.cos(j*1.2)*d.R*0.02, Math.cos(j)*d.R*0.025));
+          d.grp.quaternion.copy(d.maxQuat);
+          tmpE.set(Math.sin(j*0.8)*0.045, Math.sin(j*0.5)*0.05, Math.cos(j*1.1)*0.045);
+          d.grp.quaternion.multiply(tmpQ.setFromEuler(tmpE));
+        });
+      } else if (roll.state === "fly"){
+        // Replay the pre-rolled sim at a FIXED timestep (real-time via the accumulator). Same initial state +
+        // same step sequence as the off-screen pre-roll → identical landing → the painted value never changes.
+        roll.t += dt*1000;
+        roll.acc += dt;
+        while (roll.acc >= 1/60 && roll.played < roll.replayN){ world.step(1/60); roll.acc -= 1/60; roll.played++; }
+        D.forEach(d => d.scale += (d.targetScale - d.scale) * Math.min(1, dt*12));
+        syncMeshes();
+        if (roll.played >= roll.replayN) finalize();
+      } else if (roll.state === "still"){
+        if (!roll.paused) roll.t += dt*1000;
+        document.getElementById("cBar").style.width = (100 * (1 - clamp(roll.t/DWELL,0,1))) + "%";
+        if (roll.t >= DWELL){ roll.state = "vanish"; roll.t = 0; }
+      } else if (roll.state === "vanish"){
+        roll.t += dt*1000;
+        const k = clamp(roll.t / VANISH, 0, 1);
+        document.getElementById("card").classList.remove("show");
+        D.forEach((d,i) => {
+          if (k < 0.16){ d.scale = 1 + 0.1*easeOut(k/0.16); }
+          else { const s = (k-0.16)/0.84; d.scale = 1.1 * (1 - s*s*s*s); }
+          tmpE.set(0, 4*dt, 0); d.grp.quaternion.multiply(tmpQ.setFromEuler(tmpE));
+        });
+        if (roll.t >= VANISH) clearRoll();
+      }
+      D.forEach(d => { const s = Math.max(0, d.scale); d.grp.scale.set(s, s, s); });
+    }
+
+    // --- pointer wiring ---------------------------------------------------------------------------
+    const pointer = { x: innerWidth/2, y: innerHeight/2 };
+    addEventListener("pointermove", e => { pointer.x = e.clientX; pointer.y = e.clientY; if (!_lock && roll && roll.state==="held") roll.cursor.copy(toWorld(e.clientX, e.clientY, 0)); });
+    document.querySelectorAll(".roll").forEach(chip => {
+      const formula = chip.dataset.roll, label = (chip.querySelector(".lbl")||{}).textContent || formula;
+      if (HOVER){
+        chip.addEventListener("pointerenter", () => { if (_lock) return; if (!roll || roll.state==="vanish") begin(formula, label, pointer.x, pointer.y); });
+        chip.addEventListener("pointerleave", () => { if (_lock) return; if (roll && roll.state==="held") clearRoll(); });
+      }
+      chip.addEventListener("pointerdown", e => {
+        e.preventDefault(); if (_lock) return;
+        if (roll && roll.state==="held") launch();
+        else { begin(formula, label, e.clientX, e.clientY); launch(); }
+      });
+    });
+    // Material picker — swap the body material on any live dice + use it for future rolls.
+    document.querySelectorAll(".mat").forEach(btn => btn.addEventListener("click", () => {
+      MATERIAL = btn.dataset.mat;
+      document.querySelectorAll(".mat").forEach(b => b.classList.toggle("on", b===btn));
+      liveBodies.forEach(mesh => { const nm = makeMaterial(mesh.userData.box); if (mesh.material.dispose) mesh.material.dispose(); mesh.material = nm; });
+    }));
+    // Edge-style toggle (applies to the next roll; re-renders the showcase if one is up).
+    document.querySelectorAll(".edge").forEach(btn => btn.addEventListener("click", () => {
+      EDGE_STYLE = btn.dataset.edge;
+      document.querySelectorAll(".edge").forEach(b => b.classList.toggle("on", b===btn));
+      if (roll && roll.state==="show") showcase(MATERIAL);
+    }));
+    // Colour picker — live-swaps material on any current dice + future rolls (matcap gem keeps its baked colour).
+    document.getElementById("diceColor").addEventListener("input", e => {
+      DICE_COLOR = parseInt(e.target.value.slice(1), 16);
+      liveBodies.forEach(mesh => { const nm = makeMaterial(mesh.userData.box); if (mesh.material.dispose) mesh.material.dispose(); mesh.material = nm; });
+    });
+    const card = document.getElementById("card");
+    card.addEventListener("pointerenter", () => { if (roll) roll.paused = true; });
+    card.addEventListener("pointerleave", () => { if (roll) roll.paused = false; });
+    document.getElementById("cX").addEventListener("click", e => {
+      e.stopPropagation();
+      if (roll && (roll.state === "still" || roll.state === "fly")){ roll.paused = false; roll.state = "vanish"; roll.t = 0; }
+    });
+    // Test hook.
+    window.__dice = { roll:(f,l,x,y)=>{ begin(f, l||f, x||W/2, y||H/2); launch(); }, hold:(f,x,y)=>begin(f, f, x||W/2, y||H/2), clear:clearRoll, get state(){ return roll && roll.state; }, get total(){ return roll && roll.total; }, get n(){ return roll && roll.dice.length; }, get up(){ return roll && roll.dice.map(d=>upValue(d)); }, showcase, unlock:()=>{ _lock=false; clearRoll(); }, get y(){ return roll && roll.dice.map(d=>Math.round(d.grp.position.y)); },
+      get dbg(){ if(!roll) return null; return roll.dice.map(d=>d.body?{v:+Math.sqrt(d.body.velocity.lengthSquared()).toFixed(0), w:+Math.sqrt(d.body.angularVelocity.lengthSquared()).toFixed(1), y:+d.body.position.y.toFixed(0), sleep:d.body.sleepState}:null); }, get R(){ return roll&&roll.plan.R; } };
+
+    // --- loop + fps -------------------------------------------------------------------------------
+    let prev = performance.now(), frames = 0, fpsT = prev;
+    const fpsEl = document.getElementById("fps");
+    function loop(now){
+      const dt = Math.min(0.033, (now - prev) / 1000); prev = now;
+      update(dt);
+      renderer.render(scene, camera);
+      frames++; if (now - fpsT >= 500){ fpsEl.textContent = Math.round(frames*1000/(now-fpsT)); frames = 0; fpsT = now; }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>

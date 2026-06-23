@@ -600,7 +600,7 @@ function rollLabelFor(span){if(span.dataset.rolllabel)return cleanRollLabel(span
 // rolls are attributed to that combatant (e.g. "Archmage 2") instead of the Forge's working monster.
 let combatRollSrc=null;
 function rollSource(){if(_curView==="combat"&&combatRollSrc)return combatRollSrc;if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
-let rollLog=[],rollLogOpen=true,rollLogSort="desc"; // desc = newest at top
+let rollLog=[],rollLogOpen=true,rollLogSort="desc",rollLogTab="mine"; // desc = newest at top; tab = mine|players (B213, when shared)
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
 // Abbreviated damage-type labels shown on the roll-log damage tag instead of "DMG" (B67).
@@ -636,8 +636,13 @@ function doRoll(formula,opts,meta){
   // Player mode (B204 stage 4): mirror the roll to the DM's roll log via the write-back bin.
   if(PLAYER_MODE&&!meta.silent&&typeof playerPushRoll==="function")playerPushRoll({label:meta.label,type:meta.type,total:r.total,parts:r.parts,abil:meta.abil,dmgType:meta.dmgType,crit});
   rollLogOpen=true;renderRollLog(true); // renderRollLog spins the new group's totals (B133)
-  // Fire the notification as the digits land (B129).
-  if(!meta.silent)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);
+  // 3D dice flourish (B214): tumble physical dice that land on this roll's actual values, with their own
+  // result alert (timer + reroll). Returns true if it took over the notification → skip the plain toast.
+  // No-ops (returns false) when the libs/WebGL are absent (jsdom), reduced-motion, or the roll has no dice.
+  let _diced=false;
+  if(!meta.silent&&typeof rollDice3D==="function")_diced=rollDice3D({formula,parts:r.parts,total:r.total,label:meta.label,type:meta.type,dmgType:meta.dmgType,abil:meta.abil,opts,meta});
+  // Fire the notification as the digits land (B129) — unless the 3D dice are showing their own alert.
+  if(!meta.silent&&!_diced)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);
   return r;
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
@@ -725,7 +730,10 @@ function renderRollLog(scrollNew){
 }
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
 function rollLogHTML(){
-  const ordered=rollLogSort==="asc"?rollLog.slice().reverse():rollLog;
+  // When the combat is shared (DM side), split into "My rolls" vs "Player rolls" tabs (B213).
+  const shared=(typeof combatShareOn==="function"&&combatShareOn()&&!PLAYER_MODE);
+  const list=shared?rollLog.filter(r=>rollLogTab==="players"?r.fromPlayer:!r.fromPlayer):rollLog;
+  const ordered=rollLogSort==="asc"?list.slice().reverse():list;
   // Shared bits. The TYPE tag (carries the dmg type for the hover popover) is a row-level child on
   // the right, and the ability-colour bar sits in a reserved right gutter (data-abil on the row), so
   // tags + bars line up identically for single and grouped rows (B63). The breakdown line scrolls
@@ -753,8 +761,10 @@ function rollLogHTML(){
   };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
-  return `<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">Rolls</span><span class="rl-n">${rollLog.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
-    +(rollLogOpen?`<div class="rl-body">${groups.map(groupHTML).join("")}</div>`:"");
+  const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
+  const bodyInner=groups.length?groups.map(groupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
+  return `<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+    +(rollLogOpen?tabs+`<div class="rl-body">${bodyInner}</div>`:"");
 }
 // Wire up the roll-log controls + row interactions after its HTML is in the DOM.
 function bindRollLog(el,scrollNew){
@@ -767,9 +777,21 @@ function bindRollLog(el,scrollNew){
   el.querySelectorAll(".rl-tag-damage[data-dmgtype]").forEach(t=>{
     t.addEventListener("mouseenter",()=>showMiniTip(t,esc(capWord(t.dataset.dmgtype))+" damage"));
     t.addEventListener("mouseleave",hideMiniTip);});
+  el.querySelectorAll("[data-rltab]").forEach(t=>t.addEventListener("click",e=>{e.stopPropagation();rollLogTab=t.dataset.rltab;renderRollLog();}));
   el.querySelectorAll("[data-rollsrc]").forEach(b=>{
-    b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.rollsrc;const mon=id&&state.lib.find(x=>x.id===id);if(mon){loadMonster(mon);switchView("forge");}});
-    bindPreviewHover(b,()=>{const id=b.dataset.rollsrc;return (id&&state.lib.find(x=>x.id===id))||(M&&M.name===b.dataset.rollsrcname?M:null);});
+    const id=b.dataset.rollsrc,monSaved=id&&state.lib.find(x=>x.id===id),mon=monSaved||(M&&M.name===b.dataset.rollsrcname?M:null);
+    if(mon){
+      b.addEventListener("click",e=>{e.stopPropagation();if(monSaved){loadMonster(monSaved);switchView("forge");}});
+      bindPreviewHover(b,()=>mon);
+    }else{
+      // A player's roll → preview their character (B213), the PC counterpart to the monster statblock preview.
+      const pc=state.roster&&state.roster.find(r=>r.name===b.dataset.rollsrcname);
+      if(pc&&typeof showPcPreview==="function"){
+        b.addEventListener("click",e=>{e.stopPropagation();showPcPreview(b,pc);});
+        b.addEventListener("mouseenter",()=>showPcPreview(b,pc));
+        b.addEventListener("mouseleave",closePopover);
+      }
+    }
   });
   // Scroll to the newest roll when one was just recorded — top for newest-first, bottom otherwise (B65).
   if(scrollNew&&rollLogOpen){const body=el.querySelector(".rl-body");if(body)body.scrollTop=rollLogSort==="desc"?0:body.scrollHeight;}

@@ -13,7 +13,10 @@ import globals from "globals";
 import * as espree from "espree";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SHARED_FILES = ["data.js", "parsers.js", "core.js", "forge.js", "engine.js", "bestiary.js", "adventures.js", "roster.js", "combat.js", "seed.js", "app.js"];
+const SHARED_FILES = ["data.js", "parsers.js", "core.js", "forge.js", "engine.js", "bestiary.js", "adventures.js", "roster.js", "combat.js", "dice3d.js", "seed.js", "app.js"];
+// Vendored UMD libraries (vendor/three.min.js, vendor/cannon.min.js) define these globals at runtime;
+// they're never injected into the lint/test realm, so register them so no-undef stays useful.
+const VENDOR_GLOBALS = { THREE: "readonly", CANNON: "readonly" };
 
 // Collect every name declared at the top level of the shared scripts.
 function collectSharedGlobals() {
@@ -47,7 +50,7 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
-      globals: { ...globals.browser, ...sharedGlobals },
+      globals: { ...globals.browser, ...VENDOR_GLOBALS, ...sharedGlobals },
     },
     rules: {
       // The high-value catches — the recurring break causes documented in the project memory.
