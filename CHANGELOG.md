@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 216 — 3D dice: materials + a settings panel
+- **The 3D dice look is now configurable.** New **Settings → 3D dice** card: a **material** picker (Stone /
+  Smooth / Metal / Crystal / Ceramic), an **edges** toggle (Sharp / Rounded — affects the six-sided die), and a
+  **colour** swatch. Persists to `mf_settings` (`dice3d:{material,color,edges}`); changes re-skin any dice on
+  screen immediately and apply to every future roll.
+- **All five materials ported from the spike** into `dice3d.js` (`d3dDieMat`): Stone keeps the baked mottled
+  terracotta texture; Smooth/Metal/Ceramic tint from the chosen colour (metal = anodised partial-metalness,
+  ceramic = a clearcoat glaze); Crystal = a baked gem **matcap** (faceted, no refraction cost). sRGB colour
+  throughout (`convertSRGBToLinear`). Stone is unchanged from B214 — it already matches the spike.
+- **Debug hook** `window.__d3d.showcase(material)` places a few static dice so a material can be inspected in
+  the preview (synthetic pointer events otherwise clear a live roll).
+- `npm run verify` green; verified live (every material renders; the settings card + colour swatch work).
+
 ## Batch 214 — 3D dice (integration: stone, sharp edges)
 - **Physical 3D dice on every roll.** A new shared-scope `dice3d.js` renders real tumbling dice (three.js +
   cannon.js, both vendored locally in `vendor/` — the site stays no-build/self-contained) that land on the

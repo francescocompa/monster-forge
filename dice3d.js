@@ -15,7 +15,9 @@ const D3D_DWELL = 1300, D3D_VANISH = 300;           // ms — dice linger after 
 let d3dReady = false, d3dDead = false, d3dRoll = null, d3dLooping = false;
 let d3dRenderer, d3dScene, d3dCamera, d3dWorld, d3dKey, d3dGround, d3dUP, d3dW = 0, d3dH = 0;
 let d3dMatDie, d3dMatFloor, d3dMatWall, d3dWalls = [];
-let d3dLogoTex = null, d3dStoneTex = null, d3dLive = [], d3dCardEl = null;
+let d3dLogoTex = null, d3dStoneTex = null, d3dGemTex = null, d3dLive = [], d3dLiveMeshes = [], d3dCardEl = null;
+// Read the user's dice look from settings (material / brand colour / cube edge style), with safe fallbacks.
+function d3dLook(){ const d = (typeof state === "object" && state.settings && state.settings.dice3d) || {}; return { material: d.material || "stone", color: d.color || "#e2654d", edges: d.edges || "sharp" }; }
 const d3dTexCache = new Map();
 const d3dDieFont = '"Vecna", "Copperplate", "Luminari", fantasy, serif';
 let d3dPX = 0, d3dPY = 0, d3dPrev = 0;
@@ -121,7 +123,8 @@ function d3dBuild(sides, R){
     const faces = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(nn => {
       const normal = new THREE.Vector3(nn[0],nn[1],nn[2]); return { normal, centroid: normal.clone().multiplyScalar(hs) };
     });
-    return { geo: d3dRoundedBox(size, size*0.04, 3), faces, box:true }; // tiny bevel = sharp edges
+    const bevel = d3dLook().edges === "round" ? size*0.16 : size*0.04; // tiny bevel = sharp; bigger = rounded
+    return { geo: d3dRoundedBox(size, bevel, 3), faces, box:true };
   }
   const geo = sides===4 ? new THREE.TetrahedronGeometry(R) : sides===8 ? new THREE.OctahedronGeometry(R)
             : sides===12 ? new THREE.DodecahedronGeometry(R) : new THREE.IcosahedronGeometry(R);
@@ -138,8 +141,31 @@ function d3dConvex(geo){
   return new CANNON.ConvexPolyhedron(verts, faces);
 }
 const d3dSC = hex => new THREE.Color(hex).convertSRGBToLinear();
-function d3dStoneMat(box){
-  const m = new THREE.MeshStandardMaterial({ map:d3dStoneTexture(), bumpMap:d3dStoneTexture(), bumpScale:0.6, metalness:0.0, roughness:1.0 });
+// Gem MATCAP — bakes a cut-gem's shading (hot highlight → vibrant coral → deep ruby edge + sparkle) into a
+// sphere image. With flat-shaded facets each face samples a different part → reads as a real gem, no refraction.
+function d3dGemMatcap(){
+  if (d3dGemTex) return d3dGemTex;
+  const s = 256, c = document.createElement("canvas"); c.width = c.height = s; const g = c.getContext("2d");
+  g.fillStyle = "#1c0402"; g.fillRect(0,0,s,s);
+  const rg = g.createRadialGradient(s*0.4,s*0.36,s*0.02, s*0.5,s*0.5,s*0.52);
+  rg.addColorStop(0,"#ffe2d2"); rg.addColorStop(0.10,"#ff8a5c"); rg.addColorStop(0.42,"#e8331a"); rg.addColorStop(0.8,"#8c1207"); rg.addColorStop(1,"#360702");
+  g.fillStyle = rg; g.beginPath(); g.arc(s/2,s/2,s/2,0,7); g.fill();
+  const h = g.createRadialGradient(s*0.68,s*0.72,1, s*0.68,s*0.72,s*0.2); h.addColorStop(0,"rgba(255,225,205,0.85)"); h.addColorStop(1,"rgba(255,225,205,0)");
+  g.save(); g.beginPath(); g.arc(s/2,s/2,s/2,0,7); g.clip(); g.fillStyle = h; g.fillRect(0,0,s,s); g.restore();
+  d3dGemTex = new THREE.CanvasTexture(c); d3dGemTex.encoding = THREE.sRGBEncoding; return d3dGemTex;
+}
+// One die surface material, per the chosen preset. stone = baked mottled texture; crystal = baked gem matcap
+// (both ignore the colour); default/metal/ceramic tint from the brand colour. scene.environment (set in
+// d3dEnsure) gives metal/ceramic their reflections. flatShading matches the geometry (faceted polyhedra).
+function d3dDieMat(box){
+  const lk = d3dLook(), col = d3dSC(lk.color); let m;
+  switch (lk.material){
+    case "stone":   m = new THREE.MeshStandardMaterial({ map:d3dStoneTexture(), bumpMap:d3dStoneTexture(), bumpScale:0.6, metalness:0.0, roughness:1.0 }); break;
+    case "metal":   m = new THREE.MeshStandardMaterial({ color:col, metalness:0.7, roughness:0.32, envMapIntensity:1.0 }); break;
+    case "crystal": m = new THREE.MeshMatcapMaterial({ matcap:d3dGemMatcap() }); break;
+    case "ceramic": m = new THREE.MeshPhysicalMaterial({ color:col, metalness:0.0, roughness:0.4, clearcoat:1.0, clearcoatRoughness:0.08, envMapIntensity:0.5 }); break;
+    default:        m = new THREE.MeshStandardMaterial({ color:col, metalness:0.1, roughness:0.6 });
+  }
   m.flatShading = !box; return m;
 }
 // Orient a face label so its number reads UPRIGHT: +Z along the face normal, +Y along a consistent "up"
@@ -180,7 +206,7 @@ function d3dD20Layout(faces){
 }
 function d3dMakeDie(sides, value, R, dropped){
   const { geo, faces, box } = d3dBuild(sides, R), grp = new THREE.Group();
-  const mesh = new THREE.Mesh(geo, d3dStoneMat(box)); mesh.castShadow = true; grp.add(mesh);
+  const mesh = new THREE.Mesh(geo, d3dDieMat(box)); mesh.userData.box = box; mesh.castShadow = true; grp.add(mesh); d3dLiveMeshes.push(mesh);
   const labelSize = R * (sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides<=12 ? 0.62 : 0.58), labels = [];
   const std = sides === 20, layout = std ? d3dD20Layout(faces) : null;       // standard layout for the d20
   faces.forEach((f, idx) => {
@@ -356,8 +382,16 @@ function d3dRelabel(d){
 }
 function d3dClear(){
   if (d3dRoll){ d3dRoll.dice.forEach(d => { d3dScene.remove(d.grp); if (d.body) d3dWorld.removeBody(d.body); }); }
-  d3dRoll = null; d3dLive = []; d3dHideCard();
+  d3dRoll = null; d3dLive = []; d3dLiveMeshes = []; d3dHideCard();
   if (d3dRenderer) d3dRenderer.clear();
+}
+// Re-skin the dice currently on screen when the look settings change (so the Settings preview updates live);
+// future rolls pick up the new look automatically since d3dMakeDie reads settings each time.
+function d3dApplyLook(){
+  if (!d3dReady || !d3dLiveMeshes.length) return;
+  d3dLiveMeshes.forEach(mesh => { const nm = d3dDieMat(mesh.userData.box); if (mesh.material.dispose) mesh.material.dispose(); mesh.material = nm; });
+  if (d3dRoll) d3dDimDropped();
+  if (d3dRenderer && d3dScene && d3dCamera) d3dRenderer.render(d3dScene, d3dCamera);
 }
 function d3dSyncMeshes(){
   d3dRoll.dice.forEach(d => { if (d.body){ const p=d.body.position, q=d.body.quaternion; d.grp.position.set(p.x*D3D_SCALE,p.y*D3D_SCALE,p.z*D3D_SCALE); d.grp.quaternion.set(q.x,q.y,q.z,q.w); } });
@@ -424,3 +458,19 @@ function d3dLoop(now){
     d3dLooping = false;                       // idle → stop the loop until the next roll
   }
 }
+
+// Debug/preview hook: place a few static dice so the chosen material can be inspected (synthetic pointer
+// events in the headless preview clear live rolls, so a real roll can't be screenshotted). window.__d3d.
+function d3dShowcase(material){
+  if (typeof THREE === "undefined" || typeof CANNON === "undefined") return false;
+  if (!d3dEnsure()) return false;
+  if (material && state.settings && state.settings.dice3d) state.settings.dice3d.material = material;
+  d3dClear();
+  const R = 64, spec = [[20,20],[6,6],[8,8]], xs = [-150,0,150];
+  const dice = spec.map((p,i) => { const d = d3dMakeDie(p[0], p[1], R, false); d.scale = 1; d.grp.position.set(xs[i],0,0); d.grp.quaternion.setFromEuler(new THREE.Euler(-0.62, 0.6 + i*0.4, 0.18)); return d; });
+  d3dRoll = { dice, state:"show", t:0, paused:true, desc:{} };
+  if (d3dRenderer) d3dRenderer.render(d3dScene, d3dCamera);
+  if (!d3dLooping){ d3dLooping = true; requestAnimationFrame(d3dLoop); }
+  return true;
+}
+if (typeof window !== "undefined") window.__d3d = { showcase:d3dShowcase, clear:() => d3dClear(), look:d3dLook, applyLook:d3dApplyLook };
