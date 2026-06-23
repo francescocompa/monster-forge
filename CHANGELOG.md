@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 210 — In-app player mode, stage 6 (the in-app view is now the share target)
+- **The share link now points at the in-app player mode.** `combatShareURL` generates
+  `index.html?share=<bin>` (was `player.html?b=<bin>`), so a shared QR/link opens the real locked-down tracker
+  with full parity (preview, rolling, row + sheet editing, enemy toggles).
+- **`player.html` retired to a redirect.** Its standalone view (B202/B203) is superseded; the file now just
+  forwards old `player.html?b=<bin>` links to `index.html?share=<bin>` so previously-shared QR codes keep
+  working. Verified in preview: the redirect resolves and `combatShareURL` emits the in-app URL.
+- This completes the in-app player-mode rework (stages 1–6).
+
 ## Batch 209 — In-app player mode, stage 5 (enemy toggles)
 - **Two per-share enemy toggles** in the share dialog (`shareOpts`, stored per encounter): **Show enemy health
   (bloodied bands)** — off ⇒ enemies show no HP info at all (`playerSafeInstance` omits the band); and **Let

@@ -1055,7 +1055,7 @@ function playerEditKey(){return ((state.settings.combat&&state.settings.combat.p
 function shareOpts(){const ctx=loadedCtx(),def={showBloodied:true,enemyConds:false};if(!ctx)return def;
   try{return Object.assign(def,JSON.parse(localStorage.getItem("mf_shareopts:"+ctx.e.id)||"{}"));}catch(e){return def;}}
 function setShareOpt(k,v){const ctx=loadedCtx();if(!ctx)return;const o=shareOpts();o[k]=v;localStorage.setItem("mf_shareopts:"+ctx.e.id,JSON.stringify(o));}
-function combatShareURL(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"player.html?b="+encodeURIComponent(id);}
+function combatShareURL(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"index.html?share="+encodeURIComponent(id);}
 // Coarse health band for an obscured (monster) row — no numbers leak to players.
 function hpBand(it){if(it.hpMax==null)return null;if(it.hpCur<=0)return "down";const p=it.hpCur/it.hpMax;
   return p>=1?"healthy":p>0.5?"hurt":p>0.25?"bloodied":"critical";}
