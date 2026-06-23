@@ -812,7 +812,9 @@ function pcSheetHTML(it){
     :`<span class="pchip skchip cc-ab-${ab}${extra||""}">${inner}</span>`;
   // Abilities the character has actually filled (a value, not the placeholder default).
   const ab=ABILS.map(k=>{const f=abilFieldOf(c,k);return (!f||f.v===""||f.v==null)?null:{k,f};}).filter(Boolean);
-  if(ab.length){
+  // Skip the Abilities/Saves rows when the ONLY entered scores are spellcasting "main" abilities — those are
+  // already surfaced as the ATK/DC chips, so a lone "Abilities: INT" reads as accidental clutter.
+  if(ab.length&&!ab.every(a=>a.f.main)){
     lines.push(line("Abilities",ab.map(a=>{const mod=abilMod(abilScore(a.f));return rchip(a.k,`<span class="pchip-n">${abilScore(a.f)}</span> ${a.k.toUpperCase()} ${sgn(mod)}`,`1d20${sgn(mod)}`,"check",ABIL_NAME[a.k]||a.k.toUpperCase());}).join("")));
     lines.push(line("Saves",ab.map(a=>{const sv=abilSave(c,a.f);return rchip(a.k,`<span class="pchip-n">${sgn(sv)}</span> ${a.k.toUpperCase()}`,`1d20${sgn(sv)}`,"save",ABIL_NAME[a.k]||a.k.toUpperCase(),a.f.prof?" exp":"");}).join("")));
   }
@@ -1040,6 +1042,7 @@ function bindCombatResizer(){
 // FA-free "share-nodes" + "copy" glyphs for the round-bar button and dialog.
 const SHARE_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.8-.7 11.9 0 53 43 96 96 96s96-43 96-96-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.8 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg>';
 const COPY_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M208 0L332.1 0c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9L448 336c0 26.5-21.5 48-48 48l-192 0c-26.5 0-48-21.5-48-48l0-288c0-26.5 21.5-48 48-48zM48 128l80 0 0 64-64 0 0 256 192 0 0-32 64 0 0 48c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 176c0-26.5 21.5-48 48-48z"/></svg>';
+const QR_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M0 80C0 53.5 21.5 32 48 32l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48L0 80zM64 96l0 64 64 0 0-64L64 96zM0 336c0-26.5 21.5-48 48-48l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48l0-96zm64 16l0 64 64 0 0-64-64 0zM304 32l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48l0-96c0-26.5 21.5-48 48-48zm80 64l-64 0 0 64 64 0 0-64zM256 304c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s7.2-16 16-16s16 7.2 16 16l0 96c0 8.8-7.2 16-16 16l-64 0c-8.8 0-16-7.2-16-16s-7.2-16-16-16-16 7.2-16 16l0 64c0 8.8-7.2 16-16 16l-32 0c-8.8 0-16-7.2-16-16l0-160zm144 160a16 16 0 1 0 0 32 16 16 0 1 0 0-32zm-48 0a16 16 0 1 0 0 32 16 16 0 1 0 0-32z"/></svg>';
 // Per-encounter share state in localStorage (per device, off the cloud-synced adventure data):
 //   mf_share:<encId>     = read-snapshot bin id (presence == sharing is on; stopping deletes the bin)
 //   mf_sharewb:<encId>   = player write-back bin id (present only while an edit mode is enabled)
@@ -1290,25 +1293,36 @@ function openCombatShareDialog(){
     const url=combatShareURL(id);
     openModalRaw(`<h3 class="share-h">Sharing is live<span class="share-badge">Live</span></h3>
       <div class="share-dlg">
-        <p class="share-sub">Players scan or open the link to follow the fight live.</p>
-        <div class="share-qr" id="shareQR"></div>
-        <div class="share-link"><input type="text" id="shareUrl" class="popinput" readonly value="${esc(url)}"><button class="btn ghost sm" id="shareCopy" title="Copy link" style="width:auto">${COPY_ICON}<span>Copy</span></button></div>
+        <p class="share-sub">Players open the link to follow the fight live.</p>
+        <div class="share-link"><input type="text" id="shareUrl" class="popinput" readonly value="${esc(url)}"><button class="btn ghost sm" id="shareCopy" title="Copy link" style="width:auto">${COPY_ICON}<span>Copy</span></button><button class="btn ghost sm" id="shareQrBtn" title="Show QR code" style="width:auto">${QR_ICON}<span>QR</span></button></div>
+        <button class="share-preview" id="sharePreview" title="Open the player view in a new tab">Preview as player ↗</button>
         ${shareEditPickerHTML()}
         ${shareTogglesHTML()}
         ${shareSuggestHTML()}
         <button class="share-stop" id="shareStop">Stop sharing</button>
       </div>`);
-    // Render the QR from the vendored generator (degrades to link-only if it failed to load).
-    const qrEl=$("#shareQR");
-    try{const QR=window.qrcode;if(typeof QR==="function"){const q=QR(0,"M");q.addData(url);q.make();qrEl.innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true});}else qrEl.remove();}catch(e){qrEl.remove();}
     bindShareEditControls(draw);
     $("#shareCopy").addEventListener("click",()=>{const inp=$("#shareUrl");inp.select();
       const done=()=>{const s=$("#shareCopy").querySelector("span");s.textContent="Copied";setTimeout(()=>{s.textContent="Copy";},1500);};
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(inp.value).then(done,()=>{try{document.execCommand("copy");done();}catch(_){}});
       else{try{document.execCommand("copy");done();}catch(_){}}});
+    $("#shareQrBtn").addEventListener("click",()=>openShareQR(url));
+    $("#sharePreview").addEventListener("click",()=>{try{window.open(url,"_blank");}catch(e){location.href=url;}});
     $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped — players disconnected.");});
   };
   draw();
+}
+// QR overlay (B210 feedback): the share dialog now offers a "QR" button instead of an always-on code; this
+// shows it large in a dismissable overlay.
+function openShareQR(url){
+  const old=document.getElementById("qrOverlay");if(old)old.remove();
+  let svg="";try{const QR=window.qrcode;if(typeof QR==="function"){const q=QR(0,"M");q.addData(url);q.make();svg=q.createSvgTag({cellSize:7,margin:2,scalable:true});}}catch(e){}
+  const bg=document.createElement("div");bg.className="qr-overlay";bg.id="qrOverlay";
+  bg.innerHTML=`<div class="qr-card"><button class="qr-x" aria-label="Close">✕</button><div class="qr-svg">${svg||'<p class="hint" style="padding:30px">QR code unavailable.</p>'}</div></div>`;
+  document.body.appendChild(bg);
+  const close=()=>bg.remove();
+  bg.addEventListener("click",e=>{if(e.target===bg)close();});
+  bg.querySelector(".qr-x").addEventListener("click",close);
 }
 // ── In-app player mode (B204, stage 1) ───────────────────────────────────────
 // index.html?share=<bin> boots here instead of the normal DM init: fetch the shared bin, hydrate a synthetic

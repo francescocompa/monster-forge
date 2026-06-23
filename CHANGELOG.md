@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 211 — Share-feedback fixes
+- **"Preview as player" button** in the share dialog opens the live player view in a new tab — the testing
+  shortcut for seeing the in-app player page without copy-pasting the link (the link itself is `localhost`/
+  origin-bound, so it only resolves in the DM's own browser or, once deployed, anywhere).
+- **QR is now a button, not an always-on code.** A "QR" button sits inline with the link + Copy; clicking
+  opens the code large in a dismissable overlay (`openShareQR`). Less clutter in the dialog.
+- **Player-editing divider spacing** widened (3px → 14px) so the "Player editing" header isn't cramped.
+- **Lone spellcasting ability no longer clutters the preview.** `pcSheetHTML` skips the Abilities/Saves rows
+  when every entered score is a spellcasting "main" ability (already shown as ATK/DC) — so a Wizard with only
+  INT set no longer renders a sparse "Abilities: INT" row. Multi-ability sheets are unchanged.
+- **Player preview overlay** is taller (94vh) and scroll-safe (safe-area bottom padding) so long sheets reach
+  the bottom instead of clipping.
+
 ## Batch 210 — In-app player mode, stage 6 (the in-app view is now the share target)
 - **The share link now points at the in-app player mode.** `combatShareURL` generates
   `index.html?share=<bin>` (was `player.html?b=<bin>`), so a shared QR/link opens the real locked-down tracker
