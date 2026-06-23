@@ -19,6 +19,7 @@ test("app boots from index.html with no init errors", async () => {
   const sb = window.document.querySelector("#statblock");
   assert.ok(sb, "#statblock node exists");
   assert.ok(sb.textContent.trim().length > 0, "#statblock rendered content");
+  window.close(); // tear down jsdom so app timers (e.g. the brand-mark doze) can't keep the runner alive
 });
 
 test("every top-level addEventListener binding survived init", async () => {
@@ -30,4 +31,5 @@ test("every top-level addEventListener binding survived init", async () => {
   for (const id of ["#statblock", "#saveMonster", "#nav", "#settingsBody"]) {
     assert.ok(window.document.querySelector(id), `expected node ${id} to exist`);
   }
+  window.close(); // tear down jsdom (see note above)
 });

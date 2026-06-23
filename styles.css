@@ -495,17 +495,16 @@ select::-ms-expand{display:none}
 .sb .ab td.lbl .abc{display:inline-block;color:var(--accent-soft);font-weight:700;min-width:38px;text-align:left}
 .sb .ab td.lbl .abc.cc-ab{color:var(--txt);text-align:center;padding:1px 6px}
 .sb .ab td.lbl .sc{margin-left:9px}
-/* Boot loader (B81): a tumbling amber d20 + wordmark, shown until init sets the right tab so there's
+/* Boot loader (B81): the animated brand mark + wordmark, shown until init sets the right tab so there's
    no flash of the Forge before the saved view loads. Fades out, then removed by JS. */
 .boot-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg,#0b0c0e);transition:opacity .4s ease}
 .boot-loader.hide{opacity:0;pointer-events:none}
-.boot-d20{width:54px;height:54px;color:var(--amber-soft);animation:bootPulse 1.5s ease-in-out infinite;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
-.boot-d20 svg{width:100%;height:100%;display:block}
+/* Loading mark: the brand icon (no coral chip — its white outline carries it on the dark loader). */
+.boot-logo{width:96px;height:96px;filter:drop-shadow(0 6px 20px rgba(0,0,0,.5))}
+.boot-logo svg{width:100%;height:100%;display:block}
 .boot-name{font-size:16px;font-weight:700;letter-spacing:.02em;color:var(--txt);opacity:0;animation:bootName 1.4s ease forwards}
 @keyframes bootName{0%{opacity:0;transform:translateY(4px)}60%{opacity:1;transform:none}100%{opacity:1}}
 /* Calm "breathe" — a gentle scale+opacity pulse, no spin (chosen over the old tumble for a sleeker boot). */
-@keyframes bootPulse{0%,100%{transform:scale(.84);opacity:.55}50%{transform:scale(1);opacity:1}}
-@media (prefers-reduced-motion:reduce){.boot-d20{animation:none}}
 /* Ability colours (B57): STR red, DEX light blue, CON orange, INT purple, WIS green, CHA pink. */
 :is(.sb,.refpop) .cc-ab-str{background:rgba(224,90,90,.22)}
 :is(.sb,.refpop) .cc-ab-dex{background:rgba(95,180,230,.22)}
@@ -2053,4 +2052,135 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
   .atk-fields{grid-template-columns:repeat(3,1fr)}
 }
 @media (max-width:720px){.app{grid-template-columns:1fr}.app .rail,.rail-resizer{display:none}.adv-layout{grid-template-columns:1fr}.abil{grid-template-columns:repeat(3,1fr)}.spd-grid{grid-template-columns:repeat(3,1fr)}}
+/* ══════ Animated logo (B-logo): one mark, three behaviours ══════
+   Loading (boot screen) loops the frantic eye; the sidebar mark is still until it randomly DOZES
+   (one cycle, JS-triggered) or is POKED by a click (one cycle, overrides doze). The eye is built from
+   nested groups: mk-turn (head) > mk-socket (black backing, revealed on turns/blinks) + mk-gaze (eyeball
+   foreshorten) > mk-lids (clip-path eyelids) > sclera + mk-pupil; mk-frame is the gear/spike frame. */
+.mk-gaze,.mk-pupil,.mk-frame,.mk-turn{transform-box:fill-box;transform-origin:center}
+.mk-socket{fill:#000}
+
+/* Loading — runs while the boot loader is on screen */
+.boot-logo .mk-gaze{animation:eye-gaze 7s linear infinite}
+.boot-logo .mk-lids{animation:eye-blink 7s ease-in-out infinite}
+.boot-logo .mk-pupil{animation:pupil-dart 7s linear infinite}
+.boot-logo .mk-frame{animation:frame-react 7s ease-out infinite}
+
+/* Sidebar mark — idle still; .dozing / .poked added by JS run one cycle each */
+.brand .mk{cursor:pointer}
+.brand .mk.dozing .mk-turn{animation:doze-nod 12s ease-in-out 1}
+.brand .mk.dozing .mk-gaze{animation:doze-gaze 12s linear 1}
+.brand .mk.dozing .mk-lids{animation:doze-lids 12s linear 1}
+.brand .mk.dozing .mk-pupil{animation:doze-pupil 12s ease-in-out 1}
+.brand .mk.dozing .mk-frame{animation:doze-frame 12s ease-out 1}
+.brand .mk.poked .mk-turn{animation:none;transform:none}
+.brand .mk.poked .mk-gaze{animation:poke-gaze 3s linear 1}
+.brand .mk.poked .mk-lids{animation:poke-lids 3s linear 1}
+.brand .mk.poked .mk-pupil{animation:poke-pupil 3s cubic-bezier(.2,.7,.2,1) 1}
+.brand .mk.poked .mk-frame{animation:poke-frame 3s ease-out 1}
+
+/* — Loading keyframes — */
+@keyframes eye-gaze{
+  0%,7%{transform:translate(0,0)}9%,19%{transform:translate(8px,-4px) scaleX(.88)}
+  21%,31%{transform:translate(-13px,-2px) scaleX(.82)}33%,42%{transform:translate(-8px,7px) scaleY(.86)}
+  44%,54%{transform:translate(13px,2px) scaleX(.82)}56%,63%{transform:translate(-13px,-1px) scaleX(.84)}
+  65%,71%{transform:translate(13px,1px) scaleX(.84)}73%,81%{transform:translate(0,0) scale(1.02)}83%,100%{transform:translate(0,0)}
+}
+@keyframes eye-blink{
+  0%,11%{clip-path:inset(0 0 0 0) fill-box}13%{clip-path:inset(50% 0 50% 0) fill-box}
+  15%,24%{clip-path:inset(0 0 0 0) fill-box}26%{clip-path:inset(50% 0 50% 0) fill-box}
+  28%,53%{clip-path:inset(0 0 0 0) fill-box}55%{clip-path:inset(33% 0 33% 0) fill-box}
+  56%,81%{clip-path:inset(33% 0 33% 0) fill-box}83%,88%{clip-path:inset(0 0 0 0) fill-box}
+  90%{clip-path:inset(50% 0 50% 0) fill-box}92%,100%{clip-path:inset(0 0 0 0) fill-box}
+}
+@keyframes pupil-dart{
+  0%,7%{transform:translate(0,0) scale(1.08)}
+  9%,19%{transform:translate(112px,-50px) scaleX(.68) scaleY(.90) skewX(-9deg) rotate(-4deg)}
+  21%,31%{transform:translate(-118px,-16px) scaleX(.58) scaleY(.92) skewX(13deg) rotate(5deg)}
+  33%,42%{transform:translate(16px,82px) scaleX(.92) scaleY(.66)}
+  44%,54%{transform:translate(118px,14px) scaleX(.58) scaleY(.92) skewX(-13deg) rotate(-5deg)}
+  56%,63%{transform:translate(-112px,-6px) scaleX(.60) scaleY(.90) skewX(12deg) rotate(5deg)}
+  65%,71%{transform:translate(112px,6px) scaleX(.60) scaleY(.90) skewX(-12deg) rotate(-5deg)}
+  73%,81%{transform:translate(0,0) scale(1.16)}83%,100%{transform:translate(0,0) scale(1.08)}
+}
+@keyframes frame-react{
+  0%,7%{transform:scale(1,1)}9%{transform:translate(-1px,0) scale(1.004,.997)}13%{transform:scale(1.015,.96)}
+  15%{transform:scale(.998,1.004)}19%{transform:scale(1,1)}21%{transform:translate(1.5px,0) scale(1.005,.996)}
+  26%{transform:scale(1.015,.96)}28%{transform:scale(1,1)}33%{transform:translate(0,1px) scale(.997,1.005)}
+  42%{transform:scale(1,1)}44%{transform:translate(-1.5px,0) scale(1.005,.996)}54%{transform:scale(1,1)}
+  56%{transform:translate(1px,0) scale(1.004,.997)}63%{transform:scale(1,1)}65%{transform:translate(-1px,0) scale(1.004,.997)}
+  71%{transform:scale(1,1)}73%,81%{transform:scale(1.012,1.012)}83%{transform:scale(1,1)}
+  90%{transform:scale(1.015,.96)}92%,100%{transform:scale(1,1)}
+}
+
+/* — Doze keyframes (slow droop, fast snap-open, sleeps, jolts awake, checks around) — */
+@keyframes doze-nod{
+  0%,5%{transform:translate(0,0) scale(1) rotate(0)}30%{transform:translate(0,2px) scale(.985) rotate(-1deg)}
+  44%{transform:translate(0,3px) scale(.97) rotate(-1.4deg)}52%,77%{transform:translate(0,4px) scale(.94) rotate(-1.4deg)}
+  78%{transform:translate(0,-2px) scale(1) rotate(1.2deg)}81%{transform:translate(0,0) scale(1) rotate(0)}100%{transform:translate(0,0) scale(1)}
+}
+@keyframes doze-lids{
+  0%,5%{clip-path:inset(0 0 0 0) fill-box;animation-timing-function:ease-in}
+  17%{clip-path:inset(26% 0 26% 0) fill-box;animation-timing-function:cubic-bezier(.12,.8,.1,1)}
+  19%{clip-path:inset(4% 0 4% 0) fill-box;animation-timing-function:ease-in}
+  32%{clip-path:inset(36% 0 36% 0) fill-box;animation-timing-function:cubic-bezier(.12,.8,.1,1)}
+  34%{clip-path:inset(10% 0 10% 0) fill-box;animation-timing-function:ease-in}
+  47%{clip-path:inset(46% 0 46% 0) fill-box;animation-timing-function:cubic-bezier(.3,.7,.4,1)}
+  49%{clip-path:inset(30% 0 30% 0) fill-box;animation-timing-function:ease-in}
+  54%{clip-path:inset(50% 0 50% 0) fill-box}
+  77%{clip-path:inset(50% 0 50% 0) fill-box;animation-timing-function:cubic-bezier(.1,.85,.2,1)}
+  78%{clip-path:inset(0 0 0 0) fill-box}86%{clip-path:inset(0 0 0 0) fill-box}
+  88%{clip-path:inset(40% 0 40% 0) fill-box}90%,100%{clip-path:inset(0 0 0 0) fill-box}
+}
+@keyframes doze-pupil{
+  0%,5%{transform:translate(0,0) scale(1)}32%{transform:translate(0,42px) scale(.96)}49%{transform:translate(0,72px) scale(.92)}
+  54%,77%{transform:translate(0,86px) scale(.9)}78%{transform:translate(0,0) scale(1.16)}
+  81%{transform:translate(-116px,-8px) scaleX(.6) skewX(12deg)}85%{transform:translate(116px,-6px) scaleX(.6) skewX(-12deg)}
+  88%{transform:translate(-100px,8px) scaleX(.64) skewX(10deg)}91%{transform:translate(106px,8px) scaleX(.62) skewX(-10deg)}
+  94%{transform:translate(0,0) scale(1.08)}98%,100%{transform:translate(0,0) scale(1)}
+}
+@keyframes doze-gaze{
+  0%,78%{transform:translate(0,0)}81%{transform:translate(-12px,0) scaleX(.85)}85%{transform:translate(12px,0) scaleX(.85)}
+  88%{transform:translate(-10px,0) scaleX(.87)}91%{transform:translate(10px,0) scaleX(.87)}94%,100%{transform:translate(0,0)}
+}
+@keyframes doze-frame{
+  0%,77%{transform:scale(1,1)}78%{transform:scale(1.03,.95)}81%{transform:scale(.99,1.01)}84%,100%{transform:scale(1,1)}
+}
+
+/* — Poke keyframes (snappy slam, frantic scan, resettle) — */
+@keyframes poke-lids{
+  0%{clip-path:inset(0 0 0 0) fill-box;animation-timing-function:cubic-bezier(.8,0,.4,1)}
+  3%{clip-path:inset(50% 0 50% 0) fill-box}9%{clip-path:inset(50% 0 50% 0) fill-box}13%{clip-path:inset(0 0 0 0) fill-box}
+  44%{clip-path:inset(0 0 0 0) fill-box}46%{clip-path:inset(50% 0 50% 0) fill-box}49%,86%{clip-path:inset(0 0 0 0) fill-box}
+  90%{clip-path:inset(42% 0 42% 0) fill-box}94%,100%{clip-path:inset(0 0 0 0) fill-box}
+}
+@keyframes poke-pupil{
+  0%{transform:translate(0,0) scale(1);animation-timing-function:cubic-bezier(.7,0,.3,1)}
+  3%{transform:translate(0,0) scale(.82)}9%{transform:translate(0,0) scale(1.18)}
+  16%{transform:translate(-118px,-12px) scaleX(.58) skewX(12deg) rotate(6deg)}
+  26%{transform:translate(118px,10px) scaleX(.58) skewX(-12deg) rotate(-6deg)}
+  35%{transform:translate(-20px,-66px) scaleX(.92) scaleY(.7)}
+  44%{transform:translate(110px,-8px) scaleX(.6) skewX(-11deg)}
+  53%{transform:translate(-110px,12px) scaleX(.62) skewX(11deg)}
+  62%{transform:translate(22px,80px) scaleX(.9) scaleY(.66)}
+  71%{transform:translate(112px,4px) scaleX(.6) skewX(-11deg)}
+  80%{transform:translate(0,0) scale(1.1)}90%,100%{transform:translate(0,0) scale(1)}
+}
+@keyframes poke-gaze{
+  0%,13%{transform:translate(0,0)}16%{transform:translate(-13px,0) scaleX(.84)}26%{transform:translate(13px,0) scaleX(.84)}
+  35%{transform:translate(0,-6px) scaleY(.86)}44%{transform:translate(13px,0) scaleX(.85)}53%{transform:translate(-13px,0) scaleX(.85)}
+  62%{transform:translate(0,6px) scaleY(.86)}71%{transform:translate(13px,0) scaleX(.85)}80%,100%{transform:translate(0,0)}
+}
+@keyframes poke-frame{
+  0%{transform:scale(1,1);animation-timing-function:cubic-bezier(.8,0,.4,1)}
+  3%{transform:scale(1.06,.9)}8%{transform:scale(.97,1.03)}13%{transform:scale(1,1)}
+  46%{transform:scale(1.015,.96)}49%{transform:scale(1,1)}90%{transform:scale(1.01,.97)}94%,100%{transform:scale(1,1)}
+}
+
+/* Reduced motion: hold the logo still everywhere (and JS skips the doze timer). */
+@media (prefers-reduced-motion:reduce){
+  .boot-logo .mk-gaze,.boot-logo .mk-lids,.boot-logo .mk-pupil,.boot-logo .mk-frame,
+  .brand .mk.dozing .mk-turn,.brand .mk.dozing .mk-gaze,.brand .mk.dozing .mk-lids,.brand .mk.dozing .mk-pupil,.brand .mk.dozing .mk-frame,
+  .brand .mk.poked .mk-turn,.brand .mk.poked .mk-gaze,.brand .mk.poked .mk-lids,.brand .mk.poked .mk-pupil,.brand .mk.poked .mk-frame{animation:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}

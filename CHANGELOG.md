@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 220 — animated logo: loading screen + a living sidebar mark
+- **The brand mark is now an animated eye, one mark with three behaviours (CSS-only animations).** Switched
+  both the boot loader and the sidebar mark to the outline-free logo, wrapped in nested animation layers
+  (`mk-turn` head › `mk-socket` black backing › `mk-gaze` eyeball foreshorten › `mk-lids` clip-path eyelids ›
+  sclera + `mk-pupil`; `mk-frame` is the gear/spike frame).
+- **Loading** (boot screen): the eye darts frantically with strong cornea distortion (skew/roll), foreshortens
+  to an ellipse on side-looks, blinks (eyelids *crop* the pupil, they don't scale it), and runs a half-closed
+  squint scan — left, right, then facing us. Shown on the dark loader with **no coral chip** (the logo's white
+  outline carries it); replaced the old tumbling d20.
+- **Sidebar mark** uses both in-page behaviours with different triggers: it sits still, **dozes** at a random
+  interval (≥ 2–5 min — heavy lids close slow / snap open fast, nods off, sleeps, jolts awake and checks
+  around), and a **click pokes** it any time (snappy slam shut → frantic scan → resettle), interrupting a doze.
+  Wired in `initBrandMark()` (toggles `.dozing`/`.poked`, cleared on each cycle's `*-pupil` animationend).
+- Honours `prefers-reduced-motion` (animations off; doze timer skipped). The black socket disc shows on every
+  turn/blink reveal so the eye never bleeds the chip colour. `npm run verify` green; smoke test boots clean.
+
 ## Batch 219 — combat: drop the monster save stat box (malformed alert)
 - **Removed the monster "best saving throw" stat box.** The active panel's monster stat row is now just
   AC · ATK · DC · HP — only the attack-roll modifier and the save DC, as intended. That box also produced a

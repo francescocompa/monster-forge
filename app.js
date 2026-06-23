@@ -347,7 +347,7 @@ function wrapStepper(input,step,min){
   loadSettings();syncFeatureClasses();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
-  bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();initForgeResizer();
+  bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();initForgeResizer();initBrandMark();
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
@@ -382,6 +382,34 @@ function maybeShowOnboarding(){
 // Remove the boot loader once the app is ready (or on a fatal init error so the page isn't stuck).
 function hideBootLoader(){const b=document.getElementById("bootLoader");if(!b)return;requestAnimationFrame(()=>{b.classList.add("hide");setTimeout(()=>b.remove(),450);});}
 window.addEventListener("error",hideBootLoader);
+// Sidebar brand mark (B-logo): idle and still, it randomly DOZES (one cycle, every few minutes) and a CLICK
+// always POKES it (one cycle, interrupting any doze). The animations themselves are CSS (.dozing/.poked on
+// the mark); here we just toggle the classes and clear them when each cycle's pupil animation ends.
+function initBrandMark(){
+  const mk=document.getElementById("brandMark");if(!mk)return;
+  mk.addEventListener("click",()=>{
+    if(mk.classList.contains("poked"))return; // already mid-poke
+    mk.classList.remove("dozing");mk.classList.add("poked"); // poke overrides any doze in progress
+  });
+  mk.addEventListener("animationend",e=>{
+    if(e.animationName==="poke-pupil")mk.classList.remove("poked");
+    else if(e.animationName==="doze-pupil")mk.classList.remove("dozing");
+  });
+  // Random doze, never sooner than a couple of minutes. Skipped under reduced motion, and in the jsdom
+  // test DOM (where a pending multi-minute timer would keep the test runner alive). Poke stays wired above.
+  const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const testDOM=/jsdom/i.test((window.navigator&&window.navigator.userAgent)||"");
+  if(reduce||testDOM)return;
+  const scheduleDoze=()=>{
+    const t=setTimeout(()=>{
+      if(!document.body.contains(mk))return; // mark gone (e.g. player mode) — stop
+      if(!document.hidden&&!mk.classList.contains("poked")&&!mk.classList.contains("dozing"))mk.classList.add("dozing");
+      scheduleDoze();
+    },120000+Math.random()*180000); // 2–5 min
+    if(t&&typeof t.unref==="function")t.unref(); // don't keep a (jsdom/node) process alive just for this
+  };
+  scheduleDoze();
+}
 
 // ── Export / settings shell helpers (moved from adventures.js, B132) ─────────
 function doExportJSON(){
