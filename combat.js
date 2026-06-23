@@ -1307,7 +1307,10 @@ function openCombatShareDialog(){
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(inp.value).then(done,()=>{try{document.execCommand("copy");done();}catch(_){}});
       else{try{document.execCommand("copy");done();}catch(_){}}});
     $("#shareQrBtn").addEventListener("click",()=>openShareQR(url));
-    $("#sharePreview").addEventListener("click",()=>{try{window.open(url,"_blank");}catch(e){location.href=url;}});
+    // "Preview as player" → a network-free local preview of the CURRENT combat (no bin fetch, always works):
+    // stash the snapshot to localStorage and open the player view against it. Copy/QR give the real link.
+    $("#sharePreview").addEventListener("click",()=>{_pmPreviewOn=true;stashPreviewSnap();
+      try{window.open("index.html?share=__preview__","_blank");}catch(e){location.href="index.html?share=__preview__";}});
     $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped — players disconnected.");});
   };
   draw();
@@ -1328,9 +1331,26 @@ function openShareQR(url){
 // index.html?share=<bin> boots here instead of the normal DM init: fetch the shared bin, hydrate a synthetic
 // combat into `state`, lock the shell to a read-only combat view, and poll for updates. PLAYER_MODE gates
 // every persistence/DM path elsewhere so the real app is untouched.
+// Mirror the current combat to localStorage for the network-free "Preview as player" tab (B211 feedback).
+// Force the editing surfaces on (with a sentinel wbin/wkey) so the DM can review the full player UX; writes
+// short-circuit locally (see pmQueueWrite) so edits show optimistically without needing a real bin.
+function stashPreviewSnap(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const snap=buildCombatShareSnapshot(ctx.e.combat),mode=combatShareMode();
+  if(mode!=="off"){snap.edit=mode;snap.wbin="__preview__";snap.wkey="__preview__";snap.enemyConds=!!shareOpts().enemyConds;}
+  try{localStorage.setItem("mf_previewsnap",JSON.stringify(snap));}catch(e){}}
 async function initPlayerMode(bin){
   PLAYER_MODE=true;PLAYER_BIN=bin;
   document.body.classList.add("player-mode");
+  // Local preview (no JSONBin): read the snapshot the DM stashed in localStorage and poll it for live updates.
+  if(bin==="__preview__"){
+    let started=false;
+    const load=()=>{let s=null;try{s=JSON.parse(localStorage.getItem("mf_previewsnap")||"null");}catch(e){}
+      if(!s||!s.combat){if(!started)playerModeMessage("Preview not ready","In the DM app, open the share dialog and tap “Preview as player”.");return;}
+      hydratePlayerCombat(s);if(!started){started=true;switchView("combat");}else if(_curView==="combat")renderCombat();};
+    load();setInterval(load,1500);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)load();});
+    return;
+  }
   const rec=await jbinReadBin(bin);
   if(!rec){playerModeMessage("Can’t reach the shared fight","Check your connection and reload.");return;}
   if(!rec.combat){playerModeMessage("Sharing ended","Your DM stopped sharing this fight.");return;}
@@ -1359,6 +1379,7 @@ function hydratePlayerCombat(rec){
 // claimed PC only; all/suggest = any PC. The claim (own mode) is a localStorage pick keyed by the bin.
 let _pmBaseline={},_pmPending={},_pmPushTimer=null,_pmWrite=Promise.resolve();
 let _pmCharBaseline={},_pmCharPending={},_pmCharPushTimer=null; // sheet-edit (B204 stage 4b) baseline + optimistic
+let _pmPreviewOn=false; // DM tapped "Preview as player" → mirror the live snapshot to localStorage (network-free)
 function playerEditMode(){return (PLAYER_MODE&&state.__pmEdit)||"off";}
 function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+PLAYER_BIN):null;}catch(e){return null;}}
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
@@ -1382,6 +1403,7 @@ function playerScheduleEdits(){if(!PLAYER_MODE)return;clearTimeout(_pmPushTimer)
 // pushes can't clobber each other's slice of the bin.
 function pmQueueWrite(mutate){
   const wbin=state.__pmWbin,wkey=state.__pmWkey;if(!wbin||!wkey)return Promise.resolve();
+  if(wbin==="__preview__")return Promise.resolve(); // local preview — edits stay optimistic, no network write
   _pmWrite=_pmWrite.then(async()=>{const rec=(await jbinReadBin(wbin))||{v:1,edits:{}};mutate(rec);
     try{await fetch(`${JBIN_BASE}/b/${wbin}`,{method:"PUT",headers:{"Content-Type":"application/json","X-Access-Key":wkey},body:JSON.stringify(rec)});}catch(e){}}).catch(()=>{});
   return _pmWrite;
@@ -1521,6 +1543,7 @@ function renderCombat(){
   bindCombatTracker(body,a,e,cb);
   if(PLAYER_MODE)playerModeChrome(body); // claim picker / editing-scope banner (B204 stage 3)
   publishCombatShareSoon(); // if sharing is on, push the updated snapshot to players (debounced; no-ops otherwise)
+  if(_pmPreviewOn&&!PLAYER_MODE)stashPreviewSnap(); // keep the local "Preview as player" tab live
   if(combatShareOn()&&combatShareMode()!=="off"&&combatShareWbId())startSharePoll(); // resume the write-back poller after a reload
 }
 // Wire every combat-tracker event handler onto the freshly-rendered DOM (B198 — extracted from

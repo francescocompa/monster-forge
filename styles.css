@@ -1506,13 +1506,12 @@ body.player-mode .cd-savetpl,body.player-mode .cd-gx[data-cdmenu]{display:none!i
   .picker-foot .pf-done{grid-column:1 / -1;margin-left:0}
 }
 @media (max-width:1080px){
-  .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,46%)}
+  /* Give the active panel (sheet/statblock) the larger share — it's the long content — and let it run to the
+     page bottom (the .ca-scroll's own bottom padding already clears the fixed turn FAB). */
+  .combat-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) var(--cah,56%)}
   .combat-order{padding:14px 20px 24px}
   .combat-active{border-left:none;border-top:1px solid var(--line)}
-  /* Stacked layout puts the active panel at the bottom of the viewport, under the fixed turn FAB.
-     Reserve a bottom gutter so no interactive content (e.g. "Add note") sits beneath it. */
-  .combat-wrap{padding-bottom:60px}
-  .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,46%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
+  .combat-resizer{top:auto;right:0;left:0;bottom:var(--cah,56%);width:auto;height:12px;margin:0 0 -6px;cursor:row-resize}
   .combat-resizer::before{width:46px;height:3px}
 }
 

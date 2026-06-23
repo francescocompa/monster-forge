@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 212 — Share-feedback round 2 (network-free preview + cropping)
+- **"Preview as player" is now network-free and reliable.** It no longer opens the real (origin/localhost-
+  bound) link — it stashes the live combat snapshot to `localStorage` and opens `index.html?share=__preview__`,
+  which renders the player view straight from that snapshot (no JSONBin fetch, so it works even when the bin
+  was never created / got deleted — the cause of the earlier "Can't reach the shared fight"). The DM tab keeps
+  the stash fresh on every render, so the preview tracks the fight live; the preview forces the editing UI on
+  (sentinel `__preview__` bin) with writes short-circuited so edits/rolls show optimistically without a bin.
+  Copy/QR still give the real shareable link for actual players.
+- **Cropping fixed (DM side).** The stacked combat layout gave the active panel only 46% and reserved a
+  redundant bottom gutter, so the sheet/statblock was cramped and cut. It now gets **56%** and runs to the
+  page bottom (the `.ca-scroll` padding already clears the turn FAB) — the full statblock/sheet is visible.
+  The player preview overlay was also raised to 94vh with safe-area padding.
+- Verified in preview: `index.html?share=__preview__` loads with no network, shows editable PC rows + enemy-
+  condition rows; the DM active panel reaches the page bottom (gap 0) showing the whole statblock.
+
 ## Batch 211 — Share-feedback fixes
 - **"Preview as player" button** in the share dialog opens the live player view in a new tab — the testing
   shortcut for seeing the in-app player page without copy-pasting the link (the link itself is `localhost`/
