@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 209 — In-app player mode, stage 5 (enemy toggles)
+- **Two per-share enemy toggles** in the share dialog (`shareOpts`, stored per encounter): **Show enemy health
+  (bloodied bands)** — off ⇒ enemies show no HP info at all (`playerSafeInstance` omits the band); and **Let
+  players edit enemy conditions** — rides in the snapshot (`snap.enemyConds`) and is gated to when an edit
+  mode + key are set.
+- **Enemy condition editing.** When enabled, obscured combatants get a `pm-edit-conds` row — the +effect / ×
+  controls work, but initiative/reaction/concentration/HP stay inert. Edits push a **conditions-only** payload
+  (`playerPushEdits`) so the DM's enemy HP/init are never touched; the DM applies just the conditions. Diff
+  baseline now covers enemies too.
+- Verified in preview: dialog shows both switches; bloodied-off suppresses the band end-to-end; enemy-conds-on
+  makes enemy rows condition-editable and an added condition pushed a conditions-only edit to the bin.
+
 ## Batch 208 — In-app player mode, stage 4b (character-sheet editing)
 - **Players edit the full character sheet** from the preview's Edit pencil — the real character-detail modal,
   locked down in player mode (notes/backstory, adventure tags, the kebab and "save as template" hidden). Every

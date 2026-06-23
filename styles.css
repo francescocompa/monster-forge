@@ -1365,6 +1365,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .share-link input{flex:1;font-size:12px;min-width:0}
 .share-link .btn{flex:none;gap:6px}
 .share-link .btn svg{width:13px;height:13px;flex:none}
+.share-toggles{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.share-tog{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.share-tog-l{font-size:12.5px;color:var(--txt)}
+.share-tog.dim{opacity:.5}.share-tog.dim .share-tog-l{color:var(--dim)}
 .share-stop{align-self:center;background:none;border:none;color:var(--faint);font-size:12px;font-weight:500;cursor:pointer;padding:7px 12px;border-radius:var(--r-sm)}
 .share-stop:hover{color:var(--bad);background:rgba(210,96,74,.1)}
 .share-stop:disabled{opacity:.6;cursor:default}
@@ -1396,13 +1400,15 @@ body.player-mode .combat-fab-turn,body.player-mode .cbt-add,
 body.player-mode .ci-menu,body.player-mode .combat-resizer,
 body.player-mode .combat-active{display:none!important} /* active panel surfaces in stage 4 (tap-to-open) */
 body.player-mode .combat-grid{grid-template-columns:1fr!important}
-/* Non-editable rows (enemies, other PCs) are inert; their editing affordances are hidden. */
-body.player-mode .cbt-row:not(.pm-edit){pointer-events:none}
-body.player-mode .cbt-row:not(.pm-edit) .ci-init-in{background:none;border:none;padding-left:0}
+/* Fully inert rows (enemies without condition permission, other PCs) — no editing affordances. */
+body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds){pointer-events:none}
+body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds) .ci-init-in,
+body.player-mode .cbt-row.pm-edit-conds .ci-init-in{pointer-events:none;background:none;border:none;padding-left:0}
+/* Reaction/concentration are PC-only; addcond/cc-x stay hidden on inert rows but show on enemy-cond rows. */
 body.player-mode .cbt-row:not(.pm-edit) .ci-react-chip,
 body.player-mode .cbt-row:not(.pm-edit) .ci-conc-chip,
-body.player-mode .cbt-row:not(.pm-edit) .ci-addcond,
-body.player-mode .cbt-row:not(.pm-edit) .cc-x{display:none!important}
+body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds) .ci-addcond,
+body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds) .cc-x{display:none!important}
 /* The active panel is read-only in stage 3: hide sheet-edit + note affordances, disable rolling (stage 4). */
 body.player-mode .combat-active .pcs-edit,
 body.player-mode .combat-active .ca-addnote,

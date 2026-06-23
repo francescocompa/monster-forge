@@ -774,7 +774,7 @@ function combatRowHTML(it,active,drag){
   const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
-  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
+  return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}${PLAYER_MODE&&playerEnemyCondsEditable(it)?" pm-edit-conds":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
     <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
@@ -1050,6 +1050,11 @@ function combatShareOn(){return !!combatShareId();}
 function combatShareWbId(){const ctx=loadedCtx();return ctx?localStorage.getItem("mf_sharewb:"+ctx.e.id):null;}
 function combatShareMode(){const ctx=loadedCtx();return (ctx&&localStorage.getItem("mf_sharemode:"+ctx.e.id))||"off";}
 function playerEditKey(){return ((state.settings.combat&&state.settings.combat.playerEditKey)||"").trim();}
+// Per-share enemy options (B204 stage 5): showBloodied = enemies show a health band (off ⇒ no HP info at
+// all); enemyConds = players may edit enemy conditions (routing matches the PC mode). Stored per encounter.
+function shareOpts(){const ctx=loadedCtx(),def={showBloodied:true,enemyConds:false};if(!ctx)return def;
+  try{return Object.assign(def,JSON.parse(localStorage.getItem("mf_shareopts:"+ctx.e.id)||"{}"));}catch(e){return def;}}
+function setShareOpt(k,v){const ctx=loadedCtx();if(!ctx)return;const o=shareOpts();o[k]=v;localStorage.setItem("mf_shareopts:"+ctx.e.id,JSON.stringify(o));}
 function combatShareURL(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"player.html?b="+encodeURIComponent(id);}
 // Coarse health band for an obscured (monster) row — no numbers leak to players.
 function hpBand(it){if(it.hpMax==null)return null;if(it.hpCur<=0)return "down";const p=it.hpCur/it.hpMax;
@@ -1074,12 +1079,13 @@ function buildCombatShareSnapshot(cb){
     else{const b=hpBand(it);if(b)row.band=b;}
     list.push(row);
   });
+  const opts=shareOpts();
   const snap={v:1,round:cb.round,turn,updated:Date.now(),order:list};
-  if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.wkey=playerEditKey();}
+  if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.wkey=playerEditKey();snap.enemyConds=!!opts.enemyConds;}
   // Richer payload for the in-app player mode (B204): the real tracker renders from this. Full PC instances
   // (minus the DM note) + obscured enemy instances (faction label + band, no statblock/HP). Events dropped.
   const porder=[];let pturn=0;
-  cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it));});
+  cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it,opts));});
   snap.combat={round:cb.round,turnIndex:pturn,order:porder};
   // Character sheets (B204 stage 2): each editable PC's roster record, notes stripped, keyed by srcId. In
   // player mode these hydrate state.roster so the real pcSheet/active-panel render with full data.
@@ -1093,12 +1099,14 @@ function buildCombatShareSnapshot(cb){
 function playerSafeChar(c){const o=JSON.parse(JSON.stringify(c));o.notes="";return o;}
 // One combat instance, sanitized for the shared payload. PCs keep their fields (the DM note is dropped);
 // enemies are obscured to a faction label + health band with no statblock id, HP numbers, or note.
-function playerSafeInstance(it){
+function playerSafeInstance(it,opts){
+  opts=opts||{showBloodied:true};
   const conds=(it.conditions||[]).map(c=>{const o={name:c.name};if(c.rounds)o.rounds=c.rounds;if(c.endWhen)o.endWhen=c.endWhen;if(c.endWho)o.endWho=c.endWho;return o;});
   const base={id:it.id,kind:it.kind,faction:it.faction,init:it.init,initMod:it.initMod||0,initRolled:it.initRolled!==false,initManual:!!it.initManual,dex:it.dex||10,status:it.status||"active",groupId:it.groupId,conditions:conds,reaction:it.reaction!==false};
   if(it.concentration)base.concentration=true;
   if(it.kind==="pc")return Object.assign(base,{name:it.name,ac:it.ac,hpMax:it.hpMax,hpCur:it.hpCur,hpTemp:it.hpTemp||0,srcId:it.srcId,srcEntry:it.srcEntry,resources:it.resources||[]},it.deathSaves?{deathSaves:it.deathSaves}:{});
-  return Object.assign(base,{name:it.faction||"Enemy",ac:null,hpMax:null,hpCur:null,hpTemp:0,srcId:null,resources:[],_enemy:true,band:hpBand(it)});
+  // Enemy: obscured. Health band only when "show bloodied" is on (off ⇒ no HP info at all).
+  return Object.assign(base,{name:it.faction||"Enemy",ac:null,hpMax:null,hpCur:null,hpTemp:0,srcId:null,resources:[],_enemy:true,band:opts.showBloodied?hpBand(it):null});
 }
 // Debounced re-publish: every combat change re-renders, which calls this; it no-ops when sharing is off.
 let _sharePending=null,_shareBusy=false;
@@ -1239,6 +1247,15 @@ function shareEditPickerHTML(){
     <p class="share-edit-hint">${hint}</p>
   </div>`;
 }
+// Two enemy toggles (B204 stage 5): show health bands; let players edit enemy conditions (needs an edit mode).
+function shareTogglesHTML(){
+  const o=shareOpts(),editing=!!playerEditKey()&&combatShareMode()!=="off";
+  const tog=(opt,label,on,disabled)=>`<label class="share-tog${disabled?" dim":""}"><span class="share-tog-l">${label}</span><span class="switch"><input type="checkbox" data-shareopt="${opt}" ${on?"checked":""} ${disabled?"disabled":""}><span class="sl"></span></span></label>`;
+  return `<div class="share-toggles">
+    ${tog("showBloodied","Show enemy health (bloodied bands)",o.showBloodied,false)}
+    ${tog("enemyConds","Let players edit enemy conditions",o.enemyConds&&editing,!editing)}
+  </div>`;
+}
 function shareSuggestHTML(){
   if(combatShareMode()!=="suggest"||!_shareSuggest.size)return "";
   const rows=[..._shareSuggest.values()].map(s=>`<div class="sug-row">
@@ -1251,6 +1268,7 @@ function bindShareEditControls(draw){
   document.querySelectorAll("[data-emode]").forEach(b=>b.addEventListener("click",async()=>{if(b.disabled||b.classList.contains("on"))return;b.classList.add("busy");await setShareEditMode(b.dataset.emode);draw();}));
   document.querySelectorAll("[data-sugyes]").forEach(b=>b.addEventListener("click",async()=>{b.disabled=true;await resolveSuggestion(b.dataset.sugyes,true);draw();}));
   document.querySelectorAll("[data-sugno]").forEach(b=>b.addEventListener("click",async()=>{b.disabled=true;await resolveSuggestion(b.dataset.sugno,false);draw();}));
+  document.querySelectorAll("[data-shareopt]").forEach(cb=>cb.addEventListener("change",async()=>{setShareOpt(cb.dataset.shareopt,cb.checked);if(combatShareOn())await publishCombatShareNow();draw();}));
 }
 // The share dialog: off → a primer + editing picker + "Start sharing"; on → the link/QR, editing picker,
 // any pending suggestions, and a low-key "Stop sharing".
@@ -1262,6 +1280,7 @@ function openCombatShareDialog(){
         <div class="share-dlg">
           <p class="share-sub">Players follow the turn order and party HP live on their phones. Monster names and HP stay hidden.</p>
           ${shareEditPickerHTML()}
+          ${shareTogglesHTML()}
           <div class="mrow"><button class="btn primary sm" id="shareStart" style="width:auto">Start sharing</button></div>
         </div>`);
       bindShareEditControls(draw);
@@ -1275,6 +1294,7 @@ function openCombatShareDialog(){
         <div class="share-qr" id="shareQR"></div>
         <div class="share-link"><input type="text" id="shareUrl" class="popinput" readonly value="${esc(url)}"><button class="btn ghost sm" id="shareCopy" title="Copy link" style="width:auto">${COPY_ICON}<span>Copy</span></button></div>
         ${shareEditPickerHTML()}
+        ${shareTogglesHTML()}
         ${shareSuggestHTML()}
         <button class="share-stop" id="shareStop">Stop sharing</button>
       </div>`);
@@ -1308,7 +1328,7 @@ async function initPlayerMode(bin){
 // Build a one-adventure / one-encounter synthetic state from the shared payload so the real renderer works.
 function hydratePlayerCombat(rec){
   const c=rec.combat;
-  state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;
+  state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;state.__pmEnemyConds=!!rec.enemyConds;
   state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
     encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
@@ -1317,7 +1337,7 @@ function hydratePlayerCombat(rec){
   hydratePlayerRoster(rec);
   // Baseline = the DM's confirmed state; then re-apply any unconfirmed local edits on top (optimistic).
   const order=state.adv[0].encounters[0].combat.order;
-  _pmBaseline={};order.forEach(it=>{if(it.kind==="pc")_pmBaseline[it.id]=instEditFields(it);});
+  _pmBaseline={};order.forEach(it=>{if(it.kind!=="event")_pmBaseline[it.id]=instEditFields(it);}); // PCs + enemies (cond edits)
   pmReconcile(order);
 }
 // ── Player editing (B204 stage 3) ────────────────────────────────────────────
@@ -1330,6 +1350,8 @@ function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
 function playerCanEdit(it){if(!PLAYER_MODE||!it||it.kind!=="pc")return false;const m=playerEditMode();
   if(m==="off"||!state.__pmWbin||!state.__pmWkey)return false;return m==="own"?it.id===playerClaimId():true;}
+// Enemy CONDITIONS-only editing (B204 stage 5): any obscured combatant when the DM enabled it + an edit mode.
+function playerEnemyCondsEditable(it){return !!(PLAYER_MODE&&it&&it.kind!=="pc"&&it.kind!=="event"&&state.__pmEnemyConds&&playerEditMode()!=="off"&&state.__pmWbin&&state.__pmWkey);}
 // The editable slice of a combat instance + equality, for diffing against the DM's snapshot.
 function instEditFields(it){return {hp:it.hpCur,temp:it.hpTemp||0,conds:(it.conditions||[]).map(c=>c.name),init:it.init,reaction:it.reaction!==false,concentration:!!it.concentration,status:it.status||"active"};}
 function sameEdit(a,b){return !!a&&!!b&&a.hp===b.hp&&a.temp===b.temp&&a.init===b.init&&a.reaction===b.reaction&&a.concentration===b.concentration&&a.status===b.status&&JSON.stringify(a.conds||[])===JSON.stringify(b.conds||[]);}
@@ -1353,9 +1375,13 @@ function pmQueueWrite(mutate){
 function playerPushEdits(){
   const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
   const suggest=playerEditMode()==="suggest",changes={},now=Date.now();
-  ctx.e.combat.order.forEach(it=>{if(!playerCanEdit(it))return;const cur=instEditFields(it);
-    if(sameEdit(_pmBaseline[it.id],cur))return; // unchanged from the DM's confirmed state
-    changes[it.id]=Object.assign({},cur,{ts:now,by:it.name,suggest});_pmPending[it.id]={fields:cur,ts:now};});
+  ctx.e.combat.order.forEach(it=>{
+    const pc=playerCanEdit(it),enemy=!pc&&playerEnemyCondsEditable(it);
+    if(!pc&&!enemy)return;
+    const cur=instEditFields(it);if(sameEdit(_pmBaseline[it.id],cur))return; // unchanged from the DM's state
+    // PCs push the full field set; enemies push ONLY their conditions (so DM-owned HP/init aren't touched).
+    changes[it.id]=pc?Object.assign({},cur,{ts:now,by:it.name,suggest}):{conds:cur.conds,ts:now,by:it.name,suggest};
+    _pmPending[it.id]={fields:cur,ts:now};});
   if(!Object.keys(changes).length)return;
   pmQueueWrite(rec=>{rec.edits=rec.edits||{};Object.keys(changes).forEach(id=>rec.edits[id]=changes[id]);});
 }
