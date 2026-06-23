@@ -5,6 +5,9 @@
 
 "use strict";
 let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+// Player mode (B204): index.html?share=<bin> boots a locked-down, read-only-then-editable view of a shared
+// combat — reusing the real tracker. PLAYER_MODE gates persistence/DM-only paths so the DM app is untouched.
+let PLAYER_MODE=false,PLAYER_BIN=null;
 // ── User settings (Batch 52) ─ persisted on-device only (mf_settings). Feature toggles gate the
 // statblock colour-coding (B53) and click-to-roll dice (B54); defaults seed new adventures/combatants.
 const SETTINGS_KEY="mf_settings";
@@ -225,7 +228,7 @@ let _saveTimer=null,_pend={lib:false,adv:false,roster:false};
 function saveLib(){_pend.lib=true;_schedule();}
 function saveAdv(){_pend.adv=true;_schedule();}
 function saveRoster(){_pend.roster=true;_schedule();}
-function _schedule(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);}
+function _schedule(){if(PLAYER_MODE)return;clearTimeout(_saveTimer);_saveTimer=setTimeout(_flush,800);} // player mode never writes to the DM's cloud (B204)
 async function _flush(){
   // local mirror first — this write cannot fail to a network, so work is never lost
   cacheSet("library:monsters",state.lib);

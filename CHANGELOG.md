@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 204 — In-app player mode, stage 1 (locked-down read-only shared tracker)
+- **First stage of the parity rework** (the player view becomes the *real* tracker, not the standalone
+  page). `index.html?share=<bin>` boots a new **player mode**: init skips loading the DM's library/adventures
+  entirely, fetches the shared bin, hydrates a one-encounter synthetic `state`, and renders the actual combat
+  view. `PLAYER_MODE`/`PLAYER_BIN` globals (core.js) gate persistence — `_schedule` (all saves) no-ops in
+  player mode, so the DM app is provably untouched.
+- **Richer share payload.** `buildCombatShareSnapshot` now also emits `snap.combat` = full PC instances
+  (minus the DM note) + obscured enemy instances (`playerSafeInstance`: faction label + health band, no
+  statblock id / HP numbers / note). Events dropped. The old sanitized `order` stays for the current
+  player.html until it's retired in a later stage.
+- **Shell lockdown + read-only.** `body.player-mode` hides the rail/nav, settings, rule-finder, and every
+  combat editing affordance (load/share/tools/roll, the turn FAB, add-combatant, row menus, add-effect,
+  reaction/concentration, init/HP controls); the active panel is hidden and the grid goes single-column.
+  Enemies render a health band (`ci-band`) in place of HP via a `hpCellHTML` player-mode branch. Verified in
+  preview: real rows, PCs full (HP + conditions), enemies obscured (Bloodied/Healthy), no DM chrome, boots
+  with zero console errors. (Stages 2–6 next: expanded sheets, PC editing parity, preview + rolling, the two
+  enemy toggles, and the player.html redirect.)
+
 ## Batch 203 — Players can edit / suggest from the shared initiative
 - **Three DM-selectable editing modes** (picker in the share dialog, both states): **Suggest** (player edits
   queue as pending suggestions the DM approves/dismisses), **Own PC** (a player claims their character by

@@ -347,6 +347,10 @@ function wrapStepper(input,step,min){
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);
   ABILS.forEach(a=>wrapStepper($("#ab_"+a),1,1));
+  // Player mode (B204): index.html?share=<bin> boots a locked-down, shared read-only combat instead of the
+  // DM app — skip loading the DM's library/adventures entirely.
+  {const shareBin=new URLSearchParams(location.search).get("share");
+   if(shareBin){await initPlayerMode(shareBin);hideBootLoader();return;}}
   await loadRefLibs();buildCondDatalist();buildSpellDatalist();
   await loadAll();
   if(typeof maybeApplySeed==="function")maybeApplySeed(); // dev-only local sandbox data (seed.js)

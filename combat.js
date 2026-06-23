@@ -517,6 +517,10 @@ function resetCombat(){const ctx=combatOf();if(!ctx)return;const a=ctx.a,e=ctx.e
 // Compact HP control (B124): a bold current/max number with a thin health-coloured underbar (the "H6"
 // design). The whole thing is a button that opens the HP-management popover (damage/heal, temp, current).
 function hpCellHTML(it){
+  // Player mode: enemies show a coarse health band instead of HP numbers (B204).
+  if(PLAYER_MODE&&it._enemy){if(!it.band)return `<span class="ci-noh"></span>`;
+    const B={healthy:["var(--ok)","Healthy"],hurt:["var(--warn)","Hurt"],bloodied:["var(--bad)","Bloodied"],critical:["var(--bad)","Critical"],down:["var(--dim)","Down"]};
+    const b=B[it.band]||B.hurt;return `<span class="ci-band"><span class="ci-band-pip" style="background:${b[0]}"></span>${b[1]}</span>`;}
   if(!hpTracked(it))return `<span class="ci-noh"></span>`;
   const max=it.hpMax,cur=it.hpCur,tmp=it.hpTemp||0,ratio=max?cur/max:0;
   const col=ratio>.5?"var(--ok)":ratio>.25?"var(--warn)":"var(--bad)";
@@ -1072,7 +1076,21 @@ function buildCombatShareSnapshot(cb){
   });
   const snap={v:1,round:cb.round,turn,updated:Date.now(),order:list};
   if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.wkey=playerEditKey();}
+  // Richer payload for the in-app player mode (B204): the real tracker renders from this. Full PC instances
+  // (minus the DM note) + obscured enemy instances (faction label + band, no statblock/HP). Events dropped.
+  const porder=[];let pturn=0;
+  cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it));});
+  snap.combat={round:cb.round,turnIndex:pturn,order:porder};
   return snap;
+}
+// One combat instance, sanitized for the shared payload. PCs keep their fields (the DM note is dropped);
+// enemies are obscured to a faction label + health band with no statblock id, HP numbers, or note.
+function playerSafeInstance(it){
+  const conds=(it.conditions||[]).map(c=>{const o={name:c.name};if(c.rounds)o.rounds=c.rounds;if(c.endWhen)o.endWhen=c.endWhen;if(c.endWho)o.endWho=c.endWho;return o;});
+  const base={id:it.id,kind:it.kind,faction:it.faction,init:it.init,initMod:it.initMod||0,initRolled:it.initRolled!==false,initManual:!!it.initManual,dex:it.dex||10,status:it.status||"active",groupId:it.groupId,conditions:conds,reaction:it.reaction!==false};
+  if(it.concentration)base.concentration=true;
+  if(it.kind==="pc")return Object.assign(base,{name:it.name,ac:it.ac,hpMax:it.hpMax,hpCur:it.hpCur,hpTemp:it.hpTemp||0,srcId:it.srcId,srcEntry:it.srcEntry,resources:it.resources||[]},it.deathSaves?{deathSaves:it.deathSaves}:{});
+  return Object.assign(base,{name:it.faction||"Enemy",ac:null,hpMax:null,hpCur:null,hpTemp:0,srcId:null,resources:[],_enemy:true,band:hpBand(it)});
 }
 // Debounced re-publish: every combat change re-renders, which calls this; it no-ops when sharing is off.
 let _sharePending=null,_shareBusy=false;
@@ -1236,6 +1254,34 @@ function openCombatShareDialog(){
     $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped — players disconnected.");});
   };
   draw();
+}
+// ── In-app player mode (B204, stage 1) ───────────────────────────────────────
+// index.html?share=<bin> boots here instead of the normal DM init: fetch the shared bin, hydrate a synthetic
+// combat into `state`, lock the shell to a read-only combat view, and poll for updates. PLAYER_MODE gates
+// every persistence/DM path elsewhere so the real app is untouched.
+async function initPlayerMode(bin){
+  PLAYER_MODE=true;PLAYER_BIN=bin;
+  document.body.classList.add("player-mode");
+  const rec=await jbinReadBin(bin);
+  if(!rec){playerModeMessage("Can’t reach the shared fight","Check your connection and reload.");return;}
+  if(!rec.combat){playerModeMessage("Sharing ended","Your DM stopped sharing this fight.");return;}
+  hydratePlayerCombat(rec);switchView("combat");
+  const refresh=async()=>{const r=await jbinReadBin(bin);if(r&&r.combat){hydratePlayerCombat(r);if(_curView==="combat")renderCombat();}};
+  setInterval(refresh,5000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});
+}
+// Build a one-adventure / one-encounter synthetic state from the shared payload so the real renderer works.
+function hydratePlayerCombat(rec){
+  const c=rec.combat;
+  state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
+    encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
+      combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
+  combatCtx={advId:"share",encId:"enc"};
+}
+function playerModeMessage(title,sub){
+  document.body.classList.add("player-mode");
+  const app=document.getElementById("app");
+  if(app)app.innerHTML=`<div class="pm-msg"><div class="pm-msg-t">${esc(title)}</div><div class="pm-msg-s">${esc(sub||"")}</div></div>`;
 }
 function renderCombat(){
   const body=$("#combatBody");if(!body)return;

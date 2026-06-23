@@ -1385,6 +1385,24 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .sug-desc{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug-acts{display:flex;gap:6px;flex:none}
 .ct-sug-badge{position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;line-height:15px;text-align:center}
+/* ── In-app player mode (B204) — locked-down read-only shell ─────────────────── */
+body.player-mode .app{grid-template-columns:1fr}
+body.player-mode .rail,body.player-mode .rail-resizer,
+body.player-mode #navToggle,body.player-mode #settingsBtn,body.player-mode #ruleFinderBtn,
+body.player-mode .ct-loadbtn,body.player-mode .ct-diff,
+body.player-mode #combatShare,body.player-mode #combatTools,body.player-mode .ct-d20,
+body.player-mode .combat-fab-turn,body.player-mode .cbt-add,
+body.player-mode .ci-menu,body.player-mode .ci-addcond,
+body.player-mode .ci-react-chip,body.player-mode .ci-conc-chip,
+body.player-mode .combat-active,body.player-mode .combat-resizer{display:none!important}
+body.player-mode .combat-grid{grid-template-columns:1fr!important}
+body.player-mode .ci-init-in{pointer-events:none;background:none;border:none;padding-left:0}
+body.player-mode .ci-hpbtn,body.player-mode .cbt-row{pointer-events:none;cursor:default}
+.ci-band{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);font-weight:600;white-space:nowrap}
+.ci-band-pip{width:9px;height:9px;border-radius:50%;flex:none}
+.pm-msg{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px}
+.pm-msg-t{font-size:18px;font-weight:700;color:var(--txt)}
+.pm-msg-s{font-size:13px;color:var(--dim)}
 .ct-d20{flex:none;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;background:none;color:var(--dim);border-radius:6px;cursor:pointer;padding:0 9px;font-size:12px;font-weight:500;white-space:nowrap}
 .ct-d20:hover{background:var(--panel2);color:var(--accent)}
 .ct-d20 svg{width:17px;height:17px;flex:none}
