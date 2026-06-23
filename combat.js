@@ -954,12 +954,14 @@ function combatRoundBarHTML(cb){
   // "on" = the view differs from the default (group-by-status, sort-by-init, no filters), so the dot only
   // flags a deliberately-changed view — not the default grouping itself.
   const active=(v.group!=="status"||v.sort!=="init"||(v.filter.status||[]).length||(v.filter.faction||[]).length)?" on":"";
-  const canRoll=!autoRollOn(); // auto-roll off: a manual d20 to roll (or re-roll) initiative is always offered
+  // The d20 roll/re-roll button is always offered now — rollInitNow works in every init mode (it rolls fresh
+  // dice with the digit-flow animation whether combatants are still unrolled averages or already rolled).
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
     ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
-    ${canRoll?`<button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}<span class="ct-d20-lbl">Roll initiative</span></button>`:""}
+    <button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}<span class="ct-d20-lbl">Roll initiative</span></button>
+    <button class="ct-toolsbtn ct-sharebtn${combatShareOn()?" on":""}" id="combatShare" title="${combatShareOn()?"Sharing initiative with players — manage":"Share initiative with players"}" aria-label="Share initiative with players">${SHARE_ICON}${_shareSuggest.size?`<span class="ct-sug-badge">${_shareSuggest.size}</span>`:""}</button>
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
@@ -1026,6 +1028,215 @@ function bindCombatResizer(){
   rz.addEventListener("pointerup",end);rz.addEventListener("pointercancel",end);
   rz.addEventListener("dblclick",()=>{fg.style.removeProperty("--caw");fg.style.removeProperty("--cah");try{localStorage.removeItem("mf_caw");localStorage.removeItem("mf_cah");}catch(_){}});
 }
+// ── Share initiative with players (B202) ─────────────────────────────────────
+// The DM publishes a sanitized snapshot of the live order to a PUBLIC JSONBin bin; players open player.html
+// on their phones (link/QR) and it polls the bin every few seconds. Players see the initiative order, whose
+// turn it is, and the round — with PCs shown in full (name + HP + conditions) but monsters obscured (a
+// generic faction label + a coarse health band, no numbers or real names) and DM-only events hidden.
+// FA-free "share-nodes" + "copy" glyphs for the round-bar button and dialog.
+const SHARE_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.8-.7 11.9 0 53 43 96 96 96s96-43 96-96-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.8 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg>';
+const COPY_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M208 0L332.1 0c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9L448 336c0 26.5-21.5 48-48 48l-192 0c-26.5 0-48-21.5-48-48l0-288c0-26.5 21.5-48 48-48zM48 128l80 0 0 64-64 0 0 256 192 0 0-32 64 0 0 48c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 176c0-26.5 21.5-48 48-48z"/></svg>';
+// Per-encounter share state in localStorage (per device, off the cloud-synced adventure data):
+//   mf_share:<encId>     = read-snapshot bin id (presence == sharing is on; stopping deletes the bin)
+//   mf_sharewb:<encId>   = player write-back bin id (present only while an edit mode is enabled)
+//   mf_sharemode:<encId> = player edit mode: off | suggest | own | all (persists between shares)
+function combatShareKey(){const ctx=loadedCtx();return ctx?"mf_share:"+ctx.e.id:null;}
+function combatShareId(){const k=combatShareKey();return k?localStorage.getItem(k):null;}
+function combatShareOn(){return !!combatShareId();}
+function combatShareWbId(){const ctx=loadedCtx();return ctx?localStorage.getItem("mf_sharewb:"+ctx.e.id):null;}
+function combatShareMode(){const ctx=loadedCtx();return (ctx&&localStorage.getItem("mf_sharemode:"+ctx.e.id))||"off";}
+function playerEditKey(){return ((state.settings.combat&&state.settings.combat.playerEditKey)||"").trim();}
+function combatShareURL(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"player.html?b="+encodeURIComponent(id);}
+// Coarse health band for an obscured (monster) row — no numbers leak to players.
+function hpBand(it){if(it.hpMax==null)return null;if(it.hpCur<=0)return "down";const p=it.hpCur/it.hpMax;
+  return p>=1?"healthy":p>0.5?"hurt":p>0.25?"bloodied":"critical";}
+// Build the sanitized snapshot players receive. Order follows cb.order (the initiative/turn order); events
+// are dropped and `turn` is the current combatant's index WITHIN the filtered list. When an edit mode is
+// live, editable PC rows carry their instance id and the snapshot carries edit/wbin/wkey so phones can write.
+function buildCombatShareSnapshot(cb){
+  const list=[];let turn=-1;
+  const mode=combatShareMode(),editing=mode!=="off"&&!!combatShareWbId()&&!!playerEditKey();
+  cb.order.forEach((it,i)=>{
+    if(it.kind==="event")return; // lair/timing cues — DM-only
+    if(i===cb.turnIndex)turn=list.length;
+    const isPc=it.kind==="pc";
+    const row={n:isPc?(it.name||"Character"):(it.faction||"Enemy"),pc:isPc};
+    if(i===cb.turnIndex)row.cur=true;
+    const conds=(it.conditions||[]).map(c=>c.name).filter(Boolean);
+    if(conds.length)row.c=conds;
+    if(isPc){if(hpTracked(it))row.hp={c:it.hpCur,m:it.hpMax,t:it.hpTemp||0};if(isDown(it))row.down=true;
+      if(it.status==="dead")row.dead=true;
+      if(editing&&hpTracked(it))row.id=it.id;} // editable PCs carry their instance id for the write-back
+    else{const b=hpBand(it);if(b)row.band=b;}
+    list.push(row);
+  });
+  const snap={v:1,round:cb.round,turn,updated:Date.now(),order:list};
+  if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.wkey=playerEditKey();}
+  return snap;
+}
+// Debounced re-publish: every combat change re-renders, which calls this; it no-ops when sharing is off.
+let _sharePending=null,_shareBusy=false;
+function publishCombatShareSoon(){if(!combatShareOn())return;clearTimeout(_sharePending);_sharePending=setTimeout(publishCombatShareNow,800);}
+async function publishCombatShareNow(){
+  if(_shareBusy)return;const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const id=localStorage.getItem("mf_share:"+ctx.e.id);if(!id)return;
+  _shareBusy=true;
+  try{await jbinSetPublic(id,buildCombatShareSnapshot(ctx.e.combat));}
+  finally{_shareBusy=false;}
+}
+async function startCombatShare(){
+  const ctx=loadedCtx();if(!ctx||!ctx.e.combat){toast("Load an encounter first.");return null;}
+  const encId=ctx.e.id;
+  // An edit mode selected (and a key present) → create the write-back bin FIRST so the snapshot can carry it.
+  if(combatShareMode()!=="off"&&playerEditKey()&&!localStorage.getItem("mf_sharewb:"+encId)){
+    const wb=await jbinSetPublic(null,{v:1,edits:{}});if(wb)localStorage.setItem("mf_sharewb:"+encId,wb);
+  }
+  const id=await jbinSetPublic(null,buildCombatShareSnapshot(ctx.e.combat));
+  if(id){localStorage.setItem("mf_share:"+encId,id);startSharePoll();return id;}
+  toast("Couldn't start sharing — check your connection.");return null;
+}
+async function stopCombatShare(){
+  const ctx=loadedCtx();if(!ctx)return;const encId=ctx.e.id;
+  stopSharePoll();_shareSuggest.clear();_shareApplied={};
+  const rid=localStorage.getItem("mf_share:"+encId),wid=localStorage.getItem("mf_sharewb:"+encId);
+  localStorage.removeItem("mf_share:"+encId);localStorage.removeItem("mf_sharewb:"+encId);
+  if(rid)await jbinDeletePublic(rid);if(wid)await jbinDeletePublic(wid);
+}
+// Switch the player-edit mode. Stored regardless; if a share is already live, it spins up / tears down the
+// write-back bin + poller and republishes so phones pick up the new mode immediately.
+async function setShareEditMode(mode){
+  const ctx=loadedCtx();if(!ctx)return;const encId=ctx.e.id;
+  localStorage.setItem("mf_sharemode:"+encId,mode);
+  if(!combatShareOn())return; // not live yet — just remember it for when sharing starts
+  if(mode==="off"){
+    stopSharePoll();_shareSuggest.clear();
+    const wid=localStorage.getItem("mf_sharewb:"+encId);localStorage.removeItem("mf_sharewb:"+encId);if(wid)await jbinDeletePublic(wid);
+  }else if(playerEditKey()){
+    if(!localStorage.getItem("mf_sharewb:"+encId)){const wb=await jbinSetPublic(null,{v:1,edits:{}});if(wb)localStorage.setItem("mf_sharewb:"+encId,wb);}
+    if(mode!=="suggest")_shareSuggest.clear();
+    startSharePoll();
+  }
+  await publishCombatShareNow();
+}
+// ── Player write-back poller + apply (B203) ──────────────────────────────────
+// Polls the write-back bin a few times a second-ish; live modes apply each PC edit to its instance, suggest
+// mode queues it for DM approval. `_shareApplied` tracks the last-seen ts per PC id so nothing reapplies.
+let _sharePoll=null,_sharePollBusy=false,_shareApplied={};
+const _shareSuggest=new Map(); // pcId → {id,name,by,edit,ts} pending DM approval (suggest mode)
+function startSharePoll(){if(_sharePoll)return;_sharePoll=setInterval(pollShareEdits,3000);pollShareEdits();}
+function stopSharePoll(){if(_sharePoll){clearInterval(_sharePoll);_sharePoll=null;}}
+async function pollShareEdits(){
+  if(_sharePollBusy)return;const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const mode=combatShareMode(),wid=combatShareWbId();if(mode==="off"||!wid){stopSharePoll();return;}
+  _sharePollBusy=true;
+  try{
+    const rec=await jbinReadBin(wid);if(!rec||!rec.edits)return;
+    const cb=ctx.e.combat;let applied=false,queued=false;
+    Object.keys(rec.edits).forEach(id=>{
+      const e=rec.edits[id];if(!e||!e.ts)return;
+      if(_shareApplied[id]&&_shareApplied[id]>=e.ts)return; // already handled this edit
+      const it=cb.order.find(o=>o.id===id);if(!it||it.kind!=="pc")return;
+      _shareApplied[id]=e.ts;
+      if(mode==="suggest"){_shareSuggest.set(id,{id,name:it.name,by:e.by||"",edit:e,ts:e.ts});queued=true;}
+      else{applyPlayerEdit(it,e);applied=true;}
+    });
+    if(applied){saveAdv();renderCombat();}
+    else if(queued)renderCombat(); // refresh the round-bar suggestion badge
+  }finally{_sharePollBusy=false;}
+}
+// Apply one player edit to a combat instance: HP/temp clamp to the instance's max; conditions are reconciled
+// by name so DM-set durations on kept conditions survive (only the player's removed ones drop).
+function applyPlayerEdit(it,e){
+  if(it.hpMax!=null){
+    if(e.hp!=null&&!isNaN(Number(e.hp)))it.hpCur=clamp(Number(e.hp),0,it.hpMax);
+    if(e.temp!=null&&!isNaN(Number(e.temp)))it.hpTemp=Math.max(0,Number(e.temp));
+  }
+  if(Array.isArray(e.conds)){const cur=it.conditions||[];it.conditions=e.conds.map(n=>cur.find(c=>c.name===n)||{name:String(n)});}
+  applyDownState(it);
+}
+// Approve / dismiss a pending suggestion, then strip it from the write-back bin so it isn't re-surfaced.
+async function resolveSuggestion(id,accept){
+  const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
+  const s=_shareSuggest.get(id);_shareSuggest.delete(id);
+  if(accept&&s){const it=ctx.e.combat.order.find(o=>o.id===id);if(it){applyPlayerEdit(it,s.edit);saveAdv();}}
+  const wid=combatShareWbId();
+  if(wid){const rec=await jbinReadBin(wid);if(rec&&rec.edits&&rec.edits[id]){delete rec.edits[id];await jbinSetPublic(wid,rec);}}
+  delete _shareApplied[id];renderCombat();
+}
+// Compact human description of a pending suggestion for the inbox row.
+function suggestDesc(s){const e=s.edit,parts=[];
+  if(e.hp!=null)parts.push("HP → "+e.hp);
+  if(e.temp!=null)parts.push("temp "+e.temp);
+  if(Array.isArray(e.conds))parts.push("conditions: "+(e.conds.length?e.conds.join(", "):"none"));
+  return parts.join(" · ")||"edit";}
+// The player-editing picker (segmented Off/Suggest/Own/All) — shown in both share-dialog states; the modes
+// are disabled with a setup hint until a player-edit key is set in Settings.
+function shareEditPickerHTML(){
+  const hasKey=!!playerEditKey(),mode=combatShareMode();
+  const opts=[["off","Off"],["suggest","Suggest"],["own","Own PC"],["all","All PCs"]];
+  const seg=opts.map(([v,l])=>`<button type="button" class="seg-btn${mode===v?" on":""}" data-emode="${v}"${(hasKey||v==="off")?"":" disabled"}>${l}</button>`).join("");
+  const hint=!hasKey?`Add a <b>player edit key</b> in Settings → Combat to let players edit.`
+    :mode==="off"?`Players can only watch — read-only.`
+    :mode==="suggest"?`Players propose changes; you approve each before it applies.`
+    :mode==="own"?`Players claim their character by name and edit only its HP &amp; conditions, live.`
+    :`Any player can edit any character's HP &amp; conditions, live.`;
+  return `<div class="share-edit">
+    <div class="share-edit-h">Player editing</div>
+    <div class="seg" role="group" aria-label="Player editing mode">${seg}</div>
+    <p class="share-edit-hint">${hint}</p>
+  </div>`;
+}
+function shareSuggestHTML(){
+  if(combatShareMode()!=="suggest"||!_shareSuggest.size)return "";
+  const rows=[..._shareSuggest.values()].map(s=>`<div class="sug-row">
+    <div class="sug-info"><span class="sug-who">${esc(s.name)}${s.by&&s.by!==s.name?` <span class="sug-by">(${esc(s.by)})</span>`:""}</span><span class="sug-desc">${esc(suggestDesc(s))}</span></div>
+    <div class="sug-acts"><button class="btn ghost sm" data-sugno="${esc(s.id)}" style="width:auto">Dismiss</button><button class="btn primary sm" data-sugyes="${esc(s.id)}" style="width:auto">Apply</button></div>
+  </div>`).join("");
+  return `<div class="share-suggests"><div class="share-edit-h">Pending suggestions</div>${rows}</div>`;
+}
+function bindShareEditControls(draw){
+  document.querySelectorAll("[data-emode]").forEach(b=>b.addEventListener("click",async()=>{if(b.disabled||b.classList.contains("on"))return;b.classList.add("busy");await setShareEditMode(b.dataset.emode);draw();}));
+  document.querySelectorAll("[data-sugyes]").forEach(b=>b.addEventListener("click",async()=>{b.disabled=true;await resolveSuggestion(b.dataset.sugyes,true);draw();}));
+  document.querySelectorAll("[data-sugno]").forEach(b=>b.addEventListener("click",async()=>{b.disabled=true;await resolveSuggestion(b.dataset.sugno,false);draw();}));
+}
+// The share dialog: off → a primer + editing picker + "Start sharing"; on → the link/QR, editing picker,
+// any pending suggestions, and a low-key "Stop sharing".
+function openCombatShareDialog(){
+  const draw=()=>{
+    const id=combatShareId();
+    if(!id){
+      openModalRaw(`<h3>Share initiative</h3>
+        <div class="share-dlg">
+          <p class="share-sub">Players follow the turn order and party HP live on their phones. Monster names and HP stay hidden.</p>
+          ${shareEditPickerHTML()}
+          <div class="mrow"><button class="btn primary sm" id="shareStart" style="width:auto">Start sharing</button></div>
+        </div>`);
+      bindShareEditControls(draw);
+      $("#shareStart").addEventListener("click",async()=>{const b=$("#shareStart");b.disabled=true;b.textContent="Starting…";const nid=await startCombatShare();if(nid){renderCombat();draw();}else{b.disabled=false;b.textContent="Start sharing";}});
+      return;
+    }
+    const url=combatShareURL(id);
+    openModalRaw(`<h3 class="share-h">Sharing is live<span class="share-badge">Live</span></h3>
+      <div class="share-dlg">
+        <p class="share-sub">Players scan or open the link to follow the fight live.</p>
+        <div class="share-qr" id="shareQR"></div>
+        <div class="share-link"><input type="text" id="shareUrl" class="popinput" readonly value="${esc(url)}"><button class="btn ghost sm" id="shareCopy" title="Copy link" style="width:auto">${COPY_ICON}<span>Copy</span></button></div>
+        ${shareEditPickerHTML()}
+        ${shareSuggestHTML()}
+        <button class="share-stop" id="shareStop">Stop sharing</button>
+      </div>`);
+    // Render the QR from the vendored generator (degrades to link-only if it failed to load).
+    const qrEl=$("#shareQR");
+    try{const QR=window.qrcode;if(typeof QR==="function"){const q=QR(0,"M");q.addData(url);q.make();qrEl.innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true});}else qrEl.remove();}catch(e){qrEl.remove();}
+    bindShareEditControls(draw);
+    $("#shareCopy").addEventListener("click",()=>{const inp=$("#shareUrl");inp.select();
+      const done=()=>{const s=$("#shareCopy").querySelector("span");s.textContent="Copied";setTimeout(()=>{s.textContent="Copy";},1500);};
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(inp.value).then(done,()=>{try{document.execCommand("copy");done();}catch(_){}});
+      else{try{document.execCommand("copy");done();}catch(_){}}});
+    $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped — players disconnected.");});
+  };
+  draw();
+}
 function renderCombat(){
   const body=$("#combatBody");if(!body)return;
   const ctx=loadedCtx();
@@ -1071,6 +1282,8 @@ function renderCombat(){
   // (toggling reaction, marking a death save, etc. shouldn't visibly refresh the preview) (B128).
   {const pk=body.querySelector(".ca-peek"),pid=pk?pk.dataset.peek:null;if(pk&&pid!==_caPeekId)pk.classList.add("ca-anim");_caPeekId=pid;}
   bindCombatTracker(body,a,e,cb);
+  publishCombatShareSoon(); // if sharing is on, push the updated snapshot to players (debounced; no-ops otherwise)
+  if(combatShareOn()&&combatShareMode()!=="off"&&combatShareWbId())startSharePoll(); // resume the write-back poller after a reload
 }
 // Wire every combat-tracker event handler onto the freshly-rendered DOM (B198 — extracted from
 // renderCombat; the markup is built by the combat*HTML helpers, this is purely the binding pass).
@@ -1087,6 +1300,7 @@ function bindCombatTracker(body,a,e,cb){
   {const re=$("#combatRoundEdit");if(re)re.addEventListener("click",ev=>{ev.stopPropagation();openRoundEdit(re);});}
   // CT9-fix: group / sort / filter / roll live in the round-bar tools menu; restore-order is its own chip.
   {const tb=$("#combatTools");if(tb)tb.addEventListener("click",ev=>{ev.stopPropagation();openCombatToolsMenu(tb);});}
+  {const sh=$("#combatShare");if(sh)sh.addEventListener("click",ev=>{ev.stopPropagation();openCombatShareDialog();});}
   {const ri=$("#combatRollInit");if(ri)ri.addEventListener("click",rollInitNow);}
   {const ro=$("#combatRestoreOrder");if(ro)ro.addEventListener("click",restoreInitOrder);}
   bindCombatRows($("#combatRows"),combatDragMode(cb),cb);

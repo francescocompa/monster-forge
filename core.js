@@ -15,7 +15,7 @@ const SETTINGS_DEFAULT={
   homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
   notes:{adventure:true,scene:true,encounter:true}, // include a notes field on newly-created items (B65)
   refPopovers:{on:true}, // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
-  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true,downMode:"players"} // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117); who drops to "down"/death-saves at 0 HP vs straight to dead — players|anyone|nobody (B126)
+  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true,downMode:"players",playerEditKey:""} // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117); who drops to "down"/death-saves at 0 HP vs straight to dead — players|anyone|nobody (B126); playerEditKey = limited JSONBin Access Key (Read+Update) that lets shared-initiative players write edits back (B203, on-device only)
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
 function loadSettings(){let got=null;try{got=JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(e){}state.settings=_mergeDefaults(SETTINGS_DEFAULT,got||{});}
@@ -165,6 +165,31 @@ async function jbinSet(k,val){
   return false;
 }
 function isBlankVal(val){return val==null||(Array.isArray(val)?val.length===0:(typeof val==="object"&&Object.keys(val).length===0));}
+
+// ── Public share bins (combat initiative for players — B202) ──────────────────
+// Unlike the private library/adventure bins, these are created PUBLIC (X-Bin-Private:false) so a player's
+// phone can read them with just the bin id and NO key — the embedded master key never leaves the DM's app.
+// They hold ONLY the sanitized combat snapshot (no monster stats, no other campaign data). Create once via
+// POST (privacy is fixed at creation), then PUT to update content; DELETE kills the share link.
+// Returns the bin id on success (the passed id for an update, a new id for a create), null otherwise.
+async function jbinSetPublic(id,val){
+  // No seed-sandbox guard here (unlike jbinSet): a share bin is a separate, ephemeral, user-initiated public
+  // bin — never the library/adventure data — so it's safe to publish for real even from the local sandbox,
+  // which lets the player link actually work while testing. Stopping the share deletes the bin.
+  const headers={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"false"};
+  if(id){const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers,body:JSON.stringify(val)});return (r&&r.ok)?id:null;}
+  const r=await jbinFetch(`${JBIN_BASE}/b`,{method:"POST",headers,body:JSON.stringify(val)});
+  if(r&&r.ok){try{const d=await r.json();return d.metadata.id;}catch(e){return null;}}
+  return null;
+}
+async function jbinDeletePublic(id){if(!id)return true;
+  const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"DELETE",headers:{"X-Master-Key":JBIN_KEY}});
+  return !!(r&&(r.ok||r.status===404));}
+// Read a public bin's record by raw id, no auth + cache-busted — used by the DM app to poll the player
+// write-back bin (B203). Returns the record, or null if unreachable/missing.
+async function jbinReadBin(id){if(!id)return null;
+  const r=await jbinFetch(`${JBIN_BASE}/b/${id}/latest?t=${Date.now()}`,{cache:"no-store"});
+  if(!r||!r.ok)return null;try{const d=await r.json();return d.record;}catch(e){return null;}}
 
 async function loadAll(){
   // 1. instant hydrate from the local mirror so the UI is never empty while the cloud loads

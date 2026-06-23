@@ -4,6 +4,61 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 203 — Players can edit / suggest from the shared initiative
+- **Three DM-selectable editing modes** (picker in the share dialog, both states): **Suggest** (player edits
+  queue as pending suggestions the DM approves/dismisses), **Own PC** (a player claims their character by
+  name and edits only its HP & conditions, live), **All PCs** (any player edits any PC, live). Off = today's
+  read-only. The modes are disabled until a key is set, with a setup hint.
+- **Write-back over a dedicated limited key.** A new **Settings → Combat → "Player edit key"** field holds a
+  JSONBin **Access Key** (Read+Update only) the user creates once. Starting a share with editing on creates a
+  separate public **write-back bin**; the snapshot carries the mode, that bin id, the access key, and each
+  editable PC's instance id. Phones write their edits to the write-back bin via `X-Access-Key` (read-modify-
+  write); the embedded key can only edit share data — verified it **can Update but 401s on Delete**, and it
+  never reaches the library/adventure bins. Key is on-device only (`mf_settings`), exposed only while editing
+  is enabled.
+- **DM poller + apply.** `pollShareEdits` (every ~3s while a share with editing is live, resumed on reload)
+  reads the write-back bin: live modes apply HP/temp/conditions to the matching instance (conditions are
+  reconciled by name so DM-set durations on kept effects survive); suggest mode queues each as a pending
+  suggestion with a count badge on the round-bar Share button and an inbox (Apply / Dismiss) in the dialog.
+  Approving applies it and strips it from the bin. `_shareApplied` ts-guards each PC so nothing reapplies.
+- **`player.html` gains the edit UI** — a claim bar (own mode), per-PC HP steppers + numeric field, a
+  condition chip editor with a common-condition palette, and a Suggest button in suggest mode. Optimistic
+  local overrides hold until the DM's snapshot catches up (15s safety timeout); polls skip re-render while a
+  field is focused so typing isn't clobbered. Monsters stay read-only/obscured throughout.
+- Verified end-to-end in the live preview against real bins: all-live edit applied to the tracker, a
+  suggestion queued → approved → applied → removed, and own-mode claim restricting edits to one PC; test bins
+  deleted afterward (404).
+
+## Batch 202 — Share initiative with players (live phone view)
+- **New combat feature: share the live initiative to players' phones.** A **Share** button in the combat
+  round bar opens a dialog that publishes the fight to a player view — a scannable **QR** + a copy-link, with
+  a green "live" dot on the round-bar button while sharing is on. Players open a read-only page that follows
+  the fight live; **Stop sharing** kills the link.
+- **Sanitized snapshot — players see only what they should.** PCs show full name + HP (current/max/temp) +
+  conditions + down/dead state; **monsters are obscured** (generic faction label + a coarse health band —
+  Healthy/Hurt/Bloodied/Critical/Down — no numbers or real names); DM-only **events are hidden**. The
+  encounter name is omitted (no spoilers). `buildCombatShareSnapshot(cb)` in `combat.js`.
+- **Transport reuses the JSONBin layer, no new infra.** New `jbinSetPublic`/`jbinDeletePublic` in `core.js`
+  create a **public** bin (`X-Bin-Private:false`) so a phone reads it with just the bin id and **no key** —
+  the embedded master key never leaves the DM app. The bin holds only the snapshot. Re-published debounced
+  (~0.8s) from `renderCombat` on every combat change; players poll every 5s. Per-encounter bin id lives in
+  `localStorage` (`mf_share:<encId>`). Unlike `jbinSet`, the public helpers have NO seed-sandbox guard — a
+  share bin is separate/ephemeral/user-initiated, so the link works for real even from the local sandbox.
+- **Dialog matches the design system.** Off → plain title + a short subtitle + a `.btn.primary.sm` "Start
+  sharing". On → "Sharing is live" with an inline pulsing **Live** badge, a one-line subtitle, the QR + a
+  `.btn.ghost.sm` copy, and "Stop sharing" demoted to a low-hierarchy text button (faint → red on hover).
+  Stopping closes the modal and toasts "Sharing stopped — players disconnected."
+- **Round-bar Roll initiative d20 now always shows** (was gated to manual/average-init mode, so it never
+  appeared in the default auto-roll mode — looked like a missing button). `rollInitNow` already rolls fresh
+  dice with the digit-flow animation in every mode, so the gate was removed.
+- **New standalone `player.html`** — a tiny mobile-first read-only page; does NOT load the app scripts.
+  Polls the public bin, highlights whose turn it is, shows the round, and degrades to "Sharing ended" on 404.
+  Themed to match the app (coral accent, cool-dark panels, blue PC names, health-band pips).
+- **New vendored `vendor/qrcode.min.js`** (qrcode-generator 1.4.4, MIT) — self-contained QR, no third-party
+  call at runtime. Loaded once in `index.html`, isolated from the shared-scope app pipeline; the share dialog
+  reads it via `window.qrcode` (degrades to link-only if absent). Verified end-to-end in the live preview
+  (DM dialog + QR, sanitized snapshot, mobile player render, and the 404 "ended" state).
+
 ## Batch 201 — Advisory type-check on parsers.js (npm run typecheck, P3)
 - **`// @ts-check` on `parsers.js`** (the pure 5etools-import layer — where a shape/typo bug actually
   bites) + a new advisory `npm run typecheck`. Dev-only `typescript` devDependency; the shipped site stays

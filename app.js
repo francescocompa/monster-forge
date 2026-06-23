@@ -47,6 +47,8 @@ function renderSettings(){
       ${SW("combat.rollParty","Roll party initiative")}
       ${SW("combat.dexTiebreak","Break initiative ties by DEX")}
       ${SW("combat.partyHP","Track party HP")}
+      <label class="f">Player edit key<input type="password" autocomplete="off" spellcheck="false" data-set="combat.playerEditKey" value="${esc(s.combat.playerEditKey||"")}" placeholder="paste your JSONBin Access Key"></label>
+      <div class="set-note">Optional — only needed if you want players to edit or suggest changes from the shared initiative (the Share button in combat). Create a JSONBin <b>Access Key</b> with <b>Read</b> + <b>Update</b> permission only (no Create/Delete/List), and paste it here. It rides along in the share link so players' phones can write back, but can never delete or reach your library/adventures. Leave blank to keep sharing read-only.</div>
       <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average, and initiative is rolled (1d20 + mod) or taken as a static average (10 + mod) — you can re-roll everyone from the combat toolbar. With grouped initiative on, all copies of one enemy entry share a single roll; turn it off to roll each separately. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters. At 0 HP, "down" combatants roll death saves (tracked on the initiative entry) instead of being marked dead outright — choose whether that applies to players only, anyone, or nobody (monsters are otherwise marked dead).</div>
     </div>
     <div class="set-card">
