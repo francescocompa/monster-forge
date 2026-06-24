@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 231 — roll-log pill/icon hover popover: styled + structured like the log
+- The collapsed-pill / mini-icon **hover popover was unstyled** — its row HTML lived in a bare `.popover`, so the
+  `.roll-log .rl-*` row styles never matched. It now renders inside a `.roll-log` wrapper (`.roll-log rl-poprow`)
+  so it picks up the exact log-row styling, in the standard popover chrome.
+- It now shows the **newest group exactly as the log structures it** (source + label header + each sub-roll with
+  totals, breakdown, type tags, and the ability colour bar) instead of a single bare row. Extracted `rlGroupHTML`
+  (shared by the log body) + new `rlLatestGroup`; `showRollPopover` uses them.
+
 ## Batch 229 — 3D dice: richer crit flourish (sheen + bloom)
 - **Reworked the crit VFX** (the plain glow read flat). Now a **vivid terracotta bloom** snaps in over the crit
   die while a **glossy sheen glint sweeps across its face**, and the die does a **snappier scale-pop** (pulse

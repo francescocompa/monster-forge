@@ -781,8 +781,25 @@ function rlSrcHTML(src){return src?`<button class="rl-src" data-rollsrc="${esc(s
 function rlAbAttr(ab){return ab?` data-abil="${esc(ab)}"`:"";}
 function rlSingleHTML(r){return `<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrcHTML(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
 function rlSubHTML(r){return `<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
-// Hover popover for the collapsed pill / mini icon: the full last-roll row (who rolled + breakdown).
-function showRollPopover(anchor,r){if(!r||typeof showPopover!=="function")return;showPopover(anchor,`<div class="rl-poprow">${rlSingleHTML(r)}</div>`);}
+// One group's HTML, exactly as the log renders it: a single roll → one row; multiple consecutive rolls that
+// share source+label → a header once, then each sub-roll (with a spanning colour bar when the ability matches).
+function rlGroupHTML(g){
+  if(g.items.length===1)return rlSingleHTML(g.items[0]);
+  const ab0=g.items[0].abil,allSame=ab0&&g.items.every(it=>it.abil===ab0);
+  return `<div class="rl-group${allSame?" rl-group-abil":""}"${allSame?rlAbAttr(ab0):""}><div class="rl-ghead">${rlSrcHTML(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(rlSubHTML).join("")}</div>`;
+}
+// The newest group = the most recent roll plus any directly-preceding rolls that share its source+label
+// (same grouping the log uses), so the pill/icon hover previews exactly what the log shows.
+function rlLatestGroup(){
+  if(!rollLog.length)return null;
+  const key0=(rollLog[0].source?rollLog[0].source.name:"~")+"|"+(rollLog[0].label||"");
+  const items=[];
+  for(const r of rollLog){if(((r.source?r.source.name:"~")+"|"+(r.label||""))!==key0)break;items.push(r);}
+  return {items,source:rollLog[0].source,label:rollLog[0].label,abil:rollLog[0].abil};
+}
+// Hover popover for the collapsed pill / mini icon: the full latest group, structured + styled exactly like
+// the log (wrapped in .roll-log so the row styles apply) inside the standard popover chrome.
+function showRollPopover(anchor){if(typeof showPopover!=="function")return;const g=rlLatestGroup();if(!g)return;showPopover(anchor,`<div class="roll-log rl-poprow">${rlGroupHTML(g)}</div>`);}
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
 // ctx = {docked, mini} chooses the form: sidebar section / mini rail icon / floating pill or panel (B224b).
 function rollLogHTML(ctx){
@@ -797,15 +814,10 @@ function rollLogHTML(ctx){
   // with the dice rather than staying pinned).
   // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll. When
   // every roll in the group shares one ability, draw a SINGLE colour bar spanning the whole group (B64).
-  const groupHTML=g=>{
-    if(g.items.length===1)return rlSingleHTML(g.items[0]);
-    const ab0=g.items[0].abil,allSame=ab0&&g.items.every(it=>it.abil===ab0);
-    return `<div class="rl-group${allSame?" rl-group-abil":""}"${allSame?rlAbAttr(ab0):""}><div class="rl-ghead">${rlSrcHTML(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(rlSubHTML).join("")}</div>`;
-  };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
-  const bodyInner=groups.length?groups.map(groupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
+  const bodyInner=groups.length?groups.map(rlGroupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
   const last=ordered.length?rollLog[0]:null;const lastTotal=last?String(last.total):"";const modeCls=rollMode||"flat";
   // Mini rail → a mode-coloured dice icon + the last total; click opens the menu, hover shows the full roll.
   if(ctx&&ctx.mini)return `<button class="rl-icon mode-${modeCls}" id="rlIcon" title="Rolls" aria-label="Rolls"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-icon-n">${esc(lastTotal)}</span></button>`;
@@ -822,7 +834,7 @@ function rollLogHTML(ctx){
 function bindRollLog(el,scrollNew,ctx){
   ctx=ctx||{};
   const last=rollLog[0];
-  const popHover=anchor=>{if(!last)return;anchor.addEventListener("mouseenter",()=>showRollPopover(anchor,last));anchor.addEventListener("mouseleave",()=>{if(typeof closePopover==="function")closePopover();});};
+  const popHover=anchor=>{if(!last)return;anchor.addEventListener("mouseenter",()=>showRollPopover(anchor));anchor.addEventListener("mouseleave",()=>{if(typeof closePopover==="function")closePopover();});};
   // Mini rail → the icon opens the menu; hover shows the full last roll.
   const icon=el.querySelector("#rlIcon");
   if(icon){icon.addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(icon);});popHover(icon);return;}
