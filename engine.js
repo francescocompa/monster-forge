@@ -990,10 +990,14 @@ function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.cli
 // Show the spinning d20 over rollable elements, and anywhere while Alt/Option is held (since that arms
 // the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
 function updateDiceCursor(overRoll){
+  // The pointer-following d20 only makes sense with a real (mouse/trackpad) pointer. On touch, iPad Safari
+  // fires a synthetic mousemove on tap, which would otherwise leave the spinning d20 stuck over the tapped
+  // rollable (there's no "move away" on touch) — so gate the whole cursor on a fine, hovering pointer.
+  let fine=true;try{fine=matchMedia("(hover:hover) and (pointer:fine)").matches;}catch(e){}
   // The 3D held cursor-die (B217) replaces the 2D d20 on hover-over-roll where it engages (desktop, motion on,
   // WebGL ok); keep the 2D cursor as the fallback elsewhere and as the Alt-armed custom-roll indicator.
   const d3dHover=overRoll&&typeof d3dPickupOn==="function"&&d3dPickupOn();
-  if((clickRollOn()&&overRoll&&!d3dHover)||_cmdHeld){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
+  if(fine&&((clickRollOn()&&overRoll&&!d3dHover)||_cmdHeld)){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
   else if(_diceCur)_diceCur.classList.remove("show");
 }
 document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});

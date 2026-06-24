@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 221 — touch: stop the spinning d20 cursor sticking on iPad
+- **Fixed the 2D d20 roll-cursor lingering over a tapped rollable on touch devices.** iPad Safari fires a
+  synthetic `mousemove` on tap, so `updateDiceCursor` showed the pointer-following d20 over the tapped
+  `[data-roll]` — and with no "move away" on touch it stayed stuck. Gated the 2D cursor on a real pointer
+  (`matchMedia("(hover:hover) and (pointer:fine)")`), matching the 3D held-die's existing check. Mouse/
+  trackpad behaviour (and the reduced-motion 2D fallback) is unchanged; touch taps just roll. (engine.js)
+
 ## Batch 220 — animated logo: loading screen + a living sidebar mark
 - **The brand mark is now an animated eye, one mark with three behaviours (CSS-only animations).** Switched
   both the boot loader and the sidebar mark to the outline-free logo, wrapped in nested animation layers
