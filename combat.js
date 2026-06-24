@@ -1176,6 +1176,7 @@ let _sharePoll=null,_sharePollBusy=false,_shareApplied={};
 const _shareSuggest=new Map(); // pcId → {id,name,by,edit,ts} pending DM approval (suggest mode)
 const _shareRollSeen=new Set(); // roll-event ids already folded into the DM roll log (B204 stage 4)
 const _shareCharApplied={}; // srcId → last-applied sheet-edit ts (B204 stage 4b)
+const _shareJoinApplied={}; // instId → ts of a processed player "join the fight" request (B235)
 function startSharePoll(){if(_sharePoll)return;_sharePoll=setInterval(pollShareEdits,3000);pollShareEdits();}
 function stopSharePoll(){if(_sharePoll){clearInterval(_sharePoll);_sharePoll=null;}}
 async function pollShareEdits(){
@@ -1205,13 +1206,23 @@ async function pollShareEdits(){
       if(mode==="suggest"){_shareSuggest.set("char:"+srcId,{id:"char:"+srcId,name:ce.by||"Player",charEdit:ce.char,ts:ce.ts,isChar:true});queued=true;}
       else{applyCharEdit(srcId,ce.char);charApplied=true;}});
     if(charApplied){resyncPcInstances();saveRoster();}
+    // Player "join the fight" requests (B235): create a roster char + a PC combat instance with the player's
+    // chosen id, so the new character appears in the order for everyone (and the player can claim it).
+    let joinNew=false;
+    if(rec.joins)Object.keys(rec.joins).forEach(jid=>{const j=rec.joins[jid];if(!j||!j.ts||!j.instId)return;
+      if(_shareJoinApplied[j.instId])return;_shareJoinApplied[j.instId]=j.ts;
+      if(cb.order.some(o=>o.id===j.instId))return;
+      const srcId=j.srcId||uid();
+      if(!rosterById(srcId)){const c={id:srcId,name:j.name||"Player",notes:"",fields:[{k:"level",v:""},{k:"class",v:[]},{k:"ac",v:""},{k:"hp",v:""}]};state.roster.push(typeof normalizeRosterPC==="function"?normalizeRosterPC(c):c);}
+      cb.order.push(pmNewJoinInstance(j.instId,srcId,j.name));joinNew=true;});
+    if(joinNew){if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveRoster();saveAdv();}
     // Player dice rolls → fold new ones into the DM roll log (B204 stage 4).
     let rollNew=false;
     if(Array.isArray(rec.rolls)){rec.rolls.forEach(ev=>{if(!ev||!ev.id||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
       rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},fromPlayer:true,roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
       if(rollLog.length>60)rollLog.length=60;}
     if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();}
-    if(applied||charApplied||queued)renderCombat();
+    if(applied||charApplied||queued||joinNew)renderCombat(); // renderCombat republishes so the new PC reaches everyone
     // A player's roll folded in → re-render the log and (when dice mirroring is on) republish so the OTHER
     // players' views pick it up too (B234).
     if(rollNew){renderRollLog(true);if(typeof shareOpts==="function"&&shareOpts().showDice)publishCombatShareSoon();}
@@ -1391,6 +1402,7 @@ function hydratePlayerCombat(rec){
   hydratePlayerRoster(rec);
   // Baseline = the DM's confirmed state; then re-apply any unconfirmed local edits on top (optimistic).
   const order=state.adv[0].encounters[0].combat.order;
+  pmInjectJoin(order); // show ourselves optimistically while a join request is pending (B235)
   _pmBaseline={};order.forEach(it=>{if(it.kind!=="event")_pmBaseline[it.id]=instEditFields(it);}); // PCs + enemies (cond edits)
   pmReconcile(order);
   pmIngestRolls(rec); // dice mirror: surface the DM's/other players' rolls (B234)
@@ -1503,21 +1515,86 @@ function playerPushRoll(ev){
   const evt={id:ev.id||uid(),by:(combatRollSrc&&combatRollSrc.name)||"Player",label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",abil:ev.abil||null,dmgType:ev.dmgType||null,crit:!!ev.crit,ts:Date.now()};
   pmQueueWrite(rec=>{rec.rolls=rec.rolls||[];rec.rolls.push(evt);if(rec.rolls.length>20)rec.rolls=rec.rolls.slice(-20);});
 }
-// A thin banner above the order: the "playing as" picker (own mode) or an editing-scope note (all/suggest).
+// Player chrome (B235): when editing is on the player must pick (or create) their character via a gating
+// modal before the page is usable; once claimed, a slim "Playing as <name> · Change" bar sits above the order.
+function playerClaimedInst(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return null;const id=playerClaimId();return id?ctx.e.combat.order.find(o=>o.id===id&&o.kind==="pc"):null;}
+function playerGateNeeded(){return PLAYER_MODE&&playerEditMode()!=="off"&&!playerClaimId();}
+function pmNamedPCs(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return [];
+  return ctx.e.combat.order.filter(o=>o.kind==="pc"&&o.name&&o.name.trim()&&o.name!=="Character"&&o.name!=="PC");}
 function playerModeChrome(body){
   const old=body.querySelector(".pm-bar");if(old)old.remove();
-  const ctx=loadedCtx();
-  // Editing on → a "Playing as" picker so the player claims their character. No banner otherwise (B213).
-  if(playerEditMode()!=="off"&&ctx&&ctx.e.combat){
-    const pcs=ctx.e.combat.order.filter(o=>o.kind==="pc"),claim=playerClaimId();
-    const bar=document.createElement("div");bar.className="pm-bar";
-    bar.innerHTML=`<span class="pm-bar-l">Playing as</span><select class="pm-claim"><option value="">— choose your character —</option>${pcs.map(p=>`<option value="${esc(p.id)}"${p.id===claim?" selected":""}>${esc(p.name)}</option>`).join("")}</select>`;
-    body.insertBefore(bar,body.firstChild);
-    bar.querySelector(".pm-claim").addEventListener("change",e=>{setPlayerClaim(e.target.value||null);renderCombat();});
-  }
-  // Tapping an editable PC's name opens its character preview (read + roll) — B204 stage 4.
+  if(playerEditMode()==="off"){closePlayerGate();return;} // read-only share: no claim concept
+  if(playerGateNeeded()){if(!document.getElementById("pmGateBg"))openPlayerGate(false);return;} // gate until chosen (don't rebuild mid-type)
+  closePlayerGate();
+  // Claimed: a slim bar showing who you're playing, with a Change action that reopens the gate.
+  const inst=playerClaimedInst();
+  const bar=document.createElement("div");bar.className="pm-bar";
+  bar.innerHTML=`<span class="pm-bar-l">Playing as</span><span class="pm-bar-name">${esc(inst?inst.name:"…")}</span><button class="pm-bar-change" id="pmChange" style="margin-left:auto">Change</button>`;
+  body.insertBefore(bar,body.firstChild);
+  bar.querySelector("#pmChange").addEventListener("click",e=>{e.stopPropagation();openPlayerGate(true);});
+  // Tapping an editable PC's name opens its character sheet (read + roll) — B204 stage 4.
   body.querySelectorAll(".cbt-row.pm-edit .ci-id").forEach(el=>{el.classList.add("pm-tap");
     el.addEventListener("click",e=>{e.stopPropagation();const row=el.closest(".cbt-row");if(row)openPlayerSheet(row.dataset.ci);});});
+}
+// The gating modal: pick a named character, or type a name to JOIN the live fight as a new PC. Not
+// dismissable on the initial gate (no claim yet); dismissable when reopened via "Change" (keeps the claim).
+function openPlayerGate(dismissable){
+  closePlayerGate();
+  const pcs=pmNamedPCs(),hasPCs=pcs.length>0;
+  const list=pcs.map(p=>`<button class="pm-gate-pc" data-claimpc="${esc(p.id)}">${esc(p.name)}${p.id===playerClaimId()?' <span class="pm-gate-cur">current</span>':""}</button>`).join("");
+  const bg=document.createElement("div");bg.className="pm-gate-bg";bg.id="pmGateBg";
+  bg.innerHTML=`<div class="pm-gate">
+    ${dismissable?'<button class="pm-gate-x" id="pmGateX" aria-label="Close">✕</button>':""}
+    <div class="pm-gate-h">Choose your character</div>
+    <div class="pm-gate-sub">${hasPCs?"Pick your character to join the fight.":"No characters yet — enter your character's name to join."}</div>
+    ${hasPCs?`<div class="pm-gate-list">${list}</div>`:""}
+    <div class="pm-gate-new">
+      ${hasPCs?`<div class="pm-gate-or">Not listed? Add your character</div>`:""}
+      <div class="pm-gate-newrow"><input type="text" class="pm-gate-in" id="pmGateName" placeholder="Character name" autocomplete="off" maxlength="40"><button class="btn primary sm" id="pmGateJoin" style="width:auto">Join</button></div>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.querySelectorAll("[data-claimpc]").forEach(b=>b.addEventListener("click",()=>{setPlayerClaim(b.dataset.claimpc);closePlayerGate();renderCombat();}));
+  const inp=bg.querySelector("#pmGateName"),go=bg.querySelector("#pmGateJoin");
+  const submit=()=>{const n=(inp.value||"").trim();if(n)playerJoinAs(n);};
+  go.addEventListener("click",submit);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();submit();}});
+  if(dismissable){const x=bg.querySelector("#pmGateX");if(x)x.addEventListener("click",closePlayerGate);bg.addEventListener("click",e=>{if(e.target===bg)closePlayerGate();});}
+  if(!hasPCs)setTimeout(()=>{try{inp.focus();}catch(e){}},50);
+}
+function closePlayerGate(){const b=document.getElementById("pmGateBg");if(b)b.remove();}
+// A minimal PC combat instance for a player-created join (HP/AC unknown until they fill their sheet).
+function pmNewJoinInstance(instId,srcId,name){
+  return {id:instId,kind:"pc",srcId:srcId,srcEntry:"pc:"+srcId,name:name||"PC",init:10,initMod:0,initRolled:false,initManual:false,dex:0,
+    ac:null,hpMax:null,hpCur:null,hpTemp:0,status:"active",conditions:[],comment:"",faction:"PC",groupId:"pc:"+srcId,resources:[]};
+}
+// Player types a name → claim a fresh id and ask the DM (write-back `joins`) to create the real combatant.
+// We optimistically show ourselves (pmInjectJoin) until the DM's snapshot carries the instance.
+let _pmJoin=null;
+function playerJoinAs(name){
+  const instId=uid(),srcId=uid();
+  _pmJoin={instId,srcId,name,ts:Date.now()};
+  setPlayerClaim(instId);
+  pmQueueWrite(rec=>{rec.joins=rec.joins||{};rec.joins[instId]={instId,srcId,name,ts:Date.now(),by:name};});
+  closePlayerGate();
+  if(typeof toast==="function")toast("Joining the fight…");
+  // Immediate optimistic insert so we see ourselves right away (a direct push — NOT pmInjectJoin, which is
+  // for the fresh per-poll order and uses presence to detect the DM's confirmation).
+  const ctx=loadedCtx();
+  if(ctx&&ctx.e.combat&&!ctx.e.combat.order.some(o=>o.id===instId)){
+    ctx.e.combat.order.push(pmNewJoinInstance(instId,srcId,name));
+    if(!rosterById(srcId))state.roster.push({id:srcId,name:name,notes:"",fields:[]});
+  }
+  renderCombat();
+}
+// Until the DM creates our requested instance, inject a placeholder so we see ourselves in the order. Cleared
+// once the snapshot carries the instance (DM confirmed) or after a minute (DM never picked it up).
+function pmInjectJoin(order){
+  if(!_pmJoin)return;
+  if(order.some(o=>o.id===_pmJoin.instId)){_pmJoin=null;return;}
+  if(Date.now()-_pmJoin.ts>60000){_pmJoin=null;return;}
+  order.push(pmNewJoinInstance(_pmJoin.instId,_pmJoin.srcId,_pmJoin.name));
+  if(!rosterById(_pmJoin.srcId))state.roster.push({id:_pmJoin.srcId,name:_pmJoin.name,notes:"",fields:[]});
 }
 // Character preview overlay (B204 stage 4): reuses the real active-panel content (sheet + rollable chips).
 // Edit affordances are suppressed (the row is the edit surface); rolling runs locally + mirrors to the DM.

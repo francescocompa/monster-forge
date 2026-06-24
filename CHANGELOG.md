@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 235 — initiative sharing: character-gate modal (pick or create-to-join)
+- **Replaced the "Playing as" picker with a gating modal + dark overlay.** In player mode with editing on, the
+  page is gated until you choose your character: pick a named PC, or type a name to **join the live fight as a
+  new PC**. A join writes to the share's write-back bin (`rec.joins`); the DM creates a roster character + a
+  combat instance with the player's chosen id, so the new character appears in the order for everyone; the
+  player sees themselves optimistically until the DM confirms (`pmInjectJoin`). Multiple devices may pick the
+  same character (claims are per-device, non-exclusive).
+- Once chosen, a slim "Playing as &lt;name&gt; · Change" bar replaces the picker; Change reopens the gate
+  (dismissable, marks your current pick). The initial gate has no dismiss.
+
 ## Batch 234 — initiative sharing: "show dice to players" mirror + "You" badge
 - **New share toggle "Show dice to players".** When on, the DM publishes the shared roll log in the snapshot;
   players see the roll log, the 3D dice animate when anyone rolls (their own immediately, the DM's/others' on
