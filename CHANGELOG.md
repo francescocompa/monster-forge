@@ -12,6 +12,9 @@ Newest batches first.
   totals, breakdown, type tags, and the ability colour bar) instead of a single bare row. Extracted `rlGroupHTML`
   (shared by the log body) + new `rlLatestGroup`; `showRollPopover` uses them.
 
+## Batch 230 — 3D dice crit sheen tuning
+- Made the crit sheen sweep **faster** (520→420ms) and **softer** (gradient opacity .92→.6) per feedback.
+
 ## Batch 229 — 3D dice: richer crit flourish (sheen + bloom)
 - **Reworked the crit VFX** (the plain glow read flat). Now a **vivid terracotta bloom** snaps in over the crit
   die while a **glossy sheen glint sweeps across its face**, and the die does a **snappier scale-pop** (pulse
