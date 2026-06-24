@@ -344,7 +344,7 @@ function wrapStepper(input,step,min){
 }
 
 (async function init(){
-  loadSettings();syncFeatureClasses();
+  loadSettings();syncFeatureClasses();loadRollLogState();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
   bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();initForgeResizer();initBrandMark();

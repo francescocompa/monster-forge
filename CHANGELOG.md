@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 223 — roll log: corner-docked, collapses to a dice pill, sticky mode
+- **Reworked the roll log's chrome** (the entry rows are unchanged — they were already good). It's now
+  `position:fixed` and **docked to a viewport corner** (no longer floating in the scrolling content);
+  **dragging snaps it to the nearest corner**, and the corner + open/closed state **persist** (`mf_rolllog`).
+- **Collapsed = a compact dice pill** (glyph + roll count), tinted when a sticky mode is on — replaces the
+  old full-width closed header. A roll no longer force-opens the log (the 3D dice already show the result);
+  it just updates the pill, respecting your collapsed state.
+- **Advantage/Disadvantage is now sticky** (no longer resets to flat after each roll) and persists. The
+  control moved out of the header into the **⋯ menu** (Flat / Advantage / Disadvantage); the open header
+  shows a read-only **ADV/DIS chip** when active. Quick shortcut: **↑ = advantage, ↓ = disadvantage** (press
+  the active one again → flat), gated so it never steals arrows from a field, dialog, or modifier combo.
+- **Cursor tell:** a small ▲/▼ badge rides the cursor over any rollable while a mode is active, so you see it
+  right where you roll. `setRollMode`/`cycleRollMode` route through one path (persist + tell + re-render).
+
 ## Batch 222 — 3D dice: roll on attack/recharge names (compounded throw)
 - **Fixed: clicking an attack (or recharge) name didn't tumble any 3D dice.** `rollAttackSequence`/
   `rollRechargeSequence` roll their sub-rolls with `silent:true` (to show one combined alert instead of two),

@@ -600,7 +600,14 @@ function rollLabelFor(span){if(span.dataset.rolllabel)return cleanRollLabel(span
 // rolls are attributed to that combatant (e.g. "Archmage 2") instead of the Forge's working monster.
 let combatRollSrc=null;
 function rollSource(){if(_curView==="combat"&&combatRollSrc)return combatRollSrc;if(!M)return null;const saved=state.lib.find(x=>x.id===M.id);return {name:M.name||"Unnamed",id:saved?M.id:null};}
-let rollLog=[],rollLogOpen=true,rollLogSort="desc",rollLogTab="mine"; // desc = newest at top; tab = mine|players (B213, when shared)
+let rollLog=[],rollLogOpen=false,rollLogSort="desc",rollLogTab="mine",_rlCorner="bl"; // desc = newest at top; tab = mine|players (B213, when shared); corner = bl|br|tl|tr (B223)
+// Roll-log UI state persists across reloads (B223): which corner it's docked in, open/closed, and the
+// sticky roll mode. Loaded once at init (initRollLogState), saved on every change.
+function loadRollLogState(){try{const s=JSON.parse(localStorage.getItem("mf_rolllog")||"{}");
+  if(["bl","br","tl","tr"].includes(s.corner))_rlCorner=s.corner;
+  if(typeof s.open==="boolean")rollLogOpen=s.open;
+  if(s.mode==="adv"||s.mode==="dis")rollMode=s.mode;}catch(e){}}
+function saveRollLogState(){try{localStorage.setItem("mf_rolllog",JSON.stringify({corner:_rlCorner,open:rollLogOpen,mode:rollMode}));}catch(e){}}
 let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
 // Abbreviated damage-type labels shown on the roll-log damage tag instead of "DMG" (B67).
@@ -632,10 +639,10 @@ function doRoll(formula,opts,meta){
   rollLog.unshift({id:uid(),_t:Date.now(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
-  rollMode=null; // each roll resets the mode to flat (B61); set adv/dis again right before the next
+  // Roll mode is STICKY (B223): it stays on adv/dis until the user changes it (menu / ↑↓), so don't reset.
   // Player mode (B204 stage 4): mirror the roll to the DM's roll log via the write-back bin.
   if(PLAYER_MODE&&!meta.silent&&typeof playerPushRoll==="function")playerPushRoll({label:meta.label,type:meta.type,total:r.total,parts:r.parts,abil:meta.abil,dmgType:meta.dmgType,crit});
-  rollLogOpen=true;renderRollLog(true); // renderRollLog spins the new group's totals (B133)
+  renderRollLog(true); // update the log + spin the new group's totals (B133); don't force-open — respect the collapsed pill (B223)
   // 3D dice flourish (B214): tumble physical dice that land on this roll's actual values, with their own
   // result alert (timer + reroll). Returns true if it took over the notification → skip the plain toast.
   // No-ops (returns false) when the libs/WebGL are absent (jsdom), reduced-motion, or the roll has no dice.
@@ -681,7 +688,9 @@ function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div 
 // rolls. Set via the cycling tag shown in the roll-log header and the custom-roll popover.
 let rollMode=null; // null | "adv" | "dis"
 function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
-function cycleRollMode(){rollMode=rollMode===null?"adv":rollMode==="adv"?"dis":null;}
+// Set the sticky roll mode (B223): persist it, refresh the cursor tell, and re-render the log chrome.
+function setRollMode(m){rollMode=(m==="adv"||m==="dis")?m:null;saveRollLogState();updateRollModeTell();if(document.getElementById("rollLog"))renderRollLog();}
+function cycleRollMode(){setRollMode(rollMode===null?"adv":rollMode==="adv"?"dis":null);}
 // The roll-log total spins through a vertical digit reel to its value — the same number-flow effect the
 // initiative roll uses (nfReelHTML lives in adventures.js, shared scope). Notifications are delayed by
 // ROLL_REEL_MS so the alert appears exactly as the reel settles (B129).
@@ -725,10 +734,8 @@ function renderRollLog(scrollNew){
   if(!rollLog.length||!clickRollOn()){if(el)el.remove();return;}
   if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
   el.classList.toggle("open",rollLogOpen);
-  // A custom drag position persists across collapse (B64); it's only cleared via the menu's
-  // "Reset position" (shown once moved) or by resetRollLogPos().
-  if(_rlPos){el.style.left=_rlPos.left+"px";el.style.top=_rlPos.top+"px";el.style.right="auto";el.style.bottom="auto";}
-  else{el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";}
+  // Docked to a viewport corner (fixed); dragging snaps to the nearest corner, persisted (B223).
+  el.classList.remove("rl-bl","rl-br","rl-tl","rl-tr");el.classList.add("rl-"+_rlCorner);
   el.innerHTML=rollLogHTML();
   bindRollLog(el,scrollNew);
   if(scrollNew)animateNewGroup(el);
@@ -768,14 +775,21 @@ function rollLogHTML(){
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
   const bodyInner=groups.length?groups.map(groupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
-  return `<div class="rl-head"><button class="rl-tog${rollLogOpen?"":" closed"}" id="rlTog" title="${rollLogOpen?"Collapse":"Expand"}">${FS_CHEVRON}</button><span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span><div class="rl-grow"></div>${rollModeTagHTML()}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
-    +(rollLogOpen?tabs+`<div class="rl-body">${bodyInner}</div>`:"");
+  // Collapsed = a compact dice pill (glyph + count), tinted when a sticky mode is on (B223).
+  if(!rollLogOpen)return `<button class="rl-pill${rollMode?" mode-"+rollMode:""}" id="rlPill" title="Rolls (${ordered.length})" aria-label="Open roll log"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-pill-n">${ordered.length}</span></button>`;
+  // Open: header (chevron · title · count · read-only mode chip when active) + tabs + body. The adv/dis
+  // CONTROL now lives in the kebab menu (and ↑/↓); the header chip is just a tell (B223).
+  const modeChip=rollMode?`<span class="rl-mode-chip ${rollMode}" title="${rollMode==="adv"?"Advantage":"Disadvantage"} (sticky) — change in ⋯ or with ↑/↓">${rollMode==="adv"?"ADV":"DIS"}</span>`:"";
+  return `<div class="rl-head"><button class="rl-tog" id="rlTog" title="Collapse">${FS_CHEVRON}</button><span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span>${modeChip}<div class="rl-grow"></div><button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+    +tabs+`<div class="rl-body">${bodyInner}</div>`;
 }
 // Wire up the roll-log controls + row interactions after its HTML is in the DOM.
 function bindRollLog(el,scrollNew){
-  bindRollLogDrag(el,el.querySelector(".rl-head"));
-  el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;renderRollLog();});
-  el.querySelector("[data-rollmode]").addEventListener("click",e=>{e.stopPropagation();cycleRollMode();renderRollLog();});
+  // Drag handle = the header when open, the pill itself when collapsed (both snap to a corner).
+  bindRollLogDrag(el,el.querySelector(".rl-head")||el.querySelector(".rl-pill"));
+  const pill=el.querySelector("#rlPill");
+  if(pill){pill.addEventListener("click",()=>{if(performance.now()-_rlDragEnd<300)return;rollLogOpen=true;saveRollLogState();renderRollLog();});return;}
+  el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;saveRollLogState();renderRollLog();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
   el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
   // Hover a DMG tag → small popover naming the damage type (B62).
@@ -801,34 +815,38 @@ function bindRollLog(el,scrollNew){
   // Scroll to the newest roll when one was just recorded — top for newest-first, bottom otherwise (B65).
   if(scrollNew&&rollLogOpen){const body=el.querySelector(".rl-body");if(body)body.scrollTop=rollLogSort==="desc"?0:body.scrollHeight;}
 }
-// Drag the roll-log window by its header to reposition it within the page (B63). Buttons/tags in the
-// header keep their own clicks. The position persists until reset via the menu (B64).
+// Drag the roll-log (by its header, or the pill itself when collapsed) and SNAP to the nearest viewport
+// corner on release; the corner persists (B223). A real drag suppresses the pill's expand-click via _rlDragEnd.
+let _rlDragEnd=0;
 function bindRollLogDrag(el,head){
   if(!head)return;head.classList.add("rl-drag-h");
   head.addEventListener("pointerdown",e=>{
-    if(e.target.closest("button,[data-rollmode]"))return; // let header controls work
-    const parent=el.offsetParent||document.body;
-    const startX=e.clientX,startY=e.clientY,ox=el.offsetLeft,oy=el.offsetTop;
-    el.style.bottom="auto";el.style.right="auto";el.classList.add("dragging");
-    const move=ev=>{let nx=ox+(ev.clientX-startX),ny=oy+(ev.clientY-startY);
-      nx=Math.max(0,Math.min(parent.clientWidth-el.offsetWidth,nx));
-      ny=Math.max(0,Math.min(parent.clientHeight-el.offsetHeight,ny));
-      el.style.left=nx+"px";el.style.top=ny+"px";_rlPos={left:nx,top:ny};};
-    const up=()=>{el.classList.remove("dragging");document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);};
+    if(e.target.closest("button:not(.rl-pill),[data-rltab]"))return; // header controls keep their clicks; the pill IS the handle
+    const startX=e.clientX,startY=e.clientY,r=el.getBoundingClientRect(),ox=r.left,oy=r.top;let moved=false;
+    el.classList.add("dragging");el.style.left=ox+"px";el.style.top=oy+"px";el.style.right="auto";el.style.bottom="auto";
+    const move=ev=>{const dx=ev.clientX-startX,dy=ev.clientY-startY;if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
+      el.style.left=Math.max(4,Math.min(window.innerWidth-el.offsetWidth-4,ox+dx))+"px";
+      el.style.top=Math.max(4,Math.min(window.innerHeight-el.offsetHeight-4,oy+dy))+"px";};
+    const up=ev=>{el.classList.remove("dragging");document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);
+      el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";
+      if(!moved)return; // a click, not a drag — leave the corner as-is, let the click handler run
+      _rlDragEnd=performance.now();
+      const cx=ev.clientX,cy=ev.clientY;_rlCorner=(cy<window.innerHeight/2?"t":"b")+(cx<window.innerWidth/2?"l":"r");
+      saveRollLogState();renderRollLog();};
     document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);
     e.preventDefault();
   });
 }
-function resetRollLogPos(){_rlPos=null;renderRollLog();}
 function openRollLogMenu(anchor){
   const sortLabel=rollLogSort==="desc"?"Newest at bottom":"Newest at top";
-  const resetItem=_rlPos?`<button class="popitem" data-rlm="resetpos">Reset position</button>`:"";
-  const p=showPopover(anchor,`<button class="popitem" data-rlm="notation">Dice notation</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll</button>${resetItem}<div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
+  // Sticky roll mode lives here now (B223): Flat / Advantage / Disadvantage, the active one checked.
+  const modeItem=(m,lbl)=>`<button class="popitem popcheck${rollMode===m||(m===null&&!rollMode)?" on":""}" data-rlmode="${m===null?"flat":m}"><span class="ck">${rollMode===m||(m===null&&!rollMode)?"✓":""}</span>${lbl}</button>`;
+  const p=showPopover(anchor,`<div class="pop-grp-lbl">Roll mode</div>${modeItem(null,"Flat")}${modeItem("adv","Advantage")}${modeItem("dis","Disadvantage")}<div class="popsep"></div><button class="popitem" data-rlm="notation">Dice notation</button><button class="popitem" data-rlm="sort">${sortLabel}</button><button class="popitem" data-rlm="custom">Custom roll</button><div class="popsep"></div><button class="popitem danger" data-rlm="clear">Clear log</button>`);
+  p.querySelectorAll("[data-rlmode]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();setRollMode(b.dataset.rlmode==="flat"?null:b.dataset.rlmode);closePopover();}));
   p.querySelectorAll("[data-rlm]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const a=b.dataset.rlm;
     if(a==="notation"){closePopover();showPopover(anchor,diceHelpHTML());}
     else if(a==="sort"){rollLogSort=rollLogSort==="desc"?"asc":"desc";closePopover();renderRollLog();}
     else if(a==="custom"){closePopover();openCustomRoll(anchor);}
-    else if(a==="resetpos"){closePopover();resetRollLogPos();}
     else{rollLog=[];closePopover();renderRollLog();}
   }));
 }
@@ -1005,8 +1023,30 @@ function updateDiceCursor(overRoll){
   if(fine&&((clickRollOn()&&overRoll&&!d3dHover)||_cmdHeld)){const el=diceCursorEl();el.classList.add("show");el.style.left=_ptrX+"px";el.style.top=_ptrY+"px";}
   else if(_diceCur)_diceCur.classList.remove("show");
 }
-document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;updateDiceCursor(e.target.closest&&e.target.closest("[data-roll]"));});
+// The sticky-mode TELL (B223): a small ▲/▼ badge riding the cursor (beside the 3D held die) over any
+// rollable while advantage/disadvantage is on, so you can see the active mode right where you roll.
+let _rmTell=null;
+function rollModeTellEl(){if(!_rmTell){_rmTell=document.createElement("div");_rmTell.id="rollModeTell";document.body.appendChild(_rmTell);}return _rmTell;}
+function updateRollModeTell(overRoll){
+  if(overRoll===undefined){const el=document.elementFromPoint(_ptrX,_ptrY);overRoll=el&&el.closest&&el.closest("[data-roll]");}
+  let fine=true;try{fine=matchMedia("(hover:hover) and (pointer:fine)").matches;}catch(e){}
+  if(rollMode&&overRoll&&fine&&clickRollOn()){const t=rollModeTellEl();t.className="show "+rollMode;t.textContent=rollMode==="adv"?"▲":"▼";t.style.left=_ptrX+"px";t.style.top=_ptrY+"px";}
+  else if(_rmTell)_rmTell.className="";
+}
+document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;const over=e.target.closest&&e.target.closest("[data-roll]");updateDiceCursor(over);updateRollModeTell(over);});
 document.addEventListener("keydown",e=>{if(e.key==="Alt"&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
+// ↑ / ↓ set the sticky roll mode to advantage / disadvantage (press the active one again → flat). Gated so
+// it never steals arrows from a focused field, an open dialog/menu, or a modifier combo (B223).
+document.addEventListener("keydown",e=>{
+  if((e.key!=="ArrowUp"&&e.key!=="ArrowDown")||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!clickRollOn())return;
+  const ae=document.activeElement;
+  if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))return;
+  if([...document.querySelectorAll(".modal,.popover")].some(el=>el.getClientRects().length))return; // a VISIBLE dialog/menu owns the arrows (hidden hosts persist in the DOM)
+  e.preventDefault();
+  const want=e.key==="ArrowUp"?"adv":"dis";
+  setRollMode(rollMode===want?null:want);
+  if(typeof toast==="function")toast(rollMode==="adv"?"Advantage on":rollMode==="dis"?"Disadvantage on":"Flat rolls",1300);
+});
 // Esc exits rule finder. If a definition popover is showing, close that first (one Esc per layer);
 // note .refpop nodes persist hidden in the DOM, so test for the visible .show class.
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!ruleFinder)return;
