@@ -584,6 +584,10 @@ function d3dLoop(now){
   const dt = Math.min(0.033, (now - d3dPrev)/1000); d3dPrev = now;
   if (d3dRoll){
     const r = d3dRoll;
+    if (r.critPulseT != null){                                         // crit pop runs in any state (incl. wave-2 flight)
+      r.critPulseT += dt*1000; const pf = d3dCritPulse(r.critPulseT);
+      if (r.critFocus) r.critFocus.critPulse = pf; else r.dice.forEach(d => d.critPulse = pf);
+    }
     if (r.state === "fly"){
       r.t += dt*1000; r.acc += dt;
       while (r.acc >= 1/60 && r.played < r.replayN){ d3dWorld.step(1/60); r.acc -= 1/60; r.played++; }
@@ -594,17 +598,14 @@ function d3dLoop(now){
         if (r.pending.length){                                         // crit: drop in the extra dice, re-fly (B228)
           const w = d3dLaunchWave(r.pending.shift(), r.R);
           r.dice = r.dice.concat(w.dice); r.replayN = w.N; r.played = 0; r.acc = 0;
+          if (r.desc.crit && !r.critFired){ d3dCritFlash(); r.critFired = true; } // crit hits the d20 as the extra dice appear (B232)
         } else {
           r.state = "still"; r.t = 0; d3dDimDropped(); d3dShowCard();
-          if (r.desc.crit) d3dCritFlash();                             // logo-awaken flourish on a crit (B228)
+          if (r.desc.crit && !r.critFired){ d3dCritFlash(); r.critFired = true; } // no extra dice (e.g. lone nat-20) → on settle
         }
       }
     } else if (r.state === "still"){
       if (!r.paused) r.t += dt*1000;                                   // hovering the card pauses the dismiss
-      if (r.critPulseT != null){                                       // crit awaken: pulse the focal die (or all)
-        r.critPulseT += dt*1000; const pf = d3dCritPulse(r.critPulseT);
-        if (r.critFocus) r.critFocus.critPulse = pf; else r.dice.forEach(d => d.critPulse = pf);
-      }
       if (d3dCardEl) d3dCardEl.querySelector(".d3dc-bar").style.width = (100 * (1 - d3dCl(r.t/D3D_DWELL,0,1))) + "%";
       if (r.t >= D3D_DWELL){ r.state = "vanish"; r.t = 0; d3dHideCard(); }
     } else if (r.state === "vanish"){

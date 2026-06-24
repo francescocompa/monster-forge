@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 232 — 3D dice: crit effect coincides with the extra dice appearing
+- On an attack crit the crit flourish (glow/sheen + d20 pop) now fires **the moment the extra crit dice drop
+  in** (wave-2 launch), not when they settle at the card stage. The crit pulse is driven in any roll state so
+  the d20 pops during wave-2 flight; a `critFired` guard prevents a double-fire. Lone crits with no extra dice
+  (e.g. a bare nat-20) still flash on settle.
+
 ## Batch 231 — roll-log pill/icon hover popover: styled + structured like the log
 - The collapsed-pill / mini-icon **hover popover was unstyled** — its row HTML lived in a bare `.popover`, so the
   `.roll-log .rl-*` row styles never matched. It now renders inside a `.roll-log` wrapper (`.roll-log rl-poprow`)
