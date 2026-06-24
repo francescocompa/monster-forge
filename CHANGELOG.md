@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 229 — 3D dice: richer crit flourish (sheen + bloom)
+- **Reworked the crit VFX** (the plain glow read flat). Now a **vivid terracotta bloom** snaps in over the crit
+  die while a **glossy sheen glint sweeps across its face**, and the die does a **snappier scale-pop** (pulse
+  shortened 750→420ms, peak ~1.22). `#d3dCrit` gains a `.d3dcrit-glow` (brighter, more saturated radial) +
+  `.d3dcrit-sheenwrap`/`.d3dcrit-sheen` (a light streak clipped to the die face). Still DOM/CSS only,
+  material-agnostic, reduced-motion safe. Picked from an animated mockup of three options.
+
 ## Batch 228 — 3D dice: staged crit dice, crit glow+pulse flourish, bigger d10/d12 numbers
 - **Crit damage is now thrown in two waves.** On a critical hit the attack to-hit + the *base* damage dice
   tumble first; once they land, the **extra crit dice drop in** as a second wave, and the result alert is

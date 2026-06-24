@@ -375,12 +375,12 @@ function d3dDimDropped(){
     d.labels.forEach(L => { L.mat.opacity = 0.28; });
   });
 }
-// Crit flourish (B228): the crit die "awakens" — a terracotta glow blooms over it (a DOM radial-gradient
-// halo, material-agnostic and free of any WebGL shader work) while the die itself does a quick scale pulse
-// (driven per-frame in the loop's "still" branch). Centres on the die showing the logo (its max face,
-// preferring the d20); falls back to the screen centre / pulsing every die. Honours reduced-motion (the 3D
-// layer already no-ops there). The original plan animated the logo eye on the face, but a CSS poke animation
-// can't be rasterised onto a baked texture in this no-build setup — so the VFX rides the die instead.
+// Crit flourish (B229): "sheen + bloom" — a vivid terracotta glow blooms over the crit die while a glossy
+// sheen glint sweeps across its face, and the die itself does a snappy scale-pop (driven per-frame in the
+// loop's "still" branch). All DOM/CSS, material-agnostic, no WebGL shader work. Centres on the die showing
+// the logo (its max face, preferring the d20); falls back to the screen centre / pulsing every die. Honours
+// reduced-motion (the 3D layer already no-ops there). (A CSS poke animation can't be rasterised onto a baked
+// texture in this no-build setup, so the VFX rides the die rather than animating the logo eye on the face.)
 let d3dCritEl = null;
 function d3dCritFlash(){
   try {
@@ -389,16 +389,21 @@ function d3dCritFlash(){
     d3dRoll.dice.forEach(d => { if (d.value === d.sides && (!focus || d.sides === 20)) focus = d; });
     let sx = d3dW/2, sy = d3dH/2, R = Math.min(d3dW, d3dH)/9;
     if (focus){ sx = d3dW/2 + focus.grp.position.x; sy = d3dH/2 + focus.grp.position.z; R = focus.R; }
-    if (!d3dCritEl){ d3dCritEl = document.createElement("div"); d3dCritEl.id = "d3dCrit"; document.body.appendChild(d3dCritEl); }
-    const size = Math.round(R * 3.6);
-    d3dCritEl.style.left = sx + "px"; d3dCritEl.style.top = sy + "px"; d3dCritEl.style.width = size + "px"; d3dCritEl.style.height = size + "px";
-    d3dCritEl.classList.remove("go"); void d3dCritEl.offsetWidth; d3dCritEl.classList.add("go"); // restart the glow
-    d3dRoll.critFocus = focus; d3dRoll.critPulseT = 0;       // kick off the per-die scale pulse (loop reads these)
+    if (!d3dCritEl){
+      d3dCritEl = document.createElement("div"); d3dCritEl.id = "d3dCrit";
+      d3dCritEl.innerHTML = '<div class="d3dcrit-glow"></div><div class="d3dcrit-sheenwrap"><div class="d3dcrit-sheen"></div></div>';
+      document.body.appendChild(d3dCritEl);
+    }
+    const glow = Math.round(R * 3.6), face = Math.round(R * 2.0);
+    d3dCritEl.style.left = sx + "px"; d3dCritEl.style.top = sy + "px"; d3dCritEl.style.width = glow + "px"; d3dCritEl.style.height = glow + "px";
+    const sw = d3dCritEl.querySelector(".d3dcrit-sheenwrap"); sw.style.width = face + "px"; sw.style.height = face + "px";
+    d3dCritEl.classList.remove("go"); void d3dCritEl.offsetWidth; d3dCritEl.classList.add("go"); // restart bloom + sheen
+    d3dRoll.critFocus = focus; d3dRoll.critPulseT = 0;       // kick off the per-die scale pop (loop reads these)
   } catch (e) {}
 }
 function d3dCritEnd(){ if (d3dCritEl) d3dCritEl.classList.remove("go"); }
-// The awaken pulse: a single eased scale-bump (1 → ~1.3 → 1) over ~750ms. Returns the scale multiplier.
-function d3dCritPulse(t){ const D = 750; if (t >= D) return 1; return 1 + 0.30 * Math.sin((t / D) * Math.PI); }
+// The awaken pop: a snappy single scale-bump (1 → ~1.22 → 1) over ~420ms. Returns the scale multiplier.
+function d3dCritPulse(t){ const D = 420; if (t >= D) return 1; return 1 + 0.22 * Math.sin((t / D) * Math.PI); }
 function d3dResize(){
   d3dW = innerWidth; d3dH = innerHeight;
   d3dRenderer.setSize(d3dW, d3dH);

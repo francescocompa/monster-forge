@@ -12,16 +12,26 @@
   background:transparent; border:0; border-radius:7px; color:var(--dim); }
 #d3dCard .d3dc-rr:hover{ color:var(--txt); background:rgba(226,101,77,.14); }
 #d3dCard .d3dc-bar{ position:absolute; left:0; bottom:0; height:3px; width:100%; background:linear-gradient(90deg,var(--brand),var(--amber)); }
-/* Crit flourish (B228) — a terracotta glow blooms over the crit die (the die itself pulses, driven in JS).
-   Only added by dice3d.js on a crit (which never runs under reduced motion). left/top/size are set inline. */
-#d3dCrit{ position:fixed; z-index:610; pointer-events:none; opacity:0; border-radius:50%;
-  transform:translate(-50%,-50%) scale(.5);
-  background:radial-gradient(circle, rgba(226,101,77,.62), rgba(226,101,77,0) 66%); }
-#d3dCrit.go{ animation:d3dcrit-glow 900ms ease-out 1; }
-@keyframes d3dcrit-glow{
-  0%{ opacity:0; transform:translate(-50%,-50%) scale(.5); }
-  22%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
-  100%{ opacity:0; transform:translate(-50%,-50%) scale(1.55); }
+/* Crit flourish (B229) — "sheen + bloom": a vivid terracotta glow blooms over the crit die while a glossy
+   sheen glint sweeps across its face (the die itself snap-pops, driven in JS). Only added by dice3d.js on a
+   crit (which never runs under reduced motion). left/top + glow/face sizes are set inline. */
+#d3dCrit{ position:fixed; z-index:610; pointer-events:none; transform:translate(-50%,-50%); }
+#d3dCrit .d3dcrit-glow{ position:absolute; inset:0; border-radius:50%; opacity:0; transform:scale(.5);
+  background:radial-gradient(circle, rgba(239,132,112,.85), rgba(226,101,77,.5) 40%, rgba(226,101,77,0) 68%); }
+#d3dCrit .d3dcrit-sheenwrap{ position:absolute; top:50%; left:50%; border-radius:20%; overflow:hidden; transform:translate(-50%,-50%); }
+#d3dCrit .d3dcrit-sheen{ position:absolute; top:-60%; left:-90%; width:55%; height:220%; opacity:0;
+  background:linear-gradient(105deg, transparent, rgba(255,242,232,.92), transparent); transform:rotate(16deg); }
+#d3dCrit.go .d3dcrit-glow{ animation:d3dcrit-bloom 560ms cubic-bezier(.1,.8,.2,1) 1; }
+#d3dCrit.go .d3dcrit-sheen{ animation:d3dcrit-sheen 520ms ease-out 1; }
+@keyframes d3dcrit-bloom{
+  0%{ opacity:0; transform:scale(.5); }
+  18%{ opacity:1; transform:scale(1.22); }
+  100%{ opacity:0; transform:scale(1.65); }
+}
+@keyframes d3dcrit-sheen{
+  0%{ transform:translateX(0) rotate(16deg); opacity:0; }
+  14%{ opacity:1; }
+  100%{ transform:translateX(380%) rotate(16deg); opacity:0; }
 }
 /* Vecna — D&D display face used on the 3D dice (B214). Pixel Sagas, free for personal use. */
 @font-face{ font-family:"Vecna"; font-weight:400; font-display:swap; src:url("vecna.otf") format("opentype"); }
