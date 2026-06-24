@@ -765,6 +765,8 @@ function combatRowHTML(it,active,drag){
   // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic, .dying =
   // down. The death-save tracker now lives in the HP popover (B127); the row just flags down/stable.
   const badge=dying?'<span class="ci-down" title="Down — rolling death saves">down</span>':stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
+  // Player mode: mark the player's OWN claimed character with a "You" badge after the name (B234).
+  const youBadge=(PLAYER_MODE&&typeof playerClaimId==="function"&&it.id===playerClaimId())?'<span class="ci-you">You</span>':"";
   // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
   // pane is wide and wraps to its own line below the name when narrow (container query). Events have none.
   // DOM order is the narrow two-row order (AC · reaction · concentration · effect chips · +add). The wide
@@ -783,7 +785,7 @@ function combatRowHTML(it,active,drag){
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}${PLAYER_MODE&&playerEnemyCondsEditable(it)?" pm-edit-conds":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
-    <div class="ci-id"><div class="ci-name">${esc(it.name)}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
+    <div class="ci-id"><div class="ci-name">${esc(it.name)}${youBadge}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
     <div class="ci-hp${active&&dying?" ds-turn":""}"${active&&dying?' title="It\'s their turn — click to roll a death save"':""}>${hpCellHTML(it)}</div>
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
@@ -1059,7 +1061,7 @@ function combatShareMode(){const ctx=loadedCtx();return (ctx&&localStorage.getIt
 function playerEditKey(){return ((state.settings.combat&&state.settings.combat.playerEditKey)||"").trim();}
 // Per-share enemy options (B204 stage 5): showBloodied = enemies show a health band (off ⇒ no HP info at
 // all); enemyConds = players may edit enemy conditions (routing matches the PC mode). Stored per encounter.
-function shareOpts(){const ctx=loadedCtx(),def={showBloodied:true,enemyConds:false};if(!ctx)return def;
+function shareOpts(){const ctx=loadedCtx(),def={showBloodied:true,enemyConds:false,showDice:false};if(!ctx)return def;
   try{return Object.assign(def,JSON.parse(localStorage.getItem("mf_shareopts:"+ctx.e.id)||"{}"));}catch(e){return def;}}
 function setShareOpt(k,v){const ctx=loadedCtx();if(!ctx)return;const o=shareOpts();o[k]=v;localStorage.setItem("mf_shareopts:"+ctx.e.id,JSON.stringify(o));}
 function combatShareURL(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"index.html?share="+encodeURIComponent(id);}
@@ -1100,6 +1102,12 @@ function buildCombatShareSnapshot(cb){
   const chars={};
   cb.order.forEach(it=>{if(it.kind==="pc"&&it.srcId&&!chars[it.srcId]){const c=rosterById(it.srcId);if(c)chars[it.srcId]=playerSafeChar(c);}});
   snap.chars=chars;
+  // Dice mirror (B234): when "show dice" is on, publish the shared roll log so players see every roll —
+  // their own + the DM's — animate (3D), alert, and list. Compact entries; newest first (rollLog order).
+  if(opts.showDice){
+    snap.diceOn=true;
+    snap.rolls=(typeof rollLog!=="undefined"?rollLog:[]).slice(0,30).map(r=>({id:r.id,ts:r._t||Date.now(),label:r.label||"Roll",type:r.type||null,total:r.total,parts:r.parts||"",abil:r.abil||null,dmgType:r.dmgType||null,crit:!!r.crit,by:(r.source&&r.source.name)||""}));
+  }
   return snap;
 }
 // A roster character sanitized for the shared payload — a deep copy with the notes/backstory stripped
@@ -1204,7 +1212,9 @@ async function pollShareEdits(){
       if(rollLog.length>60)rollLog.length=60;}
     if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();}
     if(applied||charApplied||queued)renderCombat();
-    if(rollNew)renderRollLog(true);
+    // A player's roll folded in → re-render the log and (when dice mirroring is on) republish so the OTHER
+    // players' views pick it up too (B234).
+    if(rollNew){renderRollLog(true);if(typeof shareOpts==="function"&&shareOpts().showDice)publishCombatShareSoon();}
   }finally{_sharePollBusy=false;}
 }
 // Apply one player edit to a combat instance: HP/temp clamp to the instance's max; conditions are reconciled
@@ -1265,6 +1275,7 @@ function shareTogglesHTML(){
   return `<div class="share-toggles">
     ${tog("showBloodied","Show enemy health (bloodied bands)",o.showBloodied,false)}
     ${tog("enemyConds","Let players edit enemy conditions",o.enemyConds&&editing,!editing)}
+    ${tog("showDice","Show dice to players (roll log, 3D dice & alerts)",o.showDice,false)}
   </div>`;
 }
 function shareSuggestHTML(){
@@ -1371,6 +1382,7 @@ async function initPlayerMode(bin){
 function hydratePlayerCombat(rec){
   const c=rec.combat;
   state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;state.__pmEnemyConds=!!rec.enemyConds;
+  state.__pmDiceOn=!!rec.diceOn; // DM's "show dice to players" toggle (B234)
   state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
     encounters:[{id:"enc",name:(c.name&&c.name.trim())||"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
@@ -1381,6 +1393,32 @@ function hydratePlayerCombat(rec){
   const order=state.adv[0].encounters[0].combat.order;
   _pmBaseline={};order.forEach(it=>{if(it.kind!=="event")_pmBaseline[it.id]=instEditFields(it);}); // PCs + enemies (cond edits)
   pmReconcile(order);
+  pmIngestRolls(rec); // dice mirror: surface the DM's/other players' rolls (B234)
+}
+// Player dice mirror (B234): the shared roll log rides in the snapshot. Rebuild the local roll log from it
+// (keeping a just-made local roll that hasn't echoed back yet) and animate the most-recent NEW roll someone
+// else made — their own rolls already animated locally, so those are skipped by id.
+let _pmRollSeen=new Set(),_pmRollInit=false;
+function pmRollToEntry(r){return {id:r.id,_t:r.ts||Date.now(),label:r.label||"Roll",type:r.type||null,total:r.total,parts:r.parts||"",adv:null,crit:!!r.crit,outcome:null,abil:r.abil||null,dmgType:r.dmgType||null,source:{name:r.by||"",id:null},roll:{formula:String(r.total||0),label:r.label||"Roll",type:r.type||null}};}
+function pmIngestRolls(rec){
+  if(!PLAYER_MODE)return;
+  if(!state.__pmDiceOn){if(rollLog.length){rollLog.length=0;if(typeof renderRollLog==="function")renderRollLog();}return;} // dice hidden → no log
+  const rolls=Array.isArray(rec.rolls)?rec.rolls:[];
+  const localIds=new Set(rollLog.map(r=>r.id));
+  const fresh=rolls.filter(r=>r&&r.id&&!_pmRollSeen.has(r.id)&&!localIds.has(r.id)); // rolls made elsewhere we haven't shown
+  rolls.forEach(r=>{if(r&&r.id)_pmRollSeen.add(r.id);});
+  // The shared log is authoritative; keep any local-only entry (a roll just made, not yet echoed) on top.
+  const mapped=rolls.map(pmRollToEntry),mappedIds=new Set(mapped.map(r=>r.id));
+  rollLog=mapped.concat(rollLog.filter(r=>!mappedIds.has(r.id))).sort((a,b)=>(b._t||0)-(a._t||0)).slice(0,60);
+  // Animate the newest unseen external roll (not on first load — don't replay history when joining).
+  const anim=_pmRollInit?fresh.filter(r=>r.parts).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]:null;
+  _pmRollInit=true;
+  if(anim){
+    combatRollSrc={name:anim.by||"Roll",id:null};
+    const did=typeof rollDice3D==="function"&&rollDice3D({parts:anim.parts,total:anim.total,label:anim.label,type:anim.type,dmgType:anim.dmgType,abil:anim.abil,crit:!!anim.crit});
+    if(!did&&typeof toast==="function"&&typeof naturalRollText==="function")toast(naturalRollText(anim.label,anim.type,anim.total,anim.dmgType,anim.abil),3200,true);
+  }
+  if(typeof renderRollLog==="function")renderRollLog(fresh.length>0);
 }
 // ── Player editing (B204 stage 3) ────────────────────────────────────────────
 // The shared edit mode + write-back bin/key ride along in the snapshot. Editability per mode: own = the
@@ -1462,7 +1500,7 @@ function hydratePlayerRoster(rec){
 // A dice roll the player made → append to the write-back bin's rolls[] so the DM's poller surfaces it in
 // the roll log (attributed to the previewed PC via combatRollSrc).
 function playerPushRoll(ev){
-  const evt={id:uid(),by:(combatRollSrc&&combatRollSrc.name)||"Player",label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",abil:ev.abil||null,dmgType:ev.dmgType||null,crit:!!ev.crit,ts:Date.now()};
+  const evt={id:ev.id||uid(),by:(combatRollSrc&&combatRollSrc.name)||"Player",label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",abil:ev.abil||null,dmgType:ev.dmgType||null,crit:!!ev.crit,ts:Date.now()};
   pmQueueWrite(rec=>{rec.rolls=rec.rolls||[];rec.rolls.push(evt);if(rec.rolls.length>20)rec.rolls=rec.rolls.slice(-20);});
 }
 // A thin banner above the order: the "playing as" picker (own mode) or an editing-scope note (all/suggest).

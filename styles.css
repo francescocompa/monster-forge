@@ -1201,6 +1201,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
 /* Death saves now live in the HP-management popover (.hpm-ds-*, B127); the row just flags down/stable. */
 .ci-stable{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--info);border:1px solid #355370;border-radius:4px;padding:1px 5px}
+/* "You" badge marking the player's own claimed character row in player mode (B234). */
+.ci-you{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-soft);background:rgba(226,101,77,.18);border:1px solid rgba(226,101,77,.5);border-radius:5px;padding:1px 6px;flex:none}
 /* Dying row keeps the normal active-card background (a bg tint would clash with the faction tints) — the
    "down" chip carries the state instead (B127). */
 .ci-conc-chip.pulse{animation:concPulse .85s ease 2}

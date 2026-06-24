@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 234 — initiative sharing: "show dice to players" mirror + "You" badge
+- **New share toggle "Show dice to players".** When on, the DM publishes the shared roll log in the snapshot;
+  players see the roll log, the 3D dice animate when anyone rolls (their own immediately, the DM's/others' on
+  the next poll), and the result alerts. When off, players get no dice UI at all (`clickRollOn` is gated on it
+  in player mode, so rolling, the d20 cursor, and the log are all suppressed). DM rolls now republish the
+  snapshot; player rolls fold back and republish so every device converges. Shared roll ids dedupe local vs
+  echoed entries so nothing double-animates. (`snap.diceOn`/`snap.rolls`, `pmIngestRolls`.)
+- **"You" badge** marks the player's own claimed character row (after the name), in the brand accent.
+
 ## Batch 233 — initiative sharing: enemy names, enemy-condition persistence, read-only react/conc, encounter name
 - **Players see combatant names** now — enemies show their custom nickname if set, else the statblock name
   (`playerSafeInstance` sends `it.name`); HP/statblock stay obscured.

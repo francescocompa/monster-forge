@@ -636,12 +636,16 @@ function doRoll(formula,opts,meta){
   const outcome=meta.success!=null?(r.total>=meta.success?"win":"lose"):null;
   // Custom rolls carry no source (nothing to attribute them to), so the log shows no statblock name.
   const src=meta.custom?null:(meta.source||rollSource());
-  rollLog.unshift({id:uid(),_t:Date.now(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
+  const _entryId=uid();
+  rollLog.unshift({id:_entryId,_t:Date.now(),label:meta.label||"Roll",type:meta.type||null,total:r.total,parts:r.parts,adv:opts.adv||null,crit,outcome,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src,
     roll:{formula,adv:opts.adv||null,crit:!!opts.crit,label:meta.label||"Roll",type:meta.type||null,success:meta.success!=null?meta.success:null,custom:!!meta.custom,abil:meta.abil||null,dmgType:meta.dmgType||null,source:src}});
   if(rollLog.length>60)rollLog.length=60;
   // Roll mode is STICKY (B223): it stays on adv/dis until the user changes it (menu / ↑↓), so don't reset.
-  // Player mode (B204 stage 4): mirror the roll to the DM's roll log via the write-back bin.
-  if(PLAYER_MODE&&!meta.silent&&typeof playerPushRoll==="function")playerPushRoll({label:meta.label,type:meta.type,total:r.total,parts:r.parts,abil:meta.abil,dmgType:meta.dmgType,crit});
+  // Player mode (B204 stage 4): mirror the roll to the DM's roll log via the write-back bin. The shared id
+  // matches the local entry so it doesn't echo back as a duplicate / re-animate (B234).
+  if(PLAYER_MODE&&!meta.silent&&typeof playerPushRoll==="function")playerPushRoll({id:_entryId,label:meta.label,type:meta.type,total:r.total,parts:r.parts,abil:meta.abil,dmgType:meta.dmgType,crit});
+  // DM rolls: republish the snapshot so players mirroring dice see this roll (no-ops unless sharing) (B234).
+  if(!PLAYER_MODE&&!meta.silent&&typeof publishCombatShareSoon==="function")publishCombatShareSoon();
   renderRollLog(true); // update the log + spin the new group's totals (B133); don't force-open — respect the collapsed pill (B223)
   // 3D dice flourish (B214): tumble physical dice that land on this roll's actual values, with their own
   // result alert (timer + reroll). Returns true if it took over the notification → skip the plain toast.
@@ -1071,7 +1075,9 @@ let _diceCur=null;
 const D20_ICON=`<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48.7 125.8l53.2 31.9c7.8 4.7 17.8 2 22.2-5.9L201.6 12.1c3-5.4-.9-12.1-7.1-12.1c-1.6 0-3.2 .5-4.6 1.4L47.9 98.8c-9.6 6.6-9.2 20.9 .8 26.9zM16 171.7l0 123.5c0 8 10.4 11 14.7 4.4l60-92c5-7.6 2.6-17.8-5.2-22.5L40.2 158C29.6 151.6 16 159.3 16 171.7zM310.4 12.1l77.6 139.6c4.4 7.9 14.5 10.6 22.2 5.9l53.2-31.9c10-6 10.4-20.3 .8-26.9L322.1 1.4c-1.4-.9-3-1.4-4.6-1.4c-6.2 0-10.1 6.7-7.1 12.1zM496 171.7c0-12.4-13.6-20.1-24.2-13.7l-45.3 27.2c-7.8 4.7-10.1 14.9-5.2 22.5l60 92c4.3 6.7 14.7 3.6 14.7-4.4l0-123.5zm-49.3 246L286.1 436.6c-8.1 .9-14.1 7.8-14.1 15.9l0 52.8c0 3.7 3 6.8 6.8 6.8c.8 0 1.6-.1 2.4-.4l172.7-64c6.1-2.2 10.1-8 10.1-14.5c0-9.3-8.1-16.5-17.3-15.4zM233.2 512c3.7 0 6.8-3 6.8-6.8l0-52.6c0-8.1-6.1-14.9-14.1-15.9l-160.6-19c-9.2-1.1-17.3 6.1-17.3 15.4c0 6.5 4 12.3 10.1 14.5l172.7 64c.8 .3 1.6 .4 2.4 .4zM41.7 382.9l170.9 20.2c7.8 .9 13.4-7.5 9.5-14.3l-85.7-150c-5.9-10.4-20.7-10.8-27.3-.8L30.2 358.2c-6.5 9.9-.3 23.3 11.5 24.7zm439.6-24.8L402.9 238.1c-6.5-10-21.4-9.6-27.3 .8L290.2 388.5c-3.9 6.8 1.6 15.2 9.5 14.3l170.1-20c11.8-1.4 18-14.7 11.5-24.6zm-216.9 11l78.4-137.2c6.1-10.7-1.6-23.9-13.9-23.9l-145.7 0c-12.3 0-20 13.3-13.9 23.9l78.4 137.2c3.7 6.4 13 6.4 16.7 0zM174.4 176l163.2 0c12.2 0 19.9-13.1 14-23.8l-80-144c-2.8-5.1-8.2-8.2-14-8.2l-3.2 0c-5.8 0-11.2 3.2-14 8.2l-80 144c-5.9 10.7 1.8 23.8 14 23.8z"/></svg>`;
 function diceCursorEl(){if(!_diceCur){_diceCur=document.createElement("div");_diceCur.id="diceCursor";_diceCur.innerHTML=D20_ICON;document.body.appendChild(_diceCur);}return _diceCur;}
 let _ptrX=0,_ptrY=0,_cmdHeld=false;
-function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on);}
+// In player mode all dice UI (rolling, the d20 cursor, the roll log) is gated on the DM's "show dice" toggle
+// (B234): no dice at all when it's off, full dice when it's on.
+function clickRollOn(){return !ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on)&&(!PLAYER_MODE||!!(state&&state.__pmDiceOn));}
 // Show the spinning d20 over rollable elements, and anywhere while Alt/Option is held (since that arms
 // the click-anywhere custom roll). Body gets .cmd-armed so the native cursor hides for the d20 (B61).
 function updateDiceCursor(overRoll){
