@@ -110,18 +110,45 @@ function d3dRoundedBox(size, radius, seg){
   }
   geo.computeVertexNormals(); return geo;
 }
-const d3dIsBox = sides => sides === 6 || ![4,8,12,20].includes(sides);
+const d3dIsBox = sides => sides === 6 || ![4,8,10,12,20].includes(sides);
+// Merge a triangulated polyhedron into its real flat faces. Cluster triangles by NORMAL DIRECTION
+// (dot > .999) instead of a rounded string key — the key rounding split coplanar faces (the d12 came out as
+// 17 groups → two numbers per pentagon). Normals are oriented OUTWARD (die centred at origin) so winding
+// can't put a face's number on the inside (matters for the custom d10).
 function d3dFaceList(geo){
-  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, map = new Map();
-  const a=new THREE.Vector3(), b=new THREE.Vector3(), c=new THREE.Vector3(), n=new THREE.Vector3(), cb=new THREE.Vector3(), ab=new THREE.Vector3();
+  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, groups = [];
+  const a=new THREE.Vector3(), b=new THREE.Vector3(), c=new THREE.Vector3(), n=new THREE.Vector3(), cb=new THREE.Vector3(), ab=new THREE.Vector3(), ctr=new THREE.Vector3();
   for (let i=0;i<p.count;i+=3){
     a.fromBufferAttribute(p,i); b.fromBufferAttribute(p,i+1); c.fromBufferAttribute(p,i+2);
     cb.subVectors(c,b); ab.subVectors(a,b); n.crossVectors(cb,ab).normalize();
-    const key = n.x.toFixed(2)+","+n.y.toFixed(2)+","+n.z.toFixed(2);
-    let e = map.get(key); if (!e){ e = { normal:n.clone(), sum:new THREE.Vector3(), c:0, vert:a.clone() }; map.set(key,e); }
+    ctr.copy(a).add(b).add(c).multiplyScalar(1/3); if (n.dot(ctr) < 0) n.negate();
+    let e = groups.find(gr => gr.normal.dot(n) > 0.999);
+    if (!e){ e = { normal:n.clone(), sum:new THREE.Vector3(), c:0, vert:a.clone() }; groups.push(e); }
     e.sum.add(a).add(b).add(c); e.c += 3;
   }
-  return [...map.values()].map(e => ({ normal:e.normal, centroid:e.sum.multiplyScalar(1/e.c), vert:e.vert }));
+  return groups.map(e => ({ normal:e.normal, centroid:e.sum.clone().multiplyScalar(1/e.c), vert:e.vert }));
+}
+// Pentagonal trapezohedron — the real d10 shape: 10 kite faces around a zigzag equator between two apexes.
+function d3dD10Geo(R){
+  // Apex height is DERIVED from the zigzag amplitude so each kite is planar (apex, the midpoint of its two
+  // "up" verts and its "down" vert stay collinear in the bisector plane) — otherwise the kite bends and the
+  // two triangles don't merge into one face. Solves to ap = ye·(1 + 2cos36°/(1−cos36°)).
+  const c5 = Math.cos(Math.PI/5), rr = R*0.85, ye = R*0.105, ap = ye*(1 + 2*c5/(1-c5)), V = [];
+  for (let k=0;k<10;k++){ const t=k*Math.PI/5; V.push(new THREE.Vector3(Math.cos(t)*rr, (k%2===0?ye:-ye), Math.sin(t)*rr)); }
+  const T = new THREE.Vector3(0,ap,0), B = new THREE.Vector3(0,-ap,0), pos = [];
+  const triOut = (p1,p2,p3) => { // push a triangle wound so its normal faces outward (FrontSide-visible)
+    const nn = new THREE.Vector3().subVectors(p2,p1).cross(new THREE.Vector3().subVectors(p3,p1));
+    const cc = new THREE.Vector3().addVectors(p1,p2).add(p3).multiplyScalar(1/3);
+    if (nn.dot(cc) < 0){ const t=p2; p2=p3; p3=t; }
+    pos.push(p1.x,p1.y,p1.z, p2.x,p2.y,p2.z, p3.x,p3.y,p3.z);
+  };
+  const kite = (apex,m,f,p) => { triOut(apex,m,f); triOut(apex,f,p); }; // apex + 3 equator verts → 2 tris
+  for (let k=1;k<10;k+=2) kite(T, V[(k+9)%10], V[k], V[(k+1)%10]); // top kites over the "down" equator verts
+  for (let k=0;k<10;k+=2) kite(B, V[(k+9)%10], V[k], V[(k+1)%10]); // bottom kites over the "up" verts
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+  geo.computeVertexNormals();
+  return geo;
 }
 function d3dBuild(sides, R){
   if (d3dIsBox(sides)){
@@ -133,7 +160,7 @@ function d3dBuild(sides, R){
     return { geo: d3dRoundedBox(size, bevel, 3), faces, box:true };
   }
   const geo = sides===4 ? new THREE.TetrahedronGeometry(R) : sides===8 ? new THREE.OctahedronGeometry(R)
-            : sides===12 ? new THREE.DodecahedronGeometry(R) : new THREE.IcosahedronGeometry(R);
+            : sides===10 ? d3dD10Geo(R) : sides===12 ? new THREE.DodecahedronGeometry(R) : new THREE.IcosahedronGeometry(R);
   return { geo, faces: d3dFaceList(geo), box:false };
 }
 function d3dConvex(geo){
@@ -213,7 +240,7 @@ function d3dD20Layout(faces){
 function d3dMakeDie(sides, value, R, dropped){
   const { geo, faces, box } = d3dBuild(sides, R), grp = new THREE.Group();
   const mesh = new THREE.Mesh(geo, d3dDieMat(box)); mesh.userData.box = box; mesh.castShadow = true; grp.add(mesh); d3dLiveMeshes.push(mesh);
-  const labelSize = R * (sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides<=12 ? 0.62 : 0.58), labels = [];
+  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.52 : sides<=12 ? 0.62 : 0.58), labels = [];
   const std = sides === 20, layout = std ? d3dD20Layout(faces) : null;       // standard layout for the d20
   faces.forEach((f, idx) => {
     const v = std ? layout[idx] : idx + 1, isMax = v === sides, mat = new THREE.MeshBasicMaterial({ transparent:true, depthWrite:false });

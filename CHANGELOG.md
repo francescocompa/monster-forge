@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 227 — 3D dice: real d10, fixed d12 faces, bigger d6 numbers
+- **Added the d10** as a proper **pentagonal trapezohedron** (it was falling through to the 6-sided box). The
+  apex height is derived from the zigzag amplitude so every kite face is planar (and so merges to exactly 10
+  faces); excluded d10 from the box path; physics hull builds from the same geometry.
+- **Fixed the d12 showing two numbers per face.** `d3dFaceList` merged triangles by a rounded normal *string
+  key*, which split coplanar pentagon triangles (the d12 came out as 17 face-groups). It now clusters by
+  normal *direction* (dot > .999) and orients normals outward — d12 → 12 faces, d10 → 10, d20/d8/d4 unchanged.
+- **Bigger d6 numbers** — bumped the d6 label size (its box face is large, so the old factor read small).
+
 ## Batch 226 — roll log: tidy-up (always-shown breakdown, bottom tabs, full-row hover popover)
 - **Breakdown is always shown** now (removed the click-to-reveal — there's room).
 - **"My rolls / Player rolls" tabs docked to the bottom** of the log (were under the header).
