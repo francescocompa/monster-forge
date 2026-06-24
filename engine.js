@@ -731,20 +731,41 @@ function animateNewGroup(el){
     animateRollTotal(el.querySelector(`[data-rollid="${r.id}"] .rl-total`),r.total,r.roll&&r.roll.formula);
   }
 }
+// Where the roll log lives (B224b): docked in the sidebar when the rail is usable (a bottom section when
+// wide; a thin number+icon when the rail is mini), or detached as a floating corner pill when the rail is
+// hidden (mobile). offsetParent===null on the mount means the rail is display:none → float.
+function rollLogPlacement(){
+  const mount=document.getElementById("rollLogMount");
+  const docked=!!(mount&&mount.offsetParent!==null);
+  const app=document.getElementById("app");
+  const mini=docked&&!!app&&app.classList.contains("rail-mini")&&!app.classList.contains("sidebar-open");
+  return {mount,docked,mini};
+}
 function renderRollLog(scrollNew){
   let el=document.getElementById("rollLog");
   // With dice rolling disabled, suppress the roll log entirely (B127).
   if(!rollLog.length||!clickRollOn()){if(el)el.remove();return;}
-  if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";(document.querySelector(".main")||document.body).appendChild(el);}
-  el.classList.toggle("open",rollLogOpen);
-  // Docked to a viewport corner (fixed); dragging snaps to the nearest corner, persisted (B223).
-  el.classList.remove("rl-bl","rl-br","rl-tl","rl-tr");el.classList.add("rl-"+_rlCorner);
-  el.innerHTML=rollLogHTML();
-  bindRollLog(el,scrollNew);
+  const {mount,docked,mini}=rollLogPlacement();
+  if(!el){el=document.createElement("div");el.id="rollLog";el.className="roll-log";}
+  const parent=docked?mount:(document.querySelector(".main")||document.body);
+  if(el.parentNode!==parent)parent.appendChild(el);
+  el.classList.toggle("rl-docked",docked);el.classList.toggle("rl-float",!docked);el.classList.toggle("rl-mini",mini);
+  el.classList.toggle("open",docked?!mini:rollLogOpen); // docked-wide = always-shown section; mini = icon; float = pill/panel
+  el.classList.remove("rl-bl","rl-br","rl-tl","rl-tr");if(!docked)el.classList.add("rl-"+_rlCorner);
+  el.innerHTML=rollLogHTML({docked,mini});
+  bindRollLog(el,scrollNew,{docked,mini});
   if(scrollNew)animateNewGroup(el);
 }
+// Re-dock/re-render when the layout changes (mobile breakpoint, or the rail toggling mini/open).
+let _rlReflow=null;
+function reflowRollLog(){if(document.getElementById("rollLog")){clearTimeout(_rlReflow);_rlReflow=setTimeout(()=>renderRollLog(),60);}}
+if(typeof window!=="undefined"){window.addEventListener("resize",reflowRollLog);
+  // The rail toggling mini/open changes the dock form — re-render on #app class changes.
+  const _app=document.getElementById("app");
+  if(_app&&typeof MutationObserver!=="undefined")new MutationObserver(reflowRollLog).observe(_app,{attributes:true,attributeFilter:["class"]});}
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
-function rollLogHTML(){
+// ctx = {docked, mini} chooses the form: sidebar section / mini rail icon / floating pill or panel (B224b).
+function rollLogHTML(ctx){
   // When the combat is shared (DM side), split into "My rolls" vs "Player rolls" tabs (B213).
   const shared=(typeof combatShareOn==="function"&&combatShareOn()&&!PLAYER_MODE);
   const list=shared?rollLog.filter(r=>rollLogTab==="players"?r.fromPlayer:!r.fromPlayer):rollLog;
@@ -778,23 +799,46 @@ function rollLogHTML(){
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
   const bodyInner=groups.length?groups.map(groupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
-  // Collapsed = a compact dice pill (glyph + count), tinted when a sticky mode is on (B223).
-  if(!rollLogOpen)return `<button class="rl-pill${rollMode?" mode-"+rollMode:""}" id="rlPill" title="Rolls (${ordered.length})" aria-label="Open roll log"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-pill-n">${ordered.length}</span></button>`;
-  // Open: header (chevron · title · count · read-only mode chip when active) + tabs + body. The adv/dis
-  // CONTROL now lives in the kebab menu (and ↑/↓); the header chip is just a tell (B223).
-  const modeChip=rollMode?`<span class="rl-mode-chip ${rollMode}" title="${rollMode==="adv"?"Advantage":"Disadvantage"} (sticky) — change in ⋯ or with ↑/↓">${rollMode==="adv"?"ADV":"DIS"}</span>`:"";
-  return `<div class="rl-head"><button class="rl-tog" id="rlTog" title="Collapse">${FS_CHEVRON}</button><span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span>${modeChip}<div class="rl-grow"></div><button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+  const last=ordered.length?rollLog[0]:null;const lastTotal=last?String(last.total):"";const modeCls=rollMode||"flat";
+  // Mini rail → a mode-coloured dice icon + the last total; click opens the menu.
+  if(ctx&&ctx.mini)return `<button class="rl-icon mode-${modeCls}" id="rlIcon" title="Rolls — last ${esc(lastTotal)}" aria-label="Rolls"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-icon-n">${esc(lastTotal)}</span></button>`;
+  // Floating (rail hidden) + collapsed → a pill showing the LAST rolled number (hover shows the full last roll).
+  if(ctx&&!ctx.docked&&!rollLogOpen)return `<button class="rl-pill mode-${modeCls}" id="rlPill" title="Open roll log" aria-label="Open roll log"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-pill-n">${esc(lastTotal)}</span></button>`;
+  // Section (docked-wide) or open floating panel → header + body. The header carries a CLICKABLE mode-cycle
+  // tag (flat → advantage → disadvantage); the collapse chevron only floats (a docked section stays open).
+  const cycle=`<button class="rl-modecycle ${modeCls}" data-rollcycle title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;
+  const collapse=(ctx&&ctx.docked)?"":`<button class="rl-tog" id="rlTog" title="Collapse">${FS_CHEVRON}</button>`;
+  return `<div class="rl-head">${collapse}<span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span><div class="rl-grow"></div>${cycle}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +tabs+`<div class="rl-body">${bodyInner}</div>`;
 }
+// A compact one-line summary of a roll for the collapsed-pill hover (B224b).
+function lastRollTip(r){return esc(r.label||"Roll")+": "+r.total+(r.parts?" ("+esc(String(r.parts).replace(/<[^>]*>/g,""))+")":"");}
 // Wire up the roll-log controls + row interactions after its HTML is in the DOM.
-function bindRollLog(el,scrollNew){
-  // Drag handle = the header when open, the pill itself when collapsed (both snap to a corner).
-  bindRollLogDrag(el,el.querySelector(".rl-head")||el.querySelector(".rl-pill"));
+function bindRollLog(el,scrollNew,ctx){
+  ctx=ctx||{};
+  // Mini rail → the icon opens the menu (and from there the rest).
+  const icon=el.querySelector("#rlIcon");
+  if(icon){icon.addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(icon);});return;}
+  // Floating + collapsed → a draggable pill; click expands (suppressed right after a drag); hover = last roll.
   const pill=el.querySelector("#rlPill");
-  if(pill){pill.addEventListener("click",()=>{if(performance.now()-_rlDragEnd<300)return;rollLogOpen=true;saveRollLogState();renderRollLog();});return;}
-  el.querySelector("#rlTog").addEventListener("click",()=>{rollLogOpen=!rollLogOpen;saveRollLogState();renderRollLog();});
+  if(pill){
+    bindRollLogDrag(el,pill);
+    pill.addEventListener("click",()=>{if(performance.now()-_rlDragEnd<300)return;rollLogOpen=true;saveRollLogState();renderRollLog();});
+    const last=rollLog[0];
+    if(last&&typeof showMiniTip==="function"){pill.addEventListener("mouseenter",()=>showMiniTip(pill,lastRollTip(last)));pill.addEventListener("mouseleave",hideMiniTip);}
+    return;
+  }
+  // Section (docked) or open floating panel.
+  if(ctx.docked===false)bindRollLogDrag(el,el.querySelector(".rl-head")); // only the floating panel drags/snaps
+  const tog=el.querySelector("#rlTog");if(tog)tog.addEventListener("click",()=>{rollLogOpen=!rollLogOpen;saveRollLogState();renderRollLog();});
+  const cyc=el.querySelector("[data-rollcycle]");if(cyc)cyc.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
-  el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
+  // Each row: click toggles its breakdown (hidden by default, B224b); right-click opens the entry menu.
+  el.querySelectorAll("[data-rollid]").forEach(rw=>{
+    rw.addEventListener("click",e=>{if(e.target.closest("button,a,.rl-src"))return;rw.classList.toggle("expanded");});
+    rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);});
+  });
+  el.querySelectorAll(".rl-body .rl-row").forEach((r,i)=>r.classList.toggle("rl-alt",i%2===1)); // subtle zebra
   // Hover a DMG tag → small popover naming the damage type (B62).
   el.querySelectorAll(".rl-tag-damage[data-dmgtype]").forEach(t=>{
     t.addEventListener("mouseenter",()=>showMiniTip(t,esc(capWord(t.dataset.dmgtype))+" damage"));
@@ -816,7 +860,7 @@ function bindRollLog(el,scrollNew){
     }
   });
   // Scroll to the newest roll when one was just recorded — top for newest-first, bottom otherwise (B65).
-  if(scrollNew&&rollLogOpen){const body=el.querySelector(".rl-body");if(body)body.scrollTop=rollLogSort==="desc"?0:body.scrollHeight;}
+  if(scrollNew&&el.classList.contains("open")){const body=el.querySelector(".rl-body");if(body)body.scrollTop=rollLogSort==="desc"?0:body.scrollHeight;}
 }
 // Drag the roll-log (by its header, or the pill itself when collapsed) and SNAP to the nearest viewport
 // corner on release; the corner persists (B223). A real drag suppresses the pill's expand-click via _rlDragEnd.

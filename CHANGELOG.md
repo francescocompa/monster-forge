@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 225 — roll log: lives in the sidebar (section / mini icon / float), tidier rows
+- **The roll log is now part of the sidebar.** Wide rail → a **section pinned to the bottom** of the sidebar;
+  **Preset libraries** moved up under a divider right below the section buttons. Mini rail → a **mode-coloured
+  dice icon + the last total** (click opens the menu). Rail hidden (mobile) → it **detaches to the floating
+  corner pill** (last rolled number; hover shows the full last roll). `renderRollLog` picks the form from
+  `rollLogPlacement()`; re-docks on resize + on `#app` class changes (MutationObserver).
+- **Tidier rows:** the breakdown (`1d8:[8]+3`) is **hidden until you click a row** to expand it; subtle
+  **alternating row shading**. Entry content/placement otherwise unchanged.
+- **Header mode tag is clickable again:** a flat→advantage→disadvantage **cycle tag** (in addition to the ⋯
+  menu and ↑/↓), coloured by state. The collapse chevron only shows on the floating panel (a docked section
+  stays open).
+
 ## Batch 224 — roll mode: d20-only scope + tell synced to the cursor-die
 - **Sticky advantage/disadvantage now applies only to d20 tests** (attacks/checks/saves), not damage or other
   dice — clicking a `3d6` with Advantage on no longer rolls it with advantage. (`quickRoll` gates `adv` on

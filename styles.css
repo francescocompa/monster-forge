@@ -559,15 +559,29 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .dice-help code{font-family:"JetBrains Mono",monospace;background:var(--in);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--amber-soft);font-size:11px;white-space:nowrap}
 .dice-help a{color:var(--info)}
 /* Roll-log panel */
-/* Docked to a viewport corner (fixed → never drifts into the scrolling content); drag snaps corners (B223). */
-.roll-log{position:fixed;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #434956;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden;font-size:12.5px}
-.roll-log.rl-bl{left:18px;bottom:18px;top:auto;right:auto}
-.roll-log.rl-br{right:18px;bottom:18px;top:auto;left:auto}
-.roll-log.rl-tl{left:18px;top:18px;bottom:auto;right:auto}
-.roll-log.rl-tr{right:18px;top:18px;bottom:auto;left:auto}
-.roll-log.dragging{transition:none}
-/* Collapsed = a compact dice pill; the container itself goes invisible so only the pill shows. */
-.roll-log:not(.open){width:auto;background:none;border:none;box-shadow:none;overflow:visible}
+/* The log lives in the sidebar (B224b): a section at the bottom when the rail is wide, a thin number+icon
+   when it's mini, and a floating corner pill/panel only when the rail is hidden (mobile). */
+.rl-mount{margin-top:6px}
+.rail-div{height:1px;background:var(--line);margin:10px 6px 8px}
+.roll-log{font-size:12.5px}
+/* — DOCKED: a sidebar section (wide rail) — */
+.roll-log.rl-docked{width:auto;background:none;border:none;border-top:1px solid var(--line);border-radius:0}
+.roll-log.rl-docked .rl-head{background:none;border-bottom:none;cursor:default;padding:8px 6px 4px}
+.roll-log.rl-docked .rl-body{max-height:30vh}
+/* — DOCKED + MINI: just a mode-coloured dice icon + last total — */
+.roll-log.rl-mini{display:flex;justify-content:center;padding:6px 0}
+.rl-icon{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--dim);cursor:pointer;padding:4px}
+.rl-icon .rl-pill-ico{color:var(--amber-soft)}
+.rl-icon-n{font-size:11px;font-weight:700;color:var(--txt)}
+.rl-icon.mode-adv .rl-pill-ico{color:#5fa873}.rl-icon.mode-dis .rl-pill-ico{color:#e05a5a}
+/* — FLOATING: fixed to a viewport corner; collapses to a dice pill (rail hidden / mobile) — */
+.roll-log.rl-float{position:fixed;z-index:54;width:252px;max-width:calc(100% - 36px);background:var(--panel3);border:1px solid #434956;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden}
+.roll-log.rl-float.rl-bl{left:18px;bottom:18px;top:auto;right:auto}
+.roll-log.rl-float.rl-br{right:18px;bottom:18px;top:auto;left:auto}
+.roll-log.rl-float.rl-tl{left:18px;top:18px;bottom:auto;right:auto}
+.roll-log.rl-float.rl-tr{right:18px;top:18px;bottom:auto;left:auto}
+.roll-log.rl-float.dragging{transition:none}
+.roll-log.rl-float:not(.open){width:auto;background:none;border:none;box-shadow:none;overflow:visible}
 .rl-pill{display:flex;align-items:center;gap:6px;background:var(--panel3);border:1px solid #434956;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.6);color:var(--txt);cursor:pointer;padding:6px 11px 6px 9px;font:inherit;font-size:12.5px;font-weight:600;touch-action:none}
 .rl-pill:hover{border-color:var(--accent)}
 .rl-pill-ico{width:16px;height:16px;color:var(--amber-soft);display:grid;place-items:center}
@@ -575,10 +589,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .rl-pill-n{min-width:13px;text-align:center}
 .rl-pill.mode-adv{border-color:#5fa873}.rl-pill.mode-adv .rl-pill-ico{color:#5fa873}
 .rl-pill.mode-dis{border-color:#e05a5a}.rl-pill.mode-dis .rl-pill-ico{color:#e05a5a}
-/* Read-only sticky-mode chip in the open header (the control is in the ⋯ menu / ↑↓). */
-.rl-mode-chip{font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:8px;line-height:14px}
-.rl-mode-chip.adv{background:rgba(95,168,115,.2);color:#7ec98f;border:1px solid rgba(95,168,115,.5)}
-.rl-mode-chip.dis{background:rgba(224,90,90,.22);color:#ef9a9a;border:1px solid rgba(224,90,90,.5)}
+/* Clickable flat/adv/dis cycle tag in the header. */
+.rl-modecycle{font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:8px;line-height:13px;cursor:pointer;background:var(--in);border:1px solid var(--line);color:var(--faint)}
+.rl-modecycle:hover{border-color:var(--accent)}
+.rl-modecycle.adv{background:rgba(95,168,115,.2);color:#7ec98f;border-color:rgba(95,168,115,.55)}
+.rl-modecycle.dis{background:rgba(224,90,90,.22);color:#ef9a9a;border-color:rgba(224,90,90,.55)}
+/* Rows: breakdown hidden until the row is clicked; subtle zebra. */
+.roll-log .rl-row{cursor:pointer}
+.roll-log .rl-row .rl-pnum{display:none}
+.roll-log .rl-row.expanded .rl-pnum{display:inline}
+.roll-log .rl-row.rl-alt{background:rgba(255,255,255,.022)}
 /* The ▲/▼ tell riding the cursor over a rollable while a sticky mode is active. */
 #rollModeTell{position:fixed;z-index:10000;pointer-events:none;transform:translate(13px,-21px);font-size:14px;font-weight:900;line-height:1;opacity:0;transition:opacity .1s;text-shadow:0 1px 3px rgba(0,0,0,.85)}
 #rollModeTell.show{opacity:1}
