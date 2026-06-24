@@ -20,9 +20,9 @@
   background:radial-gradient(circle, rgba(239,132,112,.85), rgba(226,101,77,.5) 40%, rgba(226,101,77,0) 68%); }
 #d3dCrit .d3dcrit-sheenwrap{ position:absolute; top:50%; left:50%; border-radius:20%; overflow:hidden; transform:translate(-50%,-50%); }
 #d3dCrit .d3dcrit-sheen{ position:absolute; top:-60%; left:-90%; width:55%; height:220%; opacity:0;
-  background:linear-gradient(105deg, transparent, rgba(255,242,232,.92), transparent); transform:rotate(16deg); }
+  background:linear-gradient(105deg, transparent, rgba(255,242,232,.6), transparent); transform:rotate(16deg); }
 #d3dCrit.go .d3dcrit-glow{ animation:d3dcrit-bloom 560ms cubic-bezier(.1,.8,.2,1) 1; }
-#d3dCrit.go .d3dcrit-sheen{ animation:d3dcrit-sheen 520ms ease-out 1; }
+#d3dCrit.go .d3dcrit-sheen{ animation:d3dcrit-sheen 420ms ease-out 1; }
 @keyframes d3dcrit-bloom{
   0%{ opacity:0; transform:scale(.5); }
   18%{ opacity:1; transform:scale(1.22); }
