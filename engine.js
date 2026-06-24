@@ -763,6 +763,16 @@ if(typeof window!=="undefined"){window.addEventListener("resize",reflowRollLog);
   // The rail toggling mini/open changes the dock form — re-render on #app class changes.
   const _app=document.getElementById("app");
   if(_app&&typeof MutationObserver!=="undefined")new MutationObserver(reflowRollLog).observe(_app,{attributes:true,attributeFilter:["class"]});}
+// Roll-row building blocks (module-level so the collapsed pill/mini-icon hover popover can render a full
+// row too — total · who-rolled · label · breakdown · type tag) (B226).
+function rlTagHTML(r){if(!r.type)return "";const dmgAbbr=r.type==="damage"&&r.dmgType?(DMG_ABBR[r.dmgType.toLowerCase()]||r.dmgType):null;const label=dmgAbbr||ROLL_TAG[r.type]||r.type.toUpperCase();return `<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${esc(label)}</span>`;}
+function rlPartsHTML(r){const adv=r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";const crit=r.crit?'<span class="rl-crit">CRIT</span>':"";return `<span class="rl-parts">${adv}${crit}<span class="rl-pnum">${esc(r.parts)}</span></span>`;}
+function rlSrcHTML(src){return src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";}
+function rlAbAttr(ab){return ab?` data-abil="${esc(ab)}"`:"";}
+function rlSingleHTML(r){return `<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrcHTML(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
+function rlSubHTML(r){return `<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
+// Hover popover for the collapsed pill / mini icon: the full last-roll row (who rolled + breakdown).
+function showRollPopover(anchor,r){if(!r||typeof showPopover!=="function")return;showPopover(anchor,`<div class="rl-poprow">${rlSingleHTML(r)}</div>`);}
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
 // ctx = {docked, mini} chooses the form: sidebar section / mini rail icon / floating pill or panel (B224b).
 function rollLogHTML(ctx){
@@ -775,57 +785,43 @@ function rollLogHTML(ctx){
   // tags + bars line up identically for single and grouped rows (B63). The breakdown line scrolls
   // horizontally with no visible scrollbar; the adv/dis tag is inline at the START of it (scrolls
   // with the dice rather than staying pinned).
-  const rlTag=r=>{if(!r.type)return "";const dmgAbbr=r.type==="damage"&&r.dmgType?(DMG_ABBR[r.dmgType.toLowerCase()]||r.dmgType):null;const label=dmgAbbr||ROLL_TAG[r.type]||r.type.toUpperCase();return `<span class="rl-tag rl-tag-${r.type}"${r.type==="damage"&&r.dmgType?` data-dmgtype="${esc(r.dmgType)}"`:""}>${esc(label)}</span>`;};
-  const rlAdv=r=>r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";
-  const rlCrit=r=>r.crit?'<span class="rl-crit">CRIT</span>':"";
-  const rlPnum=r=>`<span class="rl-pnum">${esc(r.parts)}</span>`;
-  const rlParts=r=>`<span class="rl-parts">${rlAdv(r)}${rlCrit(r)}${rlPnum(r)}</span>`;
-  const rlSrc=src=>src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";
-  const abAttr=ab=>ab?` data-abil="${esc(ab)}"`:"";
-  // Single entry: total · [source / label / breakdown] · TYPE tag.
-  const single=r=>`<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrc(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlParts(r)}</span>${rlTag(r)}</div>`;
-  // Grouped sub-roll: the SAME geometry as a single row minus the source/label — total · breakdown ·
-  // TYPE tag — so the bars and tags align with the single rows above/below.
-  const sub=r=>`<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${abAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlParts(r)}</span>${rlTag(r)}</div>`;
   // Group consecutive rolls that share source + name (B61): a header once, then each sub-roll. When
-  // every roll in the group shares one ability, draw a SINGLE colour bar spanning the whole group
-  // instead of one per sub-row (B64).
+  // every roll in the group shares one ability, draw a SINGLE colour bar spanning the whole group (B64).
   const groupHTML=g=>{
-    if(g.items.length===1)return single(g.items[0]);
+    if(g.items.length===1)return rlSingleHTML(g.items[0]);
     const ab0=g.items[0].abil,allSame=ab0&&g.items.every(it=>it.abil===ab0);
-    return `<div class="rl-group${allSame?" rl-group-abil":""}"${allSame?abAttr(ab0):""}><div class="rl-ghead">${rlSrc(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(sub).join("")}</div>`;
+    return `<div class="rl-group${allSame?" rl-group-abil":""}"${allSame?rlAbAttr(ab0):""}><div class="rl-ghead">${rlSrcHTML(g.source)}<span class="rl-glbl">${esc(g.label)}</span></div>${g.items.map(rlSubHTML).join("")}</div>`;
   };
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
   const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
   const bodyInner=groups.length?groups.map(groupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
   const last=ordered.length?rollLog[0]:null;const lastTotal=last?String(last.total):"";const modeCls=rollMode||"flat";
-  // Mini rail → a mode-coloured dice icon + the last total; click opens the menu.
-  if(ctx&&ctx.mini)return `<button class="rl-icon mode-${modeCls}" id="rlIcon" title="Rolls — last ${esc(lastTotal)}" aria-label="Rolls"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-icon-n">${esc(lastTotal)}</span></button>`;
+  // Mini rail → a mode-coloured dice icon + the last total; click opens the menu, hover shows the full roll.
+  if(ctx&&ctx.mini)return `<button class="rl-icon mode-${modeCls}" id="rlIcon" title="Rolls" aria-label="Rolls"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-icon-n">${esc(lastTotal)}</span></button>`;
   // Floating (rail hidden) + collapsed → a pill showing the LAST rolled number (hover shows the full last roll).
   if(ctx&&!ctx.docked&&!rollLogOpen)return `<button class="rl-pill mode-${modeCls}" id="rlPill" title="Open roll log" aria-label="Open roll log"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-pill-n">${esc(lastTotal)}</span></button>`;
-  // Section (docked-wide) or open floating panel → header + body. The header carries a CLICKABLE mode-cycle
-  // tag (flat → advantage → disadvantage); the collapse chevron only floats (a docked section stays open).
+  // Section (docked-wide) or open floating panel → header + body + tabs (tabs docked at the BOTTOM, B226).
+  // The header carries a CLICKABLE flat→adv→dis cycle tag; the collapse chevron only floats.
   const cycle=`<button class="rl-modecycle ${modeCls}" data-rollcycle title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;
   const collapse=(ctx&&ctx.docked)?"":`<button class="rl-tog" id="rlTog" title="Collapse">${FS_CHEVRON}</button>`;
-  return `<div class="rl-head">${collapse}<span class="rl-title">My Rolls</span><span class="rl-n">${ordered.length}</span><div class="rl-grow"></div>${cycle}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
-    +tabs+`<div class="rl-body">${bodyInner}</div>`;
+  return `<div class="rl-head">${collapse}<span class="rl-title">Rolls</span><div class="rl-grow"></div>${cycle}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
+    +`<div class="rl-body">${bodyInner}</div>`+tabs;
 }
-// A compact one-line summary of a roll for the collapsed-pill hover (B224b).
-function lastRollTip(r){return esc(r.label||"Roll")+": "+r.total+(r.parts?" ("+esc(String(r.parts).replace(/<[^>]*>/g,""))+")":"");}
 // Wire up the roll-log controls + row interactions after its HTML is in the DOM.
 function bindRollLog(el,scrollNew,ctx){
   ctx=ctx||{};
-  // Mini rail → the icon opens the menu (and from there the rest).
+  const last=rollLog[0];
+  const popHover=anchor=>{if(!last)return;anchor.addEventListener("mouseenter",()=>showRollPopover(anchor,last));anchor.addEventListener("mouseleave",()=>{if(typeof closePopover==="function")closePopover();});};
+  // Mini rail → the icon opens the menu; hover shows the full last roll.
   const icon=el.querySelector("#rlIcon");
-  if(icon){icon.addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(icon);});return;}
-  // Floating + collapsed → a draggable pill; click expands (suppressed right after a drag); hover = last roll.
+  if(icon){icon.addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(icon);});popHover(icon);return;}
+  // Floating + collapsed → a draggable pill; click expands (suppressed right after a drag); hover = full last roll.
   const pill=el.querySelector("#rlPill");
   if(pill){
     bindRollLogDrag(el,pill);
     pill.addEventListener("click",()=>{if(performance.now()-_rlDragEnd<300)return;rollLogOpen=true;saveRollLogState();renderRollLog();});
-    const last=rollLog[0];
-    if(last&&typeof showMiniTip==="function"){pill.addEventListener("mouseenter",()=>showMiniTip(pill,lastRollTip(last)));pill.addEventListener("mouseleave",hideMiniTip);}
+    popHover(pill);
     return;
   }
   // Section (docked) or open floating panel.
@@ -833,11 +829,8 @@ function bindRollLog(el,scrollNew,ctx){
   const tog=el.querySelector("#rlTog");if(tog)tog.addEventListener("click",()=>{rollLogOpen=!rollLogOpen;saveRollLogState();renderRollLog();});
   const cyc=el.querySelector("[data-rollcycle]");if(cyc)cyc.addEventListener("click",e=>{e.stopPropagation();cycleRollMode();});
   el.querySelector("#rlMenu").addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(e.currentTarget);});
-  // Each row: click toggles its breakdown (hidden by default, B224b); right-click opens the entry menu.
-  el.querySelectorAll("[data-rollid]").forEach(rw=>{
-    rw.addEventListener("click",e=>{if(e.target.closest("button,a,.rl-src"))return;rw.classList.toggle("expanded");});
-    rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);});
-  });
+  // Breakdown is always shown now (B226); rows just take a right-click entry menu.
+  el.querySelectorAll("[data-rollid]").forEach(rw=>rw.addEventListener("contextmenu",e=>{e.preventDefault();e.stopPropagation();openRollEntryMenu(rw,rw.dataset.rollid);}));
   el.querySelectorAll(".rl-body .rl-row").forEach((r,i)=>r.classList.toggle("rl-alt",i%2===1)); // subtle zebra
   // Hover a DMG tag → small popover naming the damage type (B62).
   el.querySelectorAll(".rl-tag-damage[data-dmgtype]").forEach(t=>{

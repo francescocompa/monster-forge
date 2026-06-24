@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 226 — roll log: tidy-up (always-shown breakdown, bottom tabs, full-row hover popover)
+- **Breakdown is always shown** now (removed the click-to-reveal — there's room).
+- **"My rolls / Player rolls" tabs docked to the bottom** of the log (were under the header).
+- **Title is just "Rolls"; removed the roll counter** badge.
+- **Mini icon & floating pill hover → a custom popover with the full last-roll row** (who rolled + label +
+  breakdown + total), replacing the plain text tooltip; the mini icon also got more vertical breathing room
+  between the die and the number. Row builders extracted to module scope (`rlSingleHTML` etc.) so the popover
+  reuses the real row.
+
 ## Batch 225 — roll log: lives in the sidebar (section / mini icon / float), tidier rows
 - **The roll log is now part of the sidebar.** Wide rail → a **section pinned to the bottom** of the sidebar;
   **Preset libraries** moved up under a divider right below the section buttons. Mini rail → a **mode-coloured

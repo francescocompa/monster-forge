@@ -570,7 +570,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .roll-log.rl-docked .rl-body{max-height:30vh}
 /* — DOCKED + MINI: just a mode-coloured dice icon + last total — */
 .roll-log.rl-mini{display:flex;justify-content:center;padding:6px 0}
-.rl-icon{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--dim);cursor:pointer;padding:4px}
+.rl-icon{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:none;color:var(--dim);cursor:pointer;padding:6px 4px}
 .rl-icon .rl-pill-ico{color:var(--amber-soft)}
 .rl-icon-n{font-size:11px;font-weight:700;color:var(--txt)}
 .rl-icon.mode-adv .rl-pill-ico{color:#5fa873}.rl-icon.mode-dis .rl-pill-ico{color:#e05a5a}
@@ -595,10 +595,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .rl-modecycle.adv{background:rgba(95,168,115,.2);color:#7ec98f;border-color:rgba(95,168,115,.55)}
 .rl-modecycle.dis{background:rgba(224,90,90,.22);color:#ef9a9a;border-color:rgba(224,90,90,.55)}
 /* Rows: breakdown hidden until the row is clicked; subtle zebra. */
-.roll-log .rl-row{cursor:pointer}
-.roll-log .rl-row .rl-pnum{display:none}
-.roll-log .rl-row.expanded .rl-pnum{display:inline}
 .roll-log .rl-row.rl-alt{background:rgba(255,255,255,.022)}
+/* Last-roll hover popover for the collapsed pill / mini icon — render the full row. */
+.rl-poprow{min-width:200px;font-size:12.5px}
+.rl-poprow .rl-row{cursor:default}
 /* The ▲/▼ tell riding the cursor over a rollable while a sticky mode is active. */
 #rollModeTell{position:fixed;z-index:10000;pointer-events:none;transform:translate(13px,-21px);font-size:14px;font-weight:900;line-height:1;opacity:0;transition:opacity .1s;text-shadow:0 1px 3px rgba(0,0,0,.85)}
 #rollModeTell.show{opacity:1}
@@ -1495,7 +1495,9 @@ body.player-mode .combat-active .pcs-roll{pointer-events:none}
 .pm-bar-l{font-size:12.5px;color:var(--dim);font-weight:500}
 .pm-claim{flex:1;max-width:260px;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:13px;padding:6px 9px;color-scheme:dark}
 /* Roll-log "My rolls / Player rolls" tabs (B213) */
-.rl-tabs{display:flex;gap:4px;padding:6px 9px;border-bottom:1px solid #434956;background:#16181c}
+/* Tabs are docked at the BOTTOM of the log now (B226) → border-top instead of -bottom. */
+.rl-tabs{display:flex;gap:4px;padding:6px 9px;border-top:1px solid var(--line);background:#16181c}
+.roll-log.rl-docked .rl-tabs{background:none;padding:6px 6px 2px}
 .rl-tab{flex:1;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:11px;font-weight:600;padding:4px 6px;cursor:pointer}
 .rl-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .rl-empty{padding:18px 12px;text-align:center;color:var(--faint);font-size:12px}
