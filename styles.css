@@ -1087,8 +1087,8 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-meta .ci-addcond{order:-2}
 .ci-meta .cc-chip{order:-1}
 .ci-meta .ci-ac-chip{order:1}
-.ci-meta .ci-react-chip{order:2}
-.ci-meta .ci-conc-chip{order:3}
+.ci-meta .ci-react-chip,.ci-meta .ci-react-ind{order:2}
+.ci-meta .ci-conc-chip,.ci-meta .ci-conc-ind{order:3}
 /* Narrow pane (resized small): two-row card. Line 1 = name (grows) · HP · kebab. Line 2 = a small
    initiative number leading the chip cluster, in line with AC and the effects (B129). A zero-height
    full-width pseudo forces the clean break between the two lines; the name grows to fill line 1. The
@@ -1100,7 +1100,7 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
   .cbt-row>.ci-menu{order:3}
   .cbt-row>.ci-init,.cbt-row>.ci-init-in{order:5;position:static;transform:none}
   .cbt-row>.ci-meta{order:6}
-  .ci-meta .ci-addcond,.ci-meta .cc-chip,.ci-meta .ci-ac-chip,.ci-meta .ci-react-chip,.ci-meta .ci-conc-chip{order:0}
+  .ci-meta .ci-addcond,.ci-meta .cc-chip,.ci-meta .ci-ac-chip,.ci-meta .ci-react-chip,.ci-meta .ci-conc-chip,.ci-meta .ci-react-ind,.ci-meta .ci-conc-ind{order:0}
 }
 .cbt-row.enemy{border-left-color:#9c4a3f;--sel-accent:#bd5a4b}.cbt-row.ally{border-left-color:#4a78b0;--sel-accent:#5b9bd5}.cbt-row.pc{border-left-color:#3f7a52;--sel-accent:#5fa873}.cbt-row.setting{border-left-color:#7a6a3f;--sel-accent:#b89a4f}
 .cbt-row.active{background:color-mix(in srgb,var(--sel-accent) 9%,var(--panel));box-shadow:inset 0 0 0 1px var(--sel-accent)}
@@ -1215,6 +1215,13 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-react-chip:hover,.ci-conc-chip:hover{border-color:var(--accent);color:var(--txt)}
 .ci-react-chip.used{color:var(--faint);opacity:.5;border-style:dashed}
 .ci-conc-chip.on{color:var(--accent-soft);border-color:var(--accent)} /* concentrating */
+/* Read-only reaction/concentration indicators (player mode, rows the player doesn't control, B233): icon
+   only — no button bg/border — coloured by state, with a state popover on hover/click. */
+.ci-react-ind,.ci-conc-ind{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;background:none;padding:0;flex:none;cursor:help;color:var(--dim)}
+.ci-react-ind svg,.ci-conc-ind svg{width:13px;height:13px}
+.ci-react-ind.used{color:var(--faint);opacity:.45}
+.ci-conc-ind{color:var(--faint)}
+.ci-conc-ind.on{color:var(--accent-soft)}
 /* Compact HP control (H6): bold current/max number + thin health underbar, centred; the whole section is a
    button with a subtle bg on hover; opens the manage popover (B124/B125). */
 .ci-hp{flex:none}
@@ -1497,6 +1504,8 @@ body.player-mode .combat-grid{grid-template-columns:1fr!important}
 body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds){pointer-events:none}
 body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds) .ci-init-in,
 body.player-mode .cbt-row.pm-edit-conds .ci-init-in{pointer-events:none;background:none;border:none;padding-left:0}
+/* Read-only reaction/concentration indicators stay interactive (state popover) even on inert rows (B233). */
+body.player-mode .ci-react-ind,body.player-mode .ci-conc-ind{pointer-events:auto}
 /* Reaction/concentration are PC-only; addcond/cc-x stay hidden on inert rows but show on enemy-cond rows. */
 body.player-mode .cbt-row:not(.pm-edit) .ci-react-chip,
 body.player-mode .cbt-row:not(.pm-edit) .ci-conc-chip,

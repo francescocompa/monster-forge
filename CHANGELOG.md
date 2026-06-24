@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 233 — initiative sharing: enemy names, enemy-condition persistence, read-only react/conc, encounter name
+- **Players see combatant names** now — enemies show their custom nickname if set, else the statblock name
+  (`playerSafeInstance` sends `it.name`); HP/statblock stay obscured.
+- **Fixed enemy conditions reverting** — the DM-side poll skipped every non-PC edit, so a player-set enemy
+  condition was never applied/republished and vanished when the player's optimistic window lapsed. The poll
+  now applies enemy edits (conditions only; HP/init stay DM-owned).
+- **Enemy reaction & concentration are visible but read-only for players** — a plain coloured icon (no button
+  bg/border) with a state popover on hover/click, instead of an editable chip. Applies to any row the player
+  doesn't control. (`.ci-react-ind`/`.ci-conc-ind`.)
+- **Player header shows the encounter name** (published in the snapshot) instead of the hardcoded
+  "Initiative"; falls back to "Initiative" when the encounter is unnamed. (Difficulty was already hidden.)
+
 ## Batch 232 — 3D dice: crit effect coincides with the extra dice appearing
 - On an attack crit the crit flourish (glow/sheen + d20 pop) now fires **the moment the extra crit dice drop
   in** (wave-2 launch), not when they settle at the card stage. The crit pulse is driven in any roll state so

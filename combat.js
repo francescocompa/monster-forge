@@ -770,8 +770,15 @@ function combatRowHTML(it,active,drag){
   // DOM order is the narrow two-row order (AC · reaction · concentration · effect chips · +add). The wide
   // single-row layout flips it via flex `order` so +add leads and AC/reaction/conc sit fixed next to HP (B125).
   const acChip=it.ac!=null?`<span class="ci-ac-chip">${SHIELD_ICON}${it.ac}</span>`:"";
-  const reactChip=it.kind!=="event"?`<button class="ci-react-chip${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`:"";
-  const concChip=it.kind!=="event"?`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`:"";
+  // In player mode, reaction & concentration on rows the player doesn't control (enemies, other PCs) are
+  // VISIBLE but not editable: a plain coloured icon (no button bg/border) with a state popover on hover/click.
+  const roCtrl=PLAYER_MODE&&typeof playerCanEdit==="function"&&!playerCanEdit(it);
+  const reactChip=it.kind==="event"?"":roCtrl
+    ?`<span class="ci-react-ind${it.reaction===false?" used":""}" data-roreact="${it.id}" tabindex="0" aria-label="Reaction ${it.reaction===false?"used":"available"}">${REACT_ICON}</span>`
+    :`<button class="ci-react-chip${it.reaction===false?" used":""}" data-cireact="${it.id}" aria-label="Toggle reaction">${REACT_ICON}</button>`;
+  const concChip=it.kind==="event"?"":roCtrl
+    ?`<span class="ci-conc-ind${it.concentration?" on":""}" data-roconc="${it.id}" tabindex="0" aria-label="Concentration ${it.concentration?"on":"off"}">${CONC_ICON}</span>`
+    :`<button class="ci-conc-chip${it.concentration?" on":""}" data-ciconc="${it.id}" aria-label="Toggle concentration">${CONC_ICON}</button>`;
   const effChips=(it.conditions||[]).map((c,i)=>condChipHTML(it.id,c,i)).join("");
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}${PLAYER_MODE&&playerEnemyCondsEditable(it)?" pm-edit-conds":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
@@ -1069,7 +1076,7 @@ function buildCombatShareSnapshot(cb){
     if(it.kind==="event")return; // lair/timing cues — DM-only
     if(i===cb.turnIndex)turn=list.length;
     const isPc=it.kind==="pc";
-    const row={n:isPc?(it.name||"Character"):(it.faction||"Enemy"),pc:isPc};
+    const row={n:isPc?(it.name||"Character"):(it.name||it.faction||"Enemy"),pc:isPc};
     if(i===cb.turnIndex)row.cur=true;
     const conds=(it.conditions||[]).map(c=>c.name).filter(Boolean);
     if(conds.length)row.c=conds;
@@ -1086,7 +1093,8 @@ function buildCombatShareSnapshot(cb){
   // (minus the DM note) + obscured enemy instances (faction label + band, no statblock/HP). Events dropped.
   const porder=[];let pturn=0;
   cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it,opts));});
-  snap.combat={round:cb.round,turnIndex:pturn,order:porder};
+  const _ctx=loadedCtx();
+  snap.combat={round:cb.round,turnIndex:pturn,order:porder,name:(_ctx&&_ctx.e&&_ctx.e.name&&_ctx.e.name.trim())||""};
   // Character sheets (B204 stage 2): each editable PC's roster record, notes stripped, keyed by srcId. In
   // player mode these hydrate state.roster so the real pcSheet/active-panel render with full data.
   const chars={};
@@ -1105,8 +1113,9 @@ function playerSafeInstance(it,opts){
   const base={id:it.id,kind:it.kind,faction:it.faction,init:it.init,initMod:it.initMod||0,initRolled:it.initRolled!==false,initManual:!!it.initManual,dex:it.dex||10,status:it.status||"active",groupId:it.groupId,conditions:conds,reaction:it.reaction!==false};
   if(it.concentration)base.concentration=true;
   if(it.kind==="pc")return Object.assign(base,{name:it.name,ac:it.ac,hpMax:it.hpMax,hpCur:it.hpCur,hpTemp:it.hpTemp||0,srcId:it.srcId,srcEntry:it.srcEntry,resources:it.resources||[]},it.deathSaves?{deathSaves:it.deathSaves}:{});
-  // Enemy: obscured. Health band only when "show bloodied" is on (off ⇒ no HP info at all).
-  return Object.assign(base,{name:it.faction||"Enemy",ac:null,hpMax:null,hpCur:null,hpTemp:0,srcId:null,resources:[],_enemy:true,band:opts.showBloodied?hpBand(it):null});
+  // Enemy: HP/statblock obscured, but the display NAME is shown (custom nickname if set, else the statblock
+  // name — same label the DM sees). Health band only when "show bloodied" is on (off ⇒ no HP info at all).
+  return Object.assign(base,{name:it.name||it.faction||"Enemy",ac:null,hpMax:null,hpCur:null,hpTemp:0,srcId:null,resources:[],_enemy:true,band:opts.showBloodied?hpBand(it):null});
 }
 // Debounced re-publish: every combat change re-renders, which calls this; it no-ops when sharing is off.
 let _sharePending=null,_shareBusy=false;
@@ -1171,10 +1180,14 @@ async function pollShareEdits(){
     Object.keys(rec.edits).forEach(id=>{
       const e=rec.edits[id];if(!e||!e.ts)return;
       if(_shareApplied[id]&&_shareApplied[id]>=e.ts)return; // already handled this edit
-      const it=cb.order.find(o=>o.id===id);if(!it||it.kind!=="pc")return;
+      const it=cb.order.find(o=>o.id===id);if(!it||it.kind==="event")return;
       _shareApplied[id]=e.ts;
+      const isPc=it.kind==="pc";
       if(mode==="suggest"){_shareSuggest.set(id,{id,name:it.name,by:e.by||"",edit:e,ts:e.ts});queued=true;}
-      else{if(e.init!=null&&Number(e.init)!==it.init)reorder=true;applyPlayerEdit(it,e);applied=true;}
+      else if(isPc){if(e.init!=null&&Number(e.init)!==it.init)reorder=true;applyPlayerEdit(it,e);applied=true;}
+      // Enemy rows: apply ONLY the conditions (HP/init stay DM-owned) so player-set enemy conditions persist
+      // instead of reverting when the player's optimistic window lapses (B233 fix).
+      else if(Array.isArray(e.conds)){it.conditions=e.conds.map(n=>(it.conditions||[]).find(c=>c.name===n)||{name:String(n)});applied=true;}
     });
     // Player character-SHEET edits (B204 stage 4b): apply to the roster char (keeping the DM's notes) +
     // resync instances, or queue as a suggestion.
@@ -1359,7 +1372,7 @@ function hydratePlayerCombat(rec){
   const c=rec.combat;
   state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;state.__pmEnemyConds=!!rec.enemyConds;
   state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
-    encounters:[{id:"enc",name:"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
+    encounters:[{id:"enc",name:(c.name&&c.name.trim())||"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
       combat:{active:true,round:c.round||1,turnIndex:c.turnIndex||0,order:c.order||[],view:{group:"status",sort:"init",filter:{}}}}]}];
   combatCtx={advId:"share",encId:"enc"};
   // Hydrate the published PC sheets into the roster (in place; keeps unconfirmed local sheet edits — B204 s4b).
@@ -1596,6 +1609,18 @@ function bindCombatTracker(body,a,e,cb){
     el.addEventListener("mouseenter",()=>{const it=cb.order.find(x=>x.id===el.dataset.ciconc);if(!it)return;
       tailPopover(el,`<div class="cr-pop cr-stat"><span class="cr-stat-t">Concentration</span><span class="cr-stat-v ${it.concentration?"on":"off"}">${it.concentration?"on":"off"}</span></div>`);});
     el.addEventListener("mouseleave",closeTipPop);
+  });
+  // Read-only reaction/concentration indicators (player mode, rows the player doesn't control): state popover
+  // on hover/click, no toggle (B233).
+  body.querySelectorAll("[data-roreact]").forEach(el=>{
+    const show=()=>{const it=cb.order.find(x=>x.id===el.dataset.roreact);if(!it)return;const up=it.reaction!==false;
+      tailPopover(el,`<div class="cr-pop cr-stat"><span class="cr-stat-t">Reaction</span><span class="cr-stat-v ${up?"on":"off"}">${up?"available":"used"}</span></div>`);};
+    el.addEventListener("mouseenter",show);el.addEventListener("mouseleave",closeTipPop);el.addEventListener("click",e=>{e.stopPropagation();show();});
+  });
+  body.querySelectorAll("[data-roconc]").forEach(el=>{
+    const show=()=>{const it=cb.order.find(x=>x.id===el.dataset.roconc);if(!it)return;
+      tailPopover(el,`<div class="cr-pop cr-stat"><span class="cr-stat-t">Concentration</span><span class="cr-stat-v ${it.concentration?"on":"off"}">${it.concentration?"on":"off"}</span></div>`);};
+    el.addEventListener("mouseenter",show);el.addEventListener("mouseleave",closeTipPop);el.addEventListener("click",e=>{e.stopPropagation();show();});
   });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
