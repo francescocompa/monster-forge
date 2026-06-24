@@ -4,18 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
-## Batch 228 — 3D dice: staged crit dice, logo-awaken crit flourish, bigger d10/d20 numbers
+## Batch 228 — 3D dice: staged crit dice, crit glow+pulse flourish, bigger d10/d12 numbers
 - **Crit damage is now thrown in two waves.** On a critical hit the attack to-hit + the *base* damage dice
   tumble first; once they land, the **extra crit dice drop in** as a second wave, and the result alert is
   **held until that second wave settles**. New `d3dSplitCrit(parts)` halves a crit-doubled damage parts string
   into `{base, extra}` (flat modifiers ride with the base); the throw is generalised into `d3dLaunchWave` and
   `rollDice3D` chains a `pending` wave. Wired from `rollAttackSequence` (nat-20) and `doRoll` (crit-chip damage).
-- **Crit flourish — the logo awakens.** On a crit, a DOM clone of the living brand mark pops up over the die
-  showing the logo (its max face, prefers the d20) with a terracotta glow halo and runs the **existing poke
-  eye-animation** (reused by broadening the `.mk.poked` CSS from `.brand .mk.poked`). Material-agnostic, no
-  WebGL shader work; honours reduced-motion (the 3D layer already no-ops there). `d3dCritFlash`/`d3dCritEnd`
-  + `#d3dCrit` styles.
-- **Bigger d10 & d20 numbers** — bumped their label-size factors (d10 0.52→0.60, d20 0.58→0.66).
+- **Crit flourish — the die awakens.** On a crit a terracotta glow blooms over the die showing the logo (its
+  max face, prefers the d20) while the die itself does a quick scale pulse. `d3dCritFlash`/`d3dCritEnd` +
+  `d3dCritPulse` (driven in the loop's "still" branch) + a `#d3dCrit` radial-gradient halo. Material-agnostic,
+  no WebGL shader work; honours reduced-motion (the 3D layer already no-ops there). *(The eye poke-animation
+  can't ride the logo: a CSS animation can't be rasterised onto a baked WebGL texture in this no-build setup,
+  so the VFX rides the die instead.)*
+- **Bigger d10 & d12 numbers** — bumped their label-size factors (d10 0.52→0.60, d12 0.62→0.70; d20 unchanged).
 
 ## Batch 227 — 3D dice: real d10, fixed d12 faces, bigger d6 numbers
 - **Added the d10** as a proper **pentagonal trapezohedron** (it was falling through to the 6-sided box). The

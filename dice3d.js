@@ -256,7 +256,7 @@ function d3dD20Layout(faces){
 function d3dMakeDie(sides, value, R, dropped){
   const { geo, faces, box } = d3dBuild(sides, R), grp = new THREE.Group();
   const mesh = new THREE.Mesh(geo, d3dDieMat(box)); mesh.userData.box = box; mesh.castShadow = true; grp.add(mesh); d3dLiveMeshes.push(mesh);
-  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.60 : sides<=12 ? 0.62 : 0.66), labels = [];
+  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.60 : sides<=12 ? 0.70 : 0.58), labels = [];
   const std = sides === 20, layout = std ? d3dD20Layout(faces) : null;       // standard layout for the d20
   faces.forEach((f, idx) => {
     const v = std ? layout[idx] : idx + 1, isMax = v === sides, mat = new THREE.MeshBasicMaterial({ transparent:true, depthWrite:false });
@@ -375,30 +375,30 @@ function d3dDimDropped(){
     d.labels.forEach(L => { L.mat.opacity = 0.28; });
   });
 }
-// Crit flourish (B228): the brand mark "awakens" over the crit die. A DOM clone of the living sidebar mark
-// pops up on the die's logo (max) face with a terracotta glow and runs the existing poke eye-animation
-// (reused via the broadened `.mk.poked` CSS). DOM/CSS, so it's material-agnostic and needs no WebGL shader.
+// Crit flourish (B228): the crit die "awakens" — a terracotta glow blooms over it (a DOM radial-gradient
+// halo, material-agnostic and free of any WebGL shader work) while the die itself does a quick scale pulse
+// (driven per-frame in the loop's "still" branch). Centres on the die showing the logo (its max face,
+// preferring the d20); falls back to the screen centre / pulsing every die. Honours reduced-motion (the 3D
+// layer already no-ops there). The original plan animated the logo eye on the face, but a CSS poke animation
+// can't be rasterised onto a baked texture in this no-build setup — so the VFX rides the die instead.
 let d3dCritEl = null;
 function d3dCritFlash(){
   try {
-    const src = document.getElementById("brandMark"); if (!src || !src.querySelector("svg") || !d3dRoll) return;
+    if (!d3dRoll) return;
     let focus = null;                                       // the die showing the logo (value === sides) — prefer the d20
     d3dRoll.dice.forEach(d => { if (d.value === d.sides && (!focus || d.sides === 20)) focus = d; });
     let sx = d3dW/2, sy = d3dH/2, R = Math.min(d3dW, d3dH)/9;
     if (focus){ sx = d3dW/2 + focus.grp.position.x; sy = d3dH/2 + focus.grp.position.z; R = focus.R; }
-    if (!d3dCritEl){
-      d3dCritEl = document.createElement("div"); d3dCritEl.id = "d3dCrit";
-      d3dCritEl.innerHTML = '<div class="d3dcrit-halo"></div><div class="mk"></div>';
-      document.body.appendChild(d3dCritEl);
-    }
-    const mk = d3dCritEl.querySelector(".mk"); mk.innerHTML = src.querySelector("svg").outerHTML;
-    const size = Math.round(R * 2.8);
+    if (!d3dCritEl){ d3dCritEl = document.createElement("div"); d3dCritEl.id = "d3dCrit"; document.body.appendChild(d3dCritEl); }
+    const size = Math.round(R * 3.6);
     d3dCritEl.style.left = sx + "px"; d3dCritEl.style.top = sy + "px"; d3dCritEl.style.width = size + "px"; d3dCritEl.style.height = size + "px";
-    d3dCritEl.classList.remove("go"); mk.classList.remove("poked"); void d3dCritEl.offsetWidth; // restart the animation
-    d3dCritEl.classList.add("go"); mk.classList.add("poked");
+    d3dCritEl.classList.remove("go"); void d3dCritEl.offsetWidth; d3dCritEl.classList.add("go"); // restart the glow
+    d3dRoll.critFocus = focus; d3dRoll.critPulseT = 0;       // kick off the per-die scale pulse (loop reads these)
   } catch (e) {}
 }
-function d3dCritEnd(){ if (d3dCritEl){ d3dCritEl.classList.remove("go"); const mk = d3dCritEl.querySelector(".mk"); if (mk) mk.classList.remove("poked"); } }
+function d3dCritEnd(){ if (d3dCritEl) d3dCritEl.classList.remove("go"); }
+// The awaken pulse: a single eased scale-bump (1 → ~1.3 → 1) over ~750ms. Returns the scale multiplier.
+function d3dCritPulse(t){ const D = 750; if (t >= D) return 1; return 1 + 0.30 * Math.sin((t / D) * Math.PI); }
 function d3dResize(){
   d3dW = innerWidth; d3dH = innerHeight;
   d3dRenderer.setSize(d3dW, d3dH);
@@ -596,6 +596,10 @@ function d3dLoop(now){
       }
     } else if (r.state === "still"){
       if (!r.paused) r.t += dt*1000;                                   // hovering the card pauses the dismiss
+      if (r.critPulseT != null){                                       // crit awaken: pulse the focal die (or all)
+        r.critPulseT += dt*1000; const pf = d3dCritPulse(r.critPulseT);
+        if (r.critFocus) r.critFocus.critPulse = pf; else r.dice.forEach(d => d.critPulse = pf);
+      }
       if (d3dCardEl) d3dCardEl.querySelector(".d3dc-bar").style.width = (100 * (1 - d3dCl(r.t/D3D_DWELL,0,1))) + "%";
       if (r.t >= D3D_DWELL){ r.state = "vanish"; r.t = 0; d3dHideCard(); }
     } else if (r.state === "vanish"){
@@ -606,7 +610,7 @@ function d3dLoop(now){
       });
       if (r.t >= D3D_VANISH){ d3dClear(); }
     }
-    if (d3dRoll) d3dRoll.dice.forEach(d => { const s = Math.max(0, d.scale); d.grp.scale.set(s,s,s); });
+    if (d3dRoll) d3dRoll.dice.forEach(d => { const s = Math.max(0, d.scale) * (d.critPulse || 1); d.grp.scale.set(s,s,s); });
     d3dRenderer.render(d3dScene, d3dCamera);
     requestAnimationFrame(d3dLoop);
   } else if (d3dHeld){

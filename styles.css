@@ -12,28 +12,16 @@
   background:transparent; border:0; border-radius:7px; color:var(--dim); }
 #d3dCard .d3dc-rr:hover{ color:var(--txt); background:rgba(226,101,77,.14); }
 #d3dCard .d3dc-bar{ position:absolute; left:0; bottom:0; height:3px; width:100%; background:linear-gradient(90deg,var(--brand),var(--amber)); }
-/* Crit flourish (B228) — the brand mark awakens over the crit die: terracotta glow + the poke eye-animation.
+/* Crit flourish (B228) — a terracotta glow blooms over the crit die (the die itself pulses, driven in JS).
    Only added by dice3d.js on a crit (which never runs under reduced motion). left/top/size are set inline. */
-#d3dCrit{ position:fixed; z-index:610; pointer-events:none; transform:translate(-50%,-50%); opacity:0; }
-#d3dCrit .mk{ position:relative; z-index:1; width:100%; height:100%; box-sizing:border-box; padding:13%;
-  background:var(--accent); border-radius:24%; box-shadow:0 6px 22px rgba(0,0,0,.45), 0 0 26px rgba(226,101,77,.6); }
-#d3dCrit .mk svg{ display:block; width:100%; height:100%; }
-#d3dCrit .d3dcrit-halo{ position:absolute; inset:-45%; border-radius:50%; opacity:0;
-  background:radial-gradient(circle, rgba(226,101,77,.6), rgba(226,101,77,0) 66%); }
-#d3dCrit.go{ animation:d3dcrit-pop 2400ms ease-out 1; }
-#d3dCrit.go .d3dcrit-halo{ animation:d3dcrit-halo 2400ms ease-out 1; }
-@keyframes d3dcrit-pop{
-  0%{ opacity:0; transform:translate(-50%,-50%) scale(.4); }
-  10%{ opacity:1; transform:translate(-50%,-50%) scale(1.12); }
-  18%{ transform:translate(-50%,-50%) scale(.98); }
-  26%,82%{ opacity:1; transform:translate(-50%,-50%) scale(1.02); }
-  100%{ opacity:0; transform:translate(-50%,-58%) scale(1.06); }
-}
-@keyframes d3dcrit-halo{
-  0%{ opacity:0; transform:scale(.5); }
-  14%{ opacity:.9; transform:scale(1.05); }
-  50%{ opacity:.5; transform:scale(1); }
-  100%{ opacity:0; transform:scale(1.25); }
+#d3dCrit{ position:fixed; z-index:610; pointer-events:none; opacity:0; border-radius:50%;
+  transform:translate(-50%,-50%) scale(.5);
+  background:radial-gradient(circle, rgba(226,101,77,.62), rgba(226,101,77,0) 66%); }
+#d3dCrit.go{ animation:d3dcrit-glow 900ms ease-out 1; }
+@keyframes d3dcrit-glow{
+  0%{ opacity:0; transform:translate(-50%,-50%) scale(.5); }
+  22%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
+  100%{ opacity:0; transform:translate(-50%,-50%) scale(1.55); }
 }
 /* Vecna — D&D display face used on the 3D dice (B214). Pixel Sagas, free for personal use. */
 @font-face{ font-family:"Vecna"; font-weight:400; font-display:swap; src:url("vecna.otf") format("opentype"); }
@@ -2142,12 +2130,11 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .brand .mk.dozing .mk-lids{animation:doze-lids 12s linear 1}
 .brand .mk.dozing .mk-pupil{animation:doze-pupil 12s ease-in-out 1}
 .brand .mk.dozing .mk-frame{animation:doze-frame 12s ease-out 1}
-/* Poke is also reused by the crit dice flourish (#d3dCrit, B228) — scope to any .mk.poked, not just .brand. */
-.mk.poked .mk-turn{animation:none;transform:none}
-.mk.poked .mk-gaze{animation:poke-gaze 3s linear 1}
-.mk.poked .mk-lids{animation:poke-lids 3s linear 1}
-.mk.poked .mk-pupil{animation:poke-pupil 3s cubic-bezier(.2,.7,.2,1) 1}
-.mk.poked .mk-frame{animation:poke-frame 3s ease-out 1}
+.brand .mk.poked .mk-turn{animation:none;transform:none}
+.brand .mk.poked .mk-gaze{animation:poke-gaze 3s linear 1}
+.brand .mk.poked .mk-lids{animation:poke-lids 3s linear 1}
+.brand .mk.poked .mk-pupil{animation:poke-pupil 3s cubic-bezier(.2,.7,.2,1) 1}
+.brand .mk.poked .mk-frame{animation:poke-frame 3s ease-out 1}
 
 /* — Loading keyframes — */
 @keyframes eye-gaze{
@@ -2251,6 +2238,6 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 @media (prefers-reduced-motion:reduce){
   .boot-logo .mk-gaze,.boot-logo .mk-lids,.boot-logo .mk-pupil,.boot-logo .mk-frame,
   .brand .mk.dozing .mk-turn,.brand .mk.dozing .mk-gaze,.brand .mk.dozing .mk-lids,.brand .mk.dozing .mk-pupil,.brand .mk.dozing .mk-frame,
-  .mk.poked .mk-turn,.mk.poked .mk-gaze,.mk.poked .mk-lids,.mk.poked .mk-pupil,.mk.poked .mk-frame{animation:none}
+  .brand .mk.poked .mk-turn,.brand .mk.poked .mk-gaze,.brand .mk.poked .mk-lids,.brand .mk.poked .mk-pupil,.brand .mk.poked .mk-frame{animation:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
