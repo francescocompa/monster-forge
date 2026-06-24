@@ -654,7 +654,10 @@ function doRoll(formula,opts,meta){
 }
 function rerollEntry(id){const e=rollLog.find(x=>x.id===id);if(!e)return;const rl=e.roll;doRoll(rl.formula,{adv:rl.adv,crit:rl.crit},{label:rl.label,type:rl.type,success:rl.success,custom:rl.custom,abil:rl.abil,source:rl.source});}
 function removeRollEntry(id){rollLog=rollLog.filter(x=>x.id!==id);renderRollLog();}
-function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil,dmgType:t.dataset.dmgtype});}
+// The sticky adv/dis mode only applies to d20 tests (attacks/checks/saves) — not damage or other dice (B224);
+// a custom roll can still apply it to anything.
+function isD20Roll(formula){return /d20/i.test(String(formula||""));}
+function quickRoll(t){const adv=isD20Roll(t.dataset.roll)?rollMode:null;doRoll(t.dataset.roll,{adv},{label:rollLabelFor(t),type:t.dataset.rolltype,success:t.dataset.rollmin?Number(t.dataset.rollmin):null,abil:t.dataset.abil,dmgType:t.dataset.dmgtype});}
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20). One combined
 // notification (B65): "Arcane Burst: 23 to hit, 25 force damage".
 function rollAttackSequence(nameEl){
@@ -1027,13 +1030,14 @@ function updateDiceCursor(overRoll){
 // rollable while advantage/disadvantage is on, so you can see the active mode right where you roll.
 let _rmTell=null;
 function rollModeTellEl(){if(!_rmTell){_rmTell=document.createElement("div");_rmTell.id="rollModeTell";document.body.appendChild(_rmTell);}return _rmTell;}
-function updateRollModeTell(overRoll){
-  if(overRoll===undefined){const el=document.elementFromPoint(_ptrX,_ptrY);overRoll=el&&el.closest&&el.closest("[data-roll]");}
-  let fine=true;try{fine=matchMedia("(hover:hover) and (pointer:fine)").matches;}catch(e){}
-  if(rollMode&&overRoll&&fine&&clickRollOn()){const t=rollModeTellEl();t.className="show "+rollMode;t.textContent=rollMode==="adv"?"▲":"▼";t.style.left=_ptrX+"px";t.style.top=_ptrY+"px";}
+// Tie the tell to the actual d20 cursor-die: it shows only while a d20 die is held (B224) — so it never
+// lingers without the die or over non-d20 rolls. dice3d.js calls this when the held die appears/clears.
+function updateRollModeTell(){
+  const held=(typeof d3dHeld!=="undefined"&&d3dHeld&&d3dHeld.sides===20);
+  if(rollMode&&held){const t=rollModeTellEl();t.className="show "+rollMode;t.textContent=rollMode==="adv"?"▲":"▼";t.style.left=_ptrX+"px";t.style.top=_ptrY+"px";}
   else if(_rmTell)_rmTell.className="";
 }
-document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;const over=e.target.closest&&e.target.closest("[data-roll]");updateDiceCursor(over);updateRollModeTell(over);});
+document.addEventListener("mousemove",e=>{_ptrX=e.clientX;_ptrY=e.clientY;const over=e.target.closest&&e.target.closest("[data-roll]");updateDiceCursor(over);updateRollModeTell();});
 document.addEventListener("keydown",e=>{if(e.key==="Alt"&&!_cmdHeld&&clickRollOn()){_cmdHeld=true;document.body.classList.add("cmd-armed");updateDiceCursor(false);}});
 // ↑ / ↓ set the sticky roll mode to advantage / disadvantage (press the active one again → flat). Gated so
 // it never steals arrows from a focused field, an open dialog/menu, or a modifier combo (B223).

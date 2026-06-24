@@ -4,6 +4,14 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 224 — roll mode: d20-only scope + tell synced to the cursor-die
+- **Sticky advantage/disadvantage now applies only to d20 tests** (attacks/checks/saves), not damage or other
+  dice — clicking a `3d6` with Advantage on no longer rolls it with advantage. (`quickRoll` gates `adv` on
+  `isD20Roll`; a custom roll can still apply a mode to any dice.)
+- **The ▲/▼ tell now rides the actual d20 cursor-die** instead of any hover: it shows only while a d20 held
+  die is present (`d3dHeld.sides===20`), driven from `d3dHoldAt`/`d3dClearHeld`, so it no longer lingers
+  without the die or flashes white, and never appears over non-d20 rolls.
+
 ## Batch 223 — roll log: corner-docked, collapses to a dice pill, sticky mode
 - **Reworked the roll log's chrome** (the entry rows are unchanged — they were already good). It's now
   `position:fixed` and **docked to a viewport corner** (no longer floating in the scrolling content);

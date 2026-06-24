@@ -442,6 +442,7 @@ function d3dHoldAt(sides){
   die.heldQuat = new THREE.Quaternion().setFromUnitVectors(maxL.normal.clone().normalize(), d3dUP);
   d3dHeld = { die, sides, t: 0 };
   document.body.classList.add("dicing");
+  if (typeof updateRollModeTell === "function") updateRollModeTell(); // sync the adv/dis tell to the held die (B224)
   if (!d3dLooping){ d3dLooping = true; d3dPrev = performance.now(); requestAnimationFrame(d3dLoop); }
 }
 function d3dClearHeld(){
@@ -452,6 +453,7 @@ function d3dClearHeld(){
     document.body.classList.remove("dicing");
   }
   d3dHeld = null;
+  if (typeof updateRollModeTell === "function") updateRollModeTell();
 }
 function d3dRenderHeld(dt){
   const h = d3dHeld, d = h.die;
