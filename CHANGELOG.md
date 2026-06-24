@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 237 — player mode: hide waiting, green "You" tag, "Playing as" in the header
+- **Waiting combatants are hidden from players** — filtered out of the shared snapshot (both the lite list and
+  the in-app order).
+- **"You" tag uses the row's local accent (PC green)** for the whole chip (text + tint + border) via
+  `--sel-accent`, not the global brand accent; and hover now underlines only the name (`.ci-nm`), not the tag.
+- **"Playing as <name>" moved into the header's Load-encounter slot** (`playerPlayingAsBtnHTML`, reusing
+  `.ct-loadbtn` so it collapses to just the icon when the header narrows); tapping it reopens the gate. The
+  slim `.pm-bar` above the order is gone.
+
 ## Batch 236 — roll log: player-side My/DM tabs + subtler tab styling
 - **Player side now gets roll-log tabs too** — "My rolls" / "DM rolls", splitting the shared log by whether a
   roll is attributed to the player's own claimed character (`pmMyRollName`). Shows when the DM is mirroring dice

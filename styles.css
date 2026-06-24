@@ -1201,8 +1201,9 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .ci-down{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bad);border:1px solid #6e2929;border-radius:4px;padding:1px 5px}
 /* Death saves now live in the HP-management popover (.hpm-ds-*, B127); the row just flags down/stable. */
 .ci-stable{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--info);border:1px solid #355370;border-radius:4px;padding:1px 5px}
-/* "You" badge marking the player's own claimed character row in player mode (B234). */
-.ci-you{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-soft);background:rgba(226,101,77,.18);border:1px solid rgba(226,101,77,.5);border-radius:5px;padding:1px 6px;flex:none}
+/* "You" badge marking the player's own claimed character row (B234). Uses the row's LOCAL accent (the PC
+   faction green, --sel-accent) for the whole tag — text, tint, border — not the global brand accent (B237). */
+.ci-you{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sel-accent);background:color-mix(in srgb,var(--sel-accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--sel-accent) 55%,transparent);border-radius:5px;padding:1px 6px;flex:none;text-decoration:none}
 /* Dying row keeps the normal active-card background (a bg tint would clash with the faction tints) — the
    "down" chip carries the state instead (B127). */
 .ci-conc-chip.pulse{animation:concPulse .85s ease 2}
@@ -1496,7 +1497,7 @@ body.player-mode .app{grid-template-columns:1fr}
 /* Always hidden: DM-only shell + combat chrome + the per-row ⋯ menu (players can't remove/reorder). */
 body.player-mode .rail,body.player-mode .rail-resizer,
 body.player-mode #navToggle,body.player-mode #settingsBtn,body.player-mode #ruleFinderBtn,
-body.player-mode .ct-loadbtn,body.player-mode .ct-diff,
+body.player-mode .ct-loadbtn:not(.pm-playingas),body.player-mode .ct-diff,
 body.player-mode #combatShare,body.player-mode #combatTools,body.player-mode .ct-d20,body.player-mode .ct-oop,
 body.player-mode .combat-fab-turn,body.player-mode .cbt-add,
 body.player-mode .ci-menu,body.player-mode .combat-resizer,
@@ -1527,6 +1528,9 @@ body.player-mode .combat-active .pcs-roll{pointer-events:none}
 .pm-bar-l{font-size:12.5px;color:var(--dim);font-weight:500}
 .pm-claim{flex:1;max-width:260px;background:var(--in);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:13px;padding:6px 9px;color-scheme:dark}
 .pm-bar-name{font-size:13px;font-weight:600;color:var(--txt)}
+.pm-playingas .pm-pa-l{color:var(--dim);font-weight:500} /* "Playing as <name>" header control (B237) */
+.pm-playingas svg{width:14px;height:14px;flex:none}
+.pm-playingas span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
 .pm-bar-change{background:none;border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:12px;padding:4px 10px;cursor:pointer}
 .pm-bar-change:hover{color:var(--txt);border-color:var(--accent)}
 /* Player character-gate modal (B235): dark overlay + card; gates the page until a character is chosen. */
@@ -1566,7 +1570,7 @@ body.player-mode #rollLog{position:fixed;top:8px;left:8px;right:auto;bottom:auto
 .pcprev-stats b{color:var(--txt)}
 .pcprev .pcs-roll{pointer-events:none}
 body.player-mode .cbt-row.pm-edit .ci-id.pm-tap{cursor:pointer}
-body.player-mode .cbt-row.pm-edit .ci-id.pm-tap .ci-name:hover{text-decoration:underline;text-underline-offset:2px}
+body.player-mode .cbt-row.pm-edit .ci-id.pm-tap .ci-name:hover .ci-nm{text-decoration:underline;text-underline-offset:2px}
 /* Character preview overlay — bottom sheet on phones, centred card on desktop. Preview + roll only. */
 .pm-sheet-bg{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
 @media(min-width:760px){.pm-sheet-bg{align-items:center}}

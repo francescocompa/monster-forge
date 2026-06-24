@@ -785,7 +785,7 @@ function combatRowHTML(it,active,drag){
   const meta=it.kind==="event"?"":`<div class="ci-meta">${acChip}${reactChip}${concChip}${effChips}<button class="ci-addcond" data-addcond="${it.id}" aria-label="Add effect">＋</button></div>`;
   return `<div class="cbt-row ${cFac(it.faction)}${active?" active":""}${isDead?" dead":""}${(dying||stable)?" dying":""}${status==="waiting"?" waiting":""}${combatSel.has(it.id)?" selected":""}${PLAYER_MODE&&playerCanEdit(it)?" pm-edit":""}${PLAYER_MODE&&playerEnemyCondsEditable(it)?" pm-edit-conds":""}" data-ci="${it.id}"${drag?' draggable="true"':''}>
     ${initEl}
-    <div class="ci-id"><div class="ci-name">${esc(it.name)}${youBadge}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
+    <div class="ci-id"><div class="ci-name"><span class="ci-nm">${esc(it.name)}</span>${youBadge}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
     <div class="ci-hp${active&&dying?" ds-turn":""}"${active&&dying?' title="It\'s their turn — click to roll a death save"':""}>${hpCellHTML(it)}</div>
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
@@ -953,9 +953,13 @@ function combatHeaderHTML(a,e,sc,cb){
       <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ct-diff ${cls}" title="Difficulty — ${esc(label)}">${label}</span>${drop}</div>
     </div>`;
   const notes=(e.notesOn&&e.notes)?`<div class="ct-notes-wrap"><div class="ct-notes clamped">${esc(e.notes)}</div><button class="ct-notes-more" hidden>more</button></div>`:"";
+  // Player mode (editing on) puts the "Playing as" control in the Load-encounter slot instead (B237).
+  const headerBtn=(PLAYER_MODE&&typeof playerEditMode==="function"&&playerEditMode()!=="off")
+    ? playerPlayingAsBtnHTML()
+    : `<button class="btn ghost sm ct-loadbtn" id="combatLoadTitle" title="Load a different scene or encounter">${LOAD_ICON}<span>Load encounter</span></button>`;
   return `<div class="ct-bar" style="--ct-accent:${advc}">
     ${title}
-    <button class="btn ghost sm ct-loadbtn" id="combatLoadTitle" title="Load a different scene or encounter">${LOAD_ICON}<span>Load encounter</span></button>
+    ${headerBtn}
   </div>${notes}`;
 }
 // Full-width round/turn bar above the grid (CT9-fix): round counter, borderless turn arrows, an
@@ -1076,6 +1080,7 @@ function buildCombatShareSnapshot(cb){
   const mode=combatShareMode(),editing=mode!=="off"&&!!combatShareWbId()&&!!playerEditKey();
   cb.order.forEach((it,i)=>{
     if(it.kind==="event")return; // lair/timing cues — DM-only
+    if(it.status==="waiting")return; // waiting combatants are hidden from players (B237)
     if(i===cb.turnIndex)turn=list.length;
     const isPc=it.kind==="pc";
     const row={n:isPc?(it.name||"Character"):(it.name||it.faction||"Enemy"),pc:isPc};
@@ -1094,7 +1099,7 @@ function buildCombatShareSnapshot(cb){
   // Richer payload for the in-app player mode (B204): the real tracker renders from this. Full PC instances
   // (minus the DM note) + obscured enemy instances (faction label + band, no statblock/HP). Events dropped.
   const porder=[];let pturn=0;
-  cb.order.forEach((it,i)=>{if(it.kind==="event")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it,opts));});
+  cb.order.forEach((it,i)=>{if(it.kind==="event"||it.status==="waiting")return;if(i===cb.turnIndex)pturn=porder.length;porder.push(playerSafeInstance(it,opts));});
   const _ctx=loadedCtx();
   snap.combat={round:cb.round,turnIndex:pturn,order:porder,name:(_ctx&&_ctx.e&&_ctx.e.name&&_ctx.e.name.trim())||""};
   // Character sheets (B204 stage 2): each editable PC's roster record, notes stripped, keyed by srcId. In
@@ -1521,20 +1526,23 @@ function playerClaimedInst(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return
 // The name rolls made by THIS player carry (their claimed character) — used to split the shared roll log into
 // "My rolls" vs "DM rolls" on the player side (B236).
 function pmMyRollName(){const i=playerClaimedInst();return i?i.name:null;}
+const PM_PERSON_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z"/></svg>';
+// The "Playing as <name>" control that takes the Load-encounter slot in the header in player mode; tapping
+// it reopens the character gate. Reuses .ct-loadbtn so it collapses to just the icon when the header narrows.
+function playerPlayingAsBtnHTML(){
+  const inst=playerClaimedInst(),has=!!playerClaimId(),name=inst?inst.name:(has?"…":"Choose character");
+  return `<button class="btn ghost sm ct-loadbtn pm-playingas" id="pmPlayingAs" title="${has?"Playing as "+esc(name)+" — tap to change":"Choose your character"}">${PM_PERSON_ICON}<span><span class="pm-pa-l">Playing as</span> ${esc(name)}</span></button>`;
+}
 function playerGateNeeded(){return PLAYER_MODE&&playerEditMode()!=="off"&&!playerClaimId();}
 function pmNamedPCs(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return [];
   return ctx.e.combat.order.filter(o=>o.kind==="pc"&&o.name&&o.name.trim()&&o.name!=="Character"&&o.name!=="PC");}
 function playerModeChrome(body){
-  const old=body.querySelector(".pm-bar");if(old)old.remove();
   if(playerEditMode()==="off"){closePlayerGate();return;} // read-only share: no claim concept
   if(playerGateNeeded()){if(!document.getElementById("pmGateBg"))openPlayerGate(false);return;} // gate until chosen (don't rebuild mid-type)
   closePlayerGate();
-  // Claimed: a slim bar showing who you're playing, with a Change action that reopens the gate.
-  const inst=playerClaimedInst();
-  const bar=document.createElement("div");bar.className="pm-bar";
-  bar.innerHTML=`<span class="pm-bar-l">Playing as</span><span class="pm-bar-name">${esc(inst?inst.name:"…")}</span><button class="pm-bar-change" id="pmChange" style="margin-left:auto">Change</button>`;
-  body.insertBefore(bar,body.firstChild);
-  bar.querySelector("#pmChange").addEventListener("click",e=>{e.stopPropagation();openPlayerGate(true);});
+  // The "Playing as" control lives in the header (Load-encounter slot, B237) — tapping it reopens the gate.
+  const pa=document.getElementById("pmPlayingAs");
+  if(pa)pa.addEventListener("click",e=>{e.stopPropagation();openPlayerGate(true);});
   // Tapping an editable PC's name opens its character sheet (read + roll) — B204 stage 4.
   body.querySelectorAll(".cbt-row.pm-edit .ci-id").forEach(el=>{el.classList.add("pm-tap");
     el.addEventListener("click",e=>{e.stopPropagation();const row=el.closest(".cbt-row");if(row)openPlayerSheet(row.dataset.ci);});});
