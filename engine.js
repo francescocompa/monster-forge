@@ -647,7 +647,13 @@ function doRoll(formula,opts,meta){
   // result alert (timer + reroll). Returns true if it took over the notification → skip the plain toast.
   // No-ops (returns false) when the libs/WebGL are absent (jsdom), reduced-motion, or the roll has no dice.
   let _diced=false;
-  if(!meta.silent&&typeof rollDice3D==="function")_diced=rollDice3D({formula,parts:r.parts,total:r.total,label:meta.label,type:meta.type,dmgType:meta.dmgType,abil:meta.abil,opts,meta});
+  if(!meta.silent&&typeof rollDice3D==="function"){
+    // On a crit damage roll (the dice are doubled), stage the extra dice as a second wave + fire the crit
+    // flourish; crit is also true for a natural-20 attack (no extra dice, just the flourish) (B228).
+    let _p=r.parts,_w2="";
+    if(opts.crit&&meta.type==="damage"&&typeof d3dSplitCrit==="function"){const sp=d3dSplitCrit(r.parts);_p=sp.base;_w2=sp.extra;}
+    _diced=rollDice3D({formula,parts:_p,wave2:_w2,crit,total:r.total,label:meta.label,type:meta.type,dmgType:meta.dmgType,abil:meta.abil,opts,meta});
+  }
   // Fire the notification as the digits land (B129) — unless the 3D dice are showing their own alert.
   if(!meta.silent&&!_diced)setTimeout(()=>toast(naturalRollText(meta.label,meta.type,r.total,meta.dmgType,meta.abil),3200,true),ROLL_REEL_MS);
   return r;
@@ -663,13 +669,17 @@ function quickRoll(t){const adv=isD20Roll(t.dataset.roll)?rollMode:null;doRoll(t
 function rollAttackSequence(nameEl){
   const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
-  let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`,parts=atk.parts||"";
+  let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`,parts=atk.parts||"",wave2="";
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
-    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;parts+=" "+(dmg.parts||"");}
+    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;
+    // On a crit the damage dice are doubled — throw the base dice with the to-hit (wave 1) and let the EXTRA
+    // crit dice drop in as a second wave once wave 1 lands, holding the alert until then (B228).
+    if(atk.nat20&&typeof d3dSplitCrit==="function"){const sp=d3dSplitCrit(dmg.parts);parts+=" "+sp.base;wave2=sp.extra;}
+    else parts+=" "+(dmg.parts||"");}
   if(atk.nat20)msg+=" — crit!";
   // Both sub-rolls are `silent` (no individual dice/toast); fire ONE compounded 3D throw so the to-hit d20
   // and the damage dice tumble together (B222), with the combined alert. Falls back to the toast if 3D is off.
-  const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,label,type:"attack",dmgType,abil,msg,reroll:()=>rollAttackSequence(nameEl)});
+  const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,wave2,crit:atk.nat20,label,type:"attack",dmgType,abil,msg,reroll:()=>rollAttackSequence(nameEl)});
   if(!diced)setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
 }
 // Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals

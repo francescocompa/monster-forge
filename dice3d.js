@@ -61,6 +61,22 @@ function d3dParse(parts){
   }
   return out.slice(0, D3D_CAP);
 }
+// Split a CRIT-doubled damage parts string into {base, extra}: each "NdM:[…]" group is halved — the first
+// half is the base hit (wave 1), the trailing half is the extra crit dice (wave 2, dropped in after). Flat
+// modifiers and any other text ride along with the base. Used by the staged crit throw (B228).
+function d3dSplitCrit(parts){
+  const s = String(parts || ""), re = /(\d+)d(\d+)((?:kh|kl|dh|dl)\d*)?:\[([\d,]+)\]/gi;
+  let base = "", extra = "", last = 0, m;
+  while ((m = re.exec(s))){
+    base += s.slice(last, m.index); last = m.index + m[0].length;
+    const sides = m[2], kmod = m[3] || "", vals = m[4].split(","), half = Math.floor(vals.length / 2);
+    const b = vals.slice(0, vals.length - half), e = vals.slice(vals.length - half);
+    base += b.length + "d" + sides + kmod + ":[" + b.join(",") + "]";
+    if (e.length) extra += (extra ? " " : "") + e.length + "d" + sides + ":[" + e.join(",") + "]";
+  }
+  base += s.slice(last);
+  return { base: base.replace(/\s+/g, " ").trim(), extra: extra.trim() };
+}
 
 // ---- textures -------------------------------------------------------------------------------------
 function d3dNumTex(n, sides){
@@ -240,7 +256,7 @@ function d3dD20Layout(faces){
 function d3dMakeDie(sides, value, R, dropped){
   const { geo, faces, box } = d3dBuild(sides, R), grp = new THREE.Group();
   const mesh = new THREE.Mesh(geo, d3dDieMat(box)); mesh.userData.box = box; mesh.castShadow = true; grp.add(mesh); d3dLiveMeshes.push(mesh);
-  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.52 : sides<=12 ? 0.62 : 0.58), labels = [];
+  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.60 : sides<=12 ? 0.62 : 0.66), labels = [];
   const std = sides === 20, layout = std ? d3dD20Layout(faces) : null;       // standard layout for the d20
   faces.forEach((f, idx) => {
     const v = std ? layout[idx] : idx + 1, isMax = v === sides, mat = new THREE.MeshBasicMaterial({ transparent:true, depthWrite:false });
@@ -359,6 +375,30 @@ function d3dDimDropped(){
     d.labels.forEach(L => { L.mat.opacity = 0.28; });
   });
 }
+// Crit flourish (B228): the brand mark "awakens" over the crit die. A DOM clone of the living sidebar mark
+// pops up on the die's logo (max) face with a terracotta glow and runs the existing poke eye-animation
+// (reused via the broadened `.mk.poked` CSS). DOM/CSS, so it's material-agnostic and needs no WebGL shader.
+let d3dCritEl = null;
+function d3dCritFlash(){
+  try {
+    const src = document.getElementById("brandMark"); if (!src || !src.querySelector("svg") || !d3dRoll) return;
+    let focus = null;                                       // the die showing the logo (value === sides) — prefer the d20
+    d3dRoll.dice.forEach(d => { if (d.value === d.sides && (!focus || d.sides === 20)) focus = d; });
+    let sx = d3dW/2, sy = d3dH/2, R = Math.min(d3dW, d3dH)/9;
+    if (focus){ sx = d3dW/2 + focus.grp.position.x; sy = d3dH/2 + focus.grp.position.z; R = focus.R; }
+    if (!d3dCritEl){
+      d3dCritEl = document.createElement("div"); d3dCritEl.id = "d3dCrit";
+      d3dCritEl.innerHTML = '<div class="d3dcrit-halo"></div><div class="mk"></div>';
+      document.body.appendChild(d3dCritEl);
+    }
+    const mk = d3dCritEl.querySelector(".mk"); mk.innerHTML = src.querySelector("svg").outerHTML;
+    const size = Math.round(R * 2.8);
+    d3dCritEl.style.left = sx + "px"; d3dCritEl.style.top = sy + "px"; d3dCritEl.style.width = size + "px"; d3dCritEl.style.height = size + "px";
+    d3dCritEl.classList.remove("go"); mk.classList.remove("poked"); void d3dCritEl.offsetWidth; // restart the animation
+    d3dCritEl.classList.add("go"); mk.classList.add("poked");
+  } catch (e) {}
+}
+function d3dCritEnd(){ if (d3dCritEl){ d3dCritEl.classList.remove("go"); const mk = d3dCritEl.querySelector(".mk"); if (mk) mk.classList.remove("poked"); } }
 function d3dResize(){
   d3dW = innerWidth; d3dH = innerHeight;
   d3dRenderer.setSize(d3dW, d3dH);
@@ -419,7 +459,7 @@ function d3dRelabel(d){
 }
 function d3dClear(){
   if (d3dRoll){ d3dRoll.dice.forEach(d => { d3dScene.remove(d.grp); if (d.body) d3dWorld.removeBody(d.body); }); }
-  d3dRoll = null; d3dLive = []; d3dLiveMeshes = []; d3dHideCard();
+  d3dRoll = null; d3dLive = []; d3dLiveMeshes = []; d3dHideCard(); d3dCritEnd();
   if (d3dRenderer) d3dRenderer.clear();
 }
 // Re-skin the dice currently on screen when the look settings change (so the Settings preview updates live);
@@ -494,15 +534,10 @@ function d3dRenderHeld(dt){
 function d3dSyncMeshes(){
   d3dRoll.dice.forEach(d => { if (d.body){ const p=d.body.position, q=d.body.quaternion; d.grp.position.set(p.x*D3D_SCALE,p.y*D3D_SCALE,p.z*D3D_SCALE); d.grp.quaternion.set(q.x,q.y,q.z,q.w); } });
 }
-// Public entry — engine.js doRoll calls this with a descriptor {formula,parts,total,label,type,dmgType,abil,opts,meta}.
-// Returns true if it took over the notification (so doRoll skips its toast).
-function rollDice3D(desc){
-  if (typeof THREE === "undefined" || typeof CANNON === "undefined") return false;   // libs absent (jsdom)
-  try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
-  const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;
-  if (!d3dEnsure()) return false;
-  d3dClear(); d3dClearHeld();                  // the held cursor-die (if any) launches into this roll
-  const R = Math.max(20, Math.min(50, Math.round(Math.min(d3dW, d3dH) / (plan.length<=2?9:plan.length<=6?11:plan.length<=12?14:17))));
+// Throw one wave of dice (parsed plan): spawn a non-overlapping grid above the cursor, give each a tumble,
+// then deterministically pre-roll → paint the value onto the up-facing face → reset for the real-time replay.
+// Returns { dice, N } (N = the fixed-step count the loop must replay so the shown value never flips at rest).
+function d3dLaunchWave(plan, R){
   const c = d3dToWorld(d3dPX || d3dW/2, d3dPY || d3dH/2);
   const dice = plan.map(p => d3dMakeDie(p.sides, p.value, R, p.dropped));
   // spawn grid above the cursor (overlapping bodies make cannon explode), clamped inside the walls
@@ -518,10 +553,24 @@ function rollDice3D(desc){
     d.body.angularVelocity.set((Math.random()-0.5)*22, (Math.random()-0.5)*22, (Math.random()-0.5)*22);
     d.body.wakeUp(); d.init = { p:d.body.position.clone(), q:d.body.quaternion.clone(), v:d.body.velocity.clone(), av:d.body.angularVelocity.clone() };
   });
-  // deterministic pre-roll → paint the value onto the face that lands up → reset & replay (no settle flip)
   const N = d3dPreSim(dice);
   dice.forEach(d => { d3dRelabel(d); d3dResetBody(d.body, d.init); });
-  d3dRoll = { dice, state:"fly", t:0, acc:0, replayN:N, played:0, paused:false, desc:desc || {} };
+  return { dice, N };
+}
+// Public entry — engine.js doRoll calls this with a descriptor {formula,parts,total,label,type,dmgType,abil,
+// opts,meta, crit, wave2}. crit → the logo-awaken flourish; wave2 (a parts string) → extra crit dice dropped
+// in after wave 1 lands (the alert waits for them). Returns true if it took over the notification (skip toast).
+function rollDice3D(desc){
+  if (typeof THREE === "undefined" || typeof CANNON === "undefined") return false;   // libs absent (jsdom)
+  try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
+  const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;
+  if (!d3dEnsure()) return false;
+  d3dClear(); d3dClearHeld();                  // the held cursor-die (if any) launches into this roll
+  const wave2 = (desc && desc.wave2) ? d3dParse(desc.wave2) : [];   // crit extra dice — second wave (B228)
+  const total = plan.length + wave2.length;
+  const R = Math.max(20, Math.min(50, Math.round(Math.min(d3dW, d3dH) / (total<=2?9:total<=6?11:total<=12?14:17))));
+  const w = d3dLaunchWave(plan, R);
+  d3dRoll = { dice:w.dice, state:"fly", t:0, acc:0, replayN:w.N, played:0, paused:false, desc:desc || {}, R, pending: wave2.length ? [wave2] : [] };
   d3dPrev = performance.now();
   if (!d3dLooping){ d3dLooping = true; requestAnimationFrame(d3dLoop); }
   return true;
@@ -535,7 +584,16 @@ function d3dLoop(now){
       while (r.acc >= 1/60 && r.played < r.replayN){ d3dWorld.step(1/60); r.acc -= 1/60; r.played++; }
       r.dice.forEach(d => d.scale += (1 - d.scale) * Math.min(1, dt*12));
       d3dSyncMeshes();
-      if (r.played >= r.replayN){ r.dice.forEach(d => { if (d.body){ d3dWorld.removeBody(d.body); d.body = null; } }); r.state = "still"; r.t = 0; d3dDimDropped(); d3dShowCard(); }
+      if (r.played >= r.replayN){
+        r.dice.forEach(d => { if (d.body){ d3dWorld.removeBody(d.body); d.body = null; } });
+        if (r.pending.length){                                         // crit: drop in the extra dice, re-fly (B228)
+          const w = d3dLaunchWave(r.pending.shift(), r.R);
+          r.dice = r.dice.concat(w.dice); r.replayN = w.N; r.played = 0; r.acc = 0;
+        } else {
+          r.state = "still"; r.t = 0; d3dDimDropped(); d3dShowCard();
+          if (r.desc.crit) d3dCritFlash();                             // logo-awaken flourish on a crit (B228)
+        }
+      }
     } else if (r.state === "still"){
       if (!r.paused) r.t += dt*1000;                                   // hovering the card pauses the dismiss
       if (d3dCardEl) d3dCardEl.querySelector(".d3dc-bar").style.width = (100 * (1 - d3dCl(r.t/D3D_DWELL,0,1))) + "%";
