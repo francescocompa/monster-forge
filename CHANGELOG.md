@@ -4,6 +4,15 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 222 — 3D dice: roll on attack/recharge names (compounded throw)
+- **Fixed: clicking an attack (or recharge) name didn't tumble any 3D dice.** `rollAttackSequence`/
+  `rollRechargeSequence` roll their sub-rolls with `silent:true` (to show one combined alert instead of two),
+  but `doRoll` also gated the 3D dice on `!silent` — so the compound clicks updated the log yet never threw
+  dice. Now each sequence rolls both sub-rolls silently, then fires **one combined `rollDice3D` throw with the
+  union of their dice** (the to-hit d20 + the damage dice, e.g. 1d20 + 3d6, tumbling together) and the combined
+  alert. `rollDice3D` gained `desc.msg` (ready-made card text for a compound throw) + `desc.reroll` (the card's
+  reroll button re-runs the whole sequence). Falls back to the toast when 3D is off (reduced-motion/no WebGL).
+
 ## Batch 221 — touch: stop the spinning d20 cursor sticking on iPad
 - **Fixed the 2D d20 roll-cursor lingering over a tapped rollable on touch devices.** iPad Safari fires a
   synthetic `mousemove` on tap, so `updateDiceCursor` showed the pointer-following d20 over the tapped

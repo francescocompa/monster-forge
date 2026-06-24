@@ -653,11 +653,14 @@ function quickRoll(t){doRoll(t.dataset.roll,{adv:rollMode},{label:rollLabelFor(t
 function rollAttackSequence(nameEl){
   const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
-  let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`;
+  let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`,parts=atk.parts||"";
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
-    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
+    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;parts+=" "+(dmg.parts||"");}
   if(atk.nat20)msg+=" — crit!";
-  setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
+  // Both sub-rolls are `silent` (no individual dice/toast); fire ONE compounded 3D throw so the to-hit d20
+  // and the damage dice tumble together (B222), with the combined alert. Falls back to the toast if 3D is off.
+  const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,label,type:"attack",dmgType,abil,msg,reroll:()=>rollAttackSequence(nameEl)});
+  if(!diced)setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
 }
 // Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals
 // damage, its damage too — as one group in the log + one combined notification (B77).
@@ -666,10 +669,12 @@ function rollRechargeSequence(nameEl){
   const min=nameEl.dataset.rollmin?Number(nameEl.dataset.rollmin):null;
   const rech=doRoll(nameEl.dataset.roll,{},{label,type:null,success:min,silent:true});
   const ready=min==null||rech.total>=min;
-  let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" — ready":" — not yet"):""}`;
+  let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" — ready":" — not yet"):""}`,parts=rech.parts||"";
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{},{label,type:"damage",dmgType,silent:true});
-    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;}
-  setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
+    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;parts+=" "+(dmg.parts||"");}
+  // One compounded 3D throw (recharge die + damage dice) — see rollAttackSequence (B222).
+  const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,label,type:null,dmgType,msg,reroll:()=>rollRechargeSequence(nameEl)});
+  if(!diced)setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
 }
 function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div class="dh-ex"><code>2d6+4</code> dice + modifier<br><code>1d20+7</code> attack roll<br><code>4d6kh3</code> keep highest 3<br><code>2d20kl1</code> keep lowest (disadvantage)<br><code>4d6dl1</code> drop lowest 1<br><code>d%</code> percentile<br><code>d20!</code> or <code>d20&gt;d20</code> advantage<br><code>d20&lt;d20</code> disadvantage</div><div class="dh-tip"><b>Alt/Option-click</b> anywhere for a custom roll.</div><a href="${DICE_HELP_URL}" target="_blank" rel="noopener">Full reference ↗</a></div>`;}
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom

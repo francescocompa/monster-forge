@@ -310,8 +310,10 @@ function d3dBuildCard(){
 }
 function d3dShowCard(){
   if (!d3dCardEl || !d3dRoll) return; const d = d3dRoll.desc || {};
-  // Same wording as the original roll toast.
-  const txt = (typeof naturalRollText === "function")
+  // Same wording as the original roll toast. A compound throw (attack/recharge sequence) passes a ready-made
+  // `msg` (e.g. "Longsword: 23 to hit, 9 slashing damage") since its total isn't a single die sum.
+  const txt = d.msg != null ? d.msg
+    : (typeof naturalRollText === "function")
     ? naturalRollText(d.label, d.type, d.total, d.dmgType, d.abil)
     : (typeof esc === "function" ? esc(d.label || "Roll") : (d.label || "Roll")) + ": " + (d.total != null ? d.total : "");
   d3dCardEl.querySelector(".d3dc-text").innerHTML = txt;
@@ -319,7 +321,9 @@ function d3dShowCard(){
   d3dCardEl.classList.add("show");
 }
 function d3dHideCard(){ if (d3dCardEl) d3dCardEl.classList.remove("show"); }
-function d3dReroll(){ const d = d3dRoll && d3dRoll.desc; if (d && typeof doRoll === "function"){ d3dClear(); doRoll(d.formula, d.opts || {}, d.meta || {}); } }
+function d3dReroll(){ const d = d3dRoll && d3dRoll.desc; if (!d) return;
+  if (typeof d.reroll === "function"){ d3dClear(); d.reroll(); return; } // compound sequences re-run themselves
+  if (typeof doRoll === "function"){ d3dClear(); doRoll(d.formula, d.opts || {}, d.meta || {}); } }
 // Dim the dice dropped by advantage/disadvantage so the kept one reads as selected.
 function d3dDimDropped(){
   if (!d3dRoll) return;
