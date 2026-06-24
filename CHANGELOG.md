@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 236 — roll log: player-side My/DM tabs + subtler tab styling
+- **Player side now gets roll-log tabs too** — "My rolls" / "DM rolls", splitting the shared log by whether a
+  roll is attributed to the player's own claimed character (`pmMyRollName`). Shows when the DM is mirroring dice
+  and the player has claimed a character. (DM side keeps "My rolls" / "Player rolls".)
+- **Subtler tab section** in both pages — dropped the solid-accent fill + boxed buttons for a flat underline
+  style: faint inactive labels, a brighter label + accent-soft underline on the active tab, no panel background.
+
 ## Batch 235 — initiative sharing: character-gate modal (pick or create-to-join)
 - **Replaced the "Playing as" picker with a gating modal + dark overlay.** In player mode with editing on, the
   page is gated until you choose your character: pick a named PC, or type a name to **join the live fight as a

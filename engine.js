@@ -807,9 +807,15 @@ function showRollPopover(anchor){if(typeof showPopover!=="function")return;const
 // Build the roll-log inner HTML (header + grouped/single rows). Pure — no DOM mutation or binding.
 // ctx = {docked, mini} chooses the form: sidebar section / mini rail icon / floating pill or panel (B224b).
 function rollLogHTML(ctx){
-  // When the combat is shared (DM side), split into "My rolls" vs "Player rolls" tabs (B213).
-  const shared=(typeof combatShareOn==="function"&&combatShareOn()&&!PLAYER_MODE);
-  const list=shared?rollLog.filter(r=>rollLogTab==="players"?r.fromPlayer:!r.fromPlayer):rollLog;
+  // Split the shared log into two tabs: DM side = "My rolls" / "Player rolls" (B213); player side (when the
+  // DM is mirroring dice and the player has claimed a character) = "My rolls" / "DM rolls" (B236). "Mine" =
+  // !fromPlayer on the DM side; on the player side = rolls attributed to the player's own character name.
+  const dmShare=(typeof combatShareOn==="function"&&combatShareOn()&&!PLAYER_MODE);
+  const myName=PLAYER_MODE&&typeof pmMyRollName==="function"?pmMyRollName():null;
+  const playerShare=PLAYER_MODE&&!!(state&&state.__pmDiceOn)&&!!myName;
+  const tabbed=dmShare||playerShare,otherLabel=dmShare?"Player rolls":"DM rolls";
+  const isMine=r=>dmShare?!r.fromPlayer:!!(r.source&&r.source.name===myName);
+  const list=tabbed?rollLog.filter(r=>rollLogTab==="players"?!isMine(r):isMine(r)):rollLog;
   const ordered=rollLogSort==="asc"?list.slice().reverse():list;
   // Shared bits. The TYPE tag (carries the dmg type for the hover popover) is a row-level child on
   // the right, and the ability-colour bar sits in a reserved right gutter (data-abil on the row), so
@@ -820,8 +826,8 @@ function rollLogHTML(ctx){
   // every roll in the group shares one ability, draw a SINGLE colour bar spanning the whole group (B64).
   const groups=[];ordered.forEach(r=>{const key=(r.source?r.source.name:"~")+"|"+(r.label||"");const g=groups[groups.length-1];
     if(g&&g.key===key)g.items.push(r);else groups.push({key,items:[r],source:r.source,label:r.label,abil:r.abil});});
-  const tabs=shared?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">Player rolls</button></div>`:"";
-  const bodyInner=groups.length?groups.map(rlGroupHTML).join(""):`<div class="rl-empty">No ${shared&&rollLogTab==="players"?"player ":""}rolls yet.</div>`;
+  const tabs=tabbed?`<div class="rl-tabs"><button class="rl-tab${rollLogTab==="mine"?" on":""}" data-rltab="mine">My rolls</button><button class="rl-tab${rollLogTab==="players"?" on":""}" data-rltab="players">${otherLabel}</button></div>`:"";
+  const bodyInner=groups.length?groups.map(rlGroupHTML).join(""):`<div class="rl-empty">No ${tabbed&&rollLogTab==="players"?(dmShare?"player ":"DM "):""}rolls yet.</div>`;
   const last=ordered.length?rollLog[0]:null;const lastTotal=last?String(last.total):"";const modeCls=rollMode||"flat";
   // Mini rail → a mode-coloured dice icon + the last total; click opens the menu, hover shows the full roll.
   if(ctx&&ctx.mini)return `<button class="rl-icon mode-${modeCls}" id="rlIcon" title="Rolls" aria-label="Rolls"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-icon-n">${esc(lastTotal)}</span></button>`;

@@ -1518,6 +1518,9 @@ function playerPushRoll(ev){
 // Player chrome (B235): when editing is on the player must pick (or create) their character via a gating
 // modal before the page is usable; once claimed, a slim "Playing as <name> · Change" bar sits above the order.
 function playerClaimedInst(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return null;const id=playerClaimId();return id?ctx.e.combat.order.find(o=>o.id===id&&o.kind==="pc"):null;}
+// The name rolls made by THIS player carry (their claimed character) — used to split the shared roll log into
+// "My rolls" vs "DM rolls" on the player side (B236).
+function pmMyRollName(){const i=playerClaimedInst();return i?i.name:null;}
 function playerGateNeeded(){return PLAYER_MODE&&playerEditMode()!=="off"&&!playerClaimId();}
 function pmNamedPCs(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return [];
   return ctx.e.combat.order.filter(o=>o.kind==="pc"&&o.name&&o.name.trim()&&o.name!=="Character"&&o.name!=="PC");}
