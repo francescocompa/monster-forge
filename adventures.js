@@ -133,7 +133,7 @@ function addMonsterCombatant(enc,monsterId){
     const lines=[];
     if(m.lair.intro)lines.push(applyRefsFor(m,m.lair.intro));
     m.lair.items.filter(it=>it.name||it.text).forEach(it=>lines.push(`${it.name?it.name+": ":""}${applyRefsFor(m,it.text)}`));
-    enc.combatants.push({type:"event",id:uid(),name:`${m.name} — Lair Action`,init:"20",text:lines.join("\n"),lairFor:cid});
+    enc.combatants.push({type:"event",id:uid(),name:`${m.name}: Lair Action`,init:"20",text:lines.join("\n"),lairFor:cid});
   }
   return cid;
 }
@@ -145,7 +145,7 @@ function combatCR(c){return c.type==="monster"?(monOf(c)?monOf(c).cr:null):c.typ
 function combatIsMinion(c){if(c.minion!=null)return !!c.minion;return c.type==="monster"?!!(monOf(c)&&monOf(c).minion):false;}
 function combatXPEach(c){if(c.type==="monster"){const m=monOf(c);if(!m)return 0;return combatIsMinion(c)?(MINION_XP[m.cr]??0):xpOf(m);}const cr=combatCR(c);if(cr==null)return 0;return (combatIsMinion(c)?MINION_XP[cr]:CR_XP[cr])||0;}
 function combatXP(c){return combatXPEach(c)*Number(c.count||1);}
-const MINION_NOTE="MCDM minion — a weak foe that drops at any damage and counts as reduced “minion XP” toward the budget.";
+const MINION_NOTE="MCDM minion: a weak foe that drops at any damage and counts as reduced “minion XP” toward the budget.";
 function encBudget(adv,e){
   const base=baseBudget(adv);const add=[0,0,0];
   // Ally creatures raise the party's budget ≈ a PC of level round(CR). A minion ally contributes
@@ -321,7 +321,7 @@ function sceneHTML(a,s,encs){
     </div>`;
   if(s.collapsed)return `<div class="scene${s.archived?" arch":""} collapsed" data-scene="${s.id}" draggable="true">${head}</div>`;
   const body=`<div class="scene-body">
-      ${s.notesOn?`<label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes — premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>`:""}
+      ${s.notesOn?`<label class="f scenenotes"><textarea data-scenenotes="${s.id}" placeholder="Scene notes: premise, transitions, pacing…">${esc(s.notes||"")}</textarea></label>`:""}
       <div class="scene-droparea" data-scenedrop="${s.id}">
         ${encs.map(e=>encHTML(a,e)).join("")||`<div class="hint scene-empty">No encounters in this scene yet.</div>`}
         ${s.archived?"":`<button class="addbtn scene-add" data-sceneadd="${s.id}" style="width:100%">＋ Encounter in this scene</button>`}
@@ -422,7 +422,7 @@ function encHTML(a,e){
         <span class="pill ${cls}">${label}</span>
       </div>
     </div>
-    ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes — terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
+    ${e.notesOn?`<label class="f encnotes"><textarea data-encnotes="${e.id}" placeholder="Battlefield notes: terrain, light, hazards, special rules…">${esc(e.notes||"")}</textarea></label>`:""}
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant</button>
@@ -431,7 +431,7 @@ function encHTML(a,e){
   </div>`;
 }
 function combatHTML(e,c){
-  if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description — e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
+  if(c.type==="event")return `<div class="cbt ev" data-cid="${c.id}"><div class="top"><input class="nick" placeholder="Event / entity name" data-cf="${c.id}:name" value="${esc(c.name||"")}"><input type="text" placeholder="init / count 20" data-cf="${c.id}:init" value="${esc(c.init||"")}" style="width:120px;flex:none"><button class="iconbtn" data-cdel="${c.id}">✕</button></div><textarea placeholder="Description, e.g. recurring battlefield effect on this initiative count" data-cf="${c.id}:text">${esc(c.text||"")}</textarea></div>`;
   const fc=facClass(c.faction);const xp=combatXP(c);
   // Faction reads as a chip (the native select is styled like the app's pills — consistent chip language, B170).
   const facSel=`<select class="fac ${fc}" data-cf="${c.id}:faction" aria-label="Faction">${FACTIONS.map(f=>`<option ${f===c.faction?"selected":""}>${f}</option>`).join("")}</select>`;
@@ -452,9 +452,9 @@ function combatHTML(e,c){
   const m=monOf(c);
   const orphan=!m&&!!c.monsterId; // had a statblock that has since been deleted from the Bestiary (B195)
   const sbLabel=m?`${esc(m.name)} (CR ${m.cr})${combatIsMinion(c)?" · minion":""}`
-    :orphan?`⚠ ${esc(c._lostName||"Statblock")} — deleted`:"Pick a statblock…";
+    :orphan?`⚠ ${esc(c._lostName||"Statblock")} (deleted)`:"Pick a statblock…";
   const pickCls=m?"":orphan?" orphan":" empty";
-  const pickTitle=orphan?' title="This statblock was deleted — pick another to re-link, or remove the combatant from its ⋯ menu"':"";
+  const pickTitle=orphan?' title="This statblock was deleted. Pick another to re-link, or remove the combatant from its ⋯ menu"':"";
   return `<div class="cbt ${fc}${orphan?" cbt-orphan":""}" data-cid="${c.id}">
     ${cnt}
     <div class="cbt-main">
@@ -750,5 +750,5 @@ function pushEncounter(a,e){
     combatants:e.combatants.filter(c=>c.type!=="event").map(c=>{const m=c.type==="monster"?monOf(c):null;return{kind:c.type,statblock_name:c.type==="monster"?(m?m.name:"(missing)"):null,nickname:c.nickname||null,cr:combatCR(c),minion:combatIsMinion(c),xp_each:combatXPEach(c),count:Number(c.count),faction:c.faction};}),
     environment_entities:e.combatants.filter(c=>c.type==="event").map(c=>({name:c.name||"(unnamed)",initiative:c.init||null,description:c.text||""}))};
   const txt="<<CLAUDE-FORGE / create the Enemy/Ally combatants below as Nemici entries in Notion, link each to its Statblock by name (use nickname as the entry Name when given, else the statblock name), set Faction & Status=Alive, and ROLL initiative for each (d20 + the statblock's DEX mod). Add environment_entities and battlefield_notes as encounter notes, not as statblock-linked enemies. Flag any statblock name not found.>>\n```json\n"+JSON.stringify(payload,null,2)+"\n```";
-  copyModal("Copy encounter for Claude",txt,"Paste in chat — I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
+  copyModal("Copy encounter for Claude",txt,"Paste in chat: I create the combatant entries, link statblocks, roll initiative, and attach the notes/entities.");
 }

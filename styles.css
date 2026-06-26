@@ -208,6 +208,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .cr-help:hover{border-color:var(--accent);color:var(--txt)}
 .cr-pop{font-size:11.5px;line-height:1.55;color:var(--dim);max-width:230px} /* custom tooltips / (?) bodies: neutral, not yellow (B125) */
 .cr-pop b{color:var(--txt)}
+.cr-pop a{color:var(--accent-soft);text-decoration:none}
+.cr-pop a:hover{text-decoration:underline}
 .trunc-pop{color:var(--txt);max-width:280px;white-space:normal;overflow-wrap:anywhere} /* full text of a clipped field (hover) */
 /* Tail-pop tooltips fit their content (drop the .popover min-width floor) (B167). */
 .popover.tail-pop{min-width:0}
@@ -1873,10 +1875,6 @@ body.player-mode .cd-savetpl,body.player-mode .cd-gx[data-cdmenu]{display:none!i
 .staged-row .hint{display:inline}
 .staged-note{font-size:11px;color:var(--faint)}
 .modal-title{display:flex;align-items:center;gap:8px}
-.help-btn{margin-left:auto;width:20px;height:20px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:grid;place-items:center}
-.help-btn:hover{border-color:var(--accent);color:var(--accent)}
-.help-pop{max-width:340px;padding:11px 13px;font-size:12px;line-height:1.5;color:var(--dim)}
-.help-pop code{font-size:11px}
 .lib-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 6px;flex-wrap:wrap}
 .lib-toolbar .ctrl-icons{margin-left:auto}
 /* selection-actions popover sits top-LEFT so it never overlaps the right-aligned group checkbox */

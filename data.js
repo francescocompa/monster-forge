@@ -75,7 +75,7 @@ const CURATED_EFFECTS=[
   {name:"Blur",group:"spell",adj:"Blurred",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration."},
   {name:"Shield of Faith",group:"spell",adj:"Shielded",text:"+2 AC. Concentration, up to 10 minutes."},
   {name:"Heroism",group:"spell",adj:"Emboldened",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
-  {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible — attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
+  {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible. Attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
   {name:"Hold Person",group:"spell",adj:"Held",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
   {name:"Guidance",group:"spell",adj:"Guided",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
   {name:"Resistance",group:"spell",text:"+1d4 to one saving throw of the target's choice. Concentration. (Cantrip.)"},

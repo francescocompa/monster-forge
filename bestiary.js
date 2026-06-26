@@ -108,7 +108,7 @@ function renderRecords(body,recs,ctrl,desc,opts){
   let shown=0;body.innerHTML=keys.map(k=>{const g=groups.get(k),items=g.items.slice(0,Math.max(0,cap-shown));shown+=items.length;const col=opts.collapsible&&libCollapsed.has(k);const lbl=p.groupLabelHTML?p.groupLabelHTML(k,g.label):esc(g.label);return items.length?`<div class="grp${col?" collapsed":""}" data-grpkey="${esc(k)}"><div class="grp-head">${lbl}<span class="grp-n">${g.items.length}</span><button class="grp-collapse" title="${col?"Expand":"Collapse"}">▾</button></div><div class="cards">${items.map(opts.cardOf).join("")}</div></div>`:"";}).join("")+(shown<recs.length?capHint(recs.length,shown):"");
   body.querySelectorAll(".grp-head").forEach(h=>{h.addEventListener("click",()=>{const grp=h.closest(".grp");const k=grp.dataset.grpkey;libCollapsed.has(k)?libCollapsed.delete(k):libCollapsed.add(k);grp.classList.toggle("collapsed",libCollapsed.has(k));const btn=h.querySelector(".grp-collapse");if(btn)btn.title=libCollapsed.has(k)?"Expand":"Collapse";});});
 }
-function capHint(total,shown){return `<div class="hint" style="margin-top:10px">Showing first ${shown.toLocaleString()} of ${total.toLocaleString()} — refine your search.</div>`;}
+function capHint(total,shown){return `<div class="hint" style="margin-top:10px">Showing first ${shown.toLocaleString()} of ${total.toLocaleString()}. Refine your search.</div>`;}
 
 // ---- Bestiary control descriptor + records ----
 function libFirstTag(r){return ((r.m.tags||[]).slice().sort((x,y)=>x.localeCompare(y))[0])||"￿";}
@@ -199,11 +199,11 @@ function wireLibCards(body){
   body.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>guardedLoad(()=>{loadMonster(find(b.dataset.edit));switchView("forge");})));
   body.querySelectorAll("[data-dup]").forEach(b=>b.addEventListener("click",()=>{const m=clone(find(b.dataset.dup));m.id=uid();m.name+=" (copy)";m.chassis=false;state.lib.unshift(m);saveLib();renderLibrary();toast("Duplicated.");}));
   body.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.del,used=monsterUsage(id),nm=(find(id)||{}).name||"";
-    const msg=`Delete “${nm}”?`+(used?` It's used in ${used} encounter${used>1?"s":""} — those combatants will show as unresolved until you re-link or remove them.`:"");
+    const msg=`Delete “${nm}”?`+(used?` It's used in ${used} encounter${used>1?"s":""}; those combatants will show as unresolved until you re-link or remove them.`:"");
     confirmModal(msg,()=>{if(used)markOrphanedCombatants(id,nm);state.lib=state.lib.filter(x=>x.id!==id);saveLib();if(used)saveAdv();renderLibrary();toast("Deleted.");});}));
   body.querySelectorAll("[data-arch]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.arch);setStatus(m,m.archived?"Ready":"Archived");}));
   body.querySelectorAll("[data-pinlib]").forEach(b=>b.addEventListener("click",()=>{const m=find(b.dataset.pinlib);if(m){m.pinned=!m.pinned;saveLib();renderLibrary();}}));
-  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat — I build the Notion page in MM25 format and set its properties.");}));
+  body.querySelectorAll("[data-claude]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.claude)));const txt=claudeMonster(M);M=sav;copyModal("Copy for Claude",txt,"Paste in chat: I build the Notion page in MM25 format and set its properties.");}));
   body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
   body.querySelectorAll("[data-stchip]").forEach(ch=>ch.addEventListener("click",e=>{e.stopPropagation();openStatusMenu(find(ch.dataset.stchip),ch);}));
   body.querySelectorAll("[data-addtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openTagAdd(find(b.dataset.addtag),b);}));
@@ -276,10 +276,10 @@ function openForgeStatusMenu(anchor){const p=showPopover(anchor,STATUSES.map(s=>
 // loaded straight from a chassis and saved without edits (B43).
 function originBadgeHTML(m){const o=originOf(m);
   return o.kind==="chassis"
-    ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}) — saved without edits">${esc(o.src||"Built-in")}</span>`
-    :`<span class="tag origin brew" title="Homebrew — created or edited here">Homebrew</span>`;}
+    ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}), saved without edits">${esc(o.src||"Built-in")}</span>`
+    :`<span class="tag origin brew" title="Homebrew: created or edited here">Homebrew</span>`;}
 function cardHTML(m,dimmed){const arch=m.archived;return `<div class="card${arch?" archived":""}${m.pinned?" pinned":""}${dimmed?" filtered-out":""}" data-card="${m.id}" draggable="true">
-  ${m.pinned?`<span class="card-pin" title="Pinned — ignores filters">${PIN_SVG}</span>`:""}
+  ${m.pinned?`<span class="card-pin" title="Pinned: ignores filters">${PIN_SVG}</span>`:""}
   <div class="menu-wrap cardmenu">
     <button class="kebab" data-menu="lib-${m.id}" title="More">⋯</button>
     <div class="menu" id="menu-lib-${m.id}">
@@ -337,7 +337,7 @@ function srcLbl(s){return s==="Built-in"?"Built-in":prettySource(s);}
 function srcBadgeHTML(o){
   const vs=o.variants||[o],built=o.src==="Built-in";
   if(vs.length<2)return `<span class="src-badge${built?" built":""}">${esc(srcLbl(o.src))}</span>`;
-  return `<button type="button" class="src-badge srcdrop${built?" built":""}" data-srcdrop="${esc(o.m.name||"")}" title="${vs.length} sources — click to switch">${esc(srcLbl(o.src))} ▾</button>`;
+  return `<button type="button" class="src-badge srcdrop${built?" built":""}" data-srcdrop="${esc(o.m.name||"")}" title="${vs.length} sources, click to switch">${esc(srcLbl(o.src))} ▾</button>`;
 }
 function bindSrcDrops(body,recs,redraw){
   body.querySelectorAll("[data-srcdrop]").forEach(btn=>btn.addEventListener("click",e=>{
@@ -394,7 +394,7 @@ $("#saveMonster").addEventListener("click",async()=>{
     const pf=pendingForge;pendingForge=null;hideBanner();refreshSaveState();toast("Saved & added to encounter.");state.selAdv=pf.advId;switchView("adventures");return;}
   refreshSaveState();toast(i>=0?"Updated in Bestiary.":"Saved to Bestiary.");
 });
-$("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat — I build the Notion page in MM25 format and set its properties.");});
+$("#pushClaude").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Claude",claudeMonster(M),"Paste in chat: I build the Notion page in MM25 format and set its properties.");});
 $("#copyNotion").addEventListener("click",()=>{if(!validName())return;copyModal("Copy for Notion (manual)",notionSingle(M),"Single-column, paste-safe. Set AC/HP/XP properties by hand.");});
 $("#forgeSaveFab").addEventListener("click",()=>$("#saveMonster").click());
 $("#forgeStatus").addEventListener("click",e=>{e.stopPropagation();openForgeStatusMenu(e.currentTarget);});
@@ -404,7 +404,7 @@ function showCrHelp(anchor){tailPopover(anchor,`<div class="cr-pop">${crTargetsH
 $("#crHelp").addEventListener("click",e=>{e.stopPropagation();showCrHelp(e.currentTarget);});
 $("#crHelp").addEventListener("mouseenter",e=>showCrHelp(e.currentTarget));
 $("#crHelp").addEventListener("mouseleave",()=>closePopover());
-const SN_HELP="The noun used for 'the ___' references in text — e.g. set it to 'dragon' and [c] becomes 'the dragon'. Turn on Proper name to drop the article.";
+const SN_HELP="The noun used for 'the ___' references in text, e.g. set it to 'dragon' and [c] becomes 'the dragon'. Turn on Proper name to drop the article.";
 function showSnHelp(anchor){tailPopover(anchor,`<div class="cr-pop">${SN_HELP}</div>`);}
 $("#snHelp").addEventListener("click",e=>{e.stopPropagation();showSnHelp(e.currentTarget);});
 $("#snHelp").addEventListener("mouseenter",e=>showSnHelp(e.currentTarget));
@@ -475,7 +475,7 @@ function chassisPreviewHTML(m){
 function applyChassis(ch,keepId,merge){
   const base=merge?mergeChassis(ch):chassisToMonster(ch,(keepId&&M)?M.id:uid());
   if(merge){delete base._preset;delete base._source;}
-  loadMonster(base);switchView("forge");toast("Loaded chassis — edit & save.");
+  loadMonster(base);switchView("forge");toast("Loaded chassis. Edit & save.");
 }
 // Add-from-chassis: build the bestiary entry from a chassis, save it, and drop it into the encounter
 // without a trip through the Forge.
@@ -483,7 +483,7 @@ function openChassisForEncounter(a,e,fromPicker){
   if(!e)return;
   openChassis(false,{onBack:fromPicker?(()=>openBestiaryPicker(a,e)):null,onPick:ch=>{const rec=normalizeMonster(chassisToMonster(ch));rec._savedAt=Date.now();
     a._focusEnc=e.id;state.lib.unshift(rec);saveLib();addMonsterCombatant(e,rec.id);saveAdv();renderEncList(a);
-    closeModal();toast(`Added “${rec.name}” — saved to Bestiary.`);}});
+    closeModal();toast(`Added “${rec.name}”, saved to Bestiary.`);}});
 }
 function findChassis(id){return CHASSIS.find(x=>x.id===id)||enPresets().find(x=>x.id===id);}
 function openChassis(fromForge,opts){
@@ -500,7 +500,7 @@ function openChassis(fromForge,opts){
       {key:"name",label:"Name",cmp:(a,b)=>a.m.name.localeCompare(b.m.name)},
     ]};
   const forEnc=!!opts.onPick;
-  const helpText=(forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":"")+"Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points — reskin freely.";
+  const helpText=(forEnc?"Picks a base, saves it to your Bestiary, and adds it to the encounter. ":"")+"Generic built-in bases plus any preset libraries you've uploaded. PB/XP/save math is exact; flavor stats are starting points; reskin freely.";
   openModalRaw(`<h3 class="modal-h-row">${opts.onBack?`<button class="modal-back" id="chBack" title="Back" aria-label="Back">${BACK_SVG}</button>`:""}<span>${forEnc?"Add from a chassis":"Start from a chassis"}</span><button class="cr-help" id="chHelp" aria-label="About this picker">?</button></h3>
     <div class="picker-tools"><input type="search" class="picker-search" id="chSearch" placeholder="Search creatures…" autocomplete="off" spellcheck="false"><div class="ctrl-icons" id="chCtrlIcons"></div></div>
     <div class="ctrl-chips" id="chChips"></div>
@@ -545,7 +545,7 @@ function removeReference(k){
 }
 const GROUP_LABELS={core:"Core",supplement:"Supplements","supplement-alt":"Supplements (alt)",setting:"Settings","setting-alt":"Settings (alt)",adventure:"Adventures",screen:"Screens","organized-play":"Organized Play",other:"Other"};
 const groupLabel=g=>g?(GROUP_LABELS[g]||g.replace(/(^|[-\s])\w/g,c=>c.toUpperCase()).replace(/-/g," ")):"Ungrouped";
-const PRESET_HINT="Content comes from 5etools data files. Download <a href='https://github.com/5etools-mirror-3/5etools-src' target='_blank' rel='noopener'>github.com/5etools-mirror-3/5etools-src</a> as a <b>.zip</b> (green <b>Code</b> button, then <b>Download ZIP</b>) and upload it here, or add individual <code>.json</code> files from the ▾ menu. The app reads what it recognises: <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles &amp; groups), and <b>legendarygroups.json</b> (lair &amp; regional effects). The kind is auto-detected. A zip lists every source it finds in a <b>Pending import</b> tray first; tick the ones you want and Add them. Nothing is kept until you do, and sources you already have are skipped. Everything is parsed in your browser and stored only on this device, never sent to the cloud. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
+const PRESET_HINT="Loads creatures, spells, conditions and rules from 5etools. Download a data <b>.zip</b> from <a href='https://github.com/5etools-mirror-3/5etools-src' target='_blank' rel='noopener'>github.com/5etools-mirror-3/5etools-src</a> (green <b>Code</b> button, then <b>Download ZIP</b>), upload it, and tick the sources to keep. Parsed in your browser; stays on this device.";
 let presetCtrl=blankCtrl();presetCtrl.group="group";
 const presetSel=new Set();
 function prUpdateSelUI(){
@@ -599,7 +599,7 @@ function stagingHTML(){
   const recs=ctrlApply(libRecs(stagedLibs),stageCtrl,libCtrlDesc(stagedLibs));
   const body=stageCollapsed?"":`<div class="ctrl-chips" id="stageChips"></div>
     <div class="staged-rows">${recs.length?libGroupRowsHTML(recs,stageCtrl,stagedSel,stagedRowHTML):'<div class="empty-state" style="padding:14px;font-size:12px">No pending libraries match these filters.</div>'}</div>
-    <div class="hint staged-note">Imported from a .zip — tick the sources to keep, then Add them. Nothing is saved until you do; sources you already have are skipped.</div>`;
+    <div class="hint staged-note">Imported from a .zip. Tick the sources to keep, then Add them. Nothing is saved until you do; sources you already have are skipped.</div>`;
   return `<div class="lib-staging${stageCollapsed?" collapsed":""}">
     <div class="lib-staging-head">
       <button class="ls-chev" id="stageCollapse" title="${stageCollapsed?"Expand":"Collapse"}" aria-label="Toggle pending import"><span class="st-chev${stageCollapsed?" closed":""}">${FS_CHEVRON}</span></button>
@@ -621,7 +621,7 @@ function presetModal(){
   const live=new Set(libs.map(L=>libKey(L.kind,L.name)));[...presetSel].forEach(k=>{if(!live.has(k))presetSel.delete(k);});
   const desc=libCtrlDesc(libs);
   const recs=ctrlApply(libRecs(libs),presetCtrl,desc);
-  let h=`<h3 class="modal-title">Preset libraries<button class="help-btn" id="prHelp" title="About preset libraries" aria-label="About">?</button></h3>`;
+  let h=`<h3 class="modal-h-row"><span>Preset libraries</span><button class="cr-help" id="prHelp" aria-label="About preset libraries">?</button></h3>`;
   h+=stagingHTML();
   h+=`<div class="lib-toolbar"><div class="ctrl-chips" id="prChips"></div><div class="ctrl-icons" id="prCtrlIcons"></div></div>`;
   h+=`<div class="lib-actions" id="prActions"><span class="sel-n"></span><button class="btn ghost sm" id="prClearSel" style="width:auto" title="Clear selection">Clear</button><label class="switch" title="Enable / disable selected"><input type="checkbox" id="prToggle"><span class="sl"></span></label><button class="binbtn" id="prRemove" title="Remove selected">${TRASH_SVG}</button></div>`;
@@ -648,8 +648,7 @@ function presetModal(){
       else if(a==="reparse")reparseLibraries();
       else{state.disabledLibs=[];saveDisabled();refreshLibPools();presetModal();toast("All libraries enabled.");}
     }));});
-  {const ph=$("#prHelp"),openPh=e=>{e.stopPropagation();showPopover(ph,`<div class="help-pop">${PRESET_HINT}</div>`);};
-    ph.addEventListener("mouseenter",openPh);ph.addEventListener("click",openPh);ph.addEventListener("mouseleave",()=>closePopover());}
+  bindHelpHover($("#prHelp"),PRESET_HINT);
   $("#modal").querySelectorAll("[data-refx]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.refx;confirmStack(`Remove this reference sheet?`,()=>removeReference(k));}));
   $("#modal").querySelectorAll(".lib-sel").forEach(cb=>cb.addEventListener("change",()=>{const row=cb.closest(".preset-row"),key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);prUpdateSelUI();}));
   $("#modal").querySelectorAll(".lib-scroll .grp-sel").forEach(cb=>cb.addEventListener("change",()=>{cb.closest(".lib-grp").querySelectorAll(".preset-row").forEach(row=>{const key=libKey(row.dataset.kind,row.dataset.name);if(cb.checked)presetSel.add(key);else presetSel.delete(key);});prUpdateSelUI();}));
@@ -682,7 +681,7 @@ function chassisConflictModal(ch){
     <div class="cc-choices">
       <button class="btn ghost sm cc-choice cc-go" id="ccSaveNew">Save &amp; New<span class="sub">Save current edits to the Bestiary, then start the chassis</span></button>
       <button class="btn ghost sm cc-choice cc-go" id="ccOverride">Replace<span class="sub">Discard current edits and load the chassis</span></button>
-      <button class="btn ghost sm cc-choice cc-back" id="ccBack">Back<span class="sub">Keep editing — don't import</span></button>
+      <button class="btn ghost sm cc-choice cc-back" id="ccBack">Back<span class="sub">Keep editing, don't import</span></button>
     </div>`);
   $("#ccSaveNew").addEventListener("click",()=>{if(!saveCurrentToBestiary())return;closeModal();toast("Saved to Bestiary.");applyChassis(ch,false,false);});
   $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});

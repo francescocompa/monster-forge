@@ -142,7 +142,7 @@ function addExistingToParty(a,rid){if(!a.party.includes(rid)){a.party.push(rid);
 // Unsync: fork a SEPARATE roster entry (a copy) tagged only with the current adventure; the original keeps
 // its other adventures. The current adventure's slot now points at the copy.
 function unsyncPartyMember(a,rid){const c=rosterById(rid);if(!c)return;const copy=normalizeRosterPC(JSON.parse(JSON.stringify(c)));copy.id=uid();
-  state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced — a separate copy for this adventure.");}
+  state.roster.push(copy);const i=a.party.indexOf(rid);if(i>=0)a.party[i]=copy.id;saveRoster();saveAdv();renderAdvDetail();toast("Unsynced. A separate copy for this adventure.");}
 const GRIP_SVG='<svg viewBox="0 0 8 14" width="8" height="13" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/><circle cx="2" cy="7" r="1.2"/><circle cx="6" cy="7" r="1.2"/><circle cx="2" cy="12" r="1.2"/><circle cx="6" cy="12" r="1.2"/></g></svg>';
 let _cdDragIdx=null,_cdDrop=null;
 // Whether a field renders in the detail's "hidden from the party row" group (Level is always shown; init +
@@ -182,7 +182,7 @@ function renderParty(a){
     // overflow toward the name, faded only when they actually overflow (B169 — see renderParty's rAF).
     const allChips=[...stdChips,...derChips].join("");
     return `<div class="pc-row" data-pcopen="${rid}">
-      <span class="pc-lvl-wrap"><span class="pc-lv-cap">LV</span><input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level — click to edit"></span>
+      <span class="pc-lvl-wrap"><span class="pc-lv-cap">LV</span><input class="pc-lvl-in${lvSet?"":" dim"}" type="number" min="1" max="20" data-pclvl="${rid}" value="${lvSet?esc(String(lv)):""}" placeholder="${partyDefaultLevel(a.id)}" title="Level: click to edit"></span>
       <span class="pc-name"><span class="pc-nm">${esc(c.name)||'<span class="pc-unnamed">New character</span>'}</span>${cls?`<span class="pc-cls">${esc(cls)}</span>`:""}</span>
       <span class="pc-chips">${allChips}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
@@ -260,7 +260,7 @@ function charDetailHTML(c,curAdv,ui,advs){
   // Ability-score grid is ALWAYS shown (B145) — cells bind by ability key and the field is created lazily on
   // first edit. Star a cell to make it "main" (derives ATK/save), with override inputs per flagged ability.
   const abilCell=k=>{const f=abilFieldOf(c,k)||{k,v:"",main:false,prof:false},on=!!f.main;
-    return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdabmain="${k}" title="Main ability — derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabkey="${k}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(abilScore(f)))}</div><button type="button" class="svtog${f.prof?" active":""}" data-cdabsave="${k}" aria-pressed="${f.prof?"true":"false"}">Save <b>${sgn(abilSave(c,f))}</b></button></div>`;};
+    return `<div class="cell cc-ab-${k}${on?" is-main":""}"><button type="button" class="abmain${on?" active":""}" data-cdabmain="${k}" title="Main ability: derives spell ATK / save DC" aria-pressed="${on}">★</button><div class="ab">${k.toUpperCase()}</div><input type="number" data-cdabkey="${k}" value="${esc(String(f.v))}" placeholder="10"><div class="mod">${sgn(abilMod(abilScore(f)))}</div><button type="button" class="svtog${f.prof?" active":""}" data-cdabsave="${k}" aria-pressed="${f.prof?"true":"false"}">Save <b>${sgn(abilSave(c,f))}</b></button></div>`;};
   const cells=PC_ABILS.map(abilCell).join("");
   const mains=PC_ABILS.map(k=>abilFieldOf(c,k)).filter(f=>f&&f.main);
   const spell=mains.length?`<div class="cd-spell">${mains.map(f=>{const cv=abilDerived(c,f);
@@ -368,14 +368,14 @@ function openCharacterDetail(rid,curAdvId,ui){
   m.querySelectorAll("[data-cdname]").forEach(el=>el.addEventListener("click",()=>fieldMenu(+el.dataset.cdname,el)));
   {const ri=m.querySelector("[data-cdrenval]");if(ri){ri.focus();const commit=()=>{const f=c.fields[+ri.dataset.cdrenval];if(f){f.label=ri.value.trim();saveRoster();}re({});};ri.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")re({});});ri.addEventListener("blur",commit);}}
   m.querySelectorAll("[data-cdaddprop]").forEach(el=>el.addEventListener("click",()=>addPropMenu(el)));
-  {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved — new characters start from these properties.");});}
+  {const st=m.querySelector("[data-cdsavetpl]");if(st)st.addEventListener("click",()=>{savePcTemplate(c);toast("Template saved. New characters start from these properties.");});}
   // Top kebab menu (B155): clear page · import template · unsync (shared only) · delete.
   {const km=m.querySelector("[data-cdmenu]");if(km)km.addEventListener("click",()=>{
     const items=`<button class="popitem" data-cdm="clear">Clear page</button><button class="popitem" data-cdm="template">Import current template</button>${shared&&curAdv?`<button class="popitem" data-cdm="unsync">Unsync from this adventure</button>`:""}<div class="popsep"></div><button class="popitem danger" data-cdm="delete">Delete character</button>`;
     const p=showPopover(km,items);
     p.querySelectorAll("[data-cdm]").forEach(b=>b.addEventListener("click",()=>{const act=b.dataset.cdm;closePopover();
-      if(act==="clear"){confirmStack("Clear this page — name, notes and every property value? The properties themselves stay.",()=>{c.name="";c.notes="";(c.fields||[]).forEach(f=>{if(Array.isArray(f.v))f.v=[];else if(f.v&&typeof f.v==="object")f.v={};else f.v="";f.main=false;f.prof=false;f.atkV="";f.dcV="";});saveRoster();re({});});}
-      else if(act==="template"){const tpl=loadPcTemplate();if(!tpl){toast("No template saved yet — use Save as template first.");return;}
+      if(act==="clear"){confirmStack("Clear this page: name, notes and every property value? The properties themselves stay.",()=>{c.name="";c.notes="";(c.fields||[]).forEach(f=>{if(Array.isArray(f.v))f.v=[];else if(f.v&&typeof f.v==="object")f.v={};else f.v="";f.main=false;f.prof=false;f.atkV="";f.dcV="";});saveRoster();re({});});}
+      else if(act==="template"){const tpl=loadPcTemplate();if(!tpl){toast("No template saved yet. Use Save as template first.");return;}
         const keyOf=f=>f.k||("l:"+(f.label||"").toLowerCase()),cur=c.fields||[],tk=new Set(tpl.map(keyOf));
         const removed=cur.filter(f=>!tk.has(keyOf(f))&&fieldHasVal(f));
         const apply=()=>{c.fields=tpl.map(tf=>{const ex=cur.find(f=>keyOf(f)===keyOf(tf));return ex?ex:JSON.parse(JSON.stringify(tf));});saveRoster();re({});};

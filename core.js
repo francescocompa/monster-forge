@@ -219,7 +219,7 @@ async function loadAll(){
   } else {
     // cloud unreachable: keep the local mirror and pause nothing — _flush still caches every edit
     cloudReady=false;
-    showBanner("Cloud unreachable — working from your local copy. Edits are saved on this device and will sync when the cloud is back.",hideBanner);
+    showBanner("Cloud unreachable. Working from your local copy. Edits are saved on this device and will sync when the cloud is back.",hideBanner);
   }
   // Convert any pre-B136 party/roster shapes once the final state is in hand, then persist the new shape.
   if(migratePartyModel()){saveAdv();saveRoster();}
@@ -240,7 +240,7 @@ async function _flush(){
   if(_pend.adv){_pend.adv=false;if(!await jbinSet("library:adventures",state.adv))okAll=false;}
   if(_pend.roster){_pend.roster=false;if(!await jbinSet("library:party",state.roster))okAll=false;}
   if(okAll){setDirty(false);_cloudWarned=false;hideBanner();}
-  else{setDirty(true);if(!_cloudWarned){_cloudWarned=true;showBanner("Cloud save failed — your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}}
+  else{setDirty(true);if(!_cloudWarned){_cloudWarned=true;showBanner("Cloud save failed. Your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}}
 }
 let _cloudWarned=false; // show the cloud-failure banner once, not on every debounced save
 if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
@@ -385,7 +385,7 @@ function migratePartyModel(){let changed=false;
 }
 
 function fillSelect(id,arr,fmt){$(id).innerHTML=arr.map(v=>`<option value="${v}">${fmt?fmt(v):v}</option>`).join("");}
-function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell cc-ab-${a}"><button type="button" class="abmain" id="mn_${a}" title="Main ability — sources bare [ATK] / [SAVE]" aria-pressed="false">★</button><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
+function buildAbilityGrid(){$("#abilGrid").innerHTML=ABILS.map(a=>`<div class="cell cc-ab-${a}"><button type="button" class="abmain" id="mn_${a}" title="Main ability: sources bare [ATK] / [SAVE]" aria-pressed="false">★</button><div class="ab">${a.toUpperCase()}</div><input type="number" id="ab_${a}" placeholder="10"><div class="mod" id="mod_${a}">+0</div><button type="button" class="svtog" id="sv_${a}" aria-pressed="false">Save <b id="svv_${a}">+0</b></button></div>`).join("");}
 // Damage modifiers — same shape as the Skills section: one row per type = name select +
 // 3-state toggle (Resist/Immune/Vulnerable) + remove. "All Physical" expands to B/P/S.
 const DMG3=[["res","Resist"],["imm","Immune"],["vuln","Vulnerable"]];
@@ -623,7 +623,7 @@ function removeSection(k){
 function addNote(){M.notes.push({title:"",text:""});renderNotes();updateSectionVis();renderPreview();}
 function renderNotes(){
   const wrap=$("#notesList");if(!wrap)return;
-  wrap.innerHTML=M.notes.map((n,i)=>`<div class="entry" data-noteblk="${i}"><div class="ehead"><input type="text" class="ename" data-note="${i}" data-nf="title" value="${esc(n.title||"")}" placeholder="Note title (optional)" autocomplete="off"><button class="iconbtn" data-noterm="${i}">✕</button></div><textarea data-note="${i}" data-nf="text" placeholder="Note text — supports bracket tokens">${esc(n.text||"")}</textarea></div>`).join("");
+  wrap.innerHTML=M.notes.map((n,i)=>`<div class="entry" data-noteblk="${i}"><div class="ehead"><input type="text" class="ename" data-note="${i}" data-nf="title" value="${esc(n.title||"")}" placeholder="Note title (optional)" autocomplete="off"><button class="iconbtn" data-noterm="${i}">✕</button></div><textarea data-note="${i}" data-nf="text" placeholder="Note text: supports bracket tokens">${esc(n.text||"")}</textarea></div>`).join("");
   wrap.querySelectorAll("[data-noterm]").forEach(b=>b.addEventListener("click",()=>{M.notes.splice(+b.dataset.noterm,1);renderNotes();updateSectionVis();renderPreview();}));
   const c=$("#cntNotes");if(c)c.textContent=M.notes.length?`(${M.notes.length})`:"";
 }

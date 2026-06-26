@@ -82,7 +82,7 @@ function openLoadCombat(){
     if(ctrl.group==="adventure"){
       const byAdv=new Map();recs.forEach(r=>{(byAdv.get(r.a.id)||byAdv.set(r.a.id,[]).get(r.a.id)).push(r);});
       let html="";state.adv.filter(a=>!a.archived).forEach(a=>{html+=advBlock(a,byAdv.get(a.id)||[]);});
-      body.innerHTML=html||'<div class="empty-state">No encounters yet — add one below.</div>';
+      body.innerHTML=html||'<div class="empty-state">No encounters yet. Add one below.</div>';
     }else if(ctrl.group==="status"){
       let html="";ENC_STATUSES.forEach(stat=>{const rs=recs.filter(r=>encStatus(r.e)===stat);if(rs.length)html+=`<div class="lc-statgrp"><div class="lc-stat-h">${ENC_STATUS_LABEL[stat]}</div>${rs.map(r=>encRow(r.a,r.e,true)).join("")}</div>`;});
       body.innerHTML=html||'<div class="empty-state">No encounters match.</div>';
@@ -400,7 +400,7 @@ function openCondAdd(itId,anchor,targets){
   const renderList=()=>{const q=inp.value.trim().toLowerCase();
     const html=GROUPS.map(([label,fn])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));
       return items.length?`<div class="cl-grp">${label}</div>`+items.map(v=>`<button type="button" class="cl-item" data-v="${esc(v)}">${esc(v)}</button>`).join(""):"";}).join("");
-    clist.innerHTML=html||`<div class="cl-empty">No match — press Add to use this name.</div>`;};
+    clist.innerHTML=html||`<div class="cl-empty">No match. Press Add to use this name.</div>`;};
   // The grouped list is collapsed by default — it opens on the chevron (or once the user starts typing) (B133).
   const setList=open=>{clist.toggleAttribute("hidden",!open);chev.classList.toggle("open",open);if(open)renderList();};
   chev.addEventListener("click",ev=>{ev.preventDefault();setList(clist.hasAttribute("hidden"));inp.focus();});
@@ -468,7 +468,7 @@ function openHPManage(itId,anchor,concPrompt){
   const it=combatItem(itId);if(!it||it.hpMax==null)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
   const headHP=t=>`${t.hpCur}/${t.hpMax}${t.hpTemp?` <span class="hpm-tmp">+${t.hpTemp}</span>`:""}`;
   const barFill=t=>{const r=t.hpMax?t.hpCur/t.hpMax:0;return `width:${clamp(r*100,0,100)}%;background:${r>.5?"var(--ok)":r>.25?"var(--warn)":"var(--bad)"}`;};
-  const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b> — DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn primary sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
+  const concHTML=concPrompt?`<div class="hpm-conc"><span class="hpm-conc-t"><b>Concentration check</b>: DC ${concPrompt.dc}${concPrompt.bonus!=null?` · CON ${sgn(concPrompt.bonus)}`:""}</span>${concPrompt.bonus!=null?`<button class="btn primary sm hpm-conc-roll" style="width:auto">Roll</button>`:""}</div>`:"";
   const p=showPopover(anchor,`<div class="hp-manage">
     <div class="hpm-head"><span class="hpm-nm">${esc(it.name)}</span><span class="ini hpm-cur-disp">${headHP(it)}</span></div>
     <div class="hpm-bar"><i style="${barFill(it)}"></i></div>
@@ -494,7 +494,7 @@ function openHPManage(itId,anchor,concPrompt){
   p.querySelectorAll(".hpm-ds-pip").forEach(b=>b.addEventListener("click",()=>{const[kind,n]=b.dataset.ds.split(":");const t=combatItem(itId);if(!t)return;if(!t.deathSaves)t.deathSaves={success:0,fail:0};
     t.deathSaves[kind]=clamp(t.deathSaves[kind]===+n?+n-1:+n,0,3);if((t.deathSaves.fail||0)>=3)t.status="dead";reopen(null);}));
   const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{const b=concPrompt.bonus||0,r=rollFormula("1d20"+(b>=0?"+"+b:String(b))),pass=r.total>=concPrompt.dc;
-    toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc} — ${pass?"held":"broken"}`);
+    toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc}, ${pass?"held":"broken"}`);
     if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
 }
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
@@ -764,7 +764,7 @@ function combatRowHTML(it,active,drag){
     :`<input class="ci-init-in${manual?" manual":unrolled?" unrolled":""}" type="number" data-initset="${it.id}" ${manual?`value="" placeholder="—"`:unrolled?`value="" placeholder="${it.init}"`:`value="${it.init}"`}>`;
   // Status reads from the row variant (B122): .dead = strikethrough/dim, .waiting = muted + italic, .dying =
   // down. The death-save tracker now lives in the HP popover (B127); the row just flags down/stable.
-  const badge=dying?'<span class="ci-down" title="Down — rolling death saves">down</span>':stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
+  const badge=dying?'<span class="ci-down" title="Down: rolling death saves">down</span>':stable?'<span class="ci-stable" title="Stabilised at 0 HP">stable</span>':"";
   // Player mode: mark the player's OWN claimed character with a "You" badge after the name (B234).
   const youBadge=(PLAYER_MODE&&typeof playerClaimId==="function"&&it.id===playerClaimId())?'<span class="ci-you">You</span>':"";
   // Fixed-chip cluster (B124): AC · reaction toggle · effect chips · add-effect. It sits inline when the
@@ -787,7 +787,7 @@ function combatRowHTML(it,active,drag){
     ${initEl}
     <div class="ci-id"><div class="ci-name"><span class="ci-nm">${esc(it.name)}</span>${youBadge}${badge}</div>${it.comment?`<div class="ci-note">${esc(it.comment)}</div>`:""}</div>
     ${meta}
-    <div class="ci-hp${active&&dying?" ds-turn":""}"${active&&dying?' title="It\'s their turn — click to roll a death save"':""}>${hpCellHTML(it)}</div>
+    <div class="ci-hp${active&&dying?" ds-turn":""}"${active&&dying?' title="It\'s their turn: click to roll a death save"':""}>${hpCellHTML(it)}</div>
     <button class="ci-menu" data-cimenu="${it.id}" title="More" aria-label="More">⋯</button>
   </div>`;
 }
@@ -809,7 +809,7 @@ function combatMainDC(m){let best=null;
 // character detail. Reads live from the roster so edits reflect on the next render.
 function pcSheetHTML(it){
   const c=rosterById(it.srcId);
-  if(!c)return `<div class="ca-soon">Player character — linked record not found.</div>`;
+  if(!c)return `<div class="ca-soon">Player character: linked record not found.</div>`;
   const lines=[];
   const R=clickRollOn(); // rollable when dice rolling is enabled; otherwise plain display chips
   const line=(lbl,inner,txt)=>`<div class="pcs-line${txt?" txt":""}"><span class="pcs-lbl">${lbl}</span><span class="pcs-${txt?"txt":"chips"}">${inner}</span></div>`;
@@ -848,7 +848,7 @@ function pcSheetHTML(it){
   // only shows when a level is set — the old "Character details" placeholder title is gone.
   const lv=charFieldVal(c,"level");
   const head=(lv!==""&&lv!=null)?`<div class="pcs-head"><span class="pcs-sub dim">Level ${esc(String(lv))}</span></div>`:"";
-  if(!lines.length)return `<div class="ca-pcsheet">${head}<div class="ca-soon">No character details yet — add abilities, skills or passives to ${esc(c.name||"this PC")}.</div></div>`;
+  if(!lines.length)return `<div class="ca-pcsheet">${head}<div class="ca-soon">No character details yet. Add abilities, skills or passives to ${esc(c.name||"this PC")}.</div></div>`;
   return `<div class="ca-pcsheet">${head}${lines.join("")}</div>`;
 }
 function combatPanelInnerHTML(it,isTurn){
@@ -864,13 +864,13 @@ function combatPanelInnerHTML(it,isTurn){
   const rollChip=(k,bonus,type,label,t,ab)=>`<button class="ca-stat ca-stat-btn ca-stat-roll${ab?` cc-ab-${ab}`:""}" data-roll="1d20${sgn(bonus)}" data-rolltype="${type}" data-rolllabel="${esc(label)}"${t?` title="${t}"`:""}><span class="cas-k">${k}</span><span class="cas-v">${sgn(bonus)}</span></button>`;
   const stats=[];
   if(it.ac!=null)stats.push(chip("AC",it.ac));
-  if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus — click to roll"));
+  if(m){stats.push(rollChip("ATK",combatAtkBonus(m),"attack","Attack","Best attack-roll bonus, click to roll"));
     const dc=combatMainDC(m);if(dc!=null)stats.push(chip("DC",dc,"Highest save DC imposed"));}
   if(pc){const mains=(pc.fields||[]).filter(f=>{const d=fieldDef(f);return d&&d.abil&&f.main;});
     if(mains.length){const atkF=mains.reduce((b,f)=>(!b||effAtk(pc,f)>effAtk(pc,b))?f:b,null),dcF=mains.reduce((b,f)=>(!b||effDc(pc,f)>effDc(pc,b))?f:b,null);
-      stats.push(rollChip("ATK",effAtk(pc,atkF),"attack","Attack","Attack bonus — click to roll",atkF.k));
+      stats.push(rollChip("ATK",effAtk(pc,atkF),"attack","Attack","Attack bonus, click to roll",atkF.k));
       stats.push(chip("DC",effDc(pc,dcF),"Save DC",dcF.k));}}
-  if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP — damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
+  if(hpTracked(it))stats.push(`<button class="ca-stat ca-stat-btn${isTurn&&isDying(it)?" ds-turn":""}" data-hpmanage="${it.id}" title="Manage HP: damage, heal, temp"><span class="cas-k">HP</span><span class="cas-v">${it.hpCur}/${it.hpMax}${it.hpTemp?` +${it.hpTemp}`:""}</span></button>`);
   const statRow=stats.length?`<div class="ca-stats">${stats.join("")}</div>`:"";
   // The edit affordance sits inline with the name (B170) — "Edit in Forge" for monsters, "Edit" for PCs.
   const editBtn=(m&&monById(it.srcId))
@@ -879,7 +879,7 @@ function combatPanelInnerHTML(it,isTurn){
   const sb=m
     ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
     :it.kind==="pc"?pcSheetHTML(it)
-    :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant — no statblock."}</div>`;
+    :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant: no statblock."}</div>`;
   const note=it.comment
     ?`<div class="ca-noteblock"><div class="ca-note-txt">${esc(it.comment)}</div><button class="ca-noteedit" data-cinote="${it.id}" title="Edit note" aria-label="Edit note">${PEN_ICON}</button></div>`
     :`<button class="ca-addnote" data-cinote="${it.id}">${PEN_ICON} Add note</button>`;
@@ -950,7 +950,7 @@ function combatHeaderHTML(a,e,sc,cb){
   const drop=(sc&&sibs.length>1)?`<button class="ct-encdrop" id="combatEncDrop" title="Switch encounter in this scene" aria-label="Switch encounter">${FS_CHEVRON}</button>`:"";
   const title=`<div class="ct-titleblock">
       ${sc?`<div class="ct-scene-sm">${esc(sceneDName(sc))}</div>`:""}
-      <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ct-diff ${cls}" title="Difficulty — ${esc(label)}">${label}</span>${drop}</div>
+      <div class="ct-encrow"><span class="ct-enc-lg">${esc(encDName(e))}</span><span class="pill sm ct-diff ${cls}" title="Difficulty: ${esc(label)}">${label}</span>${drop}</div>
     </div>`;
   const notes=(e.notesOn&&e.notes)?`<div class="ct-notes-wrap"><div class="ct-notes clamped">${esc(e.notes)}</div><button class="ct-notes-more" hidden>more</button></div>`:"";
   // Player mode (editing on) puts the "Playing as" control in the Load-encounter slot instead (B237).
@@ -975,9 +975,9 @@ function combatRoundBarHTML(cb){
   return `<div class="ct-roundbar">
     <button class="ct-round" id="combatRoundEdit" title="Set the round">Round ${cb.round}</button>
     <span class="ct-turnline"></span>
-    ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative — click to restore">⚠ ${oop} out of order</button>`:""}
+    ${oop?`<button class="ct-oop" id="combatRestoreOrder" title="The turn order was changed by hand and no longer matches initiative. Click to restore">⚠ ${oop} out of order</button>`:""}
     <button class="ct-d20" id="combatRollInit" title="Roll initiative">${D20_ICON}<span class="ct-d20-lbl">Roll initiative</span></button>
-    <button class="ct-toolsbtn ct-sharebtn${combatShareOn()?" on":""}" id="combatShare" title="${combatShareOn()?"Sharing initiative with players — manage":"Share initiative with players"}" aria-label="Share initiative with players">${SHARE_ICON}${_shareSuggest.size?`<span class="ct-sug-badge">${_shareSuggest.size}</span>`:""}</button>
+    <button class="ct-toolsbtn ct-sharebtn${combatShareOn()?" on":""}" id="combatShare" title="${combatShareOn()?"Sharing initiative with players, manage":"Share initiative with players"}" aria-label="Share initiative with players">${SHARE_ICON}${_shareSuggest.size?`<span class="ct-sug-badge">${_shareSuggest.size}</span>`:""}</button>
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
@@ -1024,7 +1024,7 @@ function combatNotStartedHTML(a,e){
   const done=e.status==="completed";
   return `<div class="combat-notstarted">
     <div class="ce-icon">${SWORDS_SVG}</div>
-    <p class="hint">${done?"This encounter is marked completed — start it again from the button below.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet — add some from the Adventures tab."}</p>
+    <p class="hint">${done?"This encounter is marked completed. Start it again from the button below.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet. Add some from the Adventures tab."}</p>
   </div>`;
 }
 // Forge-style draggable split between the initiative list and the active-combatant panel (CT9). The
@@ -1149,7 +1149,7 @@ async function startCombatShare(){
   }
   const id=await jbinSetPublic(null,buildCombatShareSnapshot(ctx.e.combat));
   if(id){localStorage.setItem("mf_share:"+encId,id);startSharePoll();return id;}
-  toast("Couldn't start sharing — check your connection.");return null;
+  toast("Couldn't start sharing. Check your connection.");return null;
 }
 async function stopCombatShare(){
   const ctx=loadedCtx();if(!ctx)return;const encId=ctx.e.id;
@@ -1276,7 +1276,7 @@ function shareEditPickerHTML(){
   const seg=`<button type="button" class="seg-btn${!on?" on":""}" data-emode="off">Off</button>`+
     `<button type="button" class="seg-btn${on?" on":""}" data-emode="own"${hasKey?"":" disabled"}>On</button>`;
   const hint=!hasKey?`Add a <b>player edit key</b> in Settings → Combat to let players edit.`
-    :!on?`Players can only watch — read-only.`
+    :!on?`Players can only watch (read-only).`
     :`Each player claims their character and can edit its HP, conditions &amp; sheet (and roll), live.`;
   return `<div class="share-edit">
     <div class="share-edit-h">Player editing</div>
@@ -1346,7 +1346,7 @@ function openCombatShareDialog(){
     // stash the snapshot to localStorage and open the player view against it. Copy/QR give the real link.
     $("#sharePreview").addEventListener("click",()=>{_pmPreviewOn=true;stashPreviewSnap();
       try{window.open("index.html?share=__preview__","_blank");}catch(e){location.href="index.html?share=__preview__";}});
-    $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped — players disconnected.");});
+    $("#shareStop").addEventListener("click",async()=>{const b=$("#shareStop");b.disabled=true;b.textContent="Stopping…";await stopCombatShare();closeModal();renderCombat();toast("Sharing stopped, players disconnected.");});
   };
   draw();
 }
@@ -1531,7 +1531,7 @@ const PM_PERSON_ICON='<svg viewBox="0 0 448 512" fill="currentColor" aria-hidden
 // it reopens the character gate. Reuses .ct-loadbtn so it collapses to just the icon when the header narrows.
 function playerPlayingAsBtnHTML(){
   const inst=playerClaimedInst(),has=!!playerClaimId(),name=inst?inst.name:(has?"…":"Choose character");
-  return `<button class="btn ghost sm ct-loadbtn pm-playingas" id="pmPlayingAs" title="${has?"Playing as "+esc(name)+" — tap to change":"Choose your character"}">${PM_PERSON_ICON}<span><span class="pm-pa-l">Playing as</span> ${esc(name)}</span></button>`;
+  return `<button class="btn ghost sm ct-loadbtn pm-playingas" id="pmPlayingAs" title="${has?"Playing as "+esc(name)+", tap to change":"Choose your character"}">${PM_PERSON_ICON}<span><span class="pm-pa-l">Playing as</span> ${esc(name)}</span></button>`;
 }
 function playerGateNeeded(){return PLAYER_MODE&&playerEditMode()!=="off"&&!playerClaimId();}
 function pmNamedPCs(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return [];
@@ -1557,7 +1557,7 @@ function openPlayerGate(dismissable){
   bg.innerHTML=`<div class="pm-gate">
     ${dismissable?'<button class="pm-gate-x" id="pmGateX" aria-label="Close">✕</button>':""}
     <div class="pm-gate-h">Choose your character</div>
-    <div class="pm-gate-sub">${hasPCs?"Pick your character to join the fight.":"No characters yet — enter your character's name to join."}</div>
+    <div class="pm-gate-sub">${hasPCs?"Pick your character to join the fight.":"No characters yet. Enter your character's name to join."}</div>
     ${hasPCs?`<div class="pm-gate-list">${list}</div>`:""}
     <div class="pm-gate-new">
       ${hasPCs?`<div class="pm-gate-or">Not listed? Add your character</div>`:""}
@@ -1648,7 +1648,7 @@ function renderCombat(){
     body.innerHTML=`<div class="combat-empty">
       <div class="ce-icon">${SWORDS_SVG}</div>
       <h2>No encounter loaded</h2>
-      <p class="hint">Load a scene or encounter to run its initiative — or hit the ⚔ button on an encounter in Adventures.</p>
+      <p class="hint">Load a scene or encounter to run its initiative, or hit the ⚔ button on an encounter in Adventures.</p>
       <button class="btn primary" id="combatLoad" style="width:auto">Load encounter</button>
     </div>`;
     $("#combatLoad").addEventListener("click",openLoadCombat);return;}

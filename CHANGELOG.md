@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 239 — onboarding follow-ups: consistent reachable help popovers + em-dash copy sweep
+- **Help "?" buttons unified + popovers now reachable.** The Preset-libraries help was a one-off
+  (`.help-btn` + a `showPopover` that closed on `mouseleave`, so the popover vanished the moment the pointer
+  travelled toward it). It now uses the shared `.cr-help` button + `bindHelpHover` like the chassis /
+  add-combatant pickers, and `bindHelpHover` no longer closes on `mouseleave` (it closes on the next outside
+  click) so the help text is reachable everywhere. Removed dead `.help-btn`/`.help-pop` CSS; added `.cr-pop a`
+  link styling. `PRESET_HINT` shortened to about a third (kept the source link + Download-ZIP step).
+- **Em dashes removed from user-facing copy** across all views (toasts, settings notes, modal/confirm text,
+  field placeholders, tooltips/titles, the welcome modal, the bracket-token help table). Replaced with
+  sentence breaks, colons, or commas to fit each context. Em-dash *glyph* placeholders (`"—"` for empty
+  values) and code comments were intentionally left as-is.
+- **(Local dev only, not shipped)** the gitignored `testkit.js` panel gains a **Welcome** button to
+  re-trigger the first-run modal (clears `mf_welcomed`, calls `maybeShowWelcome`).
+
 ## Batch 238 — onboarding: first-run welcome modal + matter-of-fact empty-state/import copy
 - **New first-run welcome modal** (`maybeShowWelcome`, app.js; localStorage `mf_welcomed`) replaces the old
   thin in-Forge tip (B200's `maybeShowOnboarding` + `.forge-onboard`/`.fo-*` CSS, both removed). Names the

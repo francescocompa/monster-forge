@@ -25,7 +25,7 @@ function entrySpellHTML(e,i,kind){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0)
       <label class="f">Save DC (auto)<input type="number" placeholder="${8+pb+ab}" data-k="${kind}" data-i="${i}" data-f="dc" value="${e.dc}"></label>
       <label class="f">Spell atk (auto)<input type="number" placeholder="${sgn(pb+ab)}" data-k="${kind}" data-i="${i}" data-f="atk" value="${e.atk}"></label>
     </div>
-    <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">— each renders on its own line</span></div>
+    <div class="fs-sub" style="margin:4px 0 6px">Spell groups <span style="color:var(--faint);text-transform:none;letter-spacing:0">· each renders on its own line</span></div>
     ${(e.groups||[]).map((g,gi)=>`<div class="rowline">
       <select data-sg="${i}:${gi}:freq" style="flex:none;width:120px">${["At Will","1/Day Each","2/Day Each","3/Day Each","1/Day","2/Day","3/Day"].map(f=>`<option ${f===g.freq?"selected":""}>${f}</option>`).join("")}</select>
       <div class="chipfield sgfield" id="sgfield-${i}-${gi}"><span class="chips" id="sgchips-${i}-${gi}"></span><input type="text" class="chipinput sgci" id="sgci-${i}-${gi}" placeholder="add spell…" autocomplete="off"></div>
@@ -261,8 +261,11 @@ const BACK_SVG='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="tru
 // Shared "preview a creature's statblock" popover, anchored to a card icon / menu item.
 function showStatPreview(anchor,m){if(m)showPopover(anchor,`<div class="chip-pop">${chassisPreviewHTML(m)}</div>`);}
 // A "?" affordance whose tail popover opens on hover (and click), like the forge CR / short-name help.
+// Help "?" affordance: open a neutral .cr-pop tail popover on hover or click. We deliberately do NOT close
+// on mouseleave — that made the popover vanish the moment the pointer travelled from the "?" toward it
+// (you couldn't reach the text). It closes on the next outside click instead (showPopover's _popOutside).
 function bindHelpHover(btn,text){if(!btn)return;const open=e=>{e.stopPropagation();tailPopover(btn,`<div class="cr-pop">${text}</div>`);};
-  btn.addEventListener("mouseenter",open);btn.addEventListener("click",open);btn.addEventListener("mouseleave",()=>closePopover());}
+  btn.addEventListener("mouseenter",open);btn.addEventListener("click",open);}
 // Bind a card's preview icon to show the statblock on hover (and click).
 function bindPreviewHover(btn,getMon){if(!btn)return;
   // Close any open preview when this anchor has nothing to show, so a previous card never lingers
@@ -315,7 +318,7 @@ function buildLibSelects(){
   const pre=(p,names)=>names.map(n=>opt(p+":"+n,n)).join("");
   const ls=k=>document.querySelector(`select[data-lib="${k}"]`);
   ls("traits").innerHTML=LIB_PROMPT+list(Object.keys(TRAIT_SNIPS));
-  ls("actions").innerHTML=LIB_PROMPT+`<optgroup label="Attacks — guided">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
+  ls("actions").innerHTML=LIB_PROMPT+`<optgroup label="Attacks (guided)">${pre("atk",Object.keys(ATK_PRESETS))}</optgroup><optgroup label="Text actions">${pre("txt",Object.keys(TEXT_ACTIONS))}</optgroup>`;
   ls("bonus").innerHTML=LIB_PROMPT+pre("txt",Object.keys(BONUS_SNIPS));
   ls("reactions").innerHTML=LIB_PROMPT+pre("react",Object.keys(REACT_SNIPS));
   ls("legend").innerHTML=LIB_PROMPT+list(Object.keys(LEGEND_SNIPS));

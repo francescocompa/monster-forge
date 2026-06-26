@@ -15,7 +15,7 @@ function renderSettings(){
     <div class="set-card">
       <div class="set-head">Dice rolling<span class="set-kbd">Alt/Option-click anywhere = custom roll</span></div>
       ${SW("clickRoll.on","Enable dice rolling")}
-      <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options. Turn this off to disable every roll feature on the page — click-to-roll, the Alt-click custom roll, the dice cursor, and the roll log.</div>
+      <div class="set-note">Click a die, bonus, or save in the preview to roll it; right-click for options. Turn this off to disable every roll feature on the page: click-to-roll, the Alt-click custom roll, the dice cursor, and the roll log.</div>
     </div>
     <!-- 3D dice look (material / colour / edges) settings card hidden for now (B217) — the engine (dice3d.js
          d3dDieMat + the dice3d.* settings) stays; re-expose this card to bring the picker back. -->
@@ -36,14 +36,14 @@ function renderSettings(){
     </div>
     <div class="set-card">
       <div class="set-head">Homebrew rules</div>
-      ${SW("homebrew.gritMin","Grit — minimum damage")}
+      ${SW("homebrew.gritMin","Grit: minimum damage")}
       <div class="set-note">Damage rolls deal at least their maximum possible non-crit value (the sum of every die's top face plus modifiers). Crits still roll and keep the higher result.</div>
     </div>
     <div class="set-card">
       <div class="set-head">Combat tracker</div>
       <div class="set-grid">
         <label class="f">Monster HP<select data-set="combat.hpMode"><option value="rolled" ${s.combat.hpMode==="rolled"?"selected":""}>Roll from Hit Dice</option><option value="average" ${s.combat.hpMode==="average"?"selected":""}>Average (book HP)</option></select></label>
-        <label class="f">Auto-roll initiative<select data-set="combat.initMode"><option value="roll" ${s.combat.initMode!=="average"?"selected":""}>On — roll 1d20 + mod</option><option value="average" ${s.combat.initMode==="average"?"selected":""}>Off — average, roll manually</option></select></label>
+        <label class="f">Auto-roll initiative<select data-set="combat.initMode"><option value="roll" ${s.combat.initMode!=="average"?"selected":""}>On: roll 1d20 + mod</option><option value="average" ${s.combat.initMode==="average"?"selected":""}>Off: average, roll manually</option></select></label>
         <label class="f">Drop to "down" at 0 HP<select data-set="combat.downMode"><option value="players" ${(s.combat.downMode||"players")==="players"?"selected":""}>Players only</option><option value="anyone" ${s.combat.downMode==="anyone"?"selected":""}>Anyone</option><option value="nobody" ${s.combat.downMode==="nobody"?"selected":""}>Nobody</option></select></label>
       </div>
       ${SW("combat.groupInit","Group initiative for identical enemies")}
@@ -51,8 +51,8 @@ function renderSettings(){
       ${SW("combat.dexTiebreak","Break initiative ties by DEX")}
       ${SW("combat.partyHP","Track party HP")}
       <label class="f">Player edit key<input type="password" autocomplete="off" spellcheck="false" data-set="combat.playerEditKey" value="${esc(s.combat.playerEditKey||"")}" placeholder="paste your JSONBin Access Key"></label>
-      <div class="set-note">Optional — only needed if you want players to edit or suggest changes from the shared initiative (the Share button in combat). Create a JSONBin <b>Access Key</b> with <b>Read</b> + <b>Update</b> permission only (no Create/Delete/List), and paste it here. It rides along in the share link so players' phones can write back, but can never delete or reach your library/adventures. Leave blank to keep sharing read-only.</div>
-      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average, and initiative is rolled (1d20 + mod) or taken as a static average (10 + mod) — you can re-roll everyone from the combat toolbar. With grouped initiative on, all copies of one enemy entry share a single roll; turn it off to roll each separately. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters. At 0 HP, "down" combatants roll death saves (tracked on the initiative entry) instead of being marked dead outright — choose whether that applies to players only, anyone, or nobody (monsters are otherwise marked dead).</div>
+      <div class="set-note">Optional: only needed if you want players to edit or suggest changes from the shared initiative (the Share button in combat). Create a JSONBin <b>Access Key</b> with <b>Read</b> + <b>Update</b> permission only (no Create/Delete/List), and paste it here. It rides along in the share link so players' phones can write back, but can never delete or reach your library/adventures. Leave blank to keep sharing read-only.</div>
+      <div class="set-note">When you run a combat, each monster's HP is rolled from its Hit Dice formula or set to its average, and initiative is rolled (1d20 + mod) or taken as a static average (10 + mod). You can re-roll everyone from the combat toolbar. With grouped initiative on, all copies of one enemy entry share a single roll; turn it off to roll each separately. Initiative ties fall to the higher Dexterity. Turn off party HP to hide the HP tracker for player characters. At 0 HP, "down" combatants roll death saves (tracked on the initiative entry) instead of being marked dead outright. You choose whether that applies to players only, anyone, or nobody (monsters are otherwise marked dead).</div>
     </div>
     <div class="set-card">
       <div class="set-head set-head-row">Notes fields<span class="switch" title="Toggle all"><input type="checkbox" id="setNotesAll"><span class="sl"></span></span></div>
@@ -121,7 +121,7 @@ function ingestLibraries(loaded){
       else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
       else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
       else if(kind==="rule"){const p=parseRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
-      else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped — base not loaded)`:""}`);}
+      else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped, base not loaded)`:""}`);}
     }catch(err){summary.push(`${L.name}: failed to parse`);}
   });
   if(legAdded)reapplyLegGroups();
@@ -146,7 +146,7 @@ function hideLoadingOverlay(){const o=document.getElementById("loadingOverlay");
 // Replay every stored raw file through the current parser (picks up parser improvements).
 async function reparseLibraries(){
   const raw=await idbGet("rawlibs");
-  if(!raw||!raw.length){alertStack("Nothing to re-parse","Re-parsing replays the original .json files through the latest parser, but none are stored yet. Upload your libraries once with this version and they'll be re-parseable from then on — no re-upload needed afterwards.");return;}
+  if(!raw||!raw.length){alertStack("Nothing to re-parse","Re-parsing replays the original .json files through the latest parser, but none are stored yet. Upload your libraries once with this version and they'll be re-parseable from then on. No re-upload needed afterwards.");return;}
   // Non-destructive: ingestLibraries replaces each source by name, so libraries without stored raw
   // (e.g. uploaded before this version) are left untouched rather than wiped.
   showLoadingOverlay("Re-parsing libraries","Replaying your stored .json files through the latest parser…");
@@ -160,7 +160,7 @@ async function reparseLibraries(){
   // re-parsed and need a one-time re-upload to pick up parser fixes (e.g. the upcasting fix).
   const rawNames=new Set(raw.map(L=>L.name));
   const missing=[...new Set([...state.spells,...state.conditions,...state.rules,...state.presets].map(x=>x._source).filter(Boolean))].filter(n=>!rawNames.has(n));
-  if(missing.length)alertStack("Some libraries weren't re-parsed",`These were uploaded before originals were stored, so re-parsing can't reach them: ${missing.join(", ")}. Re-upload each once (Preset libraries → Upload .json files) and they'll pick up the latest parser — including the spell upcasting fix.`);
+  if(missing.length)alertStack("Some libraries weren't re-parsed",`These were uploaded before originals were stored, so re-parsing can't reach them: ${missing.join(", ")}. Re-upload each once (Preset libraries → Upload .json files) and they'll pick up the latest parser, including the spell upcasting fix.`);
 }
 // 5etools JSON uploader (Batch 28). One change handler ingests bestiary / spell /
 // condition / books files; the kind is detected from the JSON's top-level keys.
@@ -170,7 +170,7 @@ $("#mdIn").addEventListener("change",e=>{
     .then(async loaded=>{
       const summary=ingestLibraries(loaded);
       await stashRawLibs(loaded);
-      toast(summary.length>1?`Loaded ${summary.length} sources.`:`Loaded — ${summary[0]||"nothing"}`);
+      toast(summary.length>1?`Loaded ${summary.length} sources.`:`Loaded: ${summary[0]||"nothing"}`);
       if(_storageFailed)alertStack("Device storage full","Some libraries couldn't be saved and won't persist after a reload. Remove libraries you don't need to free space, then re-upload.");
       if($("#modalBg").classList.contains("show"))presetModal();
     });
@@ -208,7 +208,7 @@ async function handleZipArrayBuffer(buf){
     if(committed.has(key)||stagedKeys.has(key)){skipped++;return;}
     stagedLibs.push(info);stagedKeys.add(key);added++;});
   hideLoadingOverlay();
-  if(!added){toast(skipped?`Nothing new — all ${skipped} source${skipped===1?" is":"s are"} already imported.`:"No 5etools libraries found in that zip.");if(stagedLibs.length)presetModal();return;}
+  if(!added){toast(skipped?`Nothing new: all ${skipped} source${skipped===1?" is":"s are"} already imported.`:"No 5etools libraries found in that zip.");if(stagedLibs.length)presetModal();return;}
   presetModal();
   toast(`${added} source${added===1?"":"s"} ready to review${skipped?` · ${skipped} already imported`:""}.`);
 }
@@ -272,7 +272,7 @@ initColResizer({handle:"#advResizer",container:".adv-layout",cssVar:"--advw",lsW
   defaultW:236,minW:160,maxW:380,snapW:150,collapsedW:66,miniClass:"adv-mini",onChange:()=>{if(_curView==="adventures")renderAdvList();}});
 $("#fileIn").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file — is it Forge JSON?");}};
+  r.onload=()=>{try{const d=JSON.parse(r.result);const mons=(d.monsters||d.lib||(Array.isArray(d)?d:[])).map(normalizeMonster);let added=0;mons.forEach(m=>{if(!state.lib.some(x=>x.id===m.id)){state.lib.push(m);added++;}});if(d.adventures)d.adventures.map(normalizeAdv).forEach(av=>{if(!state.adv.some(x=>x.id===av.id))state.adv.push(av);});saveLib();saveAdv();renderLibrary();toast(`Imported ${added} creature(s).`);}catch(err){toast("Couldn't read that file. Is it Forge JSON?");}};
   r.readAsText(f);e.target.value="";
 });
 
@@ -306,13 +306,13 @@ function alertStack(title,msg){const bg=stackDialog(`<h3>${esc(title)}</h3><p st
 // ── 5etools paste importer ────────────────────────────────────────────────────
 
 function openImportModal(){
-  openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Open a creature on 5e.tools, copy its statblock text, and paste it below — one at a time. Attacks come in as plain text, so check the result in the Forge before saving it to the Bestiary. To add creatures in bulk, load a 5etools library under Preset libraries instead.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
+  openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Open a creature on 5e.tools, copy its statblock text, and paste it below, one at a time. Attacks come in as plain text, so check the result in the Forge before saving it to the Bestiary. To add creatures in bulk, load a 5etools library under Preset libraries instead.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
   setTimeout(()=>$("#impArea")&&$("#impArea").focus(),50);
   $("#impCancel").addEventListener("click",closeModal);
   $("#impGo").addEventListener("click",()=>{const raw=$("#impArea").value;if(!raw.trim()){toast("Paste a statblock first.");return;}
     let m;try{m=parse5etools(raw);}catch(e){m=null;}
-    if(!m||!m.name){toast("Couldn't parse that — is it a 5etools block?");return;}
-    closeModal();guardedLoad(()=>{loadMonster(m);switchView("forge");toast("Imported — review and Save to Bestiary.");});});
+    if(!m||!m.name){toast("Couldn't parse that. Is it a 5etools block?");return;}
+    closeModal();guardedLoad(()=>{loadMonster(m);switchView("forge");toast("Imported. Review and Save to Bestiary.");});});
 }
 
 document.addEventListener("click",e=>{
@@ -436,5 +436,5 @@ function doExportJSON(){
 $("#settingsBtn").addEventListener("click",()=>switchView(_curView==="settings"?_prevView:"settings"));
 // Read/write a dotted path inside state.settings (e.g. "colorCode.damage").
 function settingPath(path,val){const p=path.split(".");let o=state.settings;for(let i=0;i<p.length-1;i++)o=o[p[i]];if(val!==undefined)o[p[p.length-1]]=val;return o[p[p.length-1]];}
-async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed — your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
-function clearLocalCache(){const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("mf_cache:")===0)keys.push(k);}keys.forEach(k=>localStorage.removeItem(k));toast("Local cache cleared — reload to re-fetch from the cloud.");}
+async function resyncCloud(){const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);if(ok1&&ok2){setDirty(false);cloudReady=true;toast("Synced to cloud.");}else toast("Sync failed. Your work stays on this device.");if($("#view-settings").classList.contains("active"))renderSettings();}
+function clearLocalCache(){const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("mf_cache:")===0)keys.push(k);}keys.forEach(k=>localStorage.removeItem(k));toast("Local cache cleared. Reload to re-fetch from the cloud.");}

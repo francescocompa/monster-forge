@@ -292,9 +292,9 @@ function renderPreviewNow(){
   const chip=(lbl,val,approx,tip,suf)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}${suf?` <span class="dabil">${suf}</span>`:""}</b></div>`;
   // SHOW_DERIVED gates the legacy AC/Attack/Save-DC chip row above the statblock (B23).
   // Kept (not deleted) so it can return as an opt-in "legacy" feature.
-  $("#derived").innerHTML=SHOW_DERIVED?(chip("AC",acVal,acFromCR,acFromCR?"from CR target — no AC set":"")
-    +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target — no attack defined":"")
-    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target — no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
+  $("#derived").innerHTML=SHOW_DERIVED?(chip("AC",acVal,acFromCR,acFromCR?"from CR target, no AC set":"")
+    +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target, no attack defined":"")
+    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target, no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
   crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
   $("#forgeTitle").textContent=m.name||"New Creature";
   refreshForgeStatus();
@@ -527,7 +527,7 @@ function toggleRuleFinder(){
   document.body.classList.toggle("rule-finder",ruleFinder);
   const btn=$("#ruleFinderBtn");if(btn){btn.classList.toggle("active",ruleFinder);btn.innerHTML=ruleFinder?RF_X_ICON:RF_Q_ICON;btn.title=ruleFinder?"Exit rule finder":"Rule finder";}
   closePopover();hideRefpopNow(0);
-  if(ruleFinder&&!enRules().length)toast("No rules loaded — upload a rules file (variantrules.json) in Preset libraries to highlight rules. Conditions and spells still highlight.",4200);
+  if(ruleFinder&&!enRules().length)toast("No rules loaded. Upload a rules file (variantrules.json) in Preset libraries to highlight rules. Conditions and spells still highlight.",4200);
   // Re-render whichever statblock surface is showing so the finder highlights apply there too (B167).
   if(typeof _curView!=="undefined"&&_curView==="combat")renderCombat();else renderPreview();
 }
@@ -680,7 +680,7 @@ function rollAttackSequence(nameEl){
     // crit dice drop in as a second wave once wave 1 lands, holding the alert until then (B228).
     if(atk.nat20&&typeof d3dSplitCrit==="function"){const sp=d3dSplitCrit(dmg.parts);parts+=" "+sp.base;wave2=sp.extra;}
     else parts+=" "+(dmg.parts||"");}
-  if(atk.nat20)msg+=" — crit!";
+  if(atk.nat20)msg+=": crit!";
   // Both sub-rolls are `silent` (no individual dice/toast); fire ONE compounded 3D throw so the to-hit d20
   // and the damage dice tumble together (B222), with the combined alert. Falls back to the toast if 3D is off.
   const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,wave2,crit:atk.nat20,label,type:"attack",dmgType,abil,msg,reroll:()=>rollAttackSequence(nameEl)});
@@ -693,7 +693,7 @@ function rollRechargeSequence(nameEl){
   const min=nameEl.dataset.rollmin?Number(nameEl.dataset.rollmin):null;
   const rech=doRoll(nameEl.dataset.roll,{},{label,type:null,success:min,silent:true});
   const ready=min==null||rech.total>=min;
-  let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" — ready":" — not yet"):""}`,parts=rech.parts||"";
+  let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" (ready)":" (not yet)"):""}`,parts=rech.parts||"";
   if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{},{label,type:"damage",dmgType,silent:true});
     msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;parts+=" "+(dmg.parts||"");}
   // One compounded 3D throw (recharge die + damage dice) — see rollAttackSequence (B222).
@@ -704,7 +704,7 @@ function diceHelpHTML(){return `<div class="dice-help"><b>Dice notation</b><div 
 // Global roll mode (B60): a persistent neutral/advantage/disadvantage applied to click & custom
 // rolls. Set via the cycling tag shown in the roll-log header and the custom-roll popover.
 let rollMode=null; // null | "adv" | "dis"
-function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
+function rollModeTagHTML(){return `<button class="roll-mode${rollMode?" "+rollMode:""}" data-rollmode title="Roll mode: click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;}
 // Set the sticky roll mode (B223): persist it, refresh the cursor tell, and re-render the log chrome.
 function setRollMode(m){rollMode=(m==="adv"||m==="dis")?m:null;saveRollLogState();updateRollModeTell();if(document.getElementById("rollLog"))renderRollLog();}
 function cycleRollMode(){setRollMode(rollMode===null?"adv":rollMode==="adv"?"dis":null);}
@@ -835,7 +835,7 @@ function rollLogHTML(ctx){
   if(ctx&&!ctx.docked&&!rollLogOpen)return `<button class="rl-pill mode-${modeCls}" id="rlPill" title="Open roll log" aria-label="Open roll log"><span class="rl-pill-ico">${D20_ICON}</span><span class="rl-pill-n">${esc(lastTotal)}</span></button>`;
   // Section (docked-wide) or open floating panel → header + body + tabs (tabs docked at the BOTTOM, B226).
   // The header carries a CLICKABLE flat→adv→dis cycle tag; the collapse chevron only floats.
-  const cycle=`<button class="rl-modecycle ${modeCls}" data-rollcycle title="Roll mode — click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;
+  const cycle=`<button class="rl-modecycle ${modeCls}" data-rollcycle title="Roll mode: click to cycle: flat → advantage → disadvantage">${rollMode==="adv"?"ADV":rollMode==="dis"?"DIS":"FLAT"}</button>`;
   const collapse=(ctx&&ctx.docked)?"":`<button class="rl-tog" id="rlTog" title="Collapse">${FS_CHEVRON}</button>`;
   return `<div class="rl-head">${collapse}<span class="rl-title">Rolls</span><div class="rl-grow"></div>${cycle}<button class="rl-kebab" id="rlMenu" title="Roll options">⋯</button></div>`
     +`<div class="rl-body">${bodyInner}</div>`+tabs;
@@ -935,7 +935,7 @@ function openCustomRoll(anchor){openRollPopover(anchor,{value:"",formula:"1d20",
 // The lead control of the roll popover: an upcast level stepper (spell scaling), a CRIT chip (damage),
 // or the flat/adv/dis mode tag (everything else). B75.
 function rollPopLeadHTML(o,sc,isDmg,phLvl){
-  if(sc)return `<div class="upcast" title="Cast at spell level — leave blank for level ${phLvl}"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" placeholder="${phLvl}"></div>`;
+  if(sc)return `<div class="upcast" title="Cast at spell level, leave blank for level ${phLvl}"><span class="up-lbl">Lv</span><input type="number" class="up-in" min="${sc.lvl}" max="9" placeholder="${phLvl}"></div>`;
   if(isDmg)return `<button class="crit-chip" data-critchip title="Treat as a critical hit (double the dice)">CRIT</button>`;
   return rollModeTagHTML();
 }
