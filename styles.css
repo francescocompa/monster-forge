@@ -186,13 +186,21 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .form-col{overflow-y:auto;padding:20px 24px 90px;min-width:0}
 .preview-col{border-left:1px solid var(--line);background:#0f1013;overflow-y:auto;padding:18px 18px 84px;display:flex;flex-direction:column;gap:13px}
 .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
-/* First-run welcome modal (B238) — one-time, names the pipeline + points at the 5etools library. */
-.mf-welcome .mfw-lead{font-size:13px;color:var(--dim);margin:-2px 0 11px}
-.mfw-flow{counter-reset:mfw;list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:7px}
-.mfw-flow li{counter-increment:mfw;position:relative;padding-left:26px;font-size:13px;color:var(--dim);line-height:1.45}
-.mfw-flow li::before{content:counter(mfw);position:absolute;left:0;top:0;width:18px;height:18px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--faint);font-size:10px;font-weight:600;display:grid;place-items:center}
-.mfw-flow li b{color:var(--txt);font-weight:600}
-.mfw-note{font-size:12px;color:var(--faint);margin:0 0 14px}
+/* First-run welcome modal (B238, visual blocks B240) — pipeline as tappable blocks + a detail panel. */
+.mf-welcome .mfw-lead{font-size:13px;color:var(--dim);margin:-2px 0 13px}
+.mfw-steps{display:flex;align-items:stretch;gap:5px;margin-bottom:11px}
+.mfw-step{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;padding:10px 6px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;cursor:pointer;transition:border-color .12s,background .12s}
+.mfw-step:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.mfw-step.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel2))}
+.mfw-ico{width:22px;height:22px;color:var(--dim);display:grid;place-items:center}
+.mfw-ico svg{width:100%;height:100%;display:block;fill:currentColor}
+.mfw-step.active .mfw-ico{color:var(--accent)}
+.mfw-sn{font-size:12px;font-weight:600;color:var(--txt)}
+.mfw-sd{font-size:10px;color:var(--faint);line-height:1.25}
+.mfw-sep{display:flex;align-items:center;color:var(--faint);font-size:14px;flex:none}
+.mfw-detail{font-size:12px;color:var(--dim);line-height:1.55;background:var(--in);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px;min-height:62px}
+.mfw-detail b{color:var(--txt);font-weight:600}
+@media (max-width:460px){.mfw-sep{display:none}.mfw-steps{flex-wrap:wrap}.mfw-step{flex:1 1 40%}}
 .mfw-lib{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-left:3px solid var(--accent);border-radius:9px;padding:11px 13px;margin-bottom:16px}
 .mfw-lib-h{font-weight:600;font-size:13px;margin-bottom:4px}
 .mfw-lib p{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
@@ -1050,6 +1058,10 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* CT7b — rebalanced grid (more room for the statblock/trackers), Forge-style divider between the
    initiative list and the active panel; redesigned compact rows (editable init, status dot, HP bar). */
 /* CT9 — Forge-style two-pane split: each pane scrolls internally, a draggable divider between them. */
+.combat-hint{display:flex;align-items:center;gap:10px;margin:0 20px 8px;padding:8px 10px 8px 12px;background:color-mix(in srgb,var(--accent) 9%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-left:3px solid var(--accent);border-radius:8px}
+.combat-hint .ch-txt{flex:1;font-size:12px;color:var(--dim);line-height:1.4}
+.combat-hint .ch-x{flex:none;width:22px;height:22px;display:grid;place-items:center;padding:0;border:none;border-radius:5px;background:none;color:var(--faint);font-size:12px;cursor:pointer;transition:color .12s,background .12s}
+.combat-hint .ch-x:hover{color:var(--txt);background:var(--in)}
 .combat-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,var(--caw,500px));gap:0;overflow:hidden;position:relative}
 .combat-order{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:0;padding:14px 18px 24px 20px;position:relative}
 /* "Rolling initiative…" flourish shown briefly over a freshly-started order (B4). */
@@ -1804,8 +1816,8 @@ body.player-mode .cd-savetpl,body.player-mode .cd-gx[data-cdmenu]{display:none!i
 .loading-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
 .loading-overlay.show{display:flex}
 .loading-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:22px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.6);max-width:300px;text-align:center}
-.loading-spin{width:34px;height:34px;color:var(--amber-soft);animation:diceSpin .9s linear infinite}
-.loading-spin svg{width:100%;height:100%;display:block}
+.loading-logo{width:54px;height:54px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5))}
+.loading-logo svg{width:100%;height:100%;display:block}
 .loading-title{font-weight:600;color:var(--txt);font-size:14px}
 .loading-sub{font-size:12px;color:var(--faint);line-height:1.4}
 /* Add-combatant picker: card list scrolls inside, action footer stays put at the bottom. */
@@ -2168,10 +2180,10 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .mk-socket{fill:#000}
 
 /* Loading — runs while the boot loader is on screen */
-.boot-logo .mk-gaze{animation:eye-gaze 7s linear infinite}
-.boot-logo .mk-lids{animation:eye-blink 7s ease-in-out infinite}
-.boot-logo .mk-pupil{animation:pupil-dart 7s linear infinite}
-.boot-logo .mk-frame{animation:frame-react 7s ease-out infinite}
+.boot-logo .mk-gaze,.loading-logo .mk-gaze{animation:eye-gaze 7s linear infinite}
+.boot-logo .mk-lids,.loading-logo .mk-lids{animation:eye-blink 7s ease-in-out infinite}
+.boot-logo .mk-pupil,.loading-logo .mk-pupil{animation:pupil-dart 7s linear infinite}
+.boot-logo .mk-frame,.loading-logo .mk-frame{animation:frame-react 7s ease-out infinite}
 
 /* Sidebar mark — idle still; .dozing / .poked added by JS run one cycle each */
 .brand .mk{cursor:pointer}
@@ -2287,6 +2299,7 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 /* Reduced motion: hold the logo still everywhere (and JS skips the doze timer). */
 @media (prefers-reduced-motion:reduce){
   .boot-logo .mk-gaze,.boot-logo .mk-lids,.boot-logo .mk-pupil,.boot-logo .mk-frame,
+  .loading-logo .mk-gaze,.loading-logo .mk-lids,.loading-logo .mk-pupil,.loading-logo .mk-frame,
   .brand .mk.dozing .mk-turn,.brand .mk.dozing .mk-gaze,.brand .mk.dozing .mk-lids,.brand .mk.dozing .mk-pupil,.brand .mk.dozing .mk-frame,
   .brand .mk.poked .mk-turn,.brand .mk.poked .mk-gaze,.brand .mk.poked .mk-lids,.brand .mk.poked .mk-pupil,.brand .mk.poked .mk-frame{animation:none}
 }

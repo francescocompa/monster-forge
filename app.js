@@ -139,7 +139,11 @@ async function stashRawLibs(loaded){
 function showLoadingOverlay(title,sub){
   let o=document.getElementById("loadingOverlay");
   if(!o){o=document.createElement("div");o.id="loadingOverlay";o.className="loading-overlay";document.body.appendChild(o);}
-  o.innerHTML=`<div class="loading-card"><div class="loading-spin">${D20_ICON}</div><div class="loading-title">${esc(title)}</div>${sub?`<div class="loading-sub">${esc(sub)}</div>`:""}</div>`;
+  o.innerHTML=`<div class="loading-card"><div class="loading-logo" aria-hidden="true"></div><div class="loading-title">${esc(title)}</div>${sub?`<div class="loading-sub">${esc(sub)}</div>`:""}</div>`;
+  // Reuse the brand-mark eye (same SVG as the boot loader) instead of a spinning d20, cloned from the
+  // live DOM so there's no duplicated markup; the .loading-logo class drives the eye animation in CSS.
+  const src=document.querySelector(".boot-logo svg")||document.querySelector("#brandMark svg");
+  if(src){const slot=o.querySelector(".loading-logo");slot.appendChild(src.cloneNode(true));}
   o.classList.add("show");
 }
 function hideLoadingOverlay(){const o=document.getElementById("loadingOverlay");if(o)o.classList.remove("show");}
@@ -368,29 +372,45 @@ function wrapStepper(input,step,min){
   maybeShowWelcome(); // first-run welcome modal (B238)
   hideBootLoader(); // correct tab is set — reveal the app (no Forge flash)
 })();
-// First-run welcome (B238): a one-time modal that names the four-screen pipeline and points at the
-// primary first step — loading a 5etools data library (the source of lookups + bulk creature import).
-// Shown once, then never again (localStorage mf_welcomed). Replaces the old in-Forge tip (B200).
+// First-run welcome (B238, redesigned B240): a one-time modal with the four-screen pipeline as visual
+// blocks — tap one to expand a detail panel — plus the primary first step (loading a 5etools data
+// library). Shown once (localStorage mf_welcomed). Replaces the old in-Forge tip (B200).
+const WELCOME_STEPS=[
+  {step:"forge",view:"forge",name:"Forge",tag:"Build a statblock",
+   detail:"A guided statblock editor with a live preview. AC, HP, attacks and saves pre-fill from CR as editable suggestions; PB, XP, passive Perception and more are derived. Start blank, load a chassis, or paste a block from 5etools."},
+  {step:"library",view:"library",name:"Bestiary",tag:"Your saved creatures",
+   detail:"Every creature you save lands here, searchable and taggable, with duplicate, edit and export. Encounters pull their combatants straight from this library."},
+  {step:"adventures",view:"adventures",name:"Adventures",tag:"Plan encounters",
+   detail:"Group encounters under an adventure. Each one is scored against the 2024 XP budget for your party roster, so you can see at a glance whether a fight is easy, hard or deadly. Add saved creatures, quick CR-only foes, or environment events."},
+  {step:"combat",view:"combat",name:"Combat",tag:"Run the fight",
+   detail:"Loading an encounter runs initiative live. Track HP, conditions, concentration and death saves, roll attacks and saves from the statblock, and share the initiative order with your players."}
+];
 function maybeShowWelcome(){
   let seen=false;try{seen=!!localStorage.getItem("mf_welcomed");}catch(e){seen=true;}
   if(seen||!document.getElementById("modalBg"))return;
   const mark=()=>{try{localStorage.setItem("mf_welcomed","1");}catch(e){}};
+  const blocks=WELCOME_STEPS.map((s,i)=>`<button class="mfw-step${i===0?" active":""}" data-wstep="${i}"><span class="mfw-ico" data-wview="${s.view}"></span><span class="mfw-sn">${s.name}</span><span class="mfw-sd">${esc(s.tag)}</span></button>`).join('<span class="mfw-sep" aria-hidden="true">›</span>');
   openModalRaw(`<div class="mf-welcome">
     <h3>How Monster Forge works</h3>
-    <p class="mfw-lead">Four screens, used in order:</p>
-    <ol class="mfw-flow">
-      <li><b>Forge.</b> Build or edit a statblock.</li>
-      <li><b>Bestiary.</b> Your saved creatures.</li>
-      <li><b>Adventures.</b> Group encounters and score them against the party's XP budget.</li>
-      <li><b>Combat.</b> Run initiative, track HP and conditions.</li>
-    </ol>
-    <p class="mfw-note">Saving a creature puts it in the Bestiary. Encounters draw from there.</p>
+    <p class="mfw-lead">Build a creature, drop it into an encounter, run the fight.</p>
+    <div class="mfw-steps">${blocks}</div>
+    <div class="mfw-detail" id="mfwDetail"></div>
     <div class="mfw-lib">
-      <div class="mfw-lib-h">Load the 5etools library first</div>
-      <p>Spell, condition and rule lookups (and bulk creature import) come from a 5etools data file you supply. Download <a href="https://github.com/5etools-mirror-3/5etools-src" target="_blank" rel="noopener">github.com/5etools-mirror-3/5etools-src</a> as a <b>.zip</b> (green <b>Code</b> button, then <b>Download ZIP</b>) and add it under Preset libraries. It's parsed in your browser and stays on this device.</p>
+      <div class="mfw-lib-h">Start by loading the 5etools library</div>
+      <p>Creature, spell, condition and rule content comes from a 5etools data file you supply. Download <a href="https://github.com/5etools-mirror-3/5etools-src" target="_blank" rel="noopener">github.com/5etools-mirror-3/5etools-src</a> as a <b>.zip</b> (green <b>Code</b> button, then <b>Download ZIP</b>) and add it under Preset libraries. It's parsed in your browser and stays on this device.</p>
     </div>
     <div class="mrow mfw-acts"><button class="btn ghost sm" id="mfwClose" style="width:auto">Not now</button><button class="btn primary sm" id="mfwLib" style="width:auto">Load the library</button></div>
   </div>`);
+  // Clone the real rail icons into the blocks so the pipeline matches the sidebar exactly.
+  document.querySelectorAll(".mfw-ico[data-wview]").forEach(slot=>{
+    const ico=document.querySelector(`.rail [data-view="${slot.dataset.wview}"] .ico svg`);
+    if(ico)slot.appendChild(ico.cloneNode(true));
+  });
+  const detail=$("#mfwDetail"),steps=$("#modal").querySelectorAll(".mfw-step");
+  const showDetail=i=>{const s=WELCOME_STEPS[i];detail.innerHTML=`<b>${s.name}.</b> ${esc(s.detail)}`;
+    steps.forEach((b,j)=>b.classList.toggle("active",i===j));};
+  steps.forEach((b,i)=>b.addEventListener("click",()=>showDetail(i)));
+  showDetail(0);
   $("#mfwClose").addEventListener("click",()=>{mark();closeModal();});
   $("#mfwLib").addEventListener("click",()=>{mark();closeModal();presetSel.clear();presetModal();});
 }

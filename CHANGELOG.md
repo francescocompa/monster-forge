@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 240 — animated-logo loading overlay + visual welcome modal + combat first-run hint
+- **Loading overlay uses the animated brand-eye logo** (the boot-screen mark) instead of a spinning d20,
+  everywhere `showLoadingOverlay` appears (zip read, adding libraries, re-parse). The SVG is cloned from the
+  live `.boot-logo`/`#brandMark` so there's no duplicated markup; `.loading-logo` drives the eye animation in
+  CSS (gaze/blink/pupil/frame), reduced-motion safe. Dead `.loading-spin` CSS removed. (The d20 stays where
+  it's a real dice feature: roll-init button, dice cursor, "Rolling initiative…".)
+- **Welcome modal redesigned to be visual** (B238 was a numbered list). The four screens are now tappable
+  blocks — each with the real rail icon (cloned from the sidebar) + a one-line tag — and tapping one expands a
+  detail panel about that screen (`WELCOME_STEPS`). Forge is open by default. The 5etools-library callout +
+  Load-the-library CTA stay. New `.mfw-steps`/`.mfw-step`/`.mfw-detail` styles (old `.mfw-flow` removed).
+- **First-run combat hint:** the first time a DM opens a running combat, a one-time dismissable bar points at
+  the two least-obvious interactions ("Click a name to roll… Click HP to apply damage and healing"); dismissed
+  for good via localStorage `mf_hint_combat`, hidden in player mode (`combatHintHTML` + `.combat-hint`).
+- Planning only (not built): a **smart CR calculator + CR adjuster** for the Forge is now on the roadmap.
+
 ## Batch 239 — onboarding follow-ups: consistent reachable help popovers + em-dash copy sweep
 - **Help "?" buttons unified + popovers now reachable.** The Preset-libraries help was a one-off
   (`.help-btn` + a `showPopover` that closed on `mouseleave`, so the popover vanished the moment the pointer

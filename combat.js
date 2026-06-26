@@ -1675,7 +1675,7 @@ function renderCombat(){
   const _pOrd=body.querySelector(".combat-order"),_pAct=body.querySelector(".ca-scroll");
   const _ordTop=_pOrd?_pOrd.scrollTop:0,_actTop=_pAct?_pAct.scrollTop:0;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
-    combatRoundBarHTML(cb)+`
+    combatRoundBarHTML(cb)+combatHintHTML()+`
     <div class="combat-grid">
       <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
@@ -1691,10 +1691,19 @@ function renderCombat(){
   if(_pmPreviewOn&&!PLAYER_MODE)stashPreviewSnap(); // keep the local "Preview as player" tab live
   if(combatShareOn()&&combatShareMode()!=="off"&&combatShareWbId())startSharePoll(); // resume the write-back poller after a reload
 }
+// One-time combat hint (B240): the first time a DM opens a running combat, point at the two least-obvious
+// interactions. Dismissed for good via localStorage mf_hint_combat. Hidden in player mode.
+function combatHintHTML(){
+  if(PLAYER_MODE)return "";
+  let seen=true;try{seen=!!localStorage.getItem("mf_hint_combat");}catch(e){}
+  if(seen)return "";
+  return `<div class="combat-hint" id="combatHint"><span class="ch-txt">Click a name to roll its attack or save. Click HP to apply damage and healing.</span><button class="ch-x" id="combatHintX" type="button" aria-label="Dismiss">✕</button></div>`;
+}
 // Wire every combat-tracker event handler onto the freshly-rendered DOM (B198 — extracted from
 // renderCombat; the markup is built by the combat*HTML helpers, this is purely the binding pass).
 function bindCombatTracker(body,a,e,cb){
   bindCombatResizer();
+  {const hx=$("#combatHintX");if(hx)hx.addEventListener("click",()=>{try{localStorage.setItem("mf_hint_combat","1");}catch(e){}const h=$("#combatHint");if(h)h.remove();});}
   const titleBtn=$("#combatLoadTitle");if(titleBtn)titleBtn.addEventListener("click",openLoadCombat);
   // Combat notes: collapse to 2 rows when taller, with a more/less toggle (only shown when it overflows).
   {const nt=$(".ct-notes"),mb=$(".ct-notes-more");if(nt&&mb&&nt.scrollHeight>nt.clientHeight+2){mb.hidden=false;mb.addEventListener("click",()=>{mb.textContent=nt.classList.toggle("clamped")?"more":"less";});}}
