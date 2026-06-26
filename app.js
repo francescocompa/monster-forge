@@ -306,7 +306,7 @@ function alertStack(title,msg){const bg=stackDialog(`<h3>${esc(title)}</h3><p st
 // ── 5etools paste importer ────────────────────────────────────────────────────
 
 function openImportModal(){
-  openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Copy a creature's text from 5e.tools (or an MM'25-style block) and paste it below. Attacks come in as text; review in the Forge, then Save to Bestiary.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
+  openModalRaw(`<h3>Paste a 5etools statblock</h3><p class="hint" style="margin:-4px 0 12px">Open a creature on 5e.tools, copy its statblock text, and paste it below — one at a time. Attacks come in as plain text, so check the result in the Forge before saving it to the Bestiary. To add creatures in bulk, load a 5etools library under Preset libraries instead.</p><textarea id="impArea" placeholder="Adult Black Dragon&#10;Huge Dragon (Chromatic), Chaotic Evil&#10;AC 19&#10;HP 195 (17d12 + 85)&#10;..."></textarea><div class="mrow"><button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button><button class="btn primary sm" id="impGo" style="width:auto">Import → Forge</button></div>`);
   setTimeout(()=>$("#impArea")&&$("#impArea").focus(),50);
   $("#impCancel").addEventListener("click",closeModal);
   $("#impGo").addEventListener("click",()=>{const raw=$("#impArea").value;if(!raw.trim()){toast("Paste a statblock first.");return;}
@@ -365,19 +365,34 @@ function wrapStepper(input,step,min){
   combatCtx=readCombatCtx(); // restore an in-progress combat so a reload returns to it (B80)
   let savedView="forge";try{savedView=localStorage.getItem("mf_view")||"forge";}catch(e){}
   if(VIEW_LABELS[savedView]&&savedView!=="forge"&&savedView!=="settings")switchView(savedView);
-  maybeShowOnboarding(); // first-run nudge on the Forge (B200)
+  maybeShowWelcome(); // first-run welcome modal (B238)
   hideBootLoader(); // correct tab is set — reveal the app (no Forge flash)
 })();
-// First-run nudge (B200): a one-time, dismissable tip at the top of the Forge form pointing newcomers at
-// the faster starting points (chassis / paste). Shown once, then never again (localStorage mf_onboarded).
-function maybeShowOnboarding(){
-  try{if(localStorage.getItem("mf_onboarded"))return;}catch(e){return;}
-  const col=document.getElementById("formCol");if(!col||col.querySelector(".forge-onboard"))return;
-  const tip=document.createElement("div");tip.className="forge-onboard";
-  tip.innerHTML=`<button class="fo-x" type="button" aria-label="Dismiss">✕</button><div class="fo-h">Welcome to Monster Forge</div><div class="fo-b">Fill in the fields and the statblock updates live as you go. To start faster, open the <b>⋯</b> menu — load a ready-made chassis or paste a 5etools block.</div>`;
-  const dismiss=()=>{try{localStorage.setItem("mf_onboarded","1");}catch(e){}tip.remove();};
-  tip.querySelector(".fo-x").addEventListener("click",dismiss);
-  col.insertBefore(tip,col.firstChild);
+// First-run welcome (B238): a one-time modal that names the four-screen pipeline and points at the
+// primary first step — loading a 5etools data library (the source of lookups + bulk creature import).
+// Shown once, then never again (localStorage mf_welcomed). Replaces the old in-Forge tip (B200).
+function maybeShowWelcome(){
+  let seen=false;try{seen=!!localStorage.getItem("mf_welcomed");}catch(e){seen=true;}
+  if(seen||!document.getElementById("modalBg"))return;
+  const mark=()=>{try{localStorage.setItem("mf_welcomed","1");}catch(e){}};
+  openModalRaw(`<div class="mf-welcome">
+    <h3>How Monster Forge works</h3>
+    <p class="mfw-lead">Four screens, used in order:</p>
+    <ol class="mfw-flow">
+      <li><b>Forge.</b> Build or edit a statblock.</li>
+      <li><b>Bestiary.</b> Your saved creatures.</li>
+      <li><b>Adventures.</b> Group encounters and score them against the party's XP budget.</li>
+      <li><b>Combat.</b> Run initiative, track HP and conditions.</li>
+    </ol>
+    <p class="mfw-note">Saving a creature puts it in the Bestiary. Encounters draw from there.</p>
+    <div class="mfw-lib">
+      <div class="mfw-lib-h">Load the 5etools library first</div>
+      <p>Spell, condition and rule lookups (and bulk creature import) come from a 5etools data file you supply. Download <a href="https://github.com/5etools-mirror-3/5etools-src" target="_blank" rel="noopener">github.com/5etools-mirror-3/5etools-src</a> as a <b>.zip</b> (green <b>Code</b> button, then <b>Download ZIP</b>) and add it under Preset libraries. It's parsed in your browser and stays on this device.</p>
+    </div>
+    <div class="mrow mfw-acts"><button class="btn ghost sm" id="mfwClose" style="width:auto">Not now</button><button class="btn primary sm" id="mfwLib" style="width:auto">Load the library</button></div>
+  </div>`);
+  $("#mfwClose").addEventListener("click",()=>{mark();closeModal();});
+  $("#mfwLib").addEventListener("click",()=>{mark();closeModal();presetSel.clear();presetModal();});
 }
 // Remove the boot loader once the app is ready (or on a fatal init error so the page isn't stuck).
 function hideBootLoader(){const b=document.getElementById("bootLoader");if(!b)return;requestAnimationFrame(()=>{b.classList.add("hide");setTimeout(()=>b.remove(),450);});}

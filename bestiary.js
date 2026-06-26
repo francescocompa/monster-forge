@@ -169,7 +169,7 @@ function libRecords(){
   if(incPreset)recs=recs.concat(presetPool().map(o=>({m:o.m,status:"Preset",preset:true,src:o.src})));
   return recs;
 }
-function libEmptyMsg(){return state.lib.length?"No creatures match these controls.":`No saved creatures yet. Build one in the Forge, or start <b>From chassis</b>.`;}
+function libEmptyMsg(){return state.lib.length?"No creatures match these controls.":`No creatures yet. Build one in the Forge, paste a 5etools block, or load a 5etools library under <b>Preset libraries</b> to import in bulk.`;}
 function buildTagDatalist(){const dl=$("#libTagList");if(dl)dl.innerHTML=[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${esc(t)}">`).join("");}
 function renderLibrary(){
   buildTagDatalist();buildMonsterDatalists();rebuildLibUsage();
@@ -545,7 +545,7 @@ function removeReference(k){
 }
 const GROUP_LABELS={core:"Core",supplement:"Supplements","supplement-alt":"Supplements (alt)",setting:"Settings","setting-alt":"Settings (alt)",adventure:"Adventures",screen:"Screens","organized-play":"Organized Play",other:"Other"};
 const groupLabel=g=>g?(GROUP_LABELS[g]||g.replace(/(^|[-\s])\w/g,c=>c.toUpperCase()).replace(/-/g," ")):"Ungrouped";
-const PRESET_HINT="Upload a whole 5etools data <b>.zip</b> (or individual <code>.json</code> files from the ▾ menu) — <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles + groups), or <b>legendarygroups.json</b> (lair actions &amp; regional effects). The kind is auto-detected. A zip lists every source it finds in a <b>Pending import</b> tray first — tick the ones you want and Add them; nothing is kept until you do, and sources you already have are skipped. Everything is parsed in your browser and stored only on this device — never sent to the cloud or committed to the repo. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
+const PRESET_HINT="Content comes from 5etools data files. Download <a href='https://github.com/5etools-mirror-3/5etools-src' target='_blank' rel='noopener'>github.com/5etools-mirror-3/5etools-src</a> as a <b>.zip</b> (green <b>Code</b> button, then <b>Download ZIP</b>) and upload it here, or add individual <code>.json</code> files from the ▾ menu. The app reads what it recognises: <b>bestiary</b> (chassis bases), <b>spells</b>, <b>conditions</b>, a <b>books.json</b> reference sheet (full titles &amp; groups), and <b>legendarygroups.json</b> (lair &amp; regional effects). The kind is auto-detected. A zip lists every source it finds in a <b>Pending import</b> tray first; tick the ones you want and Add them. Nothing is kept until you do, and sources you already have are skipped. Everything is parsed in your browser and stored only on this device, never sent to the cloud. Tick a library and use the actions to enable, disable, or remove it; a disabled library is hidden from the app but kept on disk.";
 let presetCtrl=blankCtrl();presetCtrl.group="group";
 const presetSel=new Set();
 function prUpdateSelUI(){

@@ -31,7 +31,7 @@ function renderAdvList(){
   // Em dash when the adventure is still untitled (the default name), else up to 3 initials (B66).
   const aiIni=a=>`<span class="ai-ini">${a.name&&a.name.trim()?esc(advInitials(a.name)):"—"}</span>`;
   const aiPin=a=>a.pinned?`<span class="ai-pin" title="Pinned">${PIN_SVG}</span>`:"";
-  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${advPartyLabel(a)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet.</div>`;
+  let html=active.map(a=>`<div class="ai ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div><div class="dt">${advPartyLabel(a)} · ${a.encounters.filter(e=>!e.archived).length} enc.</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("")||`<div class="hint" style="padding:8px">No adventures yet. Add one with ＋ New adventure above.</div>`;
   if(arch.length)html+=`<div class="hint" style="padding:6px 8px 2px;font-size:11px">Archived</div>`+arch.map(a=>`<div class="ai arch ${a.id===state.selAdv?"sel":""}${a.pinned?" pinned":""}" data-adv="${a.id}" draggable="true" title="${esc(advDName(a))}"${aiStyle(a)}>${aiIni(a)}<div class="ai-info"><div class="nm">${advDot(a.id,a.color)}${esc(advDName(a))}</div></div>${aiPin(a)}${aiMenu(a)}</div>`).join("");
   box.innerHTML=html;
   // Select on a card click (anywhere but the colour dot / kebab). Right-click opens a compact menu —
@@ -160,7 +160,7 @@ function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2]
 
 function renderAdvDetail(){
   const a=curAdv(),d=$("#advDetail");
-  if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select or create an adventure.</div>`;return;}
+  if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select an adventure on the left, or create one with ＋ New adventure.</div>`;return;}
   setCrumbs(["Adventures",advDName(a)]);
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
     <div class="adv-detail-body">

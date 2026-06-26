@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 238 — onboarding: first-run welcome modal + matter-of-fact empty-state/import copy
+- **New first-run welcome modal** (`maybeShowWelcome`, app.js; localStorage `mf_welcomed`) replaces the old
+  thin in-Forge tip (B200's `maybeShowOnboarding` + `.forge-onboard`/`.fo-*` CSS, both removed). Names the
+  four-screen pipeline (Forge → Bestiary → Adventures → Combat) as a numbered list, states the one
+  non-obvious fact ("Saving a creature puts it in the Bestiary; encounters draw from there"), and makes
+  **loading the 5etools library the primary first step** — an accent callout linking
+  `github.com/5etools-mirror-3/5etools-src` (Code → Download ZIP) with a "Load the library" button that
+  closes the modal and opens the Preset-libraries manager. Shown once; reuses the existing `openModalRaw`
+  modal primitive. New `.mf-welcome`/`.mfw-*` styles in styles.css.
+- **5etools zip source surfaced where it was missing.** `PRESET_HINT` (the Preset-libraries help popover)
+  now leads with where to get the data + the Download-ZIP step + the source link, before the import
+  mechanics. The paste importer (`openImportModal`) copy now explains what pasting *means* (open a creature
+  on 5e.tools, copy its statblock text, one at a time) and points bulk imports at the library instead.
+- **Empty-state copy tightened, matter-of-fact:** Bestiary empty (`libEmptyMsg`) now mentions paste + the
+  bulk-library path; Adventures list/detail empties point at ＋ New adventure. (No getting-started
+  checklist — dropped per design review; audience is DM-side new users only.)
+
 ## Batch 237 — player mode: hide waiting, green "You" tag, "Playing as" in the header
 - **Waiting combatants are hidden from players** — filtered out of the shared snapshot (both the lite list and
   the in-app order).
