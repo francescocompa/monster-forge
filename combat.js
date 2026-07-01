@@ -1200,6 +1200,21 @@ const _shareCharApplied={}; // srcId → last-applied sheet-edit ts (B204 stage 
 const _shareJoinApplied={}; // instId → ts of a processed player "join the fight" request (B235)
 function startSharePoll(){if(_sharePoll)return;_sharePoll=setInterval(pollShareEdits,3000);pollShareEdits();}
 function stopSharePoll(){if(_sharePoll){clearInterval(_sharePoll);_sharePoll=null;}}
+// Sanitize one player-supplied roll event at the trust boundary (B250). Returns a fully-typed record or
+// null. `total` is coerced to a finite number (it renders unescaped as text), `id`/`type`/`abil` are
+// validated/whitelisted (id is a DOM attr, type becomes an unescaped CSS class), free-text is clamped.
+const _ROLL_TYPES=new Set(["attack","damage","check","save","init","custom"]);
+function _pmStr(v,max){return typeof v==="string"?v.slice(0,max||120):"";}
+function _pmSafeRoll(ev){
+  if(!ev||typeof ev!=="object")return null;
+  const id=_pmStr(ev.id,40);if(!/^[\w-]{1,40}$/.test(id))return null;
+  const total=Number(ev.total);
+  return {id,ts:Number(ev.ts)||Date.now(),label:_pmStr(ev.label)||"Roll",
+    type:_ROLL_TYPES.has(ev.type)?ev.type:null,total:Number.isFinite(total)?total:0,
+    parts:_pmStr(ev.parts,200),crit:!!ev.crit,
+    abil:ABILS.indexOf(ev.abil)>=0?ev.abil:null,dmgType:_pmStr(ev.dmgType,40)||null,
+    by:_pmStr(ev.by,60)||"Player"};
+}
 async function pollShareEdits(){
   if(_sharePollBusy)return;const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
   const mode=combatShareMode(),wid=combatShareWbId();if(mode==="off"||!wid){stopSharePoll();return;}
@@ -1237,10 +1252,13 @@ async function pollShareEdits(){
       if(!rosterById(srcId)){const c={id:srcId,name:j.name||"Player",notes:"",fields:[{k:"level",v:""},{k:"class",v:[]},{k:"ac",v:""},{k:"hp",v:""}]};state.roster.push(typeof normalizeRosterPC==="function"?normalizeRosterPC(c):c);}
       cb.order.push(pmNewJoinInstance(j.instId,srcId,j.name));joinNew=true;});
     if(joinNew){if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveRoster();saveAdv();}
-    // Player dice rolls → fold new ones into the DM roll log (B204 stage 4).
+    // Player dice rolls → fold new ones into the DM roll log (B204 stage 4). These come from an untrusted
+    // device over the open write-back path, so EVERY field is sanitized here at the boundary (B250): the roll
+    // log renders some of them unescaped (`total` into text, `type` into a class name), so numbers are coerced,
+    // the id/type/abil are whitelisted, and free-text is clamped. See _pmSafeRoll.
     let rollNew=false;
-    if(Array.isArray(rec.rolls)){rec.rolls.forEach(ev=>{if(!ev||!ev.id||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
-      rollLog.unshift({id:ev.id,_t:ev.ts||Date.now(),label:ev.label||"Roll",type:ev.type||null,total:ev.total,parts:ev.parts||"",adv:null,crit:!!ev.crit,outcome:null,abil:ev.abil||null,dmgType:ev.dmgType||null,source:{name:ev.by||"Player",id:null},fromPlayer:true,roll:{formula:String(ev.total||0),label:ev.label||"Roll",type:ev.type||null}});rollNew=true;});
+    if(Array.isArray(rec.rolls)){rec.rolls.forEach(raw=>{const ev=_pmSafeRoll(raw);if(!ev||_shareRollSeen.has(ev.id))return;_shareRollSeen.add(ev.id);
+      rollLog.unshift({id:ev.id,_t:ev.ts,label:ev.label,type:ev.type,total:ev.total,parts:ev.parts,adv:null,crit:ev.crit,outcome:null,abil:ev.abil,dmgType:ev.dmgType,source:{name:ev.by,id:null},fromPlayer:true,roll:{formula:String(ev.total),label:ev.label,type:ev.type}});rollNew=true;});
       if(rollLog.length>60)rollLog.length=60;}
     if(applied){if(reorder&&combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}saveAdv();}
     if(applied||charApplied||queued||joinNew)renderCombat(); // renderCombat republishes so the new PC reaches everyone

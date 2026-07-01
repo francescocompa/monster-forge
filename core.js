@@ -232,7 +232,11 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 // instead of hand-rolling scrollTop save/restore around renderAdvDetail / re-opened modals etc. Returns fn()'s value.
 function preserveScroll(sel,fn){const top=(s=>s?s.scrollTop:0)($(sel));const r=fn();const ns=$(sel);if(ns)ns.scrollTop=top;return r;}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// Escape for BOTH text and attribute HTML contexts. Quotes MUST be encoded: user/player-supplied strings
+// are interpolated into double-quoted attributes throughout (value="…", title="…", data-*="…"), so leaving
+// " unescaped allowed attribute breakout → event-handler injection (the B250 player→DM XSS). All call sites
+// render into HTML, so encoding quotes is always safe (identical in text context, correct in attributes).
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const clone=o=>JSON.parse(JSON.stringify(o));
 // asHtml lets roll notifications highlight the result number; callers MUST esc any user content (B77).
 function toast(t,ms,asHtml){const e=$("#toast");if(asHtml)e.innerHTML=t;else e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),ms||1900);}

@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 250 — security: fix player→DM stored XSS (audit P1)
+- Full-project re-audit refreshed `AUDIT.md`; its P1 was a **confirmed stored-XSS**. Any player device can
+  push a crafted dice-roll (or sheet edit) over the open share write-back path; the DM app folds it into the
+  roll log and rendered it **unescaped** — proven live (`<img onerror>` executed in the DM origin, which can
+  read `mf_fbid` and tamper with the whole cloud library). Two root causes, both fixed:
+  - **`esc()` never escaped quotes** (only `& < >`), so user/player strings interpolated into `value="…"`/
+    `title="…"`/`data-*="…"` allowed attribute breakout. It now also encodes `"`→`&quot;` and `'`→`&#39;`.
+    All 310 call sites are HTML contexts (verified), and quotes/apostrophes still decode correctly in text
+    and input values, so there is no visual regression.
+  - **The player→DM ingestion boundary trusted field types.** New `_pmSafeRoll` sanitizes every incoming
+    roll event in `pollShareEdits`: `total` coerced to a finite number, `id` validated (`^[\w-]{1,40}$`),
+    `type`/`abil` whitelisted (they flow into unescaped CSS classes), free-text clamped.
+  - Defense-in-depth: `rlSingleHTML`/`rlSubHTML` now `esc()` `total`/`id` at the sink too, so the roll-log
+    render is safe regardless of caller.
+- Verified live: the exact prior payload now renders inert (`&lt;img…&gt;`, `data-rollid="x&quot;onx"`),
+  the sanitizer rejects bad ids/types, and the Firebase share round-trip still works. `npm run verify` green.
+
 ## Batch 249 — docs: fix "three JS files" drift, stale datalist comment
 - `DEVELOPMENT.md` and the changelog header still described the pre-split site ("the three JS files",
   five-file list); updated to the twelve-script reality and pointed at the four sync points

@@ -805,8 +805,10 @@ function rlTagHTML(r){if(!r.type)return "";const dmgAbbr=r.type==="damage"&&r.dm
 function rlPartsHTML(r){const adv=r.adv?`<span class="rl-advlbl ${r.adv}">${r.adv==="adv"?"ADV":"DIS"}</span>`:"";const crit=r.crit?'<span class="rl-crit">CRIT</span>':"";return `<span class="rl-parts">${adv}${crit}<span class="rl-pnum">${esc(r.parts)}</span></span>`;}
 function rlSrcHTML(src){return src?`<button class="rl-src" data-rollsrc="${esc(src.id||"")}" data-rollsrcname="${esc(src.name)}">${esc(src.name)}</button>`:"";}
 function rlAbAttr(ab){return ab?` data-abil="${esc(ab)}"`:"";}
-function rlSingleHTML(r){return `<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlSrcHTML(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
-function rlSubHTML(r){return `<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${r.id}"><span class="rl-total">${r.total}</span><span class="rl-mid">${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
+// total/id are esc'd at the sink too (defense-in-depth, B250): player-sourced rolls are already sanitized at
+// ingestion (_pmSafeRoll), but the sink stays safe regardless of caller — esc is harmless on numeric totals.
+function rlSingleHTML(r){return `<div class="rl-row${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${esc(String(r.id))}"><span class="rl-total">${esc(String(r.total))}</span><span class="rl-mid">${rlSrcHTML(r.source)}<span class="rl-lbl">${esc(r.label)}</span>${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
+function rlSubHTML(r){return `<div class="rl-row rl-sub${r.crit?" crit":""}${r.outcome?" "+r.outcome:""}"${rlAbAttr(r.abil)} data-rollid="${esc(String(r.id))}"><span class="rl-total">${esc(String(r.total))}</span><span class="rl-mid">${rlPartsHTML(r)}</span>${rlTagHTML(r)}</div>`;}
 // One group's HTML, exactly as the log renders it: a single roll → one row; multiple consecutive rolls that
 // share source+label → a header once, then each sub-roll (with a spanning colour bar when the ability matches).
 function rlGroupHTML(g){
