@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 248 — mobile tap-highlight, template leaking class/subclass, dice margin widened
+- **Killed the default mobile tap-highlight flash everywhere** (`*{-webkit-tap-highlight-color:transparent}`).
+  Every interactive element already has its own hover/active/focus treatment (or intentionally none for
+  plain rows), so the browser's translucent blue tap rectangle only ever fought with those.
+- **Character "Save as template" was leaking Class/Subclass onto new characters.** `buildPcTemplate` only
+  blanked scalar field values; an array-valued chipfield (Class, Subclass) slipped through unblanked. Now
+  blanks arrays to `[]` and objects to `{}` too.
+- **Widened the B244 dice edge-balance fix's margin (0.04→0.06) and step budget (600→900)** after
+  stress-testing the actual reported scenario — a crit with two damage types throws 9 dice across two waves;
+  busier scenes need more headroom for the nudge-retry to converge on every die. 540 dice-checks across 60
+  crit two-wave throws: 1 residual mismatch (~0.2%), down from a clearly frequent failure pre-B244. This is a
+  large improvement, not a proven elimination — a very rare edge case likely remains in the busiest scenes.
+
 ## Batch 247 — fix party-row chipfield actually starving on flex-grow, not shrink
 - Every prior pass at the party-chip clipping bug (B169, B178/179, B241) retuned the shrink side; the real
   bug was `.pc-name`'s `flex-grow:3` out-competing `.pc-chips`' `flex-grow:1` for leftover row space 3-to-1,
