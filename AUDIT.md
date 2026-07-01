@@ -167,9 +167,9 @@ would be the highest-value addition (and would lock in the P1 fix).
 | # | Item | Where | Effort |
 |---|---|---|---|
 | **P1** | Player→DM stored XSS (esc() quotes + ingestion sanitization) | core.js, combat.js, engine.js | **fixed in B250** |
-| P2 | Lazy-load three/cannon off the boot path | index.html, dice3d.js | ~half a batch |
-| P2 | `loadAll` roster dirty-clear ignores write result | core.js:191-193 | tiny |
-| P2 | Firebase rules are the whole boundary — document + periodic check | Firebase console, docs | tiny |
+| P2 | Lazy-load three/cannon off the boot path | index.html, dice3d.js | **fixed in B251** |
+| P2 | `loadAll` roster dirty-clear ignores write result | core.js:191-193 | **fixed in B251** |
+| P2 | Firebase rules are the whole boundary — document + periodic check | DEVELOPMENT.md | **documented in B251** |
 | P3 | Gate `_flush` on `!PLAYER_MODE` | core.js:227 | tiny |
 | P3 | Remove confirmed dead JS globals + dead CSS | multiple | ~half a batch |
 | P3 | Add `combat.test.js` around the ingestion boundary | test/ | ~half a batch |

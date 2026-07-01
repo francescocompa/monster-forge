@@ -333,8 +333,8 @@
 <!-- Vendored QR generator (B202) — sets window.qrcode; used only by the combat "Share initiative" dialog.
      Isolated from the shared-scope app files (not in the array below), so it isn't part of that pipeline. -->
 <script src="vendor/qrcode.min.js"></script>
-<script src="vendor/three.min.js"></script>
-<script src="vendor/cannon.min.js"></script>
+<!-- three.min.js + cannon.min.js are NOT loaded here (B250): dice3d.js injects them lazily on first roll
+     intent (d3dLoadLibs), keeping ~724KB of physics/render libs off the boot critical path. -->
 <script>var _cb=Date.now();["data.js","parsers.js","core.js","forge.js","engine.js","bestiary.js","adventures.js","roster.js","combat.js","dice3d.js","seed.js","app.js"].forEach(function(s){document.write('<script src="'+s+'?cb='+_cb+'"><\/script>');});</script>
 </body>
 </html>

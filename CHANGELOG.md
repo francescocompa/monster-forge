@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 251 — audit P2s: lazy-load 3D dice libs, roster save-fail fix, Firebase rules doc
+- **Three.js (592KB) + cannon.js (132KB) no longer load on boot.** They were blocking `<script>` tags in
+  index.html, parsed on every page load even for DMs/players who never roll a 3D die that session. Now
+  `dice3d.js` injects them lazily (`d3dLoadLibs`) on first roll intent: hovering a rollable preloads on
+  desktop (so the click is already 3D), and the first roll itself triggers the load on touch (that one roll
+  falls back to the 2D toast, the next is 3D). Gated behind `clickRoll`/reduced-motion so the 724KB is never
+  fetched when rolling is off. Verified live: at boot `THREE`/`CANNON` are undefined with no vendor tags;
+  they fetch only after the first intent, and rolls still render 3D. (Vendor blobs stay un-cache-busted, so
+  they're browser-cached after the first fetch.)
+- **`loadAll` no longer clears the dirty flag when the roster cloud push fails.** The party/roster
+  `jbinSet` result was ignored, so a failed roster write still cleared `mf_dirty` → the next load adopted
+  the cloud roster and dropped the unsynced local roster edits. Now all three pushes must succeed.
+- **Documented the Firebase security model in DEVELOPMENT.md.** The DB rules ARE the security boundary
+  (the client URL is public by design); added the scoped rules JSON, the "don't leave test-mode on" warning,
+  and a reminder to re-check the rules periodically and check them first if sharing breaks.
+
 ## Batch 250 — security: fix player→DM stored XSS (audit P1)
 - Full-project re-audit refreshed `AUDIT.md`; its P1 was a **confirmed stored-XSS**. Any player device can
   push a crafted dice-roll (or sheet edit) over the open share write-back path; the DM app folds it into the

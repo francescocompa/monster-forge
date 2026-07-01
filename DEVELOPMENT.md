@@ -58,6 +58,32 @@ These are the project's historically painful failure modes, each now covered:
 - Manual/visual verification still happens in the live preview (the `monster-forge` preview server).
   The automated tests are the regression floor, not a replacement for looking at the UI.
 
+## Cloud storage & the security model (Firebase RTDB)
+
+Cloud data lives in a Firebase Realtime Database (`FB_BASE` in `core.js`), reached over plain REST — no
+SDK, so the site stays no-build. The client "key" is just the DB URL and is *designed* to be public:
+**access is controlled entirely by the database's server-side rules, not by keeping anything secret.**
+That means the rules ARE the security boundary. They must stay scoped to exactly two namespaces:
+
+```json
+{ "rules": {
+  "installs": { "$inst": { ".read": true, ".write": true } },
+  "shares":   { "$id":   { ".read": true, ".write": true } }
+} }
+```
+
+- `installs/<per-device-random-id>/…` — one device's private library (monsters/adventures/party). The id
+  (`fbInstallId()`, localStorage `mf_fbid`) is the only thing protecting it, so it must never leak into a
+  share payload, URL, or QR.
+- `shares/<random-id>` — ephemeral combat-share snapshots + the player write-back channel (open by design;
+  players must write to it). Player-supplied data from here is untrusted — sanitize at ingestion
+  (`_pmSafeRoll` and friends in `combat.js`) and never render it unescaped (see `esc()` in `core.js`).
+
+**Do NOT leave the console's default "test mode" rule in place** — it grants root read/write and expires
+after 30 days, after which one `GET /installs.json` would dump every install. Paste the scoped rules above
+instead. If cloud saves or sharing ever break, check the Firebase console rules FIRST before assuming a code
+regression. Re-check the rules periodically; they are the whole game.
+
 ## Conventions
 
 See `CHANGELOG.md` (newest batch first) and the architecture notes. After editing any JS file run

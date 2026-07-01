@@ -189,8 +189,10 @@ async function loadAll(){
     if(isDirty()){
       // we have unsynced local edits — push them up rather than letting the cloud overwrite them
       const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);
-      await jbinSet("library:party",state.roster);
-      if(ok1&&ok2)setDirty(false);
+      const ok3=await jbinSet("library:party",state.roster);
+      // Only clear dirty when ALL THREE pushed. The roster result was previously ignored, so a failed roster
+      // push still cleared the flag → the next load adopted the cloud roster and dropped local roster edits (B250 P2).
+      if(ok1&&ok2&&ok3)setDirty(false);
     } else {
       // cloud is authoritative; only adopt it when a bin actually exists (else keep cache)
       if(!a.noBin){state.lib=(a.record||[]).map(normalizeMonster);cacheSet("library:monsters",state.lib);}

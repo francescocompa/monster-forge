@@ -18,6 +18,22 @@ let d3dMatDie, d3dMatFloor, d3dMatWall, d3dWalls = [];
 let d3dLogoTex = null, d3dStoneTex = null, d3dGemTex = null, d3dLive = [], d3dLiveMeshes = [], d3dCardEl = null, d3dHeld = null;
 // Read the user's dice look from settings (material / brand colour / cube edge style), with safe fallbacks.
 function d3dLook(){ const d = (typeof state === "object" && state.settings && state.settings.dice3d) || {}; return { material: d.material || "stone", color: d.color || "#e2654d", edges: d.edges || "sharp" }; }
+// Lazy-load the vendored physics/render libs (three ~592KB + cannon ~132KB) OFF the boot critical path
+// (B250 audit P2): they used to be blocking <script> tags in index.html, parsed on every page load even for
+// DMs/players who never roll. Now they're injected on first roll INTENT — hovering a rollable (desktop
+// preload, so the click is already 3D) or the first roll itself (touch: that roll falls back to the 2D toast,
+// the next is 3D). Idempotent; returns a promise. No-ops in jsdom (no external-script execution).
+let d3dLibsP = null;
+function d3dLibsReady(){ return typeof THREE !== "undefined" && typeof CANNON !== "undefined"; }
+function d3dLoadLibs(){
+  if (d3dLibsP) return d3dLibsP;
+  if (d3dLibsReady()) return (d3dLibsP = Promise.resolve(true));
+  if (typeof document === "undefined") return Promise.resolve(false);
+  const one = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.async = true; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  // No ?cb cache-bust: unlike the shared scripts these are immutable vendor blobs, so let the browser cache them.
+  d3dLibsP = Promise.all([one("vendor/three.min.js"), one("vendor/cannon.min.js")]).then(() => true).catch(() => { d3dLibsP = null; return false; });
+  return d3dLibsP;
+}
 const d3dTexCache = new Map();
 const d3dDieFont = '"Vecna", "Copperplate", "Luminari", fantasy, serif';
 let d3dPX = 0, d3dPY = 0, d3dPrev = 0;
@@ -521,9 +537,10 @@ function d3dHoverOK(){
   return true;
 }
 function d3dHoverOver(e){
-  if (typeof THREE === "undefined" || typeof CANNON === "undefined" || d3dDead || d3dRoll) return;
+  if (d3dDead || d3dRoll) return;
   const t = e.target && e.target.closest && e.target.closest("[data-roll]"); if (!t) return; // cheap test first
   const sides = d3dPrimaryDie(t.dataset.roll); if (!sides || !d3dHoverOK()) return;
+  if (!d3dLibsReady()){ d3dLoadLibs(); return; }   // desktop preload: hovering a rollable pulls the libs in so the click is 3D
   d3dPX = e.clientX; d3dPY = e.clientY; d3dHoldAt(sides);
 }
 function d3dHoverOut(e){
@@ -595,8 +612,12 @@ function d3dLaunchWave(plan, R){
 // opts,meta, crit, wave2}. crit → the logo-awaken flourish; wave2 (a parts string) → extra crit dice dropped
 // in after wave 1 lands (the alert waits for them). Returns true if it took over the notification (skip toast).
 function rollDice3D(desc){
-  if (typeof THREE === "undefined" || typeof CANNON === "undefined") return false;   // libs absent (jsdom)
   try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
+  // Libs not in yet (jsdom, or the first roll before the lazy load finished): kick off the load so the NEXT
+  // roll is 3D, and let this one fall back to doRoll's 2D toast (return false). Desktop hover usually preloads
+  // first, so this fallback rarely fires there. Gated behind clickRoll so we never fetch 724KB when rolling
+  // is off; reduced-motion already returned above.
+  if (!d3dLibsReady()){ if (typeof clickRollOn !== "function" || clickRollOn()) d3dLoadLibs(); return false; }
   const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;
   if (!d3dEnsure()) return false;
   d3dClear(); d3dClearHeld();                  // the held cursor-die (if any) launches into this roll
