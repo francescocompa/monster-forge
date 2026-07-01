@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 244 — dice edge-balance fix + player-mode full-height initiative list
+- **3D dice could show a number that didn't match the roll.** Reported and reproduced: an attack roll's d20
+  visibly balanced on an edge between two faces, neither of which was the actual to-hit result. Root cause —
+  `d3dAtRest`'s settle check only watches velocity/cannon-sleep, which can fire while a die is still
+  precariously perched on an edge or vertex (a known failure mode of physics-based dice); it then gets
+  relabeled and replayed frozen in that ambiguous pose. `d3dPreSim` now requires the top face's y-normal to
+  clearly beat the runner-up before accepting a settle (`d3dFaceMargin`); an ambiguous landing gets a small
+  random nudge (`d3dNudge`) and re-settles. Verified with 120+ synthetic trials (random + adversarial
+  straight-drop landings, including a d20 for every target value 1–20): 0 mismatches, 0 hit the raised step
+  cap (300 → 600).
+- **Player mode's initiative list was stuck in the top ~44% of the screen** with a dead void below it on
+  narrow viewports — the `@media (max-width:1080px)` combat-grid rule unconditionally reserves ~56% of the
+  height (`--cah`) for the DM's detail panel, even though that panel is `display:none` in player mode. Player
+  mode now always gets a single full-height row.
+
 ## Batch 243 — replace JSONBin with Firebase Realtime Database
 - **Cloud storage moved off JSONBin entirely.** Its single hardcoded master key (shared across every
   install) hit the account's request quota — "Requests exhausted" — which took down cloud saves and combat
