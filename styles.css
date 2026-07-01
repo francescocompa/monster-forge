@@ -62,6 +62,11 @@ body.dicing, body.dicing *{ cursor:none !important; }
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+/* Kill the browser's default mobile tap flash (a translucent blue-grey rectangle painted over whatever was
+   tapped) everywhere — every interactive element here already has its own hover/active/focus treatment (or,
+   for plain non-interactive rows, intentionally none), so the default only ever fights with those instead of
+   adding anything (B248). */
+*{-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer}

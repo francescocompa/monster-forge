@@ -443,12 +443,15 @@ function d3dNudge(d){
   d.body.wakeUp();
 }
 function d3dPreSim(dice){
-  const MAX = 600; let restRun = 0, n = 0;
+  // MAX/margin widened from 600/0.04 after stress-testing a full crit two-wave multi-damage throw (9 dice)
+  // still showed a rare residual mismatch — busier scenes need more headroom for the nudge-retry to converge
+  // on every die, not just settle the group (B248 follow-up).
+  const MAX = 900; let restRun = 0, n = 0;
   for (; n < MAX; n++){
     d3dWorld.step(1/60);
     if (dice.every(d3dAtRest)){
       if (++restRun >= 8){
-        const ambiguous = dice.filter(d => d3dFaceMargin(d) < 0.04);
+        const ambiguous = dice.filter(d => d3dFaceMargin(d) < 0.06);
         if (!ambiguous.length){ n++; break; }
         ambiguous.forEach(d3dNudge); restRun = 0;
       }

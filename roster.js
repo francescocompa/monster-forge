@@ -25,8 +25,11 @@ const D5_CLASSES=["Artificer","Barbarian","Bard","Cleric","Druid","Fighter","Mon
 function rosterById(id){return state.roster.find(r=>r.id===id)||null;}
 // Property template (B153): a saved set of properties new characters start from. Stored locally (a UI
 // preference, not roster data). `buildPcTemplate` keeps each field's structure + flags + preset entries but
-// clears the instance-specific scalar values and ATK/DC overrides.
-function buildPcTemplate(c){return (c&&c.fields||[]).map(f=>{const t=JSON.parse(JSON.stringify(f));if(!Array.isArray(t.v)&&!(t.v&&typeof t.v==="object"))t.v="";t.atkV="";t.dcV="";return t;});}
+// clears the instance-specific values (and ATK/DC overrides) — every shape of value, not just scalars: a
+// chipfield like Class/Subclass stores an array, so it was slipping through unblanked (B248).
+function buildPcTemplate(c){return (c&&c.fields||[]).map(f=>{const t=JSON.parse(JSON.stringify(f));
+  if(Array.isArray(t.v))t.v=[];else if(t.v&&typeof t.v==="object")t.v={};else t.v="";
+  t.atkV="";t.dcV="";return t;});}
 function savePcTemplate(c){try{localStorage.setItem("mf_pc_template",JSON.stringify(buildPcTemplate(c)));}catch(e){}}
 function loadPcTemplate(){try{const s=localStorage.getItem("mf_pc_template");if(s){const f=JSON.parse(s);if(Array.isArray(f)&&f.length)return JSON.parse(JSON.stringify(f));}}catch(e){}return null;}
 // A character's class — the standard `class` field, or a legacy custom field labelled "Class".
