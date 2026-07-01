@@ -4,6 +4,33 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 247 — fix party-row chipfield actually starving on flex-grow, not shrink
+- Every prior pass at the party-chip clipping bug (B169, B178/179, B241) retuned the shrink side; the real
+  bug was `.pc-name`'s `flex-grow:3` out-competing `.pc-chips`' `flex-grow:1` for leftover row space 3-to-1,
+  ballooning the name into empty air even with room to spare while chips (the actual data) stayed clipped.
+  `.pc-name` is now `flex-grow:0`; chips get all the leftover space. Verified at 1200/700/480/400px with a
+  long-name + 3-chip stress case: no dead gap with room to spare, both degrade together (chips first) only
+  when genuinely tight.
+
+## Batch 246 — restore End combat + fix encounter status getting silently overridden
+- Batch 162 ("combat is always live") removed the old Start/End FAB and `endCombat()` but left `encStatus()`
+  reading `e.combat.active` as an override — and since that flag was set true once and never false again,
+  every started encounter showed "active"/"Resume" forever, discarding any manual status pick. `encStatus()`
+  now just reads `e.status`. New `endCombat(a,e)` clears the live combat and marks the encounter Completed
+  (status stays freely editable after, no further effect on the cleared combat) — exposed via "End combat"
+  in the combat tab's round-bar tools menu and a new dropdown chevron on the adventure card's Resume button
+  (End combat / Reset & restart). Also fixed a bug found during testing: the combat tab's own "always
+  auto-start" render logic instantly undid End Combat on the next render; it now skips auto-start for a
+  "completed" encounter, and the not-started screen got the real "Start again" button its copy always
+  promised but B162 never wired up.
+
+## Batch 245 — fix Slow effect popover still showing mastery text
+- B242's group-disambiguation only reached the chip's ref/class computation — the actual popover content is
+  built by a separate, generic reflink system (`engine.js` `showRefpop`/`refContent`) that only had the
+  chip's `data-ref`/`data-name`, not its `effGroup`, so it always fell back to the mastery. Threaded
+  `effGroup` through as a `data-eg` attribute, read by `showRefpop`. Verified live: the Slow spell's popover
+  now correctly shows "Spell effects" with the spell's own text.
+
 ## Batch 244 — dice edge-balance fix + player-mode full-height initiative list
 - **3D dice could show a number that didn't match the roll.** Reported and reproduced: an attack roll's d20
   visibly balanced on an edge between two faces, neither of which was the actual to-hit result. Root cause —
