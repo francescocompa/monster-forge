@@ -425,9 +425,35 @@ function d3dAtRest(d){
   if (d.body.sleepState === CANNON.Body.SLEEPING) return true;
   return d.body.position.y < (d.R/D3D_SCALE)*1.45 && d.body.velocity.lengthSquared() < 0.5 && d.body.angularVelocity.lengthSquared() < 1.0;
 }
+// The velocity/sleep check above can fire while a die is still precariously balanced on an edge or vertex
+// between two near-tied faces (cannon's sleep threshold only watches speed, not "is this genuinely a face
+// resting flat") — B244: the die then gets relabeled and replayed frozen in that ambiguous pose, so what's
+// painted doesn't match anything the player can actually read on screen. Require the top face's y-normal to
+// clearly beat the runner-up before accepting a rest; an ambiguous settle gets a small random nudge instead.
+function d3dFaceMargin(d){
+  const q = d.body.quaternion, tq = new THREE.Quaternion(q.x,q.y,q.z,q.w);
+  const normals = d.std ? d.normals : d.labels.map(L => L.normal);
+  let best = -2, second = -2;
+  normals.forEach(nm => { const y = nm.clone().applyQuaternion(tq).y; if (y > best){ second = best; best = y; } else if (y > second) second = y; });
+  return best - second;
+}
+function d3dNudge(d){
+  d.body.angularVelocity.x += (Math.random()-0.5)*3; d.body.angularVelocity.y += (Math.random()-0.5)*3; d.body.angularVelocity.z += (Math.random()-0.5)*3;
+  d.body.velocity.y += 0.5 + Math.random()*0.5;
+  d.body.wakeUp();
+}
 function d3dPreSim(dice){
-  const MAX = 300; let restRun = 0, n = 0;
-  for (; n < MAX; n++){ d3dWorld.step(1/60); if (dice.every(d3dAtRest)){ if (++restRun >= 8){ n++; break; } } else restRun = 0; }
+  const MAX = 600; let restRun = 0, n = 0;
+  for (; n < MAX; n++){
+    d3dWorld.step(1/60);
+    if (dice.every(d3dAtRest)){
+      if (++restRun >= 8){
+        const ambiguous = dice.filter(d => d3dFaceMargin(d) < 0.04);
+        if (!ambiguous.length){ n++; break; }
+        ambiguous.forEach(d3dNudge); restRun = 0;
+      }
+    } else restRun = 0;
+  }
   return n;
 }
 function d3dResetBody(b, s){

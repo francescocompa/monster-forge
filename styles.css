@@ -1526,7 +1526,11 @@ body.player-mode #combatShare,body.player-mode #combatTools,body.player-mode .ct
 body.player-mode .combat-fab-turn,body.player-mode .cbt-add,
 body.player-mode .ci-menu,body.player-mode .combat-resizer,
 body.player-mode .combat-active{display:none!important} /* active panel surfaces in stage 4 (tap-to-open) */
-body.player-mode .combat-grid{grid-template-columns:1fr!important}
+/* Players never get the DM's side/bottom detail panel (.combat-active is display:none above) — but the
+   narrow-viewport media query below still reserves it a row via --cah (a DM-only manual-resize var), leaving
+   the initiative list stuck in the top ~44% of the screen with a dead void below it (B244). Player mode is
+   always a single full-height row regardless of viewport width. */
+body.player-mode .combat-grid{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
 /* Fully inert rows (enemies without condition permission, other PCs) — no editing affordances. */
 body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds){pointer-events:none}
 body.player-mode .cbt-row:not(.pm-edit):not(.pm-edit-conds) .ci-init-in,
