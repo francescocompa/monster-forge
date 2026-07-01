@@ -1,15 +1,17 @@
 # Development
 
-Monster Forge is a **no-build static site**: `index.html` + `styles.css` + `data.js` + `parsers.js` +
-`app.js`, served as-is (GitHub Pages). The three JS files are loaded as classic `<script>` tags and
-**share one global lexical scope** — a function defined in `data.js` is callable from `app.js` with no
-imports. Keep it that way; there is no bundler.
+Monster Forge is a **no-build static site**: `index.html` + `styles.css` + twelve JS files, served as-is
+(GitHub Pages). The shared scripts are loaded as classic `<script>` tags and **share one global lexical
+scope** — a function defined in `data.js` is callable from `app.js` with no imports. Keep it that way;
+there is no bundler. The ordered list (`data.js` first, `app.js` last) lives in `package.json`'s `check`
+script and index.html's loader — those, plus `test/harness.js` and `eslint.config.js`, are the four sync
+points that must stay matched when a file is added.
 
 ## Tooling (dev-only — the shipped site stays no-build)
 
 ```sh
 npm install        # one-time: eslint, jsdom, fake-indexeddb
-npm run check      # node --check on all three scripts (syntax / smart-quote breakage)
+npm run check      # node --check on every shared script (syntax / smart-quote breakage)
 npm run lint       # eslint — blocks on errors, warnings are advisory
 npm test           # init smoke test + pure-function maths (jsdom)
 npm run verify     # all three, in order
@@ -45,7 +47,7 @@ These are the project's historically painful failure modes, each now covered:
   references don't false-positive — and it stays correct as you add functions.
 - **A top-level `addEventListener` bound to a DOM node that no longer exists** (throws during init and
   white-screens the live page) → the smoke test (`test/smoke.test.js`) boots the real `index.html` in
-  jsdom with the three scripts injected into one realm and asserts init produces zero errors.
+  jsdom with the shared scripts injected into one realm and asserts init produces zero errors.
 
 ## Testing notes
 

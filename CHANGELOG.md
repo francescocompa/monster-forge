@@ -1,8 +1,17 @@
 # Changelog
 
 Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
-site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
+site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
+
+## Batch 249 — docs: fix "three JS files" drift, stale datalist comment
+- `DEVELOPMENT.md` and the changelog header still described the pre-split site ("the three JS files",
+  five-file list); updated to the twelve-script reality and pointed at the four sync points
+  (`package.json` check, index.html loader, `test/harness.js`, `eslint.config.js`) as the source of truth
+  for the ordered list.
+- Fixed a stale `roster.js` comment claiming the skills chipfield "keeps the datalist combobox" — skills
+  have used the custom add control since B160. (The one deliberate native-datalist survivor is the
+  bestiary tag-add input.)
 
 ## Batch 248 — mobile tap-highlight, template leaking class/subclass, dice margin widened
 - **Killed the default mobile tap-highlight flash everywhere** (`*{-webkit-tap-highlight-color:transparent}`).

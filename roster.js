@@ -249,8 +249,8 @@ function charDetailHTML(c,curAdv,ui,advs){
     const ph=fieldDefault(c,f,curAdv)||"Empty";
     const valEl=`<input class="cd-pv" data-cdval="${i}" value="${esc(String(f.v))}" placeholder="${esc(ph)}">`;
     return `<div class="cd-prop" data-cdrow="${i}"><span class="cd-grip" draggable="true" data-cdgrip="${i}" title="Drag to reorder">${GRIP_SVG}</span>${nameEl}${valEl}</div>`;};
-  // Preset chip field (B148) — label + a wrapping field of chips and an add control. dmgmod/passives pick from
-  // a custom dropdown; skills keep the datalist combobox. Passive chips derive proficiency from the Skills field.
+  // Preset chip field (B148) — label + a wrapping field of chips and an add control. dmgmod/passives/skills
+  // pick from custom dropdowns. Passive chips derive proficiency from the Skills field.
   const presetRow=(f,i)=>{const arr=Array.isArray(f.v)?f.v:[];
     const chips=arr.map((e,j)=>f.k==="dmgmod"?dmgChipHTML(e,j):f.k==="passives"?passiveChipHTML(c,e,j):(f.k==="class"||f.k==="subclass")?plainChipHTML(e,j):skillChipHTML(c,e,j)).join("");
     const addAttr=f.k==="dmgmod"?"data-cddmgadd":f.k==="passives"?"data-cdpassadd":f.k==="class"?"data-cdclassadd":f.k==="subclass"?"data-cdsubadd":"data-cdskilladd";
