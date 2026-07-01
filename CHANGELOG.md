@@ -4,6 +4,33 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 243 — replace JSONBin with Firebase Realtime Database
+- **Cloud storage moved off JSONBin entirely.** Its single hardcoded master key (shared across every
+  install) hit the account's request quota — "Requests exhausted" — which took down cloud saves and combat
+  sharing everywhere at once, locally and on the deployed site, for everyone, simultaneously. Firebase RTDB's
+  client key is *designed* to be public (security comes from server-side rules, not key secrecy), which is
+  the correct model for a no-backend static site, not a stopgap.
+- `jbinGet`/`jbinSet` (library/adventures/roster) now read/write `installs/<per-device-id>/<key>` on the RTDB
+  REST API — same function names/signatures as before, so no call sites elsewhere needed to change. Same
+  local-mirror-first / retry-on-429-5xx / dirty-flag behavior. The per-device id replaces JSONBin's
+  bin-id-per-key scheme; generated once, persisted in `localStorage`.
+- `jbinSetPublic`/`jbinDeletePublic`/`jbinReadBin` (combat share + player write-back) move to `shares/<id>`,
+  with ids generated client-side instead of server-assigned.
+- **The player-edit "Access Key" setting (B203) is gone.** Firebase's open-rule write path means any
+  player's phone can already write to its own share bin — there was nothing left for a pasted JSONBin Access
+  Key to gate. Removed the Settings → Combat key field and `settings.combat.playerEditKey`; the share
+  dialog's Player Editing Off/On toggle now works standalone, no setup step.
+- Verified live against the real database: save/load round-trip, share start/stop, and player-editing-on all
+  confirmed working end to end (`jbinGet` needed an explicit `cache:"no-store"` — without it, a save
+  immediately followed by a read intermittently served a stale/cached empty response).
+
+## Batch 242 — disambiguate the Slow weapon-mastery vs Slow spell effect chip
+- Both are named "Slow" in 5e 2024 canon (a real name collision, not a data bug), and the add-effect picker
+  only stored a bare name, so the condition chip's definition popover always showed the weapon mastery's
+  rules text even when the spell was picked from the list. The picker now tags mastery/spell items with
+  their group (`data-eg`) and carries it onto the condition record (`c.effGroup`); `findCuratedEffect` prefers
+  an exact name+group match and falls back to name-only for conditions saved before this existed.
+
 ## Batch 241 — playtesting fixes: party chips, adventure-list crumb, multi-damage attacks, Slow spell
 - **Party-roster chip cluster no longer clips before it needs to.** `.pc-chips` was `flex:1 100 30px` — a
   30px basis with a 100x shrink factor absorbs almost all of any shrinkage instantly, crushing the chips to a
