@@ -18,7 +18,7 @@ const SETTINGS_DEFAULT={
   homebrew:{gritMin:false}, // grit: damage rolls deal at least their pre-crit maximum (B65)
   notes:{adventure:true,scene:true,encounter:true}, // include a notes field on newly-created items (B65)
   refPopovers:{on:true}, // hover/click definition popovers for spells & conditions (rule finder ignores this) (B68)
-  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true,downMode:"players",playerEditKey:""}, // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117); who drops to "down"/death-saves at 0 HP vs straight to dead — players|anyone|nobody (B126); playerEditKey = limited JSONBin Access Key (Read+Update) that lets shared-initiative players write edits back (B203, on-device only)
+  combat:{hpMode:"rolled",initMode:"roll",dexTiebreak:true,partyHP:true,groupInit:true,rollParty:true,downMode:"players"}, // Combat Tracker: roll vs average HP; roll vs average initiative; init DEX tiebreak; track party HP; share one init across an identical-monster group (B116); auto-roll party initiative or leave blank for manual entry (B117); who drops to "down"/death-saves at 0 HP vs straight to dead — players|anyone|nobody (B126)
   dice3d:{material:"stone",color:"#e2654d",edges:"sharp"} // 3D dice look (B215): material preset (stone|default|metal|crystal|ceramic), brand colour (ignored by stone/crystal — baked), sharp|round cube edges
 };
 function _mergeDefaults(def,got){const o=Array.isArray(def)?[]:{};for(const k in def){const dv=def[k],gv=got?got[k]:undefined;o[k]=(dv&&typeof dv==="object"&&!Array.isArray(dv))?_mergeDefaults(dv,gv&&typeof gv==="object"?gv:{}):(gv===undefined?dv:gv);}return o;}
@@ -106,15 +106,19 @@ function presetLibraries(){const map={};
   return Object.values(map).map(e=>({name:e.name,kind:e.kind,count:e.count,book:dom(e.books),group:dom(e.groups),enabled:isLibEnabled(e.kind,e.name)}));}
 const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions",rule:"Rules"};
 
-// ── JSONBin cloud storage ─────────────────────────────────────────────────────
-// Personal-use master key (full CRUD). The previous value was a read-only ACCESS key,
-// which is why every create/write returned 401 "Invalid X-Master-Key".
-const JBIN_KEY="$2a$10$O99keLRG2gcLv9rw7bX1KOacdL.mv/OuBSrg2m6FqHf3k2CTBG3KK";
-const JBIN_BASE="https://api.jsonbin.io/v3";
-const JBIN_HEADERS={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"true"};
-// Bin IDs are created on first save and persisted in localStorage as a cheap lookup table
-function getBinId(k){return localStorage.getItem("mf_bin:"+k)||null;}
-function setBinId(k,id){localStorage.setItem("mf_bin:"+k,id);}
+// ── Firebase Realtime Database cloud storage (B243 — replaces JSONBin) ────────
+// JSONBin used a single hardcoded MASTER key baked into public source for every install to share — which
+// is exactly what a stranger (or just heavy personal use) can exhaust, taking every install down at once
+// (that's what happened: "Requests exhausted" on the shared free-tier key). Firebase RTDB's client key is
+// DESIGNED to be public; access is controlled by server-side rules, not by keeping the key secret, so this
+// is the correct model for a no-backend static site, not just a workaround. The DB has open read/write rules
+// under three namespaces (see FB_BASE) — the same trust model JSONBin had (an unguessable random id is the
+// only real protection), just no exhaustible shared quota under normal personal use.
+const FB_BASE="https://monster-forge-da7e4-default-rtdb.europe-west1.firebasedatabase.app";
+// Per-installation private namespace: generated once, persisted in localStorage — the Firebase equivalent
+// of JSONBin's per-key bin id, but a single id covers all three library datasets (monsters/adventures/party).
+function fbInstallId(){let id=localStorage.getItem("mf_fbid");if(!id){id=uid()+uid();localStorage.setItem("mf_fbid",id);}return id;}
+function fbLibPath(k){return `installs/${fbInstallId()}/${String(k).replace(/^library:/,"")}`;}
 // Local mirror: every save is written here first so work survives a cloud outage or a
 // cleared/empty bin. On load we hydrate from this instantly, then reconcile with the cloud.
 function cacheGet(k){try{return JSON.parse(localStorage.getItem("mf_cache:"+k));}catch(e){return null;}}
@@ -137,63 +141,40 @@ async function jbinFetch(url,opts,tries=3){
   }
   return null;
 }
-// returns {ok:true,record} on success, {ok:true,record:null,noBin:true} when no bin exists
-// yet, {ok:false} when the cloud was unreachable (so callers never confuse "empty" with "down")
+// returns {ok:true,record} on success, {ok:true,record:null,noBin:true} when the path is empty
+// (never written), {ok:false} when the cloud was unreachable (so callers never confuse "empty" with "down")
 async function jbinGet(k){
-  const id=getBinId(k);
-  if(!id)return {ok:true,record:null,noBin:true};
-  const r=await jbinFetch(`${JBIN_BASE}/b/${id}/latest`,{headers:{"X-Master-Key":JBIN_KEY}});
+  const r=await jbinFetch(`${FB_BASE}/${fbLibPath(k)}.json`,{cache:"no-store"});
   if(!r||!r.ok)return {ok:false};
-  try{const d=await r.json();return {ok:true,record:d.record};}catch(e){return {ok:false};}
+  try{const d=await r.json();return {ok:true,record:d,noBin:d==null};}catch(e){return {ok:false};}
 }
 // returns true on a confirmed write, false otherwise
 async function jbinSet(k,val){
   // Dev seed sandbox (seed.js): never write the local test data to the real cloud bin.
   if(typeof window!=="undefined"&&window.__MF_SEED)return true;
-  const id=getBinId(k);
-  // JSONBin rejects an empty bin ("Bin cannot be blank", HTTP 400), so an empty library/adventure
-  // list can't be PUT. Treat "empty" as "delete the bin": loadAll reads a missing bin (noBin) as
-  // empty and keeps the local mirror, and the next non-empty save recreates the bin via POST.
-  if(isBlankVal(val)){
-    if(!id)return true; // nothing stored yet — already in sync
-    const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"DELETE",headers:{"X-Master-Key":JBIN_KEY}});
-    if(r&&(r.ok||r.status===404)){localStorage.removeItem("mf_bin:"+k);return true;}
-    return false;
-  }
-  if(id){
-    const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers:JBIN_HEADERS,body:JSON.stringify(val)});
-    return !!(r&&r.ok);
-  }
-  const r=await jbinFetch(`${JBIN_BASE}/b`,{method:"POST",headers:{...JBIN_HEADERS,"X-Bin-Name":k},body:JSON.stringify(val)});
-  if(r&&r.ok){try{const d=await r.json();setBinId(k,d.metadata.id);return true;}catch(e){return false;}}
-  return false;
+  const r=await jbinFetch(`${FB_BASE}/${fbLibPath(k)}.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val==null?null:val)});
+  return !!(r&&r.ok);
 }
-function isBlankVal(val){return val==null||(Array.isArray(val)?val.length===0:(typeof val==="object"&&Object.keys(val).length===0));}
 
-// ── Public share bins (combat initiative for players — B202) ──────────────────
-// Unlike the private library/adventure bins, these are created PUBLIC (X-Bin-Private:false) so a player's
-// phone can read them with just the bin id and NO key — the embedded master key never leaves the DM's app.
-// They hold ONLY the sanitized combat snapshot (no monster stats, no other campaign data). Create once via
-// POST (privacy is fixed at creation), then PUT to update content; DELETE kills the share link.
-// Returns the bin id on success (the passed id for an update, a new id for a create), null otherwise.
+// ── Public share paths (combat initiative for players — B202) ─────────────────
+// Read/write-back state lives under open-rule paths so a player's phone can hit them directly with a plain
+// fetch, no key at all — this is what let B203's "player edit key" setting go away (B243): Firebase's open
+// rules already make writes from any device possible, so there's nothing left for a pasted key to gate.
+// Returns the id on success (the passed id for an update, a freshly generated one for a create), null otherwise.
 async function jbinSetPublic(id,val){
-  // No seed-sandbox guard here (unlike jbinSet): a share bin is a separate, ephemeral, user-initiated public
-  // bin — never the library/adventure data — so it's safe to publish for real even from the local sandbox,
-  // which lets the player link actually work while testing. Stopping the share deletes the bin.
-  const headers={"Content-Type":"application/json","X-Master-Key":JBIN_KEY,"X-Bin-Private":"false"};
-  if(id){const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"PUT",headers,body:JSON.stringify(val)});return (r&&r.ok)?id:null;}
-  const r=await jbinFetch(`${JBIN_BASE}/b`,{method:"POST",headers,body:JSON.stringify(val)});
-  if(r&&r.ok){try{const d=await r.json();return d.metadata.id;}catch(e){return null;}}
-  return null;
+  id=id||(uid()+uid());
+  const r=await jbinFetch(`${FB_BASE}/shares/${id}.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});
+  return (r&&r.ok)?id:null;
 }
 async function jbinDeletePublic(id){if(!id)return true;
-  const r=await jbinFetch(`${JBIN_BASE}/b/${id}`,{method:"DELETE",headers:{"X-Master-Key":JBIN_KEY}});
-  return !!(r&&(r.ok||r.status===404));}
+  const r=await jbinFetch(`${FB_BASE}/shares/${id}.json`,{method:"DELETE"});
+  return !!(r&&r.ok);}
 // Read a public bin's record by raw id, no auth + cache-busted — used by the DM app to poll the player
-// write-back bin (B203). Returns the record, or null if unreachable/missing.
+// write-back bin (B203) and by players polling the DM's read snapshot. Returns the record, or null if
+// unreachable/missing.
 async function jbinReadBin(id){if(!id)return null;
-  const r=await jbinFetch(`${JBIN_BASE}/b/${id}/latest?t=${Date.now()}`,{cache:"no-store"});
-  if(!r||!r.ok)return null;try{const d=await r.json();return d.record;}catch(e){return null;}}
+  const r=await jbinFetch(`${FB_BASE}/shares/${id}.json?t=${Date.now()}`,{cache:"no-store"});
+  if(!r||!r.ok)return null;try{return await r.json();}catch(e){return null;}}
 
 async function loadAll(){
   // 1. instant hydrate from the local mirror so the UI is never empty while the cloud loads
@@ -208,7 +189,7 @@ async function loadAll(){
     if(isDirty()){
       // we have unsynced local edits — push them up rather than letting the cloud overwrite them
       const ok1=await jbinSet("library:monsters",state.lib),ok2=await jbinSet("library:adventures",state.adv);
-      if(state.roster.length||getBinId("library:party"))await jbinSet("library:party",state.roster);
+      await jbinSet("library:party",state.roster);
       if(ok1&&ok2)setDirty(false);
     } else {
       // cloud is authoritative; only adopt it when a bin actually exists (else keep cache)

@@ -1064,7 +1064,6 @@ function combatShareId(){const k=combatShareKey();return k?localStorage.getItem(
 function combatShareOn(){return !!combatShareId();}
 function combatShareWbId(){const ctx=loadedCtx();return ctx?localStorage.getItem("mf_sharewb:"+ctx.e.id):null;}
 function combatShareMode(){const ctx=loadedCtx();return (ctx&&localStorage.getItem("mf_sharemode:"+ctx.e.id))||"off";}
-function playerEditKey(){return ((state.settings.combat&&state.settings.combat.playerEditKey)||"").trim();}
 // Per-share enemy options (B204 stage 5): showBloodied = enemies show a health band (off ⇒ no HP info at
 // all); enemyConds = players may edit enemy conditions (routing matches the PC mode). Stored per encounter.
 function shareOpts(){const ctx=loadedCtx(),def={showBloodied:true,enemyConds:false,showDice:false};if(!ctx)return def;
@@ -1079,7 +1078,7 @@ function hpBand(it){if(it.hpMax==null)return null;if(it.hpCur<=0)return "down";c
 // live, editable PC rows carry their instance id and the snapshot carries edit/wbin/wkey so phones can write.
 function buildCombatShareSnapshot(cb){
   const list=[];let turn=-1;
-  const mode=combatShareMode(),editing=mode!=="off"&&!!combatShareWbId()&&!!playerEditKey();
+  const mode=combatShareMode(),editing=mode!=="off"&&!!combatShareWbId();
   cb.order.forEach((it,i)=>{
     if(it.kind==="event")return; // lair/timing cues — DM-only
     if(it.status==="waiting")return; // waiting combatants are hidden from players (B237)
@@ -1097,7 +1096,7 @@ function buildCombatShareSnapshot(cb){
   });
   const opts=shareOpts();
   const snap={v:1,round:cb.round,turn,updated:Date.now(),order:list};
-  if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.wkey=playerEditKey();snap.enemyConds=!!opts.enemyConds;}
+  if(editing){snap.edit=mode;snap.wbin=combatShareWbId();snap.enemyConds=!!opts.enemyConds;}
   // Richer payload for the in-app player mode (B204): the real tracker renders from this. Full PC instances
   // (minus the DM note) + obscured enemy instances (faction label + band, no statblock/HP). Events dropped.
   const porder=[];let pturn=0;
@@ -1145,8 +1144,8 @@ async function publishCombatShareNow(){
 async function startCombatShare(){
   const ctx=loadedCtx();if(!ctx||!ctx.e.combat){toast("Load an encounter first.");return null;}
   const encId=ctx.e.id;
-  // An edit mode selected (and a key present) → create the write-back bin FIRST so the snapshot can carry it.
-  if(combatShareMode()!=="off"&&playerEditKey()&&!localStorage.getItem("mf_sharewb:"+encId)){
+  // An edit mode selected → create the write-back bin FIRST so the snapshot can carry it.
+  if(combatShareMode()!=="off"&&!localStorage.getItem("mf_sharewb:"+encId)){
     const wb=await jbinSetPublic(null,{v:1,edits:{}});if(wb)localStorage.setItem("mf_sharewb:"+encId,wb);
   }
   const id=await jbinSetPublic(null,buildCombatShareSnapshot(ctx.e.combat));
@@ -1169,7 +1168,7 @@ async function setShareEditMode(mode){
   if(mode==="off"){
     stopSharePoll();_shareSuggest.clear();
     const wid=localStorage.getItem("mf_sharewb:"+encId);localStorage.removeItem("mf_sharewb:"+encId);if(wid)await jbinDeletePublic(wid);
-  }else if(playerEditKey()){
+  }else{
     if(!localStorage.getItem("mf_sharewb:"+encId)){const wb=await jbinSetPublic(null,{v:1,edits:{}});if(wb)localStorage.setItem("mf_sharewb:"+encId,wb);}
     if(mode!=="suggest")_shareSuggest.clear();
     startSharePoll();
@@ -1271,14 +1270,14 @@ function suggestDesc(s){if(s.isChar)return "updated their character sheet";const
   if(e.temp!=null)parts.push("temp "+e.temp);
   if(Array.isArray(e.conds))parts.push("conditions: "+(e.conds.length?e.conds.join(", "):"none"));
   return parts.join(" · ")||"edit";}
-// The player-editing picker (segmented Off/Suggest/Own/All) — shown in both share-dialog states; the modes
-// are disabled with a setup hint until a player-edit key is set in Settings.
+// The player-editing picker (segmented Off/On) — shown in both share-dialog states. No setup key needed
+// (B243): Firebase's open-rule write path means any device can write to its own share, so there's nothing
+// left to gate the toggle on.
 function shareEditPickerHTML(){
-  const hasKey=!!playerEditKey(),on=combatShareMode()!=="off";
+  const on=combatShareMode()!=="off";
   const seg=`<button type="button" class="seg-btn${!on?" on":""}" data-emode="off">Off</button>`+
-    `<button type="button" class="seg-btn${on?" on":""}" data-emode="own"${hasKey?"":" disabled"}>On</button>`;
-  const hint=!hasKey?`Add a <b>player edit key</b> in Settings → Combat to let players edit.`
-    :!on?`Players can only watch (read-only).`
+    `<button type="button" class="seg-btn${on?" on":""}" data-emode="own">On</button>`;
+  const hint=!on?`Players can only watch (read-only).`
     :`Each player claims their character and can edit its HP, conditions &amp; sheet (and roll), live.`;
   return `<div class="share-edit">
     <div class="share-edit-h">Player editing</div>
@@ -1288,7 +1287,7 @@ function shareEditPickerHTML(){
 }
 // Two enemy toggles (B204 stage 5): show health bands; let players edit enemy conditions (needs an edit mode).
 function shareTogglesHTML(){
-  const o=shareOpts(),editing=!!playerEditKey()&&combatShareMode()!=="off";
+  const o=shareOpts(),editing=combatShareMode()!=="off";
   const tog=(opt,label,on,disabled)=>`<label class="share-tog${disabled?" dim":""}"><span class="share-tog-l">${label}</span><span class="switch"><input type="checkbox" data-shareopt="${opt}" ${on?"checked":""} ${disabled?"disabled":""}><span class="sl"></span></span></label>`;
   return `<div class="share-toggles">
     ${tog("showBloodied","Show enemy health (bloodied bands)",o.showBloodied,false)}
@@ -1373,7 +1372,7 @@ function openShareQR(url){
 // short-circuit locally (see pmQueueWrite) so edits show optimistically without needing a real bin.
 function stashPreviewSnap(){const ctx=loadedCtx();if(!ctx||!ctx.e.combat)return;
   const snap=buildCombatShareSnapshot(ctx.e.combat),mode=combatShareMode();
-  if(mode!=="off"){snap.edit=mode;snap.wbin="__preview__";snap.wkey="__preview__";snap.enemyConds=!!shareOpts().enemyConds;}
+  if(mode!=="off"){snap.edit=mode;snap.wbin="__preview__";snap.enemyConds=!!shareOpts().enemyConds;}
   try{localStorage.setItem("mf_previewsnap",JSON.stringify(snap));}catch(e){}}
 async function initPlayerMode(bin){
   PLAYER_MODE=true;PLAYER_BIN=bin;
@@ -1399,7 +1398,7 @@ async function initPlayerMode(bin){
 // Build a one-adventure / one-encounter synthetic state from the shared payload so the real renderer works.
 function hydratePlayerCombat(rec){
   const c=rec.combat;
-  state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmWkey=rec.wkey||null;state.__pmEnemyConds=!!rec.enemyConds;
+  state.__pmEdit=rec.edit||"off";state.__pmWbin=rec.wbin||null;state.__pmEnemyConds=!!rec.enemyConds;
   state.__pmDiceOn=!!rec.diceOn; // DM's "show dice to players" toggle (B234)
   state.adv=[{id:"share",name:"",color:null,archived:false,scenes:[],party:[],
     encounters:[{id:"enc",name:(c.name&&c.name.trim())||"Initiative",archived:false,sceneId:null,combatants:[],notes:"",notesOn:false,
@@ -1450,9 +1449,9 @@ function playerClaimId(){try{return PLAYER_BIN?localStorage.getItem("mf_claim:"+
 function setPlayerClaim(id){try{id?localStorage.setItem("mf_claim:"+PLAYER_BIN,id):localStorage.removeItem("mf_claim:"+PLAYER_BIN);}catch(e){}}
 // Editing is own-PC-only now (B213 — simplified to Off/On): a player may edit only their claimed character.
 function playerCanEdit(it){if(!PLAYER_MODE||!it||it.kind!=="pc")return false;
-  if(playerEditMode()==="off"||!state.__pmWbin||!state.__pmWkey)return false;return it.id===playerClaimId();}
+  if(playerEditMode()==="off"||!state.__pmWbin)return false;return it.id===playerClaimId();}
 // Enemy CONDITIONS-only editing (B204 stage 5): any obscured combatant when the DM enabled it + editing on.
-function playerEnemyCondsEditable(it){return !!(PLAYER_MODE&&it&&it.kind!=="pc"&&it.kind!=="event"&&state.__pmEnemyConds&&playerEditMode()!=="off"&&state.__pmWbin&&state.__pmWkey);}
+function playerEnemyCondsEditable(it){return !!(PLAYER_MODE&&it&&it.kind!=="pc"&&it.kind!=="event"&&state.__pmEnemyConds&&playerEditMode()!=="off"&&state.__pmWbin);}
 // Phantom-input guard (B213): conditions may be edited on a player's own PC, or on enemies when permitted.
 function playerCondAllowed(it){return !PLAYER_MODE||playerCanEdit(it)||playerEnemyCondsEditable(it);}
 // The editable slice of a combat instance + equality, for diffing against the DM's snapshot.
@@ -1470,10 +1469,10 @@ function playerScheduleEdits(){if(!PLAYER_MODE)return;clearTimeout(_pmPushTimer)
 // Serialize every player write-back (edits + rolls) through one read-modify-write queue so concurrent
 // pushes can't clobber each other's slice of the bin.
 function pmQueueWrite(mutate){
-  const wbin=state.__pmWbin,wkey=state.__pmWkey;if(!wbin||!wkey)return Promise.resolve();
+  const wbin=state.__pmWbin;if(!wbin)return Promise.resolve();
   if(wbin==="__preview__")return Promise.resolve(); // local preview — edits stay optimistic, no network write
   _pmWrite=_pmWrite.then(async()=>{const rec=(await jbinReadBin(wbin))||{v:1,edits:{}};mutate(rec);
-    try{await fetch(`${JBIN_BASE}/b/${wbin}`,{method:"PUT",headers:{"Content-Type":"application/json","X-Access-Key":wkey},body:JSON.stringify(rec)});}catch(e){}}).catch(()=>{});
+    await jbinSetPublic(wbin,rec);}).catch(()=>{});
   return _pmWrite;
 }
 function playerPushEdits(){
