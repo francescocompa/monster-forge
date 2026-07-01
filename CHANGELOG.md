@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 253 — mobile fixes: roll-log double-open on tap, first roll now 3D
+- **Tapping the roll-log pill/icon no longer opens both the log and the hover-preview at once.** On touch a
+  tap synthesizes a `mouseenter` alongside the `click`, so the pill's hover-preview and the open-log action
+  both fired. `bindRollLog`'s `popHover` now only binds the preview on a real hovering pointer
+  (`matchMedia("(hover:hover) and (pointer:fine)")`); on touch the tap just opens the log. Desktop hover
+  preview is unchanged. Verified both ways in the preview.
+- **The first roll of a session now renders in 3D too.** B251 loaded the 3D libs lazily and let the first
+  roll (before the load finished) fall back to the 2D toast — visible on touch, where there's no hover to
+  preload. `rollDice3D` now, when the libs aren't in yet, loads them and REPLAYS that roll in 3D once ready
+  (returning true to suppress the caller's 2D toast; if the load fails it restores the toast). Rolls with no
+  dice (flat modifiers) still return false and keep their toast. Verified: a cold first roll returns true and
+  renders in 3D after the async load.
+
 ## Batch 252 — audit P3s: dead-code sweep, combat ingestion tests, crypto ids, player-mode flush gate
 - **Removed 13 confirmed-dead JS globals** (each referenced only at its own declaration; features they
   duplicated are wired independently, verified): `dlFor`, `presetSources` (core.js); `setDeathSave`,

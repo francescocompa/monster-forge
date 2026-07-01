@@ -863,7 +863,10 @@ function rollLogHTML(ctx){
 function bindRollLog(el,scrollNew,ctx){
   ctx=ctx||{};
   const last=rollLog[0];
-  const popHover=anchor=>{if(!last)return;anchor.addEventListener("mouseenter",()=>showRollPopover(anchor));anchor.addEventListener("mouseleave",()=>{if(typeof closePopover==="function")closePopover();});};
+  // Only wire the hover-preview on a real hovering pointer. On touch a tap synthesizes mouseenter alongside
+  // the click, so binding it there popped BOTH the preview popover AND the log/menu at once (mobile bug).
+  let canHover=true;try{canHover=matchMedia("(hover:hover) and (pointer:fine)").matches;}catch(e){}
+  const popHover=anchor=>{if(!last||!canHover)return;anchor.addEventListener("mouseenter",()=>showRollPopover(anchor));anchor.addEventListener("mouseleave",()=>{if(typeof closePopover==="function")closePopover();});};
   // Mini rail → the icon opens the menu; hover shows the full last roll.
   const icon=el.querySelector("#rlIcon");
   if(icon){icon.addEventListener("click",e=>{e.stopPropagation();openRollLogMenu(icon);});popHover(icon);return;}

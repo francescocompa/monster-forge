@@ -613,12 +613,22 @@ function d3dLaunchWave(plan, R){
 // in after wave 1 lands (the alert waits for them). Returns true if it took over the notification (skip toast).
 function rollDice3D(desc){
   try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false; } catch (e) {}
-  // Libs not in yet (jsdom, or the first roll before the lazy load finished): kick off the load so the NEXT
-  // roll is 3D, and let this one fall back to doRoll's 2D toast (return false). Desktop hover usually preloads
-  // first, so this fallback rarely fires there. Gated behind clickRoll so we never fetch 724KB when rolling
-  // is off; reduced-motion already returned above.
-  if (!d3dLibsReady()){ if (typeof clickRollOn !== "function" || clickRollOn()) d3dLoadLibs(); return false; }
-  const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;
+  const plan = d3dParse(desc && desc.parts); if (!plan.length) return false;   // no dice to render → let the caller's toast show
+  // Libs not in yet (jsdom, or the first roll before the lazy load finished). Rather than dropping this roll
+  // to a 2D toast, load the libs and REPLAY it in 3D once they're in, so no roll is ever 2D-only — including
+  // the first tap on touch, where there's no hover to preload. We return true to suppress the caller's toast
+  // (the 3D result card provides the feedback shortly); if the load fails we restore that notification here.
+  // Gated behind clickRoll so we never fetch 724KB when rolling is off; reduced-motion already returned above.
+  if (!d3dLibsReady()){
+    if (typeof clickRollOn === "function" && !clickRollOn()) return false;   // rolling off → no fetch, no 3D
+    d3dLoadLibs().then(ok => {
+      if (ok && d3dLibsReady()) { rollDice3D(desc); return; }
+      const d = desc || {};                                                   // load failed → show the toast we suppressed
+      const txt = d.msg || (typeof naturalRollText === "function" ? naturalRollText(d.label, d.type, d.total, d.dmgType, d.abil) : null);
+      if (txt && typeof toast === "function") toast(txt, d.msg ? 3600 : 3200, true);
+    });
+    return true;
+  }
   if (!d3dEnsure()) return false;
   d3dClear(); d3dClearHeld();                  // the held cursor-die (if any) launches into this roll
   const wave2 = (desc && desc.wave2) ? d3dParse(desc.wave2) : [];   // crit extra dice — second wave (B228)
