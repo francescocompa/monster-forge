@@ -1329,8 +1329,12 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .cc-dur{font-size:9.5px;font-weight:700;background:rgba(180,140,230,.22);color:#d6c2ef;border-radius:8px;padding:0 5px;font-variant-numeric:tabular-nums}
 .cc-x{background:none;border:none;color:var(--faint);font-size:13px;line-height:1;padding:0;cursor:pointer;display:inline-grid;place-items:center}
 .cc-x:hover{color:var(--bad)}
-.ci-addcond{flex:none;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:13px;font-size:11px;line-height:1;padding:3px 9px;cursor:pointer}
+.ci-addcond{flex:none;border:1px dashed var(--line);background:none;color:var(--faint);border-radius:13px;font-size:11px;line-height:1;padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
 .ci-addcond:hover{border-color:var(--accent);color:var(--txt)}
+/* Tap-target floor (B254, audit P3): the init-row chip cluster was 19–23px tall on mobile — under the
+   WCAG-AA 24px minimum, the add-effect (+) worst at 19px. A shared min-height lifts them clear and keeps
+   the row aligned (siblings already flex-centre; .ci-addcond centres via the rule above). */
+.ci-meta .ci-addcond,.ci-meta .cc-chip,.ci-meta .ci-ac-chip,.ci-meta .ci-react-chip,.ci-meta .ci-conc-chip,.ci-meta .ci-react-ind,.ci-meta .ci-conc-ind{min-height:26px;box-sizing:border-box}
 .ca-noteedit{flex:none;border:none;background:none;color:var(--faint);cursor:pointer;padding:4px;display:grid;place-items:center;border-radius:5px}
 .ca-noteedit:hover{color:var(--accent-soft);background:var(--panel2)}
 .ca-noteedit svg{display:block}

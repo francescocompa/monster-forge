@@ -166,11 +166,11 @@ Verified live at 375 / 768 / 1280 px with a populated combat (the newest/densest
 - **Keyboard/focus:** the combat controls are real `<button>`s (focusable, keyboard-reachable), and the
   add-effect button carries an `aria-label`. `aria-label`/`aria-hidden`/`aria-pressed` are used across
   combat/adventures/roster; `prefers-reduced-motion` honored (CSS 5 + dice3d 2).
-- **P3 — tap targets:** measured on mobile (375 px). Most combat controls are 26–32 px — above the 24 px
-  WCAG-AA minimum but below the 44 px comfort target. The one outlier is the row **add-effect (`+`)
-  button at 31×19 px** — its 19 px height is below the AA 24 px minimum and is the fiddliest to tap. A
-  small `min-height` bump would fix it. (The author reports touch overall "feels good," so this is a
-  refinement, not a blocker — and a sizing/feel change is theirs to greenlight.)
+- **Tap targets (fixed B254):** measured on mobile (375 px). The row chip cluster was 19–23 px tall —
+  under the WCAG-AA 24 px minimum, the add-effect (`+`) worst at 31×19 px. Gave the cluster a shared
+  26 px min-height so every chip clears AA and the row stays aligned; verified live (all chips 26 px).
+  Other controls (kebab 26, HP button 28, turn FABs 32) clear AA but sit below the 44 px comfort target —
+  acceptable for this dense tracker; the author reports touch "feels good."
 
 ---
 
@@ -187,7 +187,7 @@ Verified live at 375 / 768 / 1280 px with a populated combat (the newest/densest
 | P3 | Add `combat.test.js` around the ingestion boundary | test/ | **fixed in B252** |
 | P3 | `crypto.getRandomValues` for new install/share ids | core.js | **fixed in B252** |
 | P3 | Roll-log double-open + first-roll-2D on touch | engine.js, dice3d.js | **fixed in B253** |
-| P3 | Bump the row add-effect (`+`) tap target (19 px tall) | styles.css | open — awaiting greenlight |
+| P3 | Bump the row add-effect (`+`) tap target (19 px tall) | styles.css | **fixed in B254** |
 
 ## 6. Phone checklist (only your device can confirm)
 - 3D dice FPS with 20 dice on a real phone (headless can't measure rAF).

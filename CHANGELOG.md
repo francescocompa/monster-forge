@@ -4,6 +4,12 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 254 — bump the combat init-row chip tap targets (audit P3)
+- The init-row chip cluster (AC, reaction, concentration, add-effect) was 19–23px tall on mobile, under the
+  WCAG-AA 24px minimum — the add-effect `+` worst at 19px. Gave the cluster a shared 26px min-height
+  (`.ci-meta` chips + flex-centred `.ci-addcond`) so every chip clears AA and the row stays aligned. Verified
+  live at 375px: all chips 26px. Layout otherwise unchanged.
+
 ## Batch 253 — mobile fixes: roll-log double-open on tap, first roll now 3D
 - **Tapping the roll-log pill/icon no longer opens both the log and the hover-preview at once.** On touch a
   tap synthesizes a `mouseenter` alongside the `click`, so the pill's hover-preview and the open-log action
