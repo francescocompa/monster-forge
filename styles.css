@@ -483,7 +483,7 @@ select::-ms-expand{display:none}
   --dim:color-mix(in srgb,var(--sel-accent) 15%,#c4c7cd);
   --faint:color-mix(in srgb,var(--sel-accent) 15%,#8c9099);
 }
-.enc.focused .start-combat{background:var(--brand)}.enc.focused .start-combat:hover{background:var(--brand);filter:brightness(1.1)}
+.enc.focused .start-combat,.enc.focused .start-combat-more{background:var(--brand)}.enc.focused .start-combat:hover,.enc.focused .start-combat-more:hover{background:var(--brand);filter:brightness(1.1)}
 /* B24: collapsible main build blocks. No layout shift — fieldset top padding is
    unchanged; collapsing only hides the body and zeroes the title's bottom margin. */
 .fs-title.fs-clickable{cursor:pointer}
@@ -1400,9 +1400,16 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .start-combat{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;border:none;background:var(--accent);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600}
 .start-combat:hover{background:var(--accent-hover)}
 .start-combat svg{width:18px;height:18px;flex:none}
+/* Resume's dropdown chevron (B246 — End combat / Reset & restart): a split-button look, only present while
+   a combat is live (the wrap always renders, the chevron is conditional, so plain "Start combat" is unaffected). */
+.start-combat-wrap{flex:none;display:flex;align-items:stretch}
+.start-combat-wrap .start-combat.resume{border-radius:var(--r) 0 0 var(--r)}
+.start-combat-more{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;border:none;border-left:1px solid rgba(0,0,0,.28);background:var(--accent);color:#fff;border-radius:0 var(--r) var(--r) 0;cursor:pointer}
+.start-combat-more:hover{background:var(--accent-hover)}
+.start-combat-more svg{width:10px;height:10px}
 /* Collapse to an icon-only square when the encounter card is narrow (container query on .enc). */
 .enc{container-type:inline-size}
-@container (max-width:360px){.enc .start-combat .sc-label{display:none}.enc .start-combat{width:38px;padding:0}}
+@container (max-width:360px){.enc .start-combat .sc-label{display:none}.enc .start-combat{width:38px;padding:0}.enc .start-combat.resume{width:auto}}
 .combat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:60vh;text-align:center;color:var(--dim)}
 .combat-empty .ce-icon{width:54px;height:54px;color:var(--accent-soft);opacity:.55}
 .combat-empty .ce-icon svg{width:100%;height:100%}

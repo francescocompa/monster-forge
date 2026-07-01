@@ -201,7 +201,7 @@ function startCombat(a,e){
   e.combatants.forEach(c=>{const n=combatBaseName(c),cnt=Math.max(1,Number(c.count||1));order.push(...combatantInstances(c,totals[n],offs[n]||0));offs[n]=(offs[n]||0)+cnt;});
   (a.party||[]).forEach(rid=>{const inst=pcInstance(rid);if(inst)order.push(inst);});
   sortInitiative(order);
-  e.combat={active:true,round:1,turnIndex:0,order};saveAdv();
+  e.combat={round:1,turnIndex:0,order};saveAdv();
 }
 // Live-update (CT7b note 4): pull any encounter combatant / party member not yet in the order into the
 // running combat (rolling init/HP), re-sorting while keeping whose turn it is. Returns true if changed.
@@ -214,7 +214,7 @@ function syncCombatOrder(a,e){const cb=e.combat;if(!cb)return false;
 }
 // Refresh after a combatant is added to an encounter — updates the adventures list and, if that
 // encounter's combat is live, syncs the order + re-renders the tracker.
-function afterCombatantAdded(a,e){saveAdv();if(e.combat&&e.combat.active){syncCombatOrder(a,e);renderCombat();}renderEncList(a);}
+function afterCombatantAdded(a,e){saveAdv();if(e.combat){syncCombatOrder(a,e);renderCombat();}renderEncList(a);}
 function partyHPOn(){return !state.settings.combat||state.settings.combat.partyHP!==false;}
 // Whether an instance's HP is tracked/shown (party HP can be disabled in Settings — CT7b).
 function hpTracked(it){return it.hpMax!=null&&!(it.kind==="pc"&&!partyHPOn());}
@@ -254,7 +254,7 @@ let combatRolling=false; // transient: show the "Rolling initiative…" flourish
 let _caPeekId=null; // last previewed (peeked) combatant id — the peek only animates when this changes (B128)
 function runCombat(a,e){
   combatCtx={advId:a.id,encId:e.id};persistCombatCtx();
-  const fresh=!e.combat||!e.combat.active;
+  const fresh=!e.combat;
   if(fresh){
     if(!e.combatants.some(c=>c.type!=="event")&&!a.party.length){toast("Add combatants or party members first.");return;}
     startCombat(a,e);
@@ -509,12 +509,23 @@ function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.
   if(combatView(cb).sort==="init"){const cur=cb.order[cb.turnIndex];sortInitiative(cb.order);cb.turnIndex=Math.max(0,cb.order.indexOf(cur));}
   saveAdv();renderCombat();}
 // Reset the encounter to a fresh start: rebuild the order from the encounter combatants + party — full HP,
-// fresh initiative, round 1, cleared conditions / death saves / statuses (B128).
-function resetCombat(){const ctx=combatOf();if(!ctx)return;const a=ctx.a,e=ctx.e;
-  confirmModal("Reset the encounter? HP, conditions, death saves, initiative and the round all reset to the start.",()=>{
-    clearCombatSel();startCombat(a,e);
-    if(autoRollOn()){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}else renderCombat();
-    toast("Encounter reset.");});}
+// fresh initiative, round 1, cleared conditions / death saves / statuses (B128). Shared by the combat tab's
+// tools menu and the adventure card's Resume dropdown (B246) — `fromTab` picks which view to re-render.
+function restartCombat(a,e,fromTab){startCombat(a,e);
+  if(fromTab){if(autoRollOn()){combatRolling=true;renderCombat();setTimeout(()=>{combatRolling=false;renderCombat();},1200);}else renderCombat();}
+  else renderEncList(a);
+  toast("Encounter reset.");}
+function resetCombat(){const ctx=combatOf();if(!ctx)return;
+  confirmModal("Reset the encounter? HP, conditions, death saves, initiative and the round all reset to the start.",()=>{clearCombatSel();restartCombat(ctx.a,ctx.e,true);});}
+function resetCombatFromCard(a,e){
+  confirmModal("Reset the encounter? HP, conditions, death saves, initiative and the round all reset to the start.",()=>restartCombat(a,e,false));}
+// Stop a live combat without wiping its history (B246 — restores the CT6 "Completed, auto-set when you end
+// its combat" promise dropped when B162 removed the old Start/End FAB): the encounter card reverts to
+// "Start combat" (a future start rebuilds fresh via startCombat) and, unless archived, marks Completed. The
+// status stays freely user-editable afterward with no further effect on the (now-cleared) combat.
+function endCombat(a,e){if(!e.combat)return;e.combat=null;if(!e.archived)e.status="completed";saveAdv();
+  if(_curView==="combat"&&loadedCtx()&&loadedCtx().e.id===e.id)renderCombat();else renderEncList(a);
+  toast("Combat ended.");}
 // Compact HP tracker (CT7b): a ratio-coloured bar (current + temp segment), an add-dmg field
 // (Enter applies; negative heals; temp absorbs first), an editable current, and the max.
 // Compact HP control (B124): a bold current/max number with a thin health-coloured underbar (the "H6"
@@ -1006,12 +1017,14 @@ function openCombatToolsMenu(anchor){
     <button class="popitem" data-ctool="clear">Clear initiative</button>
     ${oop?`<button class="popitem" data-ctool="restore">Restore initiative order</button>`:""}
     <div class="popsep"></div>
+    <button class="popitem" data-ctool="end">End combat</button>
     <button class="popitem danger" data-ctool="reset">Reset encounter</button>`;
   const p=showPopover(anchor,html);
   p.querySelectorAll("[data-ctool]").forEach(b=>b.addEventListener("click",ev=>{ev.stopPropagation();const k=b.dataset.ctool;
     if(k==="roll"){closePopover();rollAllInit();}
     else if(k==="clear"){closePopover();clearInitiative();}
     else if(k==="restore"){closePopover();restoreInitOrder();}
+    else if(k==="end"){closePopover();endCombat(ctx.a,ctx.e);}
     else if(k==="reset"){closePopover();resetCombat();}
     else openCombatViewMenu(k,anchor);}));
 }
@@ -1027,7 +1040,8 @@ function combatNotStartedHTML(a,e){
   const done=e.status==="completed";
   return `<div class="combat-notstarted">
     <div class="ce-icon">${SWORDS_SVG}</div>
-    <p class="hint">${done?"This encounter is marked completed. Start it again from the button below.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet. Add some from the Adventures tab."}</p>
+    <p class="hint">${done?"This encounter is marked completed.":n?`${n} combatant group${n>1?"s":""} ready${a.party.length?` · ${a.party.length} party member${a.party.length>1?"s":""}`:""}.`:"No combatants in this encounter yet. Add some from the Adventures tab."}</p>
+    ${n||a.party.length?`<button class="btn primary" id="combatNotStartedGo" style="width:auto">${done?"Start again":"Start combat"}</button>`:""}
   </div>`;
 }
 // Forge-style draggable split between the initiative list and the active-combatant panel (CT9). The
@@ -1657,8 +1671,11 @@ function renderCombat(){
   const {a,e}=ctx,sc=sceneOf(a,e.sceneId);let cb=e.combat;
   // Combat is always "started": auto-start the tracker on load (no pre-combat screen) whenever the
   // encounter has something to fight. The dramatic "Rolling initiative…" flourish stays on the explicit
-  // ⚔ entry (runCombat); loading the tab just builds the order silently.
-  if(!cb&&(e.combatants.some(c=>c.type!=="event")||a.party.length)){startCombat(a,e);if(!e.archived)e.status="active";cb=e.combat;}
+  // ⚔ entry (runCombat); loading the tab just builds the order silently. Skip this for a deliberately-ended
+  // encounter (status "completed", set by endCombat) — otherwise the very next render of this same tab
+  // instantly undid "End combat" by auto-restarting it (B246); a completed encounter waits for an explicit
+  // restart (the not-started screen's own button, or Adventures' Resume-dropdown "Reset & restart").
+  if(!cb&&e.status!=="completed"&&(e.combatants.some(c=>c.type!=="event")||a.party.length)){startCombat(a,e);if(!e.archived)e.status="active";cb=e.combat;}
   if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
   const cur=cb?cb.order[cb.turnIndex]:null;
   // Attribute statblock / chip rolls to the combatant whose panel is shown — the peeked selection if any,
@@ -1711,6 +1728,7 @@ function bindCombatTracker(body,a,e,cb){
   {const nt=$(".ct-notes"),mb=$(".ct-notes-more");if(nt&&mb&&nt.scrollHeight>nt.clientHeight+2){mb.hidden=false;mb.addEventListener("click",()=>{mb.textContent=nt.classList.toggle("clamped")?"more":"less";});}}
   {const ed=$("#combatEncDrop");if(ed)ed.addEventListener("click",ev=>{ev.stopPropagation();openSceneEncMenu(ed,a,e);});}
   const addBtn=$("#combatAddBtn");if(addBtn)addBtn.addEventListener("click",()=>openBestiaryPicker(a,e));
+  {const go=$("#combatNotStartedGo");if(go)go.addEventListener("click",()=>runCombat(a,e));}
   if(!cb)return; // not-started panel has no tracker bindings
   $("#combatPrev").addEventListener("click",()=>combatAdvance(-1));
   $("#combatNext").addEventListener("click",()=>combatAdvance(1));

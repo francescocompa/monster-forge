@@ -219,11 +219,26 @@ function renderAdvDetail(){
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}
 function blankEncounter(sceneId){return {id:uid(),name:"",archived:false,status:"draft",notes:"",notesOn:notesDefault("encounter"),sceneId:sceneId||null,combatants:[]};}
-// Effective lifecycle status: archived (the operative flag) wins, then a running combat reads "active",
-// else the stored status. (CT7)
-function encStatus(e){return e.archived?"archived":(e.combat&&e.combat.active?"active":(e.status||"draft"));}
+// Effective lifecycle status: archived (the operative flag) wins, else the stored status. Starting a combat
+// sets status to "active" explicitly (runCombat/renderCombat); ending one sets "completed" (endCombat) —
+// but the status itself is always freely user-editable afterward with no effect on the live combat (B246;
+// previously this re-derived "active" from e.combat.active on every read, so a manually-picked status never
+// stuck as long as any combat had ever been started — that flag never went false again after B162 removed
+// the old Start/End FAB).
+function encStatus(e){return e.archived?"archived":(e.status||"draft");}
 function applyEncStatus(e,st){if(st==="archived"){e.archived=true;}else{e.archived=false;e.status=st;}}
 function setEncStatus(a,e,st){applyEncStatus(e,st);saveAdv();renderEncList(a);} // renderEncList (not renderAdvDetail) so the page keeps its scroll position (B177)
+// The Resume button's dropdown (B246): End combat (stop without wiping — see endCombat in combat.js) and
+// Reset & restart (rebuild fresh — see restartCombat), for when the DM doesn't want to open the combat tab
+// just to do either. Only rendered while a combat is live (see the encounter card's start-combat-more button).
+function openStartCombatMenu(a,e,anchor){
+  if(!e||!e.combat)return;
+  const p=showPopover(anchor,`<button class="popitem" data-scmore="end">End combat</button>
+    <div class="popsep"></div>
+    <button class="popitem danger" data-scmore="reset">Reset &amp; restart</button>`);
+  p.querySelectorAll("[data-scmore]").forEach(b=>b.addEventListener("click",()=>{closePopover();
+    if(b.dataset.scmore==="end")endCombat(a,e);else resetCombatFromCard(a,e);}));
+}
 // `after` (optional) overrides the default re-render — the load popup passes its own redraw (CT7c).
 function openEncStatusMenu(a,e,anchor,after){
   if(!e)return;const cur=encStatus(e);
@@ -426,7 +441,10 @@ function encHTML(a,e){
     <div data-combat="${e.id}">${e.combatants.map(c=>combatHTML(e,c)).join("")||'<div class="hint" style="margin:4px 0">No combatants yet.</div>'}</div>
     <div class="addrow">
       <button class="addbtn" data-addmon="${e.id}" style="flex:1">＋ Add combatant</button>
-      <button class="start-combat${e.combat&&e.combat.active?" resume":""}" data-startcombat="${e.id}" title="${e.combat&&e.combat.active?"Resume combat":"Start combat"}" aria-label="${e.combat&&e.combat.active?"Resume combat":"Start combat"}">${SWORDS_SVG}<span class="sc-label">${e.combat&&e.combat.active?"Resume":"Start combat"}</span></button>
+      <div class="start-combat-wrap">
+        <button class="start-combat${e.combat?" resume":""}" data-startcombat="${e.id}" title="${e.combat?"Resume combat":"Start combat"}" aria-label="${e.combat?"Resume combat":"Start combat"}">${SWORDS_SVG}<span class="sc-label">${e.combat?"Resume":"Start combat"}</span></button>
+        ${e.combat?`<button class="start-combat-more" data-startmore="${e.id}" title="More combat options" aria-label="More combat options">${FS_CHEVRON}</button>`:""}
+      </div>
     </div>
   </div>`;
 }
@@ -546,6 +564,7 @@ function bindEncEvents(a){
   q("[data-addmon]").forEach(el=>el.addEventListener("click",()=>openBestiaryPicker(a,findEnc(a,el.dataset.addmon))));
   q("[data-pushenc]").forEach(el=>el.addEventListener("click",()=>pushEncounter(a,findEnc(a,el.dataset.pushenc))));
   q("[data-startcombat]").forEach(el=>el.addEventListener("click",()=>runCombat(a,findEnc(a,el.dataset.startcombat))));
+  q("[data-startmore]").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();openStartCombatMenu(a,findEnc(a,el.dataset.startmore),el);}));
   q("[data-encstatus]").forEach(el=>el.addEventListener("click",()=>openEncStatusMenu(a,findEnc(a,el.dataset.encstatus),el)));
   q("[data-encclear]").forEach(el=>el.addEventListener("click",()=>{const e=findEnc(a,el.dataset.encclear);if(!e||!e.combatants.length)return;
     confirmModal(`Clear all combatants from "${e.name||"this encounter"}"?`,()=>{e.combatants=[];saveAdv();renderEncList(a);});}));
