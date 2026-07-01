@@ -66,8 +66,11 @@ function linkSpells(str){return String(str||"").split(",").map(tok=>{const t=tok
   const [bare,tail]=splitBracket(t);
   const inner=findSpell(bare)?`<span class="cc-spell"><span class="reflink" data-ref="spell" data-name="${esc(bare)}">${esc(bare)}</span></span>`:`<span class="cc-spell">${esc(bare)}</span>`;
   return inner+(tail?" "+esc(tail):"");}).filter(Boolean).join(", ");}
-// Build the hover/click card body for a spell or condition.
-function refContent(kind,name){
+// Build the hover/click card body for a spell or condition. `effGroup` disambiguates a curated effect name
+// that exists in more than one group (e.g. "Slow" the mastery vs "Slow" the spell — B242/B245: the chip's
+// group tag lives on the reflink span's data-eg, since this generic popover system has no other way to know
+// which of the two the combatant's condition record actually meant).
+function refContent(kind,name,effGroup){
   if(kind==="spell"){const s=findSpell(name);if(!s)return "";
     const meta=s.level===0?(s.school+" cantrip"):s.level?("Level "+s.level+" "+s.school):s.school;
     const sub=[s.castingTime&&["Casting Time",s.castingTime],s.range&&["Range",s.range],s.components&&["Components",s.components],s.duration&&["Duration",s.duration]]
@@ -75,7 +78,7 @@ function refContent(kind,name){
     return `<div class="refcard-h">${esc(s.name)}${srcBadge(s)}</div><div class="refcard-meta">${esc(meta)}</div>${sub?`<div class="refcard-sub">${sub}</div>`:""}${s.text?`<div class="refcard-body">${fmtBlock(s.text)}</div>`:""}`;}
   if(kind==="rule"){const r=findRule(name);if(!r)return "";
     return `<div class="refcard-h">${esc(r.name)}${srcBadge(r)}</div><div class="refcard-meta">${esc(r.category||"Rule")}</div>${r.text?`<div class="refcard-body">${fmtBlock(r.text)}</div>`:""}`;}
-  if(kind==="effect"){const e=findCuratedEffect(name);if(!e)return "";
+  if(kind==="effect"){const e=findCuratedEffect(name,effGroup);if(!e)return "";
     return `<div class="refcard-h">${esc(e.name)}</div><div class="refcard-meta">${esc(CURATED_EFFECT_GROUP_LABEL[e.group]||"Effect")}</div><div class="refcard-body">${fmtBlock(e.text)}</div>`;}
   const c=findCondition(name);if(!c)return "";
   return `<div class="refcard-h">${esc(c.name)}${srcBadge(c)}</div>${c.category?`<div class="refcard-meta">${esc(c.category.replace(/s$/,""))}</div>`:""}${c.text?`<div class="refcard-body">${fmtBlock(c.text)}</div>`:""}`;}
@@ -113,7 +116,7 @@ function refpopAt(level){let p=document.querySelector('.refpop[data-level="'+lev
 // The level a ref link opens: 0 at the top, or one deeper than the popover it lives in.
 function refLevelOf(node){const pop=node&&node.closest&&node.closest(".refpop");return pop?((+pop.dataset.level||0)+1):0;}
 function showRefpop(anchor,kind,name){const level=refLevelOf(anchor);
-  const html=refContent(kind,name);if(!html)return;
+  const html=refContent(kind,name,anchor&&anchor.dataset&&anchor.dataset.eg);if(!html)return;
   hideRefpopNow(level); // drop this level + any deeper before re-showing
   // Content scrolls inside .refpop-body; the bottom scroll-fade is a non-scrolling overlay on .refpop
   // itself (see CSS), so it always sits at the true bottom edge instead of drifting with the scroll.

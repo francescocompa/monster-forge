@@ -346,7 +346,8 @@ function condChipHTML(itId,c,i){
   // Show the state-adjective on the chip (Haste → "Hasted") so the combatant reads as the state it's in; the
   // popover (data-name) keeps the canonical effect name.
   const disp=(eff&&eff.adj)||c.name;
-  const label=ref?`<span class="reflink reflink-plain" data-ref="${ref}" data-name="${esc(c.name)}">${esc(disp)}</span>`:`<span>${esc(disp)}</span>`;
+  const egAttr=(ref==="effect"&&c.effGroup)?` data-eg="${esc(c.effGroup)}"`:"";
+  const label=ref?`<span class="reflink reflink-plain" data-ref="${ref}" data-name="${esc(c.name)}"${egAttr}>${esc(disp)}</span>`:`<span>${esc(disp)}</span>`;
   return `<span class="cc-chip cc-cond${ref?" known":""}">${label}${c.rounds>0?`<span class="cc-dur" title="Rounds remaining">${c.rounds}</span>`:""}<button class="cc-x" data-rmcond="${itId}:${i}" title="Remove">×</button></span>`;
 }
 // A chip's hover tooltip and a click-popover (e.g. the add-effect popover) share the single `_pop`
