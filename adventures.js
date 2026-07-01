@@ -161,7 +161,7 @@ function diffOf(spent,bud){if(spent<=0)return["trivial","Empty"];if(spent>bud[2]
 function renderAdvDetail(){
   const a=curAdv(),d=$("#advDetail");
   if(!a){setCrumbs(["Adventures"]);d.innerHTML=`<div class="empty-state">Select an adventure on the left, or create one with ＋ New adventure.</div>`;return;}
-  setCrumbs(["Adventures",advDName(a)]);
+  setCrumbs(["Adventures",advDName(a)],()=>{const lay=$(".adv-layout");if(lay)lay.classList.toggle("adv-drawer");});
   d.innerHTML=`<div class="adv-topbar" data-advcolor="${a.id}" title="Adventure colour"${a.color?` style="background:linear-gradient(90deg,${a.color},color-mix(in srgb,${a.color} 55%,#000))"`:""}></div>
     <div class="adv-detail-body">
     <div class="col-head"><div class="ch-left"><button class="adv-back" id="advBack" title="Adventures" aria-label="Open the adventure list">${ADV_TAB_SVG}</button><h2 contenteditable="true" id="advName" data-ph="New Adventure" style="outline:none">${esc(a.name)}</h2></div>

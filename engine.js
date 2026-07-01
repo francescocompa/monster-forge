@@ -438,12 +438,15 @@ function colorizeAttackNames(root){
   // likely correct guess in a tie.
   const inferAbil=bonus=>{const ms=ABILS.filter(a=>mod(M[a])+pbCR===bonus);if(!ms.length)return null;if(spAbil&&ms.includes(spAbil))return spAbil;return ms.slice().sort((a,b)=>(a==="con")-(b==="con"))[0];};
   root.querySelectorAll(".blk,.va").forEach(blk=>{
-    const atk=blk.querySelector('[data-rolltype="attack"]'),dmg=blk.querySelector('[data-rolltype="damage"]'),nm=blk.querySelector(".nm");
+    // A statblock line can deal several damage instances of different types ("7 (1d8+3) slashing damage
+    // plus 3 (1d6) cold damage") — collect every `[data-rolltype="damage"]` span in the block, not just
+    // the first, so the attack-name click rolls all of them (B241).
+    const atk=blk.querySelector('[data-rolltype="attack"]'),dmgs=[...blk.querySelectorAll('[data-rolltype="damage"]')],nm=blk.querySelector(".nm");
     if(atk&&nm){
       nm.classList.add("roll-atkname");nm.dataset.roll=atk.dataset.roll;nm.dataset.rolltype="attack";
-      if(dmg){nm.dataset.dmg=dmg.dataset.roll;if(dmg.dataset.dmgtype&&!nm.dataset.dmgtype)nm.dataset.dmgtype=dmg.dataset.dmgtype;}
+      if(dmgs.length){nm.dataset.dmg=dmgs.map(d=>d.dataset.roll).join("|");nm.dataset.dmgtype=dmgs.map(d=>d.dataset.dmgtype||"").join("|");}
       if(!nm.dataset.abil){const mm=(atk.dataset.roll||"").match(/[+\-]\d+/);const ab=mm?inferAbil(parseInt(mm[0],10)):null;if(ab)nm.dataset.abil=ab;}
-      if(nm.dataset.abil&&dmg&&!dmg.dataset.abil)dmg.dataset.abil=nm.dataset.abil;
+      if(nm.dataset.abil)dmgs.forEach(d=>{if(!d.dataset.abil)d.dataset.abil=nm.dataset.abil;});
     }
   });
 }
@@ -460,11 +463,11 @@ function colorizeRechargeTags(root){
     // If the action also deals damage, clicking the NAME rolls recharge + damage as one group (B77).
     // The inner "(Recharge N–N)" tag stays its own roll target that rolls ONLY the recharge die, so
     // the DM can split the two (recharge-only vs recharge+damage) from one statblock entry (B78).
-    const blk=nm.closest(".blk,.va"),dmg=blk&&blk.querySelector('[data-rolltype="damage"]');
-    if(dmg){
+    const blk=nm.closest(".blk,.va"),dmgs=blk?[...blk.querySelectorAll('[data-rolltype="damage"]')]:[];
+    if(dmgs.length){
       nm.classList.add("roll-rchname");nm.dataset.roll="1d6";if(num)nm.dataset.rollmin=num[0];
       nm.dataset.rolllabel=before.replace(/\.\s*$/,"").trim()||"Recharge";
-      nm.dataset.dmg=dmg.dataset.roll;if(dmg.dataset.dmgtype)nm.dataset.dmgtype=dmg.dataset.dmgtype;
+      nm.dataset.dmg=dmgs.map(d=>d.dataset.roll).join("|");nm.dataset.dmgtype=dmgs.map(d=>d.dataset.dmgtype||"").join("|");
       sp.classList.add("roll-rchtag"); // keeps its own data-roll/rollmin → recharge-only on click
     }
   });
@@ -671,15 +674,23 @@ function quickRoll(t){const adv=isD20Roll(t.dataset.roll)?rollMode:null;doRoll(t
 // Attack-name click: roll the attack, then its damage (crit-doubled on a natural 20). One combined
 // notification (B65): "Arcane Burst: 23 to hit, 25 force damage".
 function rollAttackSequence(nameEl){
-  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),abil=nameEl.dataset.abil,dmgType=nameEl.dataset.dmgtype;
+  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),abil=nameEl.dataset.abil;
   const atk=doRoll(nameEl.dataset.roll,{adv:rollMode},{label,type:"attack",abil,silent:true});
   let msg=`${esc(label)}: ${rollNum(atk.total)} to hit`,parts=atk.parts||"",wave2="";
-  if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{crit:atk.nat20},{label,type:"damage",abil,dmgType,silent:true});
-    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;
-    // On a crit the damage dice are doubled — throw the base dice with the to-hit (wave 1) and let the EXTRA
-    // crit dice drop in as a second wave once wave 1 lands, holding the alert until then (B228).
-    if(atk.nat20&&typeof d3dSplitCrit==="function"){const sp=d3dSplitCrit(dmg.parts);parts+=" "+sp.base;wave2=sp.extra;}
-    else parts+=" "+(dmg.parts||"");}
+  // An attack can carry several damage instances of different types ("plus 3 (1d6) cold damage") —
+  // pipe-separated in the name's dataset (colorizeAttackNames) — so roll and report every one (B241).
+  const dmgType=(nameEl.dataset.dmgtype||"").split("|")[0]||null;
+  if(nameEl.dataset.dmg){
+    const formulas=nameEl.dataset.dmg.split("|"),types=(nameEl.dataset.dmgtype||"").split("|");
+    const dmgTexts=[];
+    formulas.forEach((f,i)=>{const dt=types[i]||null;
+      const dmg=doRoll(f,{crit:atk.nat20},{label,type:"damage",abil,dmgType:dt,silent:true});
+      dmgTexts.push(`${rollNum(dmg.total)}${dt?" "+capWord(dt.toLowerCase()):""} damage`);
+      // On a crit the damage dice are doubled — throw the base dice with the to-hit (wave 1) and let the EXTRA
+      // crit dice drop in as a second wave once wave 1 lands, holding the alert until then (B228).
+      if(atk.nat20&&typeof d3dSplitCrit==="function"){const sp=d3dSplitCrit(dmg.parts);parts+=" "+sp.base;wave2+=(wave2?" ":"")+sp.extra;}
+      else parts+=" "+(dmg.parts||"");});
+    msg+=", "+dmgTexts.join(" plus ");}
   if(atk.nat20)msg+=": crit!";
   // Both sub-rolls are `silent` (no individual dice/toast); fire ONE compounded 3D throw so the to-hit d20
   // and the damage dice tumble together (B222), with the combined alert. Falls back to the toast if 3D is off.
@@ -689,13 +700,21 @@ function rollAttackSequence(nameEl){
 // Recharge-name click: roll the recharge die (win/lose vs the threshold) and, if the action deals
 // damage, its damage too — as one group in the log + one combined notification (B77).
 function rollRechargeSequence(nameEl){
-  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent),dmgType=nameEl.dataset.dmgtype;
+  const label=cleanRollLabel(nameEl.dataset.rolllabel||nameEl.textContent);
+  const dmgType=(nameEl.dataset.dmgtype||"").split("|")[0]||null;
   const min=nameEl.dataset.rollmin?Number(nameEl.dataset.rollmin):null;
   const rech=doRoll(nameEl.dataset.roll,{},{label,type:null,success:min,silent:true});
   const ready=min==null||rech.total>=min;
   let msg=`${esc(label)} recharge: ${rollNum(rech.total)}${min!=null?(ready?" (ready)":" (not yet)"):""}`,parts=rech.parts||"";
-  if(nameEl.dataset.dmg){const dmg=doRoll(nameEl.dataset.dmg,{},{label,type:"damage",dmgType,silent:true});
-    msg+=`, ${rollNum(dmg.total)}${dmgType?" "+capWord(dmgType.toLowerCase()):""} damage`;parts+=" "+(dmg.parts||"");}
+  // Several damage instances of different types (B241) — see rollAttackSequence.
+  if(nameEl.dataset.dmg){
+    const formulas=nameEl.dataset.dmg.split("|"),types=(nameEl.dataset.dmgtype||"").split("|");
+    const dmgTexts=[];
+    formulas.forEach((f,i)=>{const dt=types[i]||null;
+      const dmg=doRoll(f,{},{label,type:"damage",dmgType:dt,silent:true});
+      dmgTexts.push(`${rollNum(dmg.total)}${dt?" "+capWord(dt.toLowerCase()):""} damage`);
+      parts+=" "+(dmg.parts||"");});
+    msg+=", "+dmgTexts.join(" plus ");}
   // One compounded 3D throw (recharge die + damage dice) — see rollAttackSequence (B222).
   const diced=typeof rollDice3D==="function"&&rollDice3D({formula:nameEl.dataset.roll,parts,label,type:null,dmgType,msg,reroll:()=>rollRechargeSequence(nameEl)});
   if(!diced)setTimeout(()=>toast(msg,3600,true),ROLL_REEL_MS);
@@ -1031,7 +1050,11 @@ function claudeMonster(m){
 }
 
 const VIEW_LABELS={forge:"Forge",library:"Bestiary",adventures:"Adventures",combat:"Combat",settings:"Settings"};
-function setCrumbs(parts){const el=$("#crumbs");if(!el)return;el.innerHTML=parts.map((p,i)=>`<span class="${i===parts.length-1?"cur":"up"}">${esc(p)}</span>`).join('<span class="sep">›</span>');}
+// `onUp` (optional) makes every non-current crumb a clickable button — used on the adventure detail page
+// so "Adventures" reopens the list, a second reachable entry point beside the small back button (B241).
+function setCrumbs(parts,onUp){const el=$("#crumbs");if(!el)return;
+  el.innerHTML=parts.map((p,i)=>i===parts.length-1?`<span class="cur">${esc(p)}</span>`:(onUp?`<button type="button" class="up up-btn">${esc(p)}</button>`:`<span class="up">${esc(p)}</span>`)).join('<span class="sep">›</span>');
+  if(onUp)el.querySelectorAll(".up-btn").forEach(b=>b.addEventListener("click",onUp));}
 // Draggable split between the form and preview columns; width persists, dbl-click resets (B60).
 function initForgeResizer(){
   const fg=document.querySelector(".forge"),rz=$("#forgeResizer");if(!fg||!rz)return;

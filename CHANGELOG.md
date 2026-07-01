@@ -4,6 +4,31 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + `data.js` + `parsers.js` + `app.js`).
 Newest batches first.
 
+## Batch 241 — playtesting fixes: party chips, adventure-list crumb, multi-damage attacks, Slow spell
+- **Party-roster chip cluster no longer clips before it needs to.** `.pc-chips` was `flex:1 100 30px` — a
+  30px basis with a 100x shrink factor absorbs almost all of any shrinkage instantly, crushing the chips to a
+  sliver well before the row is actually tight. Now `flex:1 12 70px`: chips still yield to the name first, but
+  scroll/fade under their mask gracefully instead of being squeezed to a few visible pixels.
+  (`styles.css` `.pc-chips`.)
+- **The adventure-list breadcrumb is now a second way back to the list at narrow widths.** `setCrumbs` takes
+  an optional `onUp` callback that turns every non-current crumb into a button; the adventures page wires it
+  to the same `.adv-drawer` toggle as the existing back-arrow button, so "Adventures" in the breadcrumb also
+  reopens the list drawer on mobile (previously that small corner button was the only entry point).
+  (`engine.js` `setCrumbs`, `adventures.js` `renderAdvDetail`.)
+- **Attacks with more than one damage instance now roll all of them.** A line like "Hit: 9 (2d8) Bludgeoning
+  damage plus 7 (2d6) Psychic damage" was only ever rolling the first — `colorizeAttackNames` grabbed a single
+  `[data-rolltype="damage"]` span per block. It now collects every damage span in the block (pipe-joined on
+  the name's dataset), and `rollAttackSequence`/`rollRechargeSequence` roll and report each one, joined with
+  "plus" in the notification and roll log. (`engine.js`.)
+- **Added the "Slow" spell to the curated combat-effects list.** The weapon-mastery Slow was already there,
+  but the actual concentration spell (common enemy-side control effect) was missing from the always-available
+  add-effect dropdown, unlike Bane/Haste/Hex/Hold Person and friends. (`data.js` `CURATED_EFFECTS`.)
+- Investigated the reported "shared initiative — half the screen hidden behind a mask" bug: the character-gate
+  modal and the bottom-sheet character preview (`pm-gate-bg`/`pm-sheet-bg`) both checked out correctly in
+  testing (full-viewport fixed overlay, correct z-index/stacking, dims as coded) via the network-free "Preview
+  as player" path. Could not reproduce a masking defect in the dev preview; likely device/browser-specific
+  (e.g. a mobile Safari dynamic-toolbar viewport quirk) — needs a repro from the reporting device.
+
 ## Batch 240 — animated-logo loading overlay + visual welcome modal + combat first-run hint
 - **Loading overlay uses the animated brand-eye logo** (the boot-screen mark) instead of a spinning d20,
   everywhere `showLoadingOverlay` appears (zip read, adding libraries, re-parse). The SVG is cloned from the

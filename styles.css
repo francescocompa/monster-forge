@@ -107,6 +107,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;min-width:0;overflow:hidden}
 .crumbs .cur{color:var(--txt);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crumbs .up{color:var(--dim);white-space:nowrap}
+.crumbs button.up{background:none;border:none;font:inherit;padding:0;cursor:pointer;border-radius:4px}
+.crumbs button.up:hover{color:var(--txt);text-decoration:underline}
 .crumbs .sep{color:var(--faint)}
 .appbar .grow{flex:1}
 .appbar-gear,.appbar-help{background:none;border:none;color:var(--dim);padding:4px;border-radius:6px;display:grid;place-items:center;flex:none;transition:color .12s,background .12s;cursor:pointer}
@@ -917,12 +919,14 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 /* Name takes its content (chips shrink first); the chip cluster is right-anchored (row-reverse so AC sits
    rightmost) and overflows toward the name, faded ONLY when it actually overflows (B169). */
 /* Name gets growth priority (so it claims free space and is never starved); the chip cluster takes the rest
-   and shrinks/scrolls first (very high flex-shrink), so the name only truncates at genuinely tiny widths. */
+   and shrinks/scrolls first, so the name only truncates at genuinely tiny widths. The chip basis/shrink
+   (70px / 12, not 30px / 100 — B241) keeps a fair starting width so chips scroll under their fade instead
+   of being crushed to a sliver the moment the row is even slightly tight. */
 .pc-name{flex:3 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
 .pc-nm{flex:0 1 auto;min-width:0;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cls{flex:0 8 auto;min-width:0;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-unnamed{color:var(--faint);font-weight:500}
-.pc-chips{flex:1 100 30px;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.pc-chips{flex:1 12 70px;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 .pc-chips.ov{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24px);mask-image:linear-gradient(90deg,transparent 0,#000 24px)}
 .pc-chips::-webkit-scrollbar{display:none}
 .pc-chip,.pc-dchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);background:var(--in);border:1px solid var(--line);border-radius:6px;padding:3px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}

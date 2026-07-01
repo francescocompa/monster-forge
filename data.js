@@ -77,6 +77,7 @@ const CURATED_EFFECTS=[
   {name:"Heroism",group:"spell",adj:"Emboldened",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
   {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible. Attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
   {name:"Hold Person",group:"spell",adj:"Held",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
+  {name:"Slow",group:"spell",adj:"Slowed",text:"−2 AC and Dexterity saving throws, no Reactions, and it can take either an action or a Bonus Action on its turn (not both); Speed is halved. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on itself on a success. Concentration, up to 1 minute."},
   {name:"Guidance",group:"spell",adj:"Guided",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
   {name:"Resistance",group:"spell",text:"+1d4 to one saving throw of the target's choice. Concentration. (Cantrip.)"},
   {name:"Sanctuary",group:"spell",adj:"Warded",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature attacks or casts a spell at an enemy."},
