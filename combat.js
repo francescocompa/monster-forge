@@ -326,7 +326,7 @@ function tickConditions(cb,turnIt,edge){
 }
 // Per-combatant edits (CT3): conditions, note, ungroup, remove.
 function combatItem(id){const ctx=combatOf();return ctx?ctx.e.combat.order.find(x=>x.id===id):null;}
-function addCombatCond(itId,name,rounds,timing){const it=combatItem(itId);if(!it||!name)return;if(!playerCondAllowed(it))return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
+function addCombatCond(itId,name,rounds,timing,effGroup){const it=combatItem(itId);if(!it||!name)return;if(!playerCondAllowed(it))return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}if(effGroup)c.effGroup=effGroup;(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
 function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;if(!playerCondAllowed(it))return;it.conditions.splice(i,1);saveAdv();renderCombat();}
 function setCombatNote(itId,text){const it=combatItem(itId);if(!it)return;it.comment=text;saveAdv();renderCombat();}
 // Split a count:N group into independent combatants — each re-rolls its own initiative.
@@ -341,7 +341,7 @@ function removeCombatant(itId){if(PLAYER_MODE)return;const ctx=combatOf();if(!ct
 // popover). Resolution order: a parsed condition, then the curated effect library (masteries + common
 // buffs/debuffs, CT10), then a parsed spell — so masteries and tracked spell-effects get a description too.
 function condChipHTML(itId,c,i){
-  const eff=findCuratedEffect(c.name);
+  const eff=findCuratedEffect(c.name,c.effGroup);
   const ref=findCondition(c.name)?"condition":eff?"effect":(findSpell(c.name)?"spell":null);
   // Show the state-adjective on the chip (Haste → "Hasted") so the combatant reads as the state it's in; the
   // popover (data-name) keeps the canonical effect name.
@@ -395,24 +395,26 @@ function openCondAdd(itId,anchor,targets){
     if(/instant|until dispelled|permanent|special/i.test(d))return false;
     return /\b(?:round|minute)s?\b/i.test(d);
   }).map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
-  const GROUPS=[["Conditions",condNames],["Weapon masteries",curatedNames("mastery")],["Spell effects",curatedNames("spell")],["Spells",spellNames]];
+  // The 3rd element (an effGroup tag) disambiguates a name that exists in more than one curated group (e.g.
+  // "Slow" is both a weapon mastery and a spell in 5e 2024 — B242) so the right definition/rules text shows.
+  const GROUPS=[["Conditions",condNames,null],["Weapon masteries",curatedNames("mastery"),"mastery"],["Spell effects",curatedNames("spell"),"spell"],["Spells",spellNames,null]];
   const chev=p.querySelector(".cond-combo-chev");
   const renderList=()=>{const q=inp.value.trim().toLowerCase();
-    const html=GROUPS.map(([label,fn])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));
-      return items.length?`<div class="cl-grp">${label}</div>`+items.map(v=>`<button type="button" class="cl-item" data-v="${esc(v)}">${esc(v)}</button>`).join(""):"";}).join("");
+    const html=GROUPS.map(([label,fn,eg])=>{const items=fn().filter(v=>!q||v.toLowerCase().includes(q));
+      return items.length?`<div class="cl-grp">${label}</div>`+items.map(v=>`<button type="button" class="cl-item" data-v="${esc(v)}"${eg?` data-eg="${eg}"`:""}>${esc(v)}</button>`).join(""):"";}).join("");
     clist.innerHTML=html||`<div class="cl-empty">No match. Press Add to use this name.</div>`;};
   // The grouped list is collapsed by default — it opens on the chevron (or once the user starts typing) (B133).
   const setList=open=>{clist.toggleAttribute("hidden",!open);chev.classList.toggle("open",open);if(open)renderList();};
   chev.addEventListener("click",ev=>{ev.preventDefault();setList(clist.hasAttribute("hidden"));inp.focus();});
   inp.addEventListener("input",()=>{if(inp.value.trim())setList(true);else renderList();});
-  clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;commitName(b.dataset.v);});
+  clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;commitName(b.dataset.v,b.dataset.eg||null);});
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
   who.addEventListener("click",e=>{e.stopPropagation();const open=list.hasAttribute("hidden");list.toggleAttribute("hidden",!open);who.classList.toggle("open",open);});
   list.querySelectorAll("[data-whoid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();who.dataset.whoid=b.dataset.whoid;who.querySelector(".cw-who-t").textContent=b.textContent;who.classList.toggle("is-self",b.dataset.whoid===itId);list.setAttribute("hidden","");who.classList.remove("open");}));
-  const commitName=name=>{name=(name||"").trim();const timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
-    (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null));};
+  const commitName=(name,effGroup)=>{name=(name||"").trim();const timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
+    (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null,effGroup));};
   const commit=()=>commitName(inp.value);
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});

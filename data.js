@@ -85,7 +85,12 @@ const CURATED_EFFECTS=[
 ];
 const CURATED_EFFECT_GROUP_LABEL={mastery:"Weapon masteries",spell:"Spell effects"};
 // Case-insensitive lookup into the curated library (matches on the bare name, ignoring any "(…)" qualifier).
-function findCuratedEffect(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return n?CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n):null;}
+// `group` disambiguates same-named entries across categories (e.g. the "Slow" weapon mastery vs the "Slow"
+// spell — real 5e 2024 name collision, B242): prefer an exact name+group match, else fall back to the first
+// name match (legacy conditions saved before the group was tracked).
+function findCuratedEffect(name,group){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();if(!n)return null;
+  if(group){const hit=CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n&&e.group===group);if(hit)return hit;}
+  return CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n);}
 // Gear self-suggestion (B38): manufactured weapons matched against attack names, armor against the AC note.
 const GEAR_WEAPONS=["Club","Dagger","Greatclub","Handaxe","Javelin","Light Hammer","Mace","Quarterstaff","Sickle","Spear","Dart","Light Crossbow","Shortbow","Sling","Battleaxe","Flail","Glaive","Greataxe","Greatsword","Halberd","Lance","Longsword","Maul","Morningstar","Pike","Rapier","Scimitar","Shortsword","Trident","War Pick","Warhammer","Whip","Blowgun","Hand Crossbow","Heavy Crossbow","Longbow","Net","Musket","Pistol","Scythe","Crossbow"];
 const GEAR_ARMOR=["Padded Armor","Studded Leather Armor","Leather Armor","Hide Armor","Chain Shirt","Scale Mail","Breastplate","Half Plate Armor","Ring Mail","Chain Mail","Splint Armor","Plate Armor","Shield"];
