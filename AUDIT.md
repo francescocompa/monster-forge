@@ -4,7 +4,8 @@
 > practice, security & data integrity, performance, UX/copy/accessibility. The previous audit
 > (2026-06-22, post–Batch 190) is treated as input, not baseline — every claim re-derived, with
 > B190→B249 deltas called out. Findings verified statically **and** live in the preview + against
-> the real Firebase DB. Scope of *changes* in this pass: diagnostic + the P1 security fix.
+> the real Firebase DB. All P1–P3 findings were then fixed across Batches 250–253 (see the priorities
+> table); the one open item is a tap-target sizing tweak awaiting the author's greenlight.
 
 ---
 
@@ -149,16 +150,27 @@ would be the highest-value addition (and would lock in the P1 fix).
 
 ## 4. UX, copy & accessibility
 
+Verified live at 375 / 768 / 1280 px with a populated combat (the newest/densest surface).
+
 - **Copy (improved since B190):** the "less corny / less AI-tell" tone pass (B238–240) landed. A scan
-  for AI-tell patterns (seamless/effortless/unleash/dive in/oops/…) found **none**; toasts read like a
-  competent tool ("Cloud unreachable. Working from your local copy.", "Imported. Review and Save to
-  Bestiary."). This is in good shape; no table of rewrites needed this round.
-- **Boot & flows:** app boots clean (zero console errors), welcome modal and Forge render well, seed
-  sandbox loads. Firebase round-trip confirmed live.
-- **Accessibility (B, unchanged):** `aria-label`/`aria-hidden`/`aria-pressed` used across combat,
-  adventures, roster; `prefers-reduced-motion` honored in CSS (5) and dice3d (2). Still owed: a
-  systematic tap-target sweep (several icon controls look sub-44px) and a keyboard-reachability pass on
-  the custom popovers — these need a real device/AT, so they're on the phone checklist below.
+  for AI-tell patterns (seamless/effortless/unleash/dive in/oops/…) across all shipped strings found
+  **none**; toasts read like a competent tool ("Sync failed. Your work stays on this device.", "Sharing
+  stopped, players disconnected."). No rewrite table needed — remaining tone work is longer-form
+  (welcome/help copy) and subjective, the author's call.
+- **Contrast (all pass WCAG AA against `--bg` #121317):** `--txt` 15.3, `--dim` 7.9, `--faint` 5.0 (the
+  B192 fix holds), `--accent`/`--brand` 5.5. The app is **dark-only** (no light-mode path), so there's a
+  single theme to check and it's legible.
+- **Responsive:** mobile / tablet / desktop all render the combat tracker cleanly — rows stack, the
+  active panel drops below the order ≤1080 px, no clipping. The B248 player-mode dead-void fix holds at
+  narrow widths. Welcome modal reflows to a 2×2 grid on mobile.
+- **Keyboard/focus:** the combat controls are real `<button>`s (focusable, keyboard-reachable), and the
+  add-effect button carries an `aria-label`. `aria-label`/`aria-hidden`/`aria-pressed` are used across
+  combat/adventures/roster; `prefers-reduced-motion` honored (CSS 5 + dice3d 2).
+- **P3 — tap targets:** measured on mobile (375 px). Most combat controls are 26–32 px — above the 24 px
+  WCAG-AA minimum but below the 44 px comfort target. The one outlier is the row **add-effect (`+`)
+  button at 31×19 px** — its 19 px height is below the AA 24 px minimum and is the fiddliest to tap. A
+  small `min-height` bump would fix it. (The author reports touch overall "feels good," so this is a
+  refinement, not a blocker — and a sizing/feel change is theirs to greenlight.)
 
 ---
 
@@ -174,6 +186,8 @@ would be the highest-value addition (and would lock in the P1 fix).
 | P3 | Remove confirmed dead JS globals + dead CSS | multiple | **fixed in B252** |
 | P3 | Add `combat.test.js` around the ingestion boundary | test/ | **fixed in B252** |
 | P3 | `crypto.getRandomValues` for new install/share ids | core.js | **fixed in B252** |
+| P3 | Roll-log double-open + first-roll-2D on touch | engine.js, dice3d.js | **fixed in B253** |
+| P3 | Bump the row add-effect (`+`) tap target (19 px tall) | styles.css | open — awaiting greenlight |
 
 ## 6. Phone checklist (only your device can confirm)
 - 3D dice FPS with 20 dice on a real phone (headless can't measure rAF).
