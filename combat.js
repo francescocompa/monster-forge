@@ -288,11 +288,6 @@ function applyDownState(it){
     else it.status="dead";
   }else if(it.deathSaves){it.deathSaves=null;}
 }
-// Mark a death save (success|fail) to count n (click a filled pip again to step it back). 3 failures = dead.
-function setDeathSave(itId,kind,n){const it=combatItem(itId);if(!it)return;if(!it.deathSaves)it.deathSaves={success:0,fail:0};
-  it.deathSaves[kind]=clamp(it.deathSaves[kind]===n?n-1:n,0,3);
-  if((it.deathSaves.fail||0)>=3){it.status="dead";}
-  saveAdv();renderCombat();}
 // Step initiative, skipping downed combatants in the travel direction (round wraps as we pass the
 // ends). The step cap (>n) guards against an infinite loop when everyone is down. Forward steps
 // tick the conditions of the combatant whose turn is beginning (minimal turn/round automation).
@@ -580,7 +575,6 @@ function combatDragOK(cb){const v=combatView(cb);return (v.sort==="init"||v.sort
 // status/faction (no filter) → drag a card onto another group to change its status/faction. Else no drag.
 function combatDragMode(cb){if(combatDragOK(cb))return "reorder";const v=combatView(cb);
   if((v.group==="status"||v.group==="faction")&&!((v.filter.status||[]).length)&&!((v.filter.faction||[]).length))return "regroup";return null;}
-function setCombatFaction(itId,fac){const it=combatItem(itId);if(!it)return;it.faction=fac;saveAdv();renderCombat();}
 function combatGroupKey(it,g){
   if(g==="status")return ciStatusKey(it);
   if(g==="faction")return it.faction||"Neutral";
@@ -942,8 +936,6 @@ function resourcePipsHTML(it){
     return `<div class="res-row"><span class="res-lbl">${esc(r.label)} ${note}</span><span class="res-pips">${pips}</span></div>`;
   }).join("")}</div>`;
 }
-// Compact lifecycle chip used on the encounter card + combat tab.
-function encStatusChipHTML(e){const st=encStatus(e);return `<span class="enc-status sm st-${st}">${ENC_STATUS_LABEL[st]}</span>`;}
 const CHEV_L='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M8 2 L4 6 L8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const CHEV_R='<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const LOAD_ICON='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H6l1.4 1.5H12.5A1.5 1.5 0 0 1 14 6v5.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>';

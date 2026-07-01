@@ -22,7 +22,7 @@ const corpus = [join(root, "index.html"), ...jsFiles.map((f) => join(root, f))]
 // Classes built from string fragments in JS — any class starting with one of these is assumed used.
 // Keep this list TIGHT (matching the families documented in the project memory) so real dead classes
 // aren't hidden; if the tool flags a class you know is built dynamically, add its prefix here.
-const DYNAMIC_PREFIXES = ["cc-ab-", "st-", "ds-", "pcs-", "rl-tag-", "nf-", "dchip-", "k-"];
+const DYNAMIC_PREFIXES = ["cc-ab-", "st-", "ds-", "pcs-", "rl-tag-", "nf-", "dchip-", "k-", "mode-"];
 
 // Collect class tokens from the stylesheet (comments stripped so commented-out names don't count).
 const classes = new Set();

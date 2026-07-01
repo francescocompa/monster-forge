@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 252 — audit P3s: dead-code sweep, combat ingestion tests, crypto ids, player-mode flush gate
+- **Removed 13 confirmed-dead JS globals** (each referenced only at its own declaration; features they
+  duplicated are wired independently, verified): `dlFor`, `presetSources` (core.js); `setDeathSave`,
+  `setCombatFaction`, `encStatusChipHTML` (combat.js — death saves run via the HP-popover pip handlers,
+  faction changes inline, enc-status chips inline); `_rlPos`, `refSpan`, `subName`, `hideRefpop`,
+  `DICE_ICON` (engine.js); `moveEntry`, `refPhrase` (forge.js); `PC_TUNE_ICON` (roster.js).
+- **Removed 8 dead CSS rules** (`.pm-bar` + `.pm-bar-l/-name/-change`, `.pm-claim` from the retired
+  "Playing as" banner; `.rl-n` from the removed roll-log counter; `.share-qr` from the pre-overlay QR;
+  `.modal-title`). Kept `.mode-adv`/`.mode-dis` — `lint:css` flagged them but they ARE built dynamically
+  (`rl-icon mode-${modeCls}`), so added the `mode-` prefix to the `lint:css` allowlist instead.
+- **New `test/combat.test.js`** (9 tests) locks in the B250 trust boundary: `_pmSafeRoll` coerces an
+  HTML-in-`total` payload to a number, rejects attribute-injecting/empty/missing ids, whitelists
+  `type`/`abil`, clamps free-text; `applyPlayerEdit` clamps HP to `[0,hpMax]`, floors temp HP, reconciles
+  conditions by name (keeping DM durations), and ignores out-of-range status. Verify now runs 21 tests.
+- **Install & share ids now use `crypto.getRandomValues`** (new `randToken`, ~128 bits) instead of the
+  Math.random-based `uid()` — those ids are the only thing protecting a device's cloud data and a live
+  share. `uid()` is unchanged for element/entry ids. Falls back to `uid()+uid()` if crypto is absent.
+- **`_flush` (visibility-hide save) is now gated on `!PLAYER_MODE`** so a player hiding the tab no longer
+  writes snapshot-derived state into that device's real `mf_cache:*`.
+
 ## Batch 251 — audit P2s: lazy-load 3D dice libs, roster save-fail fix, Firebase rules doc
 - **Three.js (592KB) + cannon.js (132KB) no longer load on boot.** They were blocking `<script>` tags in
   index.html, parsed on every page load even for DMs/players who never roll a 3D die that session. Now

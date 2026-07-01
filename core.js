@@ -95,8 +95,6 @@ function enPresets(){return state.presets.filter(m=>isLibEnabled("statblock",m._
 function enSpells(){return state.spells.filter(s=>isLibEnabled("spell",s._source||""));}
 function enConditions(){return state.conditions.filter(c=>isLibEnabled("condition",c._source||""));}
 function enRules(){return state.rules.filter(r=>isLibEnabled("rule",r._source||""));}
-// statblock sources only (drives the From-chassis source picker)
-function presetSources(){const s=[];enPresets().forEach(m=>{const k=m._source||"Uploaded";const e=s.find(x=>x.name===k);if(e)e.count++;else s.push({name:k,count:1});});return s;}
 // every uploaded library across kinds, for the manage modal
 function presetLibraries(){const map={};
   const add=(arr,kind)=>arr.forEach(x=>{const n=x._source||"Uploaded",key=kind+LIBSEP+n,e=map[key]=map[key]||{name:n,kind,count:0,books:{},groups:{}};
@@ -117,7 +115,7 @@ const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions",r
 const FB_BASE="https://monster-forge-da7e4-default-rtdb.europe-west1.firebasedatabase.app";
 // Per-installation private namespace: generated once, persisted in localStorage — the Firebase equivalent
 // of JSONBin's per-key bin id, but a single id covers all three library datasets (monsters/adventures/party).
-function fbInstallId(){let id=localStorage.getItem("mf_fbid");if(!id){id=uid()+uid();localStorage.setItem("mf_fbid",id);}return id;}
+function fbInstallId(){let id=localStorage.getItem("mf_fbid");if(!id){id=randToken();localStorage.setItem("mf_fbid",id);}return id;}
 function fbLibPath(k){return `installs/${fbInstallId()}/${String(k).replace(/^library:/,"")}`;}
 // Local mirror: every save is written here first so work survives a cloud outage or a
 // cleared/empty bin. On load we hydrate from this instantly, then reconcile with the cloud.
@@ -162,7 +160,7 @@ async function jbinSet(k,val){
 // rules already make writes from any device possible, so there's nothing left for a pasted key to gate.
 // Returns the id on success (the passed id for an update, a freshly generated one for a create), null otherwise.
 async function jbinSetPublic(id,val){
-  id=id||(uid()+uid());
+  id=id||randToken();
   const r=await jbinFetch(`${FB_BASE}/shares/${id}.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});
   return (r&&r.ok)?id:null;
 }
@@ -226,7 +224,9 @@ async function _flush(){
   else{setDirty(true);if(!_cloudWarned){_cloudWarned=true;showBanner("Cloud save failed. Your work is saved on this device and will retry. Export JSON for an extra backup.",hideBanner);}}
 }
 let _cloudWarned=false; // show the cloud-failure banner once, not on every debounced save
-if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden)_flush();});
+// Flush pending edits when the tab is hidden — but NOT in player mode, where `state` is synthetic snapshot
+// data: caching it into this device's real mf_cache:* could pollute a later real-app load (B252).
+if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.hidden&&!PLAYER_MODE)_flush();});
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 // Run a wholesale re-render that rebuilds a scroll container, preserving its scroll position. `sel` is a CSS
@@ -234,6 +234,11 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 // instead of hand-rolling scrollTop save/restore around renderAdvDetail / re-opened modals etc. Returns fn()'s value.
 function preserveScroll(sel,fn){const top=(s=>s?s.scrollTop:0)($(sel));const r=fn();const ns=$(sel);if(ns)ns.scrollTop=top;return r;}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+// Cryptographically-strong random token for the SECURITY-SENSITIVE namespaces only (per-install private id +
+// public share id) — those ids are the sole thing protecting a device's cloud data / a live share, so they
+// use crypto.getRandomValues (~128 bits) instead of the Math.random-based uid(). Falls back to uid()+uid()
+// if crypto is unavailable. uid() stays fine for element/entry ids where guessability doesn't matter. (B252)
+function randToken(){try{const a=new Uint32Array(4);crypto.getRandomValues(a);return Array.from(a,n=>n.toString(36)).join("");}catch(e){return uid()+uid();}}
 // Escape for BOTH text and attribute HTML contexts. Quotes MUST be encoded: user/player-supplied strings
 // are interpolated into double-quoted attributes throughout (value="…", title="…", data-*="…"), so leaving
 // " unescaped allowed attribute breakout → event-handler injection (the B250 player→DM XSS). All call sites
@@ -658,4 +663,3 @@ function openCheckGear(anchor,cbSel,label){const cb=$(cbSel);
 function openFreqMenu(anchor,target){const[k,i]=target.split(":");const e=arrFor(k)[+i];const m=(e.name||"").match(/\((Recharge[^)]*|\d+\/Day(?:\s+each)?)\)\s*$/i);const cur=m?"("+m[1]+")":"";
   const p=showPopover(anchor,FREQ_TAGS.map(o=>`<button class="popitem${o.toLowerCase()===cur.toLowerCase()?" on":""}" data-freqv="${esc(o)}">${esc(o)}</button>`).join("")+`<div class="popsep"></div><button class="popitem" data-freqv="">None</button>`);
   p.querySelectorAll("[data-freqv]").forEach(b=>b.addEventListener("click",()=>{closePopover();applyFreqTag(k,+i,b.dataset.freqv);}));}
-function dlFor(kind){return kind==="traits"?"dl-traits":kind==="bonus"?"dl-bonus":kind==="actions"?"dl-textact":"";}

@@ -164,7 +164,6 @@ function bindEntryDrag(){
   });
 }
 function expandSnip(s){const pb=pbForCR(M.cr);const best=Math.max(...ABILS.map(a=>mod(M[a])));return s.replace("{DC}",8+pb+best);}
-function moveEntry(kind,i,dir){const arr=arrFor(kind),j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];renderEntries();renderPreview();}
 function findCI(map,key){return Object.keys(map).find(k=>k.toLowerCase()===key);}
 // plain-text rendering for an action snippet (text action, or an attack preset as prose)
 function actionTextFor(name){if(TEXT_ACTIONS[name])return expandSnip(TEXT_ACTIONS[name]);if(ATK_PRESETS[name])return attackText(ATK(Object.assign({name},ATK_PRESETS[name])));return null;}
@@ -493,4 +492,3 @@ function sensesStr(m){const s=m.senses||{};let p=[];
   if(s.truesight)p.push(`Truesight ${s.truesight} ft.`);
   if(s.other)p.push(s.other);
   return p.join(", ");}
-function refPhrase(cap){const sn=M.shortName||{word:"creature",proper:false};const w=sn.word||"creature";return sn.proper?w:((cap?"The ":"the ")+w);}

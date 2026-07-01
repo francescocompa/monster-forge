@@ -28,7 +28,6 @@ function spellLines(e){const pb=pbForCR(M.cr),ab=mod(M[e.ability]||0);
   const main=`[C] casts one of the following spells, requiring no Material components and using ${abName} as the spellcasting ability (spell save DC ${dc}, ${sgn(atk)} to hit with spell attacks):`;
   const groups=(e.groups||[]).filter(g=>g.spells).map(g=>({label:g.freq,spells:g.spells.split(",").map(s=>s.trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b)).join(", ")}));
   return{main,groups};}
-function subName(t){return applyRefs(t);}
 function fmtInline(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>");}
 // B67: render "a | b | c" line runs (from 5etools tables, e.g. Teleport) as real <table>s; the first
 // row is the header. Everything else keeps the lightweight bold/italic/bullet/line-break handling.
@@ -55,7 +54,6 @@ function findSpell(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim(
 // the bracketed part when resolving the reference — same as findSpell.
 function findCondition(name){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();return enConditions().find(c=>(c.name||"").toLowerCase()===n);}
 function findRule(name){const n=String(name||"").trim().toLowerCase();return enRules().find(r=>(r.name||"").toLowerCase()===n);}
-function refSpan(kind,name){return `<span class="reflink" data-ref="${kind}" data-name="${esc(name)}">${esc(name)}</span>`;}
 // Subtle ghost dismiss icon shown top-right of every definition popover (spell/condition/rule). B68.
 const REFPOP_X_SVG=`<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>`;
 // Linkify a comma-separated spell list; matched spells become hover/click refs.
@@ -160,7 +158,6 @@ function hideRefpopNow(level){document.querySelectorAll(".refpop").forEach(p=>{i
 // Generous grace period so the cursor can travel from the link into the popover (to roll its dice)
 // without it vanishing (B64).
 function hideRefpopFrom(level){clearTimeout(_refTimer);_refTimer=setTimeout(()=>hideRefpopNow(level),360);}
-function hideRefpop(){hideRefpopFrom(0);}
 // Definition popovers (spell/condition/rule) are suppressible via Settings, but the rule finder always
 // shows them — its whole purpose is to surface definitions on hover (B68).
 function refPopOn(){return ruleFinder||!(state.settings&&state.settings.refPopovers)||state.settings.refPopovers.on!==false;}
@@ -543,7 +540,6 @@ const RF_X_ICON=`<svg viewBox="0 0 384 512" width="15" height="15" fill="current
 function syncFeatureClasses(){document.body.classList.toggle("mf-clickroll",!ruleFinder&&!!(state.settings&&state.settings.clickRoll&&state.settings.clickRoll.on));}
 function d(n){return 1+Math.floor(Math.random()*n);}
 const DICE_HELP_URL="https://dice.clockworkmod.com/";
-const DICE_ICON=`<svg viewBox="0 0 640 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8l138.8 138.8c28.1 28.1 73.7 28.1 101.8 0l138.8-138.8c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zM96 200a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm104 176c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zm128-128c0 13.3-10.7 24-24 24s-24-10.7-24-24 10.7-24 24-24 24 10.7 24 24zm-24-80a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm288 32V480c0 35.3-28.7 64-64 64H192c-19.1 0-36.3-8.4-48-21.7 5.4 .9 10.5 1.7 16 1.7h288c53 0 96-43 96-96V224c0-5.5-.8-10.6-1.7-16 13.3 11.7 21.7 28.9 21.7 48z"/></svg>`;
 // Roll a dice-notation formula (clockworkmod-style): NdY, +/-N, kh/kl/dh/dl (keep/drop highest/lowest),
 // d% (percentile). opts.adv ("adv"/"dis") rerolls a lone d20; opts.crit doubles each die's count.
 function rollFormula(f,opts){
@@ -614,7 +610,6 @@ function loadRollLogState(){try{const s=JSON.parse(localStorage.getItem("mf_roll
   if(typeof s.open==="boolean")rollLogOpen=s.open;
   if(s.mode==="adv"||s.mode==="dis")rollMode=s.mode;}catch(e){}}
 function saveRollLogState(){try{localStorage.setItem("mf_rolllog",JSON.stringify({corner:_rlCorner,open:rollLogOpen,mode:rollMode}));}catch(e){}}
-let _rlPos=null; // custom drag position {left,top}; cleared (restored to default) on collapse/close (B63)
 const ROLL_TAG={attack:"ATK",damage:"DMG",check:"CHK",save:"SAVE"}; // recharge/other rolls get no tag
 // Abbreviated damage-type labels shown on the roll-log damage tag instead of "DMG" (B67).
 const DMG_ABBR={acid:"Acid",bludgeoning:"Bludg.",cold:"Cold",fire:"Fire",force:"Force",lightning:"Light.",necrotic:"Necr.",piercing:"Pierc.",poison:"Pois.",psychic:"Psych.",radiant:"Rad.",slashing:"Slash.",thunder:"Thun."};

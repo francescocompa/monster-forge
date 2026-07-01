@@ -170,10 +170,10 @@ would be the highest-value addition (and would lock in the P1 fix).
 | P2 | Lazy-load three/cannon off the boot path | index.html, dice3d.js | **fixed in B251** |
 | P2 | `loadAll` roster dirty-clear ignores write result | core.js:191-193 | **fixed in B251** |
 | P2 | Firebase rules are the whole boundary — document + periodic check | DEVELOPMENT.md | **documented in B251** |
-| P3 | Gate `_flush` on `!PLAYER_MODE` | core.js:227 | tiny |
-| P3 | Remove confirmed dead JS globals + dead CSS | multiple | ~half a batch |
-| P3 | Add `combat.test.js` around the ingestion boundary | test/ | ~half a batch |
-| P3 | `crypto.getRandomValues` for new install/share ids | core.js | tiny |
+| P3 | Gate `_flush` on `!PLAYER_MODE` | core.js:227 | **fixed in B252** |
+| P3 | Remove confirmed dead JS globals + dead CSS | multiple | **fixed in B252** |
+| P3 | Add `combat.test.js` around the ingestion boundary | test/ | **fixed in B252** |
+| P3 | `crypto.getRandomValues` for new install/share ids | core.js | **fixed in B252** |
 
 ## 6. Phone checklist (only your device can confirm)
 - 3D dice FPS with 20 dice on a real phone (headless can't measure rAF).
