@@ -916,13 +916,15 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .lvlup-btn{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:24px;background:none;border:none;border-radius:6px;color:var(--dim);cursor:pointer;padding:0 6px;text-transform:none;letter-spacing:0}
 .lvlup-btn .lvlup-txt{font-size:11px;font-weight:600}
 .lvlup-btn:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
-/* Name takes its content (chips shrink first); the chip cluster is right-anchored (row-reverse so AC sits
-   rightmost) and overflows toward the name, faded ONLY when it actually overflows (B169). */
-/* Name gets growth priority (so it claims free space and is never starved); the chip cluster takes the rest
-   and shrinks/scrolls first, so the name only truncates at genuinely tiny widths. The chip basis/shrink
-   (70px / 12, not 30px / 100 — B241) keeps a fair starting width so chips scroll under their fade instead
-   of being crushed to a sliver the moment the row is even slightly tight. */
-.pc-name{flex:3 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
+/* Name takes exactly its content width (flex-grow:0) — it must NOT compete for leftover row space, or the
+   chip cluster (the actual data) gets starved even when the row has plenty of room: B241 gave chips
+   flex-grow:1, but the name's old flex-grow:3 out-competed it 3-to-1 for any free space, so the name's flex
+   item just ballooned into dead air while chips stayed pinned near their minimum and clipped (B246 — the
+   bug survived several passes because each one retuned the SHRINK side without noticing growth was the
+   actual culprit). Chips now get 100% of any leftover space; the name still protects itself from shrinking
+   via its own flex-shrink:1 vs the chips' much higher shrink weight below, so chips still give way first
+   once the row is genuinely tight. */
+.pc-name{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
 .pc-nm{flex:0 1 auto;min-width:0;font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cls{flex:0 8 auto;min-width:0;font-size:11px;font-weight:500;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-unnamed{color:var(--faint);font-weight:500}
