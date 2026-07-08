@@ -26,6 +26,52 @@ function crExpected(cr){
   const [ac,hpMin,hpMax,atk,dprMin,dprMax,dc]=e;
   return {cr,pb:pbForCR(cr),ac,hpMin,hpMax,hpAvg:Math.round((hpMin+hpMax)/2),atk,dprMin,dprMax,dprAvg:Math.round((dprMin+dprMax)/2),dc};
 }
+// ── Defensive CR (T1.3) ──────────────────────────────────────────────────────
+// Effective-HP model, CALIBRATED to the 2024 corpus (CR_CALIBRATION.md §T1.3). This DELIBERATELY
+// overturns the 2014 DMG's blanket resistance/immunity multipliers: in the 2024 MM, monsters carry
+// normal raw HP for their CR despite elemental resistance/immunity, multi-type resistance, or
+// poison/psychic immunity (corpus median rawHP/expected ≈ 1.0 for all of those). Only resistance to
+// PHYSICAL damage (bludgeoning+piercing+slashing, the swarm/incorporeal archetype) comes with
+// depressed HP — corpus median 0.78× expected — so only that earns a multiplier. Vulnerabilities show
+// no HP compensation either (0.94×, n=21), so they get none. See the memo before changing these.
+const PHYS_DMG_TYPES=["Bludgeoning","Piercing","Slashing"];
+const PHYS_RES_MULT=1.28; // ≈ 1/0.78 — restores the toughness the low HP conceals
+// The CR (a CR_LIST entry) whose HP band contains hp. Bands tile the ladder (see CR_EXPECT), so the
+// match is unambiguous; clamped to the ladder ends (hp<1 → "0", hp above the CR30 ceiling → "30").
+function crFromHP(hp){
+  if(!(hp>0))return "0";
+  for(const cr of CR_LIST){const e=CR_EXPECT[cr];if(hp>=e[1]&&hp<=e[2])return cr;}
+  return "30";
+}
+// Structured defensive profile from a monster's damage map (m.dmg keys are DMG_TYPES-cased) plus the
+// legacy free-text "…from nonmagical attacks" resistance carried in m.dmgnote.
+function defenseProfile(m){
+  const dmg=m.dmg||{};
+  const physRes=PHYS_DMG_TYPES.every(t=>dmg[t]==="res")||/nonmagic/i.test(m.dmgnote||"");
+  return {physRes};
+}
+// Effective HP: raw HP scaled by the (calibrated) physical-resistance multiplier, nothing else.
+function effectiveHP(hp,prof){return prof&&prof.physRes?Math.round(hp*PHYS_RES_MULT):Math.round(hp);}
+// One CR step per this many points of AC deviation. SOFTENED from the 2014 DMG's 2: on the 2024 corpus
+// AC is tightly pinned to the CR-expected value (deviation IQR ≈ ±2), so the DMG's ÷2 rate turned that
+// small spread into a CR-step of pure noise and measurably WORSENED label prediction (mean|err| 0.78→0.94
+// defence-only). ÷4 keeps AC honest — only a real 4+ point deviation moves the CR — and matches the label
+// as well as ignoring AC entirely, while staying explainable to an author who buffs AC. See the memo §T1.3.
+const AC_PER_CR_STEP=4;
+// Defensive CR: effective HP → base CR, then shifted by the AC delta from that CR's expected AC.
+// Returns the CR plus the full derivation so the calculator UI (T1.6) can explain it.
+function defensiveCR(m){
+  const rawHP=Number(m.hp)||0;
+  const prof=defenseProfile(m);
+  const effHP=effectiveHP(rawHP,prof);
+  const baseCR=crFromHP(effHP),baseIdx=CR_LIST.indexOf(baseCR);
+  const expAC=CR_EXPECT[baseCR][0];
+  // guard null/"" explicitly — Number(null) is 0 (finite), which would read as AC 0
+  const ac=(m.ac==null||m.ac==="")?NaN:Number(m.ac),hasAC=Number.isFinite(ac);
+  const acDelta=hasAC?ac-expAC:0,acStep=Math.round(acDelta/AC_PER_CR_STEP);
+  const idx=clamp(baseIdx+acStep,0,CR_LIST.length-1);
+  return {cr:CR_LIST[idx],idx,rawHP,effHP,physRes:prof.physRes,baseCR,expAC,ac:hasAC?ac:null,acDelta:hasAC?acDelta:null,acStep};
+}
 const BUDGET={1:[50,75,100],2:[100,150,200],3:[150,225,400],4:[250,375,500],5:[500,750,1100],6:[600,1000,1400],7:[750,1300,1700],8:[1000,1700,2100],9:[1300,2000,2600],10:[1600,2300,3100],11:[1900,2900,4100],12:[2200,3700,4700],13:[2600,4200,5400],14:[2900,4900,6200],15:[3300,5400,7800],16:[3800,6100,9800],17:[4500,7200,11700],18:[5000,8700,14200],19:[5500,10700,17200],20:[6400,13200,22000]};
 const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
 const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};

@@ -96,3 +96,49 @@ test("CR_EXPECT HP and DPR bands tile the ladder — no gaps, no overlaps (inver
 test("crExpected returns null for an unknown CR", () => {
   assert.equal(ev("crExpected('99')"), null);
 });
+
+// ── Defensive CR (T1.3) ──────────────────────────────────────────────────────
+test("crFromHP maps HP into the CR band that contains it, clamped at the ends", () => {
+  assert.equal(ev("crFromHP(1)"), "0");     // CR0 band floor
+  assert.equal(ev("crFromHP(30)"), "1");    // CR1 band 24-36
+  assert.equal(ev("crFromHP(93)"), "5");    // CR5 band 83-102
+  assert.equal(ev("crFromHP(0)"), "0");     // non-positive clamps down
+  assert.equal(ev("crFromHP(99999)"), "30"); // above the CR30 ceiling clamps up
+});
+
+test("crFromHP never returns undefined for any positive HP up to the ceiling (bands tile)", () => {
+  assert.equal(ev("(()=>{for(let hp=1;hp<=825;hp++){if(CR_LIST.indexOf(crFromHP(hp))<0)return 'miss@'+hp;}return 'ok';})()"), "ok");
+});
+
+test("effectiveHP applies the physical-resistance multiplier only for physRes profiles", () => {
+  assert.equal(ev("effectiveHP(100,{physRes:false})"), 100);
+  assert.equal(ev("effectiveHP(100,{physRes:true})"), 128); // 100 * 1.28
+  assert.equal(ev("effectiveHP(100,null)"), 100);
+});
+
+test("defenseProfile flags physical resistance from m.dmg and from legacy nonmagical note", () => {
+  assert.equal(ev("defenseProfile({dmg:{Bludgeoning:'res',Piercing:'res',Slashing:'res'}}).physRes"), true);
+  assert.equal(ev("defenseProfile({dmg:{Fire:'res',Cold:'imm'}}).physRes"), false); // elemental only → no
+  assert.equal(ev("defenseProfile({dmg:{Bludgeoning:'res',Piercing:'res'}}).physRes"), false); // needs all three
+  assert.equal(ev("defenseProfile({dmg:{},dmgnote:'Bludgeoning, Piercing, Slashing from nonmagical attacks (Resistance)'}).physRes"), true);
+});
+
+test("defensiveCR — HP anchors the CR, physical resistance raises it, AC nudges gently", () => {
+  // vanilla CR5-HP monster at expected AC → CR 5, no AC shift
+  assert.deepEqual(evJSON("(()=>{const d=defensiveCR({hp:93,ac:15,dmg:{}});return {cr:d.cr,acStep:d.acStep,physRes:d.physRes};})()"),
+    { cr: "5", acStep: 0, physRes: false });
+  // same HP but physical-resistant → 93*1.28=119 → CR7 band
+  assert.equal(ev("defensiveCR({hp:93,ac:15,dmg:{Bludgeoning:'res',Piercing:'res',Slashing:'res'}}).cr"), "7");
+  // AC 4 over expected shifts +1 step; AC 3 under expected shifts -1 (round(±/4))
+  assert.equal(ev("defensiveCR({hp:93,ac:19,dmg:{}}).acStep"), 1);
+  assert.equal(ev("defensiveCR({hp:93,ac:12,dmg:{}}).acStep"), -1);
+  // a +1 AC deviation is inside the deadzone → no shift (this is the point of ÷4 vs the DMG's ÷2)
+  assert.equal(ev("defensiveCR({hp:93,ac:16,dmg:{}}).acStep"), 0);
+});
+
+test("defensiveCR tolerates a missing AC (no shift) and clamps to the ladder", () => {
+  assert.equal(ev("defensiveCR({hp:93,ac:null,dmg:{}}).acStep"), 0);
+  assert.equal(ev("defensiveCR({hp:93,dmg:{}}).acDelta"), null);
+  assert.equal(ev("defensiveCR({hp:99999,ac:30,dmg:{}}).cr"), "30");
+  assert.equal(ev("defensiveCR({hp:1,ac:1,dmg:{}}).cr"), "0");
+});

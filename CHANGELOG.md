@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 260 — T1.3: defensive CR (effective-HP model, corpus-calibrated)
+- **New pure functions in data.js:** `crFromHP` (HP → CR via the tiling `CR_EXPECT` bands),
+  `defenseProfile`/`effectiveHP`, and `defensiveCR(m)` → `{cr, effHP, baseCR, acDelta, acStep, …}`
+  (full derivation so the T1.6 calculator UI can explain itself). Pure; no UI wiring yet.
+- **Two corpus findings overturned the 2014 DMG method** (full data + tables in `CR_CALIBRATION.md`
+  §T1.3):
+  1. **Resistances/immunities are mostly NOT baked into 2024 HP.** Elemental resist/immune,
+     multi-resistance, and poison/psychic immunity monsters carry normal raw HP (ratio ~1.0), so they
+     get **no multiplier** — the 2014 blanket ×1.5 would mis-rate them (+1 bias, 64% within ±1). Only
+     **physical resistance** (B+P+S) shows depressed HP (0.78×), earning `PHYS_RES_MULT = 1.28`.
+  2. **The DMG's AC adjustment (÷2) is too aggressive.** 2024 AC is tightly pinned to CR, so ÷2
+     amplifies noise and worsens prediction; softened to `AC_PER_CR_STEP = 4` (best-scoring, ties
+     AC-off, beats ÷2), keeping AC an honest but gentle factor.
+- **Adopted accuracy vs labeled CR (n=503): bias 0, mean |err| 0.76 CR steps, 86% within ±1.** This
+  is a defensive-half sanity check; the real grade waits for T1.4's offensive CR + T1.5's averaging.
+- Bug caught by a new test: `Number(null)` is 0 (finite), so a null AC read as AC 0 → −4 steps; now
+  guarded. 32 tests green (10 new for the defensive-CR layer).
+
 ## Batch 259 — T1.2: corpus calibration spike — CR_EXPECT recalibrated to the 2024 MM
 - **The calibration memo is `CR_CALIBRATION.md`** (new, repo root) — corpus, method, residuals,
   construction rules, the full adopted table, and the raw 2014 table kept for reference.

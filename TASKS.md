@@ -43,9 +43,12 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
   Output: a calibration memo that settles Q1.A's numbers. Haiku may prep the corpus extraction;
   Fable does the analysis. **Done — memo: `CR_CALIBRATION.md`; calibrated table adopted into
   `CR_EXPECT`; BOH unification deferred to T1.5 by decision.**
-- [ ] **T1.3 — Defensive CR** · Opus @ high · ~1
+- [x] **T1.3 — Defensive CR** · Opus @ high · ~1 · Batch 260
   Effective-HP function: resistance/immunity multipliers by CR tier, AC adjustment steps. Pure
-  function + tests. (P1.2)
+  function + tests. (P1.2) **Done — `defensiveCR(m)` in data.js. Corpus validation overturned the
+  2014 blanket multipliers (only physical-resistance depresses HP → ×1.28; elemental/immunity get
+  none) and softened the AC rule to ÷4; adopted config scores mean |err| 0.76 CR steps / 86% within
+  ±1 on 503 monsters. See `CR_CALIBRATION.md` §T1.3.**
 - [ ] **T1.4 — Offensive CR: the DPR extractor** · Fable @ high · ~2
   The keystone function of the whole plan (CR calc, role inference, and the P3 composition model
   all consume it): best-3-round DPR from statblock entries — multiattack, recharge weighting,

@@ -135,12 +135,79 @@ Kept only so future sessions don't re-transcribe it. Columns: AC · HP · Atk ·
   T1.5's job, after the regression run grades the calibrated table. Do not let a third table
   appear in the meantime.
 
+## §T1.3 — Defensive CR (Batch 260)
+
+Defensive CR = effective HP → base CR (via `crFromHP`, the `CR_EXPECT` HP bands), then an AC nudge.
+Two model choices the corpus forced, both departing from the 2014 DMG:
+
+### Finding 1 — 2024 does NOT bake most resistances/immunities into (lower) HP
+
+The 2014 DMG multiplies effective HP by ×1.5–×2 for any meaningful resistance/immunity. Measured on
+the corpus (raw HP ÷ the expected-HP midpoint for the monster's labeled CR, by defense bucket):
+
+| defense bucket | n | median rawHP / expected | reading |
+|---|---|---|---|
+| none | 303 | 0.98 | baseline — table is centered |
+| some resistance (1–2 types) | 40 | 1.03 | *more* HP, not less |
+| multi-resistance (≥3 types) | 28 | 1.00 | same as vanilla |
+| elemental immunity (non-poison) | 103 | 0.98 | same as vanilla |
+| poison-immune only | 35 | 1.01 | poison immunity ⇒ no HP change |
+| **physical resistance (B+P+S)** | **29** | **0.78** | **the one real exception** |
+
+So elemental resistance/immunity, multi-resistance, and poison/psychic immunity get **no multiplier**
+— applying one would over-rate defensive CR. Only **physical resistance** (resist bludgeoning +
+piercing + slashing — the swarm/incorporeal-undead archetype) comes with ~22% depressed HP, stable
+across CR 1/4–30 (ratio IQR 0.72–0.87). Adopted: `PHYS_RES_MULT = 1.28` (≈ 1/0.78), which zeroes the
+signed error on that 29-monster subset (was −1 CR step under-rated). Vulnerabilities (n=21) show ratio
+0.94 — no HP compensation, so no multiplier there either.
+
+Quantified cost of the old model: a 2014-style "any resistance/meaningful immunity → ×1.5" rule scores
+**+1 systematic bias, mean |err| 1.66, only 64% within ±1** on the corpus — decisively worse than the
+calibrated model below.
+
+### Finding 2 — the DMG's AC adjustment (÷2) is too aggressive for 2024
+
+The DMG shifts defensive CR by one step per 2 points of AC deviation from expected. But 2024 AC is
+tightly pinned to CR: (actual AC − expected AC at label CR) has median 0, IQR ±2 — so most AC deltas
+are small noise, and ÷2 amplifies them into a full CR step. Swept against the corpus (mean |err|,
+% within ±1; defensive-only):
+
+| AC rule | mean \|err\| | within ±1 |
+|---|---|---|
+| ÷2 (DMG) | 0.94 | 79% |
+| ÷3 | 0.80 | 84% |
+| **÷4 (adopted)** | **0.76** | **86%** |
+| AC ignored | 0.78 | 85% |
+
+÷4 (and AC-off) tie for best and both clearly beat ÷2; the same ordering holds when defensive CR is
+averaged with a rough DPR-based offensive proxy (the real T1.5 test). Adopted `AC_PER_CR_STEP = 4`:
+keeps AC an honest factor (a real 4+ point deviation still moves the CR, and it stays explainable to
+an author who buffs AC) with an implicit ±1-point deadzone, without injecting the ÷2 noise.
+
+### Adopted defensive-CR accuracy (phys ×1.28, AC ÷4), vs labeled CR, n=503
+
+**bias 0 · median |err| 1 step · mean |err| 0.76 · within ±1 86% · within ±2 95%.** Signed-error
+histogram is centered on 0 (mode 229) with a mild +1 lean — expected, since defensive CR is only half
+of the label (label = avg of defensive and offensive), so genuinely tanky monsters read a step high.
+This is a sanity check, **not** the final accuracy number: that comes at T1.5 once offensive CR (T1.4)
+exists and the two are averaged.
+
+### Caveats / notes for later
+
+- Defense detection is intentionally minimal: only the physical-resistance flag matters to the math,
+  so `defenseProfile` computes just that. If a future model needs elemental buckets, the corpus data
+  is in the scratch extractor.
+- Regeneration, incorporeal movement, "half damage from X", legendary resistances, and large hit-dice
+  variance are all unmodeled defensive factors — candidates for the role classifier's feature set
+  (T1.11) and for T2.x, recorded here so they aren't rediscovered from scratch.
+
 ## Open items
 
 - **T1.4** (real DPR extractor) re-grades the DPR column — the CR 13+ values are inherited from
   BOH's line, not measured, and the sub-13 values come from a spike parser with documented blind
-  spots.
-- **T1.5** (corpus regression run) decides the BOH unification and may retune any column;
-  outliers get dispositioned with the user (parser bug / miscalibration / mislabeled monster).
+  spots. It also unlocks offensive CR, which pairs with T1.3's defensive CR.
+- **T1.5** (corpus regression run) averages defensive + offensive CR into a final CR, grades it on
+  the full corpus, decides the BOH unification, and dispositions outliers with the user (parser bug /
+  miscalibration / mislabeled monster). This is where T1.3's AC-÷4 choice gets its real verification.
 - CR 26–29 have **no 2024 monsters at all** — those rows are interpolation and should be marked
   low-confidence in any UI that surfaces divergence.
