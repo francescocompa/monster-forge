@@ -4,7 +4,7 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
-## Batch 255 — replace the 3D d4 tetrahedron with a crystal-shard shape
+## Batch 256 — replace the 3D d4 tetrahedron with a crystal-shard shape
 - The tetrahedral d4 fought the roller: it rests on a face with a *vertex* pointing up, so there's no
   up-facing face for `d3dUpValueBody` to read (the old code read an arbitrary slanted face), and a tetra
   barely tumbles. Replaced the shape with a **crystal shard** — a square rod (4 long flat faces, numbered
