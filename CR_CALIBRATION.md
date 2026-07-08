@@ -206,7 +206,7 @@ exists and the two are averaged.
   variance are all unmodeled defensive factors — candidates for the role classifier's feature set
   (T1.11) and for T2.x, recorded here so they aren't rediscovered from scratch.
 
-## §T1.4 — Offensive CR: the DPR extractor (Batch 261, batch 1 of ~2)
+## §T1.4 — Offensive CR: the DPR extractor (Batches 261–262)
 
 `dprExtract(m)` (data.js) reads best-3-round DPR from the app's monster model — both Forge-structured
 attack entries and imported/plain-text entries (Forge bracket tokens are resolved through
@@ -300,14 +300,58 @@ partially absorbs), dragons keep a +4…+5 residual (breath ×2 AoE + replacemen
 the printed labels budget), and a few curse-weighted monsters (Mummy Lord −6 even with Harm/Insect
 Plague scored). **These go to T1.5's outlier review with the user as-is.**
 
+## §T1.5 — Full-corpus regression + the outlier review (Batch 263)
+
+The final blended CR — `round(avg(offensiveCR.idx, defensiveCR.idx))` — graded on all 503 monsters
+through the production import pipeline:
+
+| population | bias | mean \|err\| | exact | within ±1 | within ±2 |
+|---|---|---|---|---|---|
+| **blended, ok-confidence (n=455)** | 0 | **0.78** | 41% | **86%** | **96%** |
+| blended, all graded (n=503) | 0 | 0.81 | 40% | 85% | 96% |
+| offensive half only | 0 | 1.19 | — | 74% | 87% |
+| defensive half only | 0 | 0.73 | — | 88% | 95% |
+
+Defense is the steadier half; averaging pulls the final onto the diagonal (each half catches the
+other's misses). By type, the engine is tightest on the everyday monsters (beast 0.49 / 98% ±1, fey
+0.43 / 100%, humanoid 0.60 / 95%, fiend 0.61 / 89%) and loosest on **dragons** (1.59 / 48%) and
+control-leaning **elementals/constructs**.
+
+### The graduated harness
+
+- `scripts/grade-corpus.mjs` — committed dev grader (`npm run grade`), parameterized corpus path,
+  skips cleanly when no corpus is present. The repeatable full grade.
+- `test/cr-model.test.js` — committed, self-contained accuracy floor: composite monsters built to
+  known CR bands, graded end-to-end through `offensiveCR`/`defensiveCR`, asserted within tolerance.
+  Runs in `verify`; ships no corpus data.
+
+### The outlier review (done with the user, 2026-07-08) — dispositions
+
+17 monsters miss by ≥3 steps. Read together, **none is a parser bug or a mislabeled monster.** Two
+documented classes, decided via AskUserQuestion:
+
+- **Dragons run hot (+3…+5): accepted, documented.** Breath (×2 AoE, recharges often) + legendary
+  stack above what the printed dragon CRs budget. No special-case fudge — left for the role-aware
+  refinement, since dragon CR is genuinely carried by non-DPR threat (flight, fear, lair).
+- **Control/curse monsters read low (−3…−5): known structural blind spot.** A DPR model cannot see
+  Kraken swallow, Mummy Lord curses, Elemental Cataclysm lair control, Colossus/Animal Lord control.
+  These become the motivating cases for the Phase 1 role classifier (T1.11) and the Phase 2 effect
+  engine — they read the mechanics the damage math can't. Flag low-confidence in any UI.
+- **BOH unification: held to T1.7.** The old suggestion table still drives the live Forge placeholders;
+  it retires when the calculator UI ships, so the ±1 (DC +1–2) shift lands with the feature that
+  explains it — not as a silent drift now.
+
+**Exit check (T1.5 gate): met.** Regression outliers dispositioned; no unexplained misses; the math
+layer is validated end-to-end. A visual report of the whole arc was published as an Artifact.
+
 ## Open items
 
 - **Not scored, deliberately (flagged in notes):** summon damage (Galeb Duhr's boulders), reaction
-  damage, retaliation traits ("a creature that hits the X takes …"). Revisit only if T1.5's review
+  damage, retaliation traits ("a creature that hits the X takes …"). Revisit only if the role work
   says they matter.
-- **T1.5** (corpus regression run) grades the final blended CR on the full corpus, decides the BOH
-  unification, and dispositions outliers with the user (parser bug / miscalibration / mislabeled
-  monster). The scratch harness (`grade-corpus.mjs`) should graduate to a committed, repeatable test
-  there.
+- **Roles (T1.11–T1.14)** consume `dprExtract`'s shape and the effect signals; the control-monster
+  outliers above are their first test cases.
+- **BOH unification** lands at T1.6/T1.7 (calculator UI) — derive the live Forge suggestions from
+  `crExpected`/the new functions and retire `BOH` then. Don't add a third table before that.
 - CR 26–29 have **no 2024 monsters at all** — those rows are interpolation and should be marked
   low-confidence in any UI that surfaces divergence.

@@ -17,7 +17,15 @@ npm test           # init smoke test + pure-function maths (jsdom)
 npm run verify     # all three, in order
 npm run lint:css   # advisory: classes in styles.css with no JS/HTML match (dead-CSS guide; never blocks)
 npm run typecheck  # advisory: tsc --checkJs on parsers.js (catches typos/signature drift; never blocks)
+npm run grade      # advisory: grade the CR math layer against a 5etools bestiary corpus (needs the corpus)
 ```
+
+`grade` (T1.5) runs the CR calculator (`offensiveCR`/`defensiveCR` in `data.js`) over a full 5etools
+bestiary and reports how close the blended CR lands to the published label. It needs an external corpus
+(`node scripts/grade-corpus.mjs [path]`, or `MF_CORPUS=…`; defaults to the local `5etool_mirror`), so it
+is NOT in `verify` and skips cleanly when no corpus is present. The committed accuracy floor — a handful
+of composite monsters graded end-to-end — lives in `test/cr-model.test.js` and DOES run in `verify`; the
+full derivation and per-column calibration is documented in `CR_CALIBRATION.md`.
 
 `typecheck` (B201) runs `// @ts-check` over `parsers.js` — the pure 5etools-import layer, where a shape bug
 actually bites. The shared scripts run in one global scope, which tsc's `checkJs` can't see across files,

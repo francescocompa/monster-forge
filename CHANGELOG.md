@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 263 — T1.5: full-corpus regression, outlier review, harness graduated
+- **Final blended-CR grade** (503 monsters, production import pipeline): bias 0, mean |err| 0.78 CR
+  steps, 41% exact, **86% within ±1, 96% within ±2** at 90% ok-confidence coverage. Defensive half
+  0.73 / offensive 1.19; averaging is what lands the final on the diagonal.
+- **Harness graduated:** `scripts/grade-corpus.mjs` (committed dev grader, `npm run grade`,
+  parameterized corpus path, skips when absent) + `test/cr-model.test.js` (self-contained accuracy
+  floor — composite monsters graded end-to-end, runs in `verify`, ships no corpus data). 54 tests
+  green (10 new). Documented the grader in DEVELOPMENT.md.
+- **Outlier review (with the user):** the 17 ≥3-step misses split into two documented classes, none a
+  parser bug — dragons run hot (accepted, deferred to role-aware refinement), control/curse monsters
+  are a structural DPR blind spot (deferred to the role classifier T1.11 + Phase 2 effects). Decided
+  via AskUserQuestion; full dispositions in `CR_CALIBRATION.md` §T1.5.
+- **BOH unification held to T1.7** (decided): the old suggestion table keeps driving live Forge
+  placeholders until the calculator UI ships, so the ±1 shift lands with the feature that explains it.
+- **Published a visualization Artifact** — the whole T1.1–T1.5 arc: 2014-vs-corpus divergence, error
+  distribution, accuracy by CR and by type, the three corpus findings, the outlier review, coverage.
+
 ## Batch 262 — T1.4 (2/2): DPR extractor edge cases against the corpus
 - **Measured first:** most of the 123 low-confidence flags were FALSE (utility actions counted as
   parse failures) and 2024 casters keep their damage in explicit actions, so the spell table needed

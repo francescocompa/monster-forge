@@ -58,11 +58,14 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
   ok-confidence coverage (455/503). Legendary = best option once/round (sweep-validated); auras +
   ~28-spell SPELL_DPR scored; summons/reactions deliberately flagged-not-scored. Outliers
   characterized for T1.5 — see `CR_CALIBRATION.md` §T1.4.**
-- [ ] **T1.5 — Corpus regression run** · Opus @ high · ~1
+- [x] **T1.5 — Corpus regression run** · Opus @ high · ~1 · Batch 263
   Derived CR across the full preset corpus; divergence distribution report.
   **🔍 REVIEW (with you):** read the outliers together — they're either parser bugs, table
   miscalibration, or genuinely mislabeled monsters. This session decides which, before the UI
-  exists.
+  exists. **Done — final blended CR: 86% within ±1, bias 0, mean 0.78 steps (455 ok-conf / 503).
+  Harness graduated (`npm run grade` + `test/cr-model.test.js`). Review done: 17 outliers, no
+  parser bugs — dragons accepted (run hot), control/curse monsters deferred to roles/effects; BOH
+  unification held to T1.7. Visual report published as an Artifact. See `CR_CALIBRATION.md` §T1.5.**
 
 ### 🔶 Decide before UI (blocks T1.6–T1.7)
 - **Q1.B — Calculator UI home:** popover off the Forge CR field vs a Forge side panel; and what

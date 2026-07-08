@@ -10,7 +10,8 @@
     "test": "node --test test/*.test.js",
     "verify": "npm run check && npm run lint && npm test",
     "lint:css": "node scripts/lint-css.mjs",
-    "typecheck": "node scripts/gen-globals.mjs && tsc -p tsconfig.json"
+    "typecheck": "node scripts/gen-globals.mjs && tsc -p tsconfig.json",
+    "grade": "node scripts/grade-corpus.mjs"
   },
   "devDependencies": {
     "eslint": "^9.13.0",
