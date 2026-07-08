@@ -4,6 +4,18 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 255 — replace the 3D d4 tetrahedron with a crystal-shard shape
+- The tetrahedral d4 fought the roller: it rests on a face with a *vertex* pointing up, so there's no
+  up-facing face for `d3dUpValueBody` to read (the old code read an arbitrary slanted face), and a tetra
+  barely tumbles. Replaced the shape with a **crystal shard** — a square rod (4 long flat faces, numbered
+  1–4) capped by short blunt pyramids — which lands on one of its 4 long faces like every other die and rolls
+  like a rolled rod. New `d3dCrystalGeo(R)` builds it (≈3:1 rod); `d3dBuild` uses it for `sides===4` and
+  passes only the 4 long faces (normal ⟂ the rod axis) to the labeller, so the cap triangles stay blank and
+  the whole die flows through the existing top-face read/relabel/margin machinery with no d4 special-casing.
+  The caps are kept blunt so it won't rest on a tip; if it ever does, no long face wins the up-margin and the
+  settle-nudge re-rolls it. Verified live: 80/80 random tumbles land a flat face on the pre-rolled value
+  (avg up-margin ≈0.9), zero tip-rests, and the shard reads clearly (number on top, logo on the max "4").
+
 ## Batch 254 — bump the combat init-row chip tap targets (audit P3)
 - The init-row chip cluster (AC, reaction, concentration, add-effect) was 19–23px tall on mobile, under the
   WCAG-AA 24px minimum — the add-effect `+` worst at 19px. Gave the cluster a shared 26px min-height

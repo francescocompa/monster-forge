@@ -191,9 +191,11 @@ function d3dBuild(sides, R){
     const bevel = d3dLook().edges === "round" ? size*0.16 : size*0.04; // tiny bevel = sharp; bigger = rounded
     return { geo: d3dRoundedBox(size, bevel, 3), faces, box:true };
   }
-  const geo = sides===4 ? new THREE.TetrahedronGeometry(R) : sides===8 ? new THREE.OctahedronGeometry(R)
+  const geo = sides===4 ? d3dCrystalGeo(R) : sides===8 ? new THREE.OctahedronGeometry(R)
             : sides===10 ? d3dD10Geo(R) : sides===12 ? new THREE.DodecahedronGeometry(R) : new THREE.IcosahedronGeometry(R);
-  return { geo, faces: d3dFaceList(geo), box:false };
+  // d4 crystal: only the 4 long faces (normal ⟂ the rod's X axis) carry numbers — the pyramidal cap tris don't.
+  const faces = sides===4 ? d3dFaceList(geo).filter(f => Math.abs(f.normal.x) < 0.5) : d3dFaceList(geo);
+  return { geo, faces, box:false };
 }
 function d3dConvex(geo){
   const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, map = new Map(), verts = [], idx = [];
@@ -269,10 +271,34 @@ function d3dD20Layout(faces){
   rem.forEach((i,k) => { const lo=pairs[k%pairs.length][0]; const hi=faces[i].centroid.y>=faces[opp[i]].centroid.y?i:opp[i]; set(hi,lo); });
   return val;
 }
+// The d4 is a CRYSTAL SHARD, not a tetrahedron: a square rod (4 long flat faces) capped by short pyramids at
+// each end. A real tetrahedron rests on a face with a VERTEX up (no up-face for the roller to read, and it
+// barely tumbles); the shard instead lands on one of its 4 long faces — a genuine flat top face — so it reads
+// like every other die and rolls like a rolled rod. The end-caps are kept short/blunt so it won't rest on a
+// tip; if it ever does, none of the 4 numbered faces wins the up-margin and the settle-nudge re-rolls it.
+function d3dCrystalGeo(R){
+  const r = R*0.52, b = R*0.92, cl = R*0.62, L = b + cl, pos = [];   // r: half cross-section · b: half flat length · cl: cap length (≈3:1 rod)
+  const corners = [[1,1],[1,-1],[-1,-1],[-1,1]].map(([sy,sz]) => [sy*r, sz*r]);
+  const P = corners.map(([y,z]) => new THREE.Vector3( b, y, z));   // near-end square ring
+  const M = corners.map(([y,z]) => new THREE.Vector3(-b, y, z));   // far-end square ring
+  const A = new THREE.Vector3(L,0,0), B = new THREE.Vector3(-L,0,0);
+  const triOut = (p1,p2,p3) => { // push a triangle wound so its normal faces outward (die centred at origin)
+    const nn = new THREE.Vector3().subVectors(p2,p1).cross(new THREE.Vector3().subVectors(p3,p1));
+    const cc = new THREE.Vector3().addVectors(p1,p2).add(p3).multiplyScalar(1/3);
+    if (nn.dot(cc) < 0){ const t=p2; p2=p3; p3=t; }
+    pos.push(p1.x,p1.y,p1.z, p2.x,p2.y,p2.z, p3.x,p3.y,p3.z);
+  };
+  for (let i=0;i<4;i++){ const a=P[i], b2=P[(i+1)%4], c=M[(i+1)%4], d=M[i]; triOut(a,b2,c); triOut(a,c,d); } // 4 long faces
+  for (let i=0;i<4;i++){ triOut(A, P[i], P[(i+1)%4]); triOut(B, M[(i+1)%4], M[i]); }                        // 2 pyramidal caps
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+  geo.computeVertexNormals();
+  return geo;
+}
 function d3dMakeDie(sides, value, R, dropped){
   const { geo, faces, box } = d3dBuild(sides, R), grp = new THREE.Group();
   const mesh = new THREE.Mesh(geo, d3dDieMat(box)); mesh.userData.box = box; mesh.castShadow = true; grp.add(mesh); d3dLiveMeshes.push(mesh);
-  const labelSize = R * (sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.60 : sides<=12 ? 0.70 : 0.58), labels = [];
+  const labelSize = R * (sides===4 ? 0.82 : sides===6 ? 1.18 : sides<=6 ? 0.92 : sides<=8 ? 0.78 : sides===10 ? 0.60 : sides<=12 ? 0.70 : 0.58), labels = [];
   const std = sides === 20, layout = std ? d3dD20Layout(faces) : null;       // standard layout for the d20
   faces.forEach((f, idx) => {
     const v = std ? layout[idx] : idx + 1, isMax = v === sides, mat = new THREE.MeshBasicMaterial({ transparent:true, depthWrite:false });
