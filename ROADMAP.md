@@ -1,6 +1,7 @@
 # ROADMAP — Monster Forge, the next twelve phases
 
-> Long-range plan agreed 2026-07-08 (Fable session, two AskUserQuestion rounds). This file is the
+> Long-range plan agreed 2026-07-08 (Fable session, three AskUserQuestion rounds; revised the same
+> day — the encounter simulator was cut in favor of the guided encounter designer). This file is the
 > source of truth for *where the project is going*; `CHANGELOG.md` stays the record of *what shipped*.
 > Maintain it like the handoff STATE block: edit in place, mark phases as they ship, never stack
 > superseded versions. When a phase completes, collapse its task list to a one-line "shipped in
@@ -19,6 +20,17 @@
   without it. Never a dependency of any other phase.
 - **Tactics:** tiered — abstract zones ship in Phase 9; a full grid map is *defined but unscheduled*
   (build only if zones prove insufficient in real play).
+- **Encounter designer, not simulator (rev. 2026-07-08):** the Monte Carlo simulator is **cut
+  entirely** — too easy to clone shallowly to be the innovation, and guidance must stay explainable.
+  Phase 3 is the guided encounter designer: dramatic intent (encounter shapes) → role slots →
+  library match / scale-to-fit / forge-to-brief. All judgments come from static, testable math
+  (action economy, role balance, budgets) — never black-box simulation runs.
+- **Combat roles:** our own math-derived taxonomy (naming is Francesco's design pass), gated by a
+  hard validation requirement — a human-labeled benchmark must confirm the math finds the real
+  role; features the math can't compute (control/support living in rider text) are handled via
+  the P2 effect tags and a manual override, not ignored.
+- **Prep scope:** encounter-level now; adventuring-day attrition guidance is *defined but
+  unscheduled* (same tiering discipline as the grid).
 - **Bridges in scope:** QR-linked printed tokens (P12), Notion lore sync (P10), table stage
   display (P8).
 
@@ -58,9 +70,19 @@ Expands the existing CR calculator/adjuster plan into a general math layer.
   which fields auto-scale may touch.*
 - **P1.7 Bestiary audit.** Library cards show computed-vs-set CR divergence; a bulk "audit my
   bestiary" pass lists outliers.
+- **P1.8 Combat-role inference.** Classify any statblock — preset, imported, homebrew — into
+  combat roles from its stat profile (AC-to-HP ratio, DPR shape, speed, range profile, save DCs).
+  The taxonomy is ours and math-derived: cluster the preset corpus first, then a naming/design
+  pass with Francesco. Role badge on library cards; bestiary filterable by role.
+- **P1.9 Role validation benchmark.** The hard gate P1.8 must pass before anything builds on it:
+  a human-labeled benchmark set (100+ monsters across CR, type, and source) scored against the
+  classifier, with the disagreements reviewed one by one. Where the math *can't* see the role
+  (control/support value living in rider text the numbers don't capture), record the miss
+  explicitly — those cases define P2.8's work — and every creature gets a manual role override so
+  the classifier is never the last word.
 
-**Exit:** the Forge shows live computed CR; a goblin scaled to CR 5 plays believably; the math has
-a test floor.
+**Exit:** the Forge shows live computed CR; a goblin scaled to CR 5 plays believably; the library
+knows its bruisers from its artillery — and the benchmark proves it; the math has a test floor.
 
 ## Phase 2 — Executable rules (the 5e effect engine)
 
@@ -85,28 +107,52 @@ tracker enforces or reminds about.
   rows (player-mode surface lands with Phase 7).
 - **P2.7 Damage-type hooks.** Resistance/immunity/vulnerability applied automatically at HP-damage
   entry, covering the multi-damage-type rolls from B241. Verify current partial coverage first.
+- **P2.8 Roles read effects.** Re-run the P1.9 benchmark with the classifier also reading the
+  machine-readable effect payloads from P2.1 — control and support signals live in riders, not
+  numbers, and this is where the misses P1.9 recorded get closed. The benchmark score is the
+  acceptance test.
 
-**Exit:** a fight where Hold Person, concentration, and a dragon's recharge all manage themselves.
+**Exit:** a fight where Hold Person, concentration, and a dragon's recharge all manage themselves —
+and the role classifier now sees what those effects mean.
 
-## Phase 3 — Encounter simulator
+## Phase 3 — Guided encounter designer
 
-**Goal:** run the fight a thousand times before the session. Difficulty becomes simulated, not
-XP-budgeted.
+**Goal:** encounter building becomes a directed creative act. The DM states dramatic intent — "a
+boss and his pack", "a swarm", "hunters that harass" — and the tool turns it into a mechanically
+sound composition; when a piece is missing, the Forge builds it to spec. No simulator: every
+judgment comes from static, testable math the DM can understand in one sentence.
 
-- **P3.1 Headless combat model.** A simulation loop reusing P1's DPR extraction and P2's effect
-  mechanics, with a simple tactics policy (target-selection heuristics, focus-fire toggle).
-- **P3.2 PC profiles.** Per-PC offensive/defensive model derived from roster fields (level + class
-  chips → baseline DPR/AC/HP from tables), user-overridable per PC.
-- **P3.3 The runner.** ~1,000 iterations in a Web Worker (UI stays live). Outputs: rounds
-  distribution, TPK probability, per-PC chance-to-drop, expected damage taken, resource-drain
-  estimate.
-- **P3.4 Result UI.** A "Simulate" action on the encounter card → result panel (distribution
-  sparkline, verdict line: "Deadly-leaning — 18% chance someone drops").
-  *Mockup + AskUserQuestion.*
-- **P3.5 Calibration.** Flag where the sim and the XP budget disagree; once Phase 5's event logs
-  exist, real fights can back-feed policy tuning (forward-looking, optional).
+- **P3.1 Party profile.** Per-PC offensive/defensive baselines derived from roster fields (level +
+  class chips → expected DPR/AC/HP from tables), overridable per PC — the reference frame all
+  guidance measures against.
+- **P3.2 Composition model.** Replace XP multipliers with the thing they crudely proxy: an
+  action-economy model — actions per round, target spread, nova risk, incoming-vs-outgoing damage
+  balance against the party profile. Pure functions, unit-tested, and every judgment it can emit
+  must be explainable in plain language.
+- **P3.3 Encounter shapes.** A data-driven template library: boss + minions, swarm, pack of
+  hunters, artillery behind soldiers, ambush, elite duo… Each shape = role slots + a CR
+  distribution relative to the party + action-economy targets. Extensible as data, not code.
+- **P3.4 The guided flow.** Shape → dials (difficulty, theme/family, headcount preference) → a
+  concrete slot list. *Core new surface: full mockup + AskUserQuestion iteration before code.*
+- **P3.5 Slot filling.** Per slot, three exits and no dead ends: role- and CR-matched creatures
+  suggested from the library and presets; a near-miss auto-scaled to fit (the P1.6 adjuster,
+  load-bearing here); or "forge to brief".
+- **P3.6 The creation brief.** The shared contract of the whole system: target CR envelope
+  (AC/HP/attack/DC/DPR), role, theme tags. The designer emits it, the Forge opens pre-loaded with
+  it, the chassis system builds toward it — and P11's optional generation (much later) consumes
+  the exact same structure.
+- **P3.7 Composition warnings.** Static-math lint on the assembled encounter: action-economy
+  imbalance ("solo boss vs five PCs — outnumbered five actions to three"), nova risk, budget
+  drift, role gaps. Advisory chips, never blocking.
 
-**Exit:** the encounter card answers "how likely is this to kill the party" before the session.
+**Adventuring-day tier — defined, deliberately unscheduled.** Guidance that knows where the fight
+sits in the day ("third encounter since the long rest — expect the party at ~60% resources"):
+attrition-aware difficulty. Revisit once the encounter-scoped designer has proven itself at the
+table, with the same discipline as the grid tier.
+
+**Exit:** pick "a boss and his pack"; moments later the encounter exists — two creatures straight
+from the library, one auto-scaled to fit, one forged to a brief — and the DM understood every
+suggestion the tool made along the way.
 
 ---
 
@@ -228,7 +274,8 @@ becoming a VTT.
 - **P9.3 AoE by zone.** "Fireball hits Mid" → one tap rolls saves for everyone standing there.
 - **P9.4 Tracker UI.** Zone lanes or chips inside the initiative list — explicitly *not* a map.
   *This reshapes the core combat surface: B5-style mockup + AskUserQuestion iteration.*
-- **P9.5 Simulator integration.** P3 becomes zone-aware (ranged vs melee positioning matters).
+- **P9.5 Designer integration.** The composition model and shape templates become zone-aware —
+  ranged vs melee positioning informs slot suggestions and composition warnings.
 
 **Grid tier — defined, deliberately unscheduled.** Build only if zones prove insufficient in real
 play: P9.G1 canvas map surface with token drag + measured AoE templates; P9.G2 fog of war;
@@ -263,14 +310,16 @@ nothing feels missing. No other phase depends on this one.
 
 - **P11.1 Provider layer.** Client-side key (Anthropic-first), stored locally only — never in cloud
   saves or shares. Every AI feature hides entirely when unset.
-- **P11.2 Generative forge.** Plain-language prompt → complete statblock at a target CR, with
-  generation constrained by P1's math (a post-generation CR audit auto-corrects drift). Output
-  lands in the normal Forge for human editing — never straight into play.
+- **P11.2 Generative forge.** Plain-language prompt → complete statblock, constrained by P1's math
+  and consuming the same P3.6 creation-brief structure the designer emits (a post-generation CR
+  and role audit auto-corrects drift). Output lands in the normal Forge for human editing — never
+  straight into play.
 - **P11.3 Quick-spawn.** "Three kobold variants that harass the flank", mid-session, minutes to
   ready.
 - **P11.4 Tactical co-DM.** On a monster's turn, suggest the strong line (target, action, zone
-  move) from *visible* state; the DM taps to accept or ignores. A deterministic fallback rides
-  P3's policy engine, so the feature exists without a key too.
+  move) from *visible* state; the DM taps to accept or ignores. A deterministic fallback uses
+  plain rule-based heuristics (role-appropriate targeting, opportunity-attack avoidance), so a
+  keyless install still gets a modest version.
 - **P11.5 Journal prose.** An optional prose pass over P10.2 drafts, in a tone Francesco controls
   (the "less corny" rule is the default).
 - **P11.6 Guardrails.** Hard spend meter, no action ever auto-applies without a tap, every AI
@@ -304,11 +353,11 @@ hand a friend your homebrew as one id.
 ## Dependency spine
 
 ```
-P1 math ──► P3 simulator ◄── P2 effects
+P1 math+roles ──► P3 designer ◄── P2 effects (P2.8 role enrichment)
 P2 effects ──► P9 zones (triggers), P7 player effects view
 P4 toolchain ──► P5 events ──► P6 sync ──► P7 player / P8 stage
 P5 events ──► P10 journal        P6 sync ──► P12.2 PWA
-P1+P3 ──► P11 AI (constraint + fallback)   P10 ──► P11.5 prose
+P1 math + P3.6 briefs ──► P11 AI generation   P10 ──► P11.5 prose
 ```
 
 Phases 1–3 are independent of the foundation arc and can interleave with playtesting as today.
@@ -317,7 +366,11 @@ Nothing in 7–12 starts before its foundation (4–6) has passed a real-session
 ## Explicit non-goals
 
 - **No system-agnostic rules engine.** 5e (2024) is the target; the effect schema serves it alone.
-- **No full VTT.** The grid tier exists as an escape hatch, not a destination.
+- **No combat simulator.** Cut 2026-07-08: shallow clones made it worthless as a differentiator,
+  and guidance must stay explainable. If a future feature seems to need simulation, the answer is
+  better static math first — don't resurrect this quietly.
+- **No full VTT.** The grid tier exists as an escape hatch, not a destination — if zones ever feel
+  insufficient, the first answer is better zones or better physical tools, not a rendered map.
 - **No accounts, no logins, no server we operate.** Identity stays device-keyed; infrastructure
   stays static hosting + a managed realtime backend.
 - **No AI dependency.** Every deterministic feature works forever with no key and no network calls
