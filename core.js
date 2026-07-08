@@ -436,8 +436,6 @@ function suggestGear(){
   GEAR_ARMOR.forEach(g=>{if(new RegExp("\\b"+g.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&")+"\\b","i").test(M.acnote||"")&&!seen(g))add.push(g);});
   if(add.length){M.gear=have.concat(add).join(", ");renderGear();renderPreview();toast(`Added ${add.length} item${add.length>1?"s":""}: ${add.join(", ")}.`);}
   else toast("No new gear found in attacks or AC note.");}
-function buildCondDatalist(){const dl=$("#condDatalist");if(!dl)return;dl.innerHTML=[...new Set(enConditions().map(c=>c.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
-function buildSpellDatalist(){const dl=$("#spellDatalist");if(!dl)return;dl.innerHTML=[...new Set(enSpells().map(s=>s.name))].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join("");}
 function bindStatic(){
   bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
   bindField("#f_acnote","acnote");bindField("#f_init","init",true);

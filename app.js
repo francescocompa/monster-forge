@@ -116,8 +116,8 @@ function ingestLibraries(loaded){
     try{
       if(kind==="book"){summary.push(`${L.name}: ${Object.keys(parseBooksJSON(L.json)).length} book refs`);}
       else if(kind==="legendaryGroup"){summary.push(`${L.name}: ${(L.json.legendaryGroup||[]).length} legendary groups`);}
-      else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();buildSpellDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
-      else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();buildCondDatalist();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
+      else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
+      else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
       else if(kind==="rule"){const p=parseRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
       else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped, base not loaded)`:""}`);}
     }catch(err){summary.push(`${L.name}: failed to parse`);}
@@ -357,7 +357,7 @@ function wrapStepper(input,step,min){
   // DM app — skip loading the DM's library/adventures entirely.
   {const shareBin=new URLSearchParams(location.search).get("share");
    if(shareBin){await initPlayerMode(shareBin);hideBootLoader();return;}}
-  await loadRefLibs();buildCondDatalist();buildSpellDatalist();
+  await loadRefLibs();
   await loadAll();
   if(typeof maybeApplySeed==="function")maybeApplySeed(); // dev-only local sandbox data (seed.js)
   if(migratePartyModel()){saveAdv();saveRoster();} // also fold any seed-applied old-shape party into the B136 model

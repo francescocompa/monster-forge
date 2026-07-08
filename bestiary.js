@@ -527,7 +527,7 @@ function openChassis(fromForge,opts){
   draw();
 }
 // Re-render the chassis/spell/condition pools after a library is toggled or removed.
-function refreshLibPools(){if(typeof buildSpellDatalist==="function")buildSpellDatalist();if(typeof buildCondDatalist==="function")buildCondDatalist();if(typeof buildMonsterDatalists==="function")buildMonsterDatalists();}
+function refreshLibPools(){if(typeof buildMonsterDatalists==="function")buildMonsterDatalists();}
 function removeLib(kind,name){
   if(kind==="spell"){state.spells=state.spells.filter(x=>x._source!==name);saveSpells();}
   else if(kind==="condition"){state.conditions=state.conditions.filter(x=>x._source!==name);saveConditions();}

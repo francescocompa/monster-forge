@@ -4,6 +4,13 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 257 — remove dead cond/spell datalists
+- **Removed `buildCondDatalist`/`buildSpellDatalist` (core.js) and the `#condDatalist`/`#spellDatalist`
+  elements (index.html)** — no input references them via `list=` anymore; they were left behind when the
+  condition/spell pickers moved to custom `showPopover` dropdowns. Also dropped their call sites in
+  `app.js` (import + init) and `bestiary.js` `refreshLibPools`. The bestiary tag-add input's `libTagList`
+  stays — it's the one deliberate native-datalist survivor (see B249 note).
+
 ## Batch 256 — replace the 3D d4 tetrahedron with a crystal-shard shape
 - The tetrahedral d4 fought the roller: it rests on a face with a *vertex* pointing up, so there's no
   up-facing face for `d3dUpValueBody` to read (the old code read an arbitrary slanted face), and a tetra
@@ -87,7 +94,6 @@ Newest batches first.
     render is safe regardless of caller.
 - Verified live: the exact prior payload now renders inert (`&lt;img…&gt;`, `data-rollid="x&quot;onx"`),
   the sanitizer rejects bad ids/types, and the Firebase share round-trip still works. `npm run verify` green.
-
 ## Batch 249 — docs: fix "three JS files" drift, stale datalist comment
 - `DEVELOPMENT.md` and the changelog header still described the pre-split site ("the three JS files",
   five-file list); updated to the twelve-script reality and pointed at the four sync points
