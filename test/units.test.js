@@ -77,8 +77,8 @@ const evJSON = (expr) => JSON.parse(ev(`JSON.stringify(${expr})`));
 test("crExpected(cr) — known spot values from the calibrated table (CR_CALIBRATION.md)", () => {
   assert.deepEqual(evJSON("crExpected('1')"), { cr: "1", pb: 2, ac: 13, hpMin: 24, hpMax: 36, hpAvg: 30, atk: 4, dprMin: 10, dprMax: 13, dprAvg: 12, dc: 12 });
   assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 83, hpMax: 102, hpAvg: 93, atk: 7, dprMin: 33, dprMax: 41, dprAvg: 37, dc: 14 });
-  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 20, hpMin: 309, hpMax: 333, hpAvg: 321, atk: 15, dprMin: 145, dprMax: 153, dprAvg: 149, dc: 21 });
-  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 22, hpMin: 776, hpMax: 825, hpAvg: 801, atk: 19, dprMin: 209, dprMax: 216, dprAvg: 213, dc: 27 });
+  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 20, hpMin: 309, hpMax: 333, hpAvg: 321, atk: 15, dprMin: 131, dprMax: 136, dprAvg: 134, dc: 21 });
+  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 22, hpMin: 776, hpMax: 825, hpAvg: 801, atk: 19, dprMin: 198, dprMax: 203, dprAvg: 201, dc: 27 });
 });
 
 test("CR_EXPECT HP and DPR bands tile the ladder — no gaps, no overlaps (inverse lookup safety)", () => {
@@ -182,11 +182,56 @@ test("dprExtract — structured Forge attack entry mirrors attackText's damage m
   assert.equal(x.atk, 5);  // mod 3 + PB 2 at CR 1
 });
 
-test("dprExtract — legendary actions add uses × best per-cost option each round", () => {
+test("dprExtract — legendary actions add the best damage option ONCE per round", () => {
   const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"text",name:"Bite",text:"*Melee Attack Roll:* +4. *Hit:* 10 (2d6 + 3) Piercing damage."}],
-    legend:{on:true,intro:"Legendary Action Uses: 2.",items:[{mode:"text",name:"Tail",text:"*Melee Attack Roll:* +4. *Hit:* 5 (1d4 + 3) Bludgeoning damage."}]}}`)})`);
-  assert.equal(x.legendary, 10); // 2 uses × 5
-  assert.equal(x.dpr, 20);       // base 10 + legendary 10
+    legend:{on:true,intro:"Legendary Action Uses: 3.",items:[
+      {mode:"text",name:"Tail",text:"*Melee Attack Roll:* +4. *Hit:* 5 (1d4 + 3) Bludgeoning damage."},
+      {mode:"text",name:"Stomp",text:"*Melee Attack Roll:* +4. *Hit:* 8 (2d4 + 3) Bludgeoning damage."}]}}`)})`);
+  assert.equal(x.legendary, 8); // 1× the best option, NOT uses × best (see CR_CALIBRATION.md §T1.4)
+  assert.equal(x.dpr, 18);      // base 10 + legendary 8
+});
+
+test("dprExtract — aura trait damage ticks every round; on-death explosions don't", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"text",name:"Slam",text:"*Melee Attack Roll:* +4. *Hit:* 10 (2d6 + 3) Bludgeoning damage."}],
+    traits:[
+      {name:"Fire Aura",text:"At the end of each of the demon's turns, each creature in a 5-foot Emanation originating from the demon takes 7 (2d6) Fire damage."},
+      {name:"Death Throes",text:"The demon explodes when it dies. *Dexterity Saving Throw:* DC 15, each creature in a 30-foot Emanation. *Failure:* 21 (6d6) Fire damage."}]}`)})`);
+  assert.equal(x.aura, 14); // 7 × 2 (each creature); Death Throes excluded
+  assert.equal(x.dpr, 24);
+  assert.ok(x.notes.some(n => /Fire Aura/.test(n)));
+});
+
+test("dprExtract — a 3+ Failure body is a random menu: mean of the options, not the best", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[
+    {mode:"text",name:"Multiattack",text:"It uses Rays three times."},
+    {mode:"text",name:"Rays",text:"Random ray: - **1: Fire.** *Dexterity Saving Throw:* DC 14. *Failure:* 12 (4d4 + 2) Fire damage. *Success:* Half damage. - **2: Stun.** *Constitution Saving Throw:* DC 14. *Failure:* The target has the Stunned condition. - **3: Frost.** *Constitution Saving Throw:* DC 14. *Failure:* 18 (4d6 + 4) Cold damage. *Success:* Half damage."}
+  ]}`)})`);
+  // mean over the 3 menu items: (12 + 0 + 18)/3 = 10 → routine 3× = 30
+  assert.equal(x.dpr, 30);
+});
+
+test("dprExtract — multiattack resolves qualified names and A-or-B counts", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[
+    {mode:"text",name:"Multiattack",text:"It makes two Claw or Ray attacks and uses Bite."},
+    {mode:"text",name:"Claw",text:"*Melee Attack Roll:* +5. *Hit:* 8 (1d10 + 3) Slashing damage."},
+    {mode:"text",name:"Ray",text:"*Ranged Attack Roll:* +5. *Hit:* 11 (2d10) Necrotic damage."},
+    {mode:"text",name:"Bite (Wolf Form Only)",text:"*Melee Attack Roll:* +5. *Hit:* 9 (1d12 + 3) Piercing damage."}
+  ]}`)})`);
+  assert.equal(x.dpr, 31); // 2 × max(8, 11) + 9 via the parenthetical-stripped alias
+});
+
+test("dprExtract — spell lists score against SPELL_DPR: at-will base, X/Day nova, upcast honored", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"spell",name:"Spellcasting",ability:"int",dc:16,atk:"",groups:[
+    {freq:"At Will",spells:"Fire Bolt, Fireball"},
+    {freq:"1/Day Each",spells:"Meteor Swarm, Fly"}
+  ]}]}`)})`);
+  // Fireball 28×2 (AoE) = 56 at-will base; Meteor Swarm 140×2 = 280 as the round-1 nova
+  assert.equal(x.dpr, Math.round((280 + 56 + 56) / 3 * 10) / 10);
+  assert.equal(x.confidence, "ok"); // scored spells → the caster is covered, no low flag
+  assert.ok(x.notes.some(n => /Spellcasting scored/.test(n)));
+  const up = evJSON(`dprExtract(${mon(`{actions:[{mode:"spell",name:"Spellcasting",ability:"int",dc:16,atk:"",groups:[
+    {freq:"At Will",spells:"Insect Plague (level 7 version)"}]}]}`)})`);
+  assert.equal(up.dpr, (22 + 2 * 5.5) * 2); // base 22 +2 levels ×5.5, then AoE ×2 = 66
 });
 
 test("dprExtract — spellcaster with nothing scored is flagged, not silently zero", () => {

@@ -17,7 +17,7 @@ const BOH={"0":[13,3,2,1,9,0],"1/8":[13,9,3,3,10,1],"1/4":[13,15,3,6,10,1],"1/2"
 // NOTE: BOH above is a separate, older empirical line that still drives the LIVE Forge suggestions;
 // it differs from this table by ±1 on most columns (DC by 1–2). Unification is deliberately deferred
 // to T1.5's regression run — don't reconcile the two before that, and don't add a third table.
-const CR_EXPECT={"0":[12,1,6,2,1,3,11],"1/8":[12,7,11,4,4,6,11],"1/4":[13,12,16,4,7,7,11],"1/2":[13,17,23,4,8,9,11],"1":[13,24,36,4,10,13,12],"2":[13,37,55,5,14,20,12],"3":[14,56,68,5,21,26,13],"4":[15,69,82,5,27,32,13],"5":[15,83,102,7,33,41,14],"6":[15,103,118,7,42,47,14],"7":[16,119,131,7,48,54,15],"8":[16,132,146,7,55,60,15],"9":[18,147,159,9,61,66,16],"10":[18,160,179,9,67,75,17],"11":[18,180,198,10,76,80,17],"12":[18,199,200,10,81,82,17],"13":[18,201,206,10,83,87,17],"14":[18,207,219,10,88,95,18],"15":[18,220,236,11,96,108,18],"16":[19,237,251,12,109,118,19],"17":[19,252,271,12,119,119,20],"18":[20,272,293,13,120,127,20],"19":[20,294,308,14,128,144,20],"20":[20,309,333,15,145,153,21],"21":[21,334,375,15,154,154,22],"22":[21,376,425,16,155,157,23],"23":[21,426,475,16,158,163,23],"24":[22,476,525,17,164,171,24],"25":[22,526,575,17,172,178,24],"26":[22,576,625,17,179,186,25],"27":[22,626,675,17,187,193,25],"28":[22,676,725,18,194,201,26],"29":[22,726,775,18,202,208,26],"30":[22,776,825,19,209,216,27]};
+const CR_EXPECT={"0":[12,1,6,2,1,3,11],"1/8":[12,7,11,4,4,5,11],"1/4":[13,12,16,4,6,7,11],"1/2":[13,17,23,4,8,9,11],"1":[13,24,36,4,10,13,12],"2":[13,37,55,5,14,20,12],"3":[14,56,68,5,21,26,13],"4":[15,69,82,5,27,32,13],"5":[15,83,102,7,33,41,14],"6":[15,103,118,7,42,47,14],"7":[16,119,131,7,48,52,15],"8":[16,132,146,7,53,59,15],"9":[18,147,159,9,60,62,16],"10":[18,160,179,9,63,71,17],"11":[18,180,198,10,72,81,17],"12":[18,199,200,10,82,87,17],"13":[18,201,206,10,88,91,17],"14":[18,207,219,10,92,95,18],"15":[18,220,236,11,96,108,18],"16":[19,237,251,12,109,119,19],"17":[19,252,271,12,120,122,20],"18":[20,272,293,13,123,126,20],"19":[20,294,308,14,127,130,20],"20":[20,309,333,15,131,136,21],"21":[21,334,375,15,137,145,22],"22":[21,376,425,16,146,151,23],"23":[21,426,475,16,152,158,23],"24":[22,476,525,17,159,164,24],"25":[22,526,575,17,165,171,24],"26":[22,576,625,17,172,177,25],"27":[22,626,675,17,178,184,25],"28":[22,676,725,18,185,190,26],"29":[22,726,775,18,191,197,26],"30":[22,776,825,19,198,203,27]};
 // Accessor over CR_EXPECT: the expected-stats envelope for a CR, with PB folded in and midpoints
 // precomputed (hpAvg/dprAvg) for callers that want one number instead of a range. Returns null for an
 // unknown CR key rather than guessing.
@@ -84,6 +84,32 @@ function defensiveCR(m){
 // Every number in the result is traceable: options carry their source entry name, rounds say what
 // they used — the T1.6 calculator UI explains itself from this structure alone.
 const _WORD_NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8};
+// Curated damage-spell table for scoring spell-list entries (T1.4 batch 2). Deliberately small:
+// 2024 MM casters carry their damage as explicit actions and their spell lists are mostly utility,
+// so only the damage spells that actually appear on monster lists are here.
+// name → [avg damage, aoe?, avg per upcast level, base level] (2024 PHB numbers).
+const SPELL_DPR={
+  "magic missile":[10,0,3.5,1],"guiding bolt":[14,0,4.5,1],"burning hands":[10,1,3.5,1],
+  "thunderwave":[9,1,4.5,1],"inflict wounds":[11,0,5.5,1],"scorching ray":[21,0,7,2],
+  "shatter":[13,1,4.5,2],"fireball":[28,1,3.5,3],"lightning bolt":[28,1,4.5,3],
+  "call lightning":[16,1,5.5,3],"ice storm":[23,1,3.5,4],"blight":[36,0,4.5,4],
+  "vitriolic sphere":[37,1,5,4],"cloudkill":[22,1,4.5,5],"flame strike":[35,1,3.5,5],
+  "insect plague":[22,1,5.5,5],"cone of cold":[36,1,4.5,5],"destructive wave":[35,1,0,5],
+  "chain lightning":[45,1,4.5,6],"circle of death":[36,1,4.5,6],"harm":[49,0,0,6],
+  "disintegrate":[75,0,10.5,6],"otiluke's freezing sphere":[45,1,4.5,6],
+  "finger of death":[61,0,0,7],"fire storm":[38,1,0,7],"delayed blast fireball":[42,1,3.5,7],
+  "sunburst":[42,1,0,8],"meteor swarm":[140,1,0,9],"power word kill":[60,0,0,9],
+};
+// score one spell-list name against SPELL_DPR, honoring "(level N version)" upcasts;
+// returns {name, dmg (AoE already ×2), aoe} or null for utility/unknown spells
+function _spellDmg(raw){
+  const lv=(String(raw).match(/level (\d+) version/i)||[])[1];
+  const clean=String(raw).replace(/\s*\([^)]*\)\s*/g,"").trim();
+  const sp=SPELL_DPR[clean.toLowerCase()];if(!sp)return null;
+  const [base,aoe,per,baseLv]=sp;
+  const dmg=Math.round(base+(lv?Math.max(0,Number(lv)-baseLv)*per:0));
+  return {name:clean,dmg:aoe?dmg*2:dmg,aoe:!!aoe};
+}
 // resolve Forge bracket tokens ([ATK]/[SAVE]/[2d8+4]) to concrete text when the engine is loaded
 function _dprResolve(m,t){return (typeof applyRefsFor==="function")?applyRefsFor(m,t):String(t||"");}
 // sum the damage packets of one clause: "13 (2d8 + 4) Slashing damage plus 5 (2d4) Fire" → 18;
@@ -120,12 +146,22 @@ function _dprOption(m,e,section){
   if(!text)return null;
   const toHitM=text.match(/Attack Roll:\*?\s*([+-]\d+)/i)||text.match(/Weapon Attack:\s*([+-]\d+)\s*to hit/i);
   const dcM=text.match(/Saving Throw:\*?\s*(?:DC\s*)?(\d+)/i)||text.match(/\bDC\s+(\d+)/);
-  // damage clause: Hit: … (attacks) / Failure: … (saves); fall back to the whole text
+  // damage clause: Hit: … (attacks) / Failure: … (saves); fall back to the whole text.
+  // A body with 3+ Failure clauses is a random menu (Eye Rays) — score the MEAN of the options,
+  // since the monster rolls which one it gets rather than picking the best.
+  // clause boundaries: the next Success/Failure marker, the next "- **N: …**" menu item, or the end.
+  // NOTE: no /i flag — it would make [A-Z]-style classes match lowercase and break on dice text.
+  const fails=[...text.matchAll(/\*?Failure:\*?\s*([^]*?)(?=\*?(?:Success|Failure or Success):|\n?- \*\*|$)/g)].map(f=>f[1]);
   const hitM=text.match(/\*?Hit:\*?\s*([^]*?)(?=\*?[A-Z][a-z]+:\*|$)/);
-  const failM=text.match(/\*?Failure:\*?\s*([^]*?)(?=\*?(?:Success|Failure or Success):\*?|$)/i);
-  const clause=hitM?hitM[1]:failM?failM[1]:text;
-  const dmg=_bestAltDmg(clause);
-  if(dmg==null)return (toHitM||dcM)?Object.assign({name,section,kind:dcM&&!toHitM?"save":"attack",dmg:null,toHit:toHitM?Number(toHitM[1]):null,dc:dcM?Number(dcM[1]):null,aoe:false,unparsed:true},lim):null;
+  let dmg=null,clause=text;
+  if(fails.length>=3){
+    const ds=fails.map(f=>_bestAltDmg(f)).filter(d=>d!=null);
+    if(ds.length){dmg=Math.round(ds.reduce((s,d)=>s+d,0)/fails.length);clause=fails.join(" ");}
+  }
+  if(dmg==null){clause=hitM?hitM[1]:fails[0]??text;dmg=_bestAltDmg(clause);}
+  // "couldn't parse" only means something when the clause talks about damage — a clean utility
+  // action (Sleep Breath, Beguile) is not a parse failure and must not poison confidence
+  if(dmg==null)return (toHitM||dcM)?Object.assign({name,section,kind:dcM&&!toHitM?"save":"attack",dmg:null,toHit:toHitM?Number(toHitM[1]):null,dc:dcM?Number(dcM[1]):null,aoe:false,unparsed:/damage/i.test(clause)},lim):null;
   const kind=(!toHitM&&dcM)?"save":"attack";
   // AoE ×2 targets (DMG convention) — judge from the targeting text, not the damage clause
   const target=dcM?text.slice(0,text.indexOf(clause)>0?text.indexOf(clause):text.length):text;
@@ -134,14 +170,33 @@ function _dprOption(m,e,section){
 }
 // Multiattack text → routine {dmg, parts[], resolved} against the sibling options
 function _dprRoutine(m,text,opts){
-  const byName={};opts.forEach(o=>{if(o.dmg!=null){byName[o.name.toLowerCase()]=o;}});
+  const byName={};opts.forEach(o=>{if(o.dmg!=null){byName[o.name.toLowerCase()]=o;
+    // alias without trailing qualifiers — "Grave Strike (Vampire Form Only)" is referenced as "Grave Strike"
+    const bare=o.name.replace(/\s*\([^)]*\)\s*$/,"").toLowerCase();if(bare&&!(bare in byName))byName[bare]=o;}});
   const find=(ref)=>{ref=ref.trim().toLowerCase();return byName[ref]||byName[ref.replace(/s$/,"")]||null;};
   const basicBest=opts.filter(o=>o.kind==="attack"&&o.dmg!=null&&!o.rechargeP&&!o.uses).reduce((b,o)=>o.dmg>(b?b.dmg:0)?o:b,null);
   let dmg=0,resolved=false;const parts=[];
+  // "makes two Claw or Nightmare Ray attacks" → n × the better of the alternatives
+  String(text).replace(/(\w+) ([A-Z][\w'’ -]*?) or ([A-Z][\w'’ -]*?) attacks?/g,(_,cnt,a,b)=>{
+    const n=_WORD_NUM[cnt.toLowerCase()]||(/^\d+$/.test(cnt)?Number(cnt):0);if(!n)return "";
+    const oa=find(a),ob=find(b),o=(oa&&ob)?(oa.dmg>=ob.dmg?oa:ob):(oa||ob);
+    if(o){dmg+=n*o.dmg;parts.push(n+"× "+o.name);resolved=true;return " ";} // consume so the single-name pass can't double count
+    return "";});
   // named counts: "makes two Rend attacks", "one Bite attack and two Claw attacks"
   String(text).replace(/(\w+) ([A-Z][\w'’ -]*?) attacks?/g,(_,cnt,ref)=>{
     const n=_WORD_NUM[cnt.toLowerCase()]||(/^\d+$/.test(cnt)?Number(cnt):0);if(!n)return "";
     const o=find(ref);if(o){dmg+=n*o.dmg;parts.push(n+"× "+o.name);resolved=true;}
+    return "";});
+  // "makes as many Bite attacks as it has heads" — count from a "has N heads"-style trait
+  const asMany=String(text).match(/as many ([A-Z][\w'’ -]*?) attacks as/);
+  if(asMany){const o=find(asMany[1]);
+    const heads=(m.traits||[]).map(t=>String(t.text||"").match(/has (\w+) (?:heads|limbs|tentacles)/i)).find(Boolean);
+    const n=heads?(_WORD_NUM[heads[1].toLowerCase()]||Number(heads[1])||0):0;
+    if(o&&n){dmg+=n*o.dmg;parts.push(n+"× "+o.name);resolved=true;}}
+  // "uses Eye Rays three times" → n × that option
+  String(text).replace(/uses ([A-Z][\w'’ -]*?) (\w+) times/g,(_,ref,cnt)=>{
+    const n=_WORD_NUM[cnt.toLowerCase()]||0;const o=find(ref);
+    if(o&&n&&!o.rechargeP&&!o.uses){dmg+=n*o.dmg;parts.push(n+"× "+o.name);resolved=true;}
     return "";});
   // "and three other attacks(, using Claw or Tail in any combination)" → n × best basic attack
   const other=String(text).match(/(\w+) other attacks/i);
@@ -163,9 +218,26 @@ function _dprRoutine(m,text,opts){
 function dprExtract(m){
   const notes=[];let unparsed=false,casterDC=null;
   const opts=[];
+  let spellScored=false;
   const scan=(arr,section)=>(arr||[]).forEach(e=>{
-    if(e&&e.mode==="spell"){const dc=(e.dc!==""&&e.dc!=null)?Number(e.dc):null;if(dc!=null)casterDC=Math.max(casterDC??0,dc);
-      notes.push("Spellcasting damage not scored ("+(e.name||"Spellcasting")+")");return;}
+    if(e&&e.mode==="spell"){
+      const dc=(e.dc!==""&&e.dc!=null)?Number(e.dc):null;if(dc!=null)casterDC=Math.max(casterDC??0,dc);
+      // score the spell lists against SPELL_DPR: at-will damage spells are unlimited options,
+      // "N/Day Each" gives each damage spell N uses, a shared "N/Day" pool goes to the best one
+      const scoredNames=[];
+      (e.groups||[]).forEach(g=>{
+        const atWill=/at will|cantrip/i.test(g.freq||""),dayM=String(g.freq||"").match(/^(\d)\s*\/\s*Day(\s+Each)?/i);
+        if(!atWill&&!dayM)return;
+        const scored=String(g.spells||"").split(/,\s*(?![^(]*\))/).map(_spellDmg).filter(Boolean);
+        if(!scored.length)return;
+        const push=(s,uses)=>{opts.push({name:s.name,section,kind:"save",dmg:s.dmg,toHit:null,dc,aoe:s.aoe,unparsed:false,rechargeP:null,uses});scoredNames.push(s.name);};
+        if(atWill)scored.forEach(s=>push(s,null));
+        else if(dayM[2])scored.forEach(s=>push(s,Number(dayM[1])));
+        else push(scored.reduce((b,s)=>s.dmg>b.dmg?s:b),Number(dayM[1]));
+      });
+      if(scoredNames.length){spellScored=true;notes.push("Spellcasting scored: "+scoredNames.join(", "));}
+      else notes.push("Spellcasting damage not scored ("+(e.name||"Spellcasting")+")");
+      return;}
     const o=_dprOption(m,e,section);
     if(o){opts.push(o);if(o.unparsed){unparsed=true;notes.push("Couldn't read damage from \""+o.name+"\"");}}});
   scan(m.actions,"action");scan(m.bonus,"bonus");
@@ -178,16 +250,26 @@ function dprExtract(m){
   const baseLabel=(routine&&routine.resolved&&routine.dmg>=bestSingle)?("Multiattack ("+routine.parts.join(", ")+")"):"best single action";
   // bonus action rides along every round
   const bonusBest=opts.filter(o=>o.section==="bonus"&&o.dmg!=null&&!o.rechargeP&&!o.uses).reduce((b,o)=>Math.max(b,o.dmg),0);
-  // legendary actions: uses/round × best damage-per-cost (cost from "(Costs N Actions)")
+  // Aura/trait damage: a trait that deals damage on a turn-cycle trigger (Fire Aura) ticks every
+  // round. On-death explosions (Death Throes) are one-shots and excluded.
+  let aura=0;
+  (m.traits||[]).forEach(t=>{
+    const tt=_dprResolve(m,t.text||"");
+    if(!/at the (?:start|end) of each of|starts? its turn within|enters? (?:a space |the emanation )?within/i.test(tt))return;
+    if(/when (?:it|the [\w'’ ]+) dies|drops to 0|reduced to 0/i.test(tt))return;
+    const d=_clauseDmg(tt);
+    if(d!=null&&d>0){const v=/each creature/i.test(tt)?d*2:d;aura+=v;notes.push("Aura/trait adds ~"+v+"/round ("+(t.name||"trait")+")");}
+  });
+  // Legendary actions: the best damage option counted ONCE per round. Spending all 3 uses on the
+  // same AoE every round is RAW-legal but the corpus sweep showed the labels don't budget it — the
+  // once-per-round reading grades legendary monsters best AND matches how they actually get played
+  // (remaining uses go to movement/utility options). See CR_CALIBRATION.md §T1.4.
   let legendary=0;
   if(m.legend&&m.legend.on&&(m.legend.items||[]).length){
-    const usesM=String(m.legend.intro||"").match(/Uses:\s*(\d+)/i);const uses=usesM?Number(usesM[1]):3;
-    let per=0,pick="";
-    (m.legend.items||[]).forEach(e=>{const o=_dprOption(m,e,"legendary");if(o&&o.dmg!=null){
-      const cost=Number((String(e.name||"").match(/costs?\s*(\d+)\s*actions/i)||[])[1]||1);
-      if(o.dmg/cost>per){per=o.dmg/cost;pick=o.name;}}});
-    legendary=Math.round(uses*per);
-    if(legendary>0)notes.push("Legendary actions add ~"+legendary+"/round ("+uses+"× best of "+pick+")");
+    let pick="";
+    (m.legend.items||[]).forEach(e=>{const o=_dprOption(m,e,"legendary");
+      if(o&&o.dmg!=null&&o.dmg>legendary){legendary=o.dmg;pick=o.name;}});
+    if(legendary>0)notes.push("Legendary actions add ~"+legendary+"/round (1× "+pick+")");
   }
   // nova options: limited-use (recharge / X-day) actions, standalone or replacing one routine attack
   const novas=opts.filter(o=>o.section==="action"&&o.dmg!=null&&(o.rechargeP||o.uses)).map(o=>{
@@ -206,17 +288,18 @@ function dprExtract(m){
     if(rch){const gain=rch.val-base;best=base+(r===0?gain:Math.round(gain*rch.rechargeP));used=r===0?rch.name+" ("+rch.form+")":used+" + expected "+rch.name;}
     else{const dn=dayUses.find(n=>n.uses>0&&n.val>best);
       if(dn){best=dn.val;used=dn.name+" ("+dn.form+")";dn.uses--;}}
-    rounds.push({dmg:best+bonusBest+legendary,used});
+    rounds.push({dmg:best+bonusBest+legendary+aura,used});
   }
   const dpr=Math.round(rounds.reduce((s,r)=>s+r.dmg,0)/3*10)/10;
   // anchors for the CR nudge: the to-hit of the best attack, the best save/spell DC
   const atk=opts.filter(o=>o.kind==="attack"&&o.toHit!=null).reduce((b,o)=>Math.max(b??-99,o.toHit),null);
   const dc=Math.max(...opts.filter(o=>o.dc!=null).map(o=>o.dc),casterDC??-99);
   const dcOut=dc>-99?dc:null;
-  // confidence: none = nothing scored; low = a parse hole, or unscored spellcasting that looks primary
-  const casterPrimary=casterDC!=null&&(base===0||(dcOut!=null&&casterDC>=dcOut&&base<(crExpected(m.cr)?.dprMin??1)));
+  // confidence: none = nothing scored; low = a parse hole, or unscored spellcasting that looks
+  // primary (a caster whose lists DID score damage spells is considered covered)
+  const casterPrimary=!spellScored&&casterDC!=null&&(base===0||(dcOut!=null&&casterDC>=dcOut&&base<(crExpected(m.cr)?.dprMin??1)));
   const confidence=(dpr<=0)?"none":(unparsed||casterPrimary)?"low":"ok";
-  return {dpr,rounds,base,bonusBest,legendary,atk,dc:dcOut,notes,confidence};
+  return {dpr,rounds,base,bonusBest,legendary,aura,atk,dc:dcOut,notes,confidence};
 }
 // DPR → the CR whose band contains it (bands tile; clamped at the ladder ends)
 function crFromDPR(dpr){

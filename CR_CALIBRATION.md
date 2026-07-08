@@ -249,28 +249,65 @@ real only at legendary CRs): CR 16 mid 102→117, CR 20 126→152, CR 30 187→2
 2. **"uses A, B, or C" comma-lists** resolved only the first name (Kraken's Lightning Strike/Swallow
    were invisible). Now the whole list resolves and the best branch counts.
 
-### Grade after fixes (final CR = round(avg(offensive, defensive)) vs label)
+### Grade after batch 1 fixes (final CR = round(avg(offensive, defensive)) vs label)
 
 | population | bias | mean \|err\| | within ±1 | within ±2 |
 |---|---|---|---|---|
 | ok-confidence (n=378) | 0 | **0.70** | **89%** | **97%** |
 | all graded (n=503) | 0 | 0.88 | 83% | 93% |
 
-Offensive-only: mean 1.10, ±1 78% (ok-confidence) — noisier than defensive, as expected; the blend
-is what ships. Remaining characterized outliers for T1.5's review session: Black/Green dragons
-+7…+9 (their damaging AoE legendary option × 3/round is RAW-legal but evidently not what the label
-budgets), aura monsters read low (Balor −7, Elemental Cataclysm −10 — Fire Aura-type trait damage
-unscored), control monsters read low on offense by design (Kraken −8, Galeb Duhr −4 — the defensive
-half carries them, which the blend partially absorbs).
+### Batch 2 (Batch 262) — edge cases against the corpus
+
+Measured first, built second: dumping the 123 low-confidence rows showed most flags were FALSE (a
+utility action with no damage was being counted as a parse failure) and that 2024 casters carry
+their damage as explicit actions — their spell lists are mostly utility, so the "spell table" needed
+~28 entries, not a full grimoire. What landed:
+
+1. **Honest flags:** "couldn't parse" now requires damage-words in the clause — Sleep Breath and
+   friends are utility actions, not parse failures. Low-confidence dropped 123 → 46 without hiding
+   anything real.
+2. **Multiattack patterns:** parenthetical-stripped aliases ("Grave Strike (Vampire Form Only)" ←
+   "Grave Strike" — vampires/shapeshifters); "makes two **A or B** attacks" (Oni, Mummy Lord);
+   "uses **X three times**" (Beholder); "as many Bite attacks as it has heads" + trait head-count
+   (Hydra); comma-list "uses A, B, or C" (Kraken).
+3. **Random-menu actions** (Eye Rays): a body with 3+ Failure clauses scores the MEAN of the menu
+   (the monster rolls, it doesn't pick), bounded at Success/menu-item markers. A regex `/i`-flag
+   foot-gun found here ([A-Z] matches lowercase under /i and truncated every save clause at its dice
+   expression) — caught because the corpus grade collapsed, which is the harness doing its job.
+4. **Legendary rule change — once per round:** a 5-point factor sweep (re-deriving the DPR column
+   per variant so each rule is judged on its own definition) showed full 3× counting is what the
+   labels DON'T budget; the best-option-once-per-round reading grades legendary monsters best and
+   matches table play. This is the one deliberate deviation from RAW-max in the model.
+5. **Aura/trait damage:** turn-cycle trigger traits (Fire Aura) tick every round, ×2 when "each
+   creature"; on-death explosions (Death Throes) excluded.
+6. **`SPELL_DPR`:** ~28 curated damage spells (2024 PHB averages, AoE flag, per-level upcast,
+   "(level N version)" honored). At-will damage spells become base options, "N/Day Each" become
+   novas, a shared "N/Day" pool goes to the best spell. A caster whose list scored is no longer
+   low-confidence.
+
+**Final T1.4 grade** (DPR column re-derived once more after the definition changes):
+
+| population | bias | mean \|err\| | within ±1 | within ±2 |
+|---|---|---|---|---|
+| ok-confidence (n=455, 90% of corpus) | 0 | **0.78** | **86%** | **96%** |
+| all graded (n=503) | 0 | 0.81 | 85% | 96% |
+
+Statistically level with batch 1's headline — while covering **77 more monsters** at ok-confidence
+(the newly included rows are the hard ones: casters, menu monsters, shapeshifters). Remaining
+outliers are characterized, not mysterious: control-design monsters read low on offense (Kraken −9,
+Elemental Cataclysm −10, Colossus −7 — their CR is carried by defense/control, which the blend only
+partially absorbs), dragons keep a +4…+5 residual (breath ×2 AoE + replacement novas vs whatever
+the printed labels budget), and a few curse-weighted monsters (Mummy Lord −6 even with Harm/Insect
+Plague scored). **These go to T1.5's outlier review with the user as-is.**
 
 ## Open items
 
-- **T1.4 batch 2 (edge cases):** aura/trait passive damage, a curated damage-spell table for casters
-  (123 low-confidence monsters are mostly this), summon damage, reaction damage policy. Re-grade
-  after each addition; re-derive the DPR column only if the definition changes again.
-- **T1.5** (corpus regression run) averages defensive + offensive CR into a final CR, grades it on
-  the full corpus, decides the BOH unification, and dispositions outliers with the user (parser bug /
-  miscalibration / mislabeled monster). The scratch harness (`grade-corpus.mjs`) should graduate to a
-  committed, repeatable test there.
+- **Not scored, deliberately (flagged in notes):** summon damage (Galeb Duhr's boulders), reaction
+  damage, retaliation traits ("a creature that hits the X takes …"). Revisit only if T1.5's review
+  says they matter.
+- **T1.5** (corpus regression run) grades the final blended CR on the full corpus, decides the BOH
+  unification, and dispositions outliers with the user (parser bug / miscalibration / mislabeled
+  monster). The scratch harness (`grade-corpus.mjs`) should graduate to a committed, repeatable test
+  there.
 - CR 26–29 have **no 2024 monsters at all** — those rows are interpolation and should be marked
   low-confidence in any UI that surfaces divergence.

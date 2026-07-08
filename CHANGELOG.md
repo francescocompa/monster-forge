@@ -4,6 +4,27 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 262 — T1.4 (2/2): DPR extractor edge cases against the corpus
+- **Measured first:** most of the 123 low-confidence flags were FALSE (utility actions counted as
+  parse failures) and 2024 casters keep their damage in explicit actions, so the spell table needed
+  ~28 entries. Low-confidence is now 46/503; ok-confidence coverage 455 (90%).
+- **Multiattack patterns:** parenthetical-stripped aliases ("Grave Strike (Vampire Form Only)"),
+  "two A or B attacks" (Oni/Mummy Lord), "uses X three times" (Beholder), "as many Bite attacks as
+  it has heads" (Hydra), comma-list "uses A, B, or C" (Kraken).
+- **Random-menu actions** (Eye Rays): 3+ Failure clauses → MEAN of the menu. A regex `/i`-flag
+  foot-gun ([A-Z] matches lowercase under /i) truncated every save clause at its dice text —
+  caught by the corpus grade collapsing, fixed, and now warned against in a comment.
+- **Legendary counting changed to once-per-round** (best option 1×, not uses × best): a 5-factor
+  sweep with per-variant column re-derivation showed the labels don't budget triple-AoE spam; this
+  is the model's one deliberate deviation from RAW-max. Dragons dropped from +7…+11 to +4…+5.
+- **Aura/trait damage** (Fire Aura ticks per round, each-creature ×2, Death Throes excluded) and
+  **`SPELL_DPR`** (~28 curated 2024 damage spells: at-will → base, N/Day → novas, upcast honored;
+  a scored caster is no longer low-confidence).
+- **Final T1.4 grade:** blended CR bias 0, mean |err| 0.78, 86% within ±1, 96% within ±2 at 90%
+  ok-coverage (level with batch 1 while absorbing 77 harder monsters). DPR column re-derived once
+  after the definition changes. Outliers characterized in `CR_CALIBRATION.md` §T1.4 for T1.5.
+- 44 tests green (5 new: aura, menu-mean, alias/A-or-B, spell scoring, legendary-once).
+
 ## Batch 261 — T1.4 (1/2): offensive CR — the DPR extractor
 - **`dprExtract(m)` + `crFromDPR` + `offensiveCR(m)` (data.js):** best-3-round DPR from the monster
   model — structured Forge attacks AND imported/plain-text entries (bracket tokens resolved via
