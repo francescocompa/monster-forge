@@ -55,3 +55,32 @@ test("bracketize is a pure string transform that never throws", () => {
   // Exercises the bracket engine on a representative token without needing a full monster.
   assert.equal(ev("typeof bracketize('The [c] makes an attack.','Goblin')"), "string");
 });
+
+test("CR_EXPECT covers every CR_LIST key with a well-formed 7-tuple", () => {
+  assert.equal(ev("CR_LIST.every(c=>Array.isArray(CR_EXPECT[c])&&CR_EXPECT[c].length===7)"), true);
+});
+
+test("CR_EXPECT is non-decreasing CR-over-CR on AC/HP/Attack/DPR/DC (2014 DMG table shape)", () => {
+  const monotonic = ev(`(()=>{
+    for(let i=1;i<CR_LIST.length;i++){
+      const a=CR_EXPECT[CR_LIST[i-1]],b=CR_EXPECT[CR_LIST[i]];
+      const [ac0,hMin0,,atk0,,dMax0,dc0]=a,[ac1,hMin1,,atk1,,dMax1,dc1]=b;
+      if(ac1<ac0||hMin1<hMin0||atk1<atk0||dMax1<dMax0||dc1<dc0)return 'CR '+CR_LIST[i]+' regresses vs '+CR_LIST[i-1];
+    }
+    return 'ok';
+  })()`);
+  assert.equal(monotonic, "ok");
+});
+
+const evJSON = (expr) => JSON.parse(ev(`JSON.stringify(${expr})`));
+
+test("crExpected(cr) — known spot values from the 2014 DMG table", () => {
+  assert.deepEqual(evJSON("crExpected('1')"), { cr: "1", pb: 2, ac: 13, hpMin: 71, hpMax: 85, hpAvg: 78, atk: 3, dprMin: 9, dprMax: 14, dprAvg: 12, dc: 13 });
+  assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 131, hpMax: 145, hpAvg: 138, atk: 6, dprMin: 33, dprMax: 38, dprAvg: 36, dc: 15 });
+  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 19, hpMin: 356, hpMax: 400, hpAvg: 378, atk: 10, dprMin: 123, dprMax: 140, dprAvg: 132, dc: 19 });
+  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 19, hpMin: 806, hpMax: 850, hpAvg: 828, atk: 14, dprMin: 303, dprMax: 320, dprAvg: 312, dc: 23 });
+});
+
+test("crExpected returns null for an unknown CR", () => {
+  assert.equal(ev("crExpected('99')"), null);
+});

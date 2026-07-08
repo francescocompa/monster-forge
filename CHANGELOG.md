@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 258 — T1.1: CR expectation tables (Phase 1 math engine, Q1.A hybrid model)
+- **`CR_EXPECT` (data.js)** — the official 2014 DMG p.274 "Monster Statistics by Challenge Rating" table,
+  transcribed in full for all 34 `CR_LIST` keys: AC, HP range, Attack Bonus, DPR range, Save DC. This is
+  the canonical *starting* structure for the Q1.A hybrid CR-math decision (2014 table shape, recalibrated
+  against the 2024 corpus later in T1.2 — not done here).
+- **`crExpected(cr)` accessor** — folds in `pbForCR`, precomputes `hpAvg`/`dprAvg` midpoints, returns
+  `null` for an unknown CR. Pure lookup, no UI wiring yet (that's T1.6/T1.7).
+- **Audit finding, left for T1.2:** the existing `BOH` table (drives the live AC/HP/Attack/Save-DC
+  suggestions in the Forge today) predates `CR_EXPECT` and already diverges from the raw 2014 numbers at
+  most CRs — notably much lower HP, and AC/Attack drifting the other way at high CR. Left unreconciled on
+  purpose: T1.2's corpus calibration spike is where the two get compared against real 2024 monster data
+  and one canonical table wins.
+- Unit tests (`test/units.test.js`): full `CR_LIST` coverage, CR-over-CR monotonicity on every column,
+  spot values at CR 1/5/20/30, unknown-CR → `null`.
+
 ## Batch 257 — remove dead cond/spell datalists
 - **Removed `buildCondDatalist`/`buildSpellDatalist` (core.js) and the `#condDatalist`/`#spellDatalist`
   elements (index.html)** — no input references them via `list=` anymore; they were left behind when the

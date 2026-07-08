@@ -32,9 +32,10 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
   (`5etool_mirror/Sources/`); (c) **hybrid (recommended)** — 2014 table structure, recalibrated
   against the 2024 corpus, divergences documented. The app targets 5e 2024 and 2024 monster math
   drifted from the 2014 table; you own the data to measure by how much.
+  **DECIDED 2026-07-08: hybrid.**
 
 ### Tasks
-- [ ] **T1.1 — CR expectation tables** · Sonnet @ medium · ~1
+- [x] **T1.1 — CR expectation tables** · Sonnet @ medium · ~1 · Batch 258
   Audit the existing CR/XP tables in `data.js`, add the missing columns (expected AC, HP range,
   attack bonus, save DC, DPR per CR 0–30), accessors + unit tests. (P1.1)
 - [ ] **T1.2 — Corpus calibration spike** · Fable @ high · ~1 *(spike, scratch scripts)*
