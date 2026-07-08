@@ -76,9 +76,9 @@ const evJSON = (expr) => JSON.parse(ev(`JSON.stringify(${expr})`));
 
 test("crExpected(cr) — known spot values from the calibrated table (CR_CALIBRATION.md)", () => {
   assert.deepEqual(evJSON("crExpected('1')"), { cr: "1", pb: 2, ac: 13, hpMin: 24, hpMax: 36, hpAvg: 30, atk: 4, dprMin: 10, dprMax: 13, dprAvg: 12, dc: 12 });
-  assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 83, hpMax: 102, hpAvg: 93, atk: 7, dprMin: 31, dprMax: 39, dprAvg: 35, dc: 14 });
-  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 20, hpMin: 309, hpMax: 333, hpAvg: 321, atk: 15, dprMin: 124, dprMax: 129, dprAvg: 127, dc: 21 });
-  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 22, hpMin: 776, hpMax: 825, hpAvg: 801, atk: 19, dprMin: 184, dprMax: 189, dprAvg: 187, dc: 27 });
+  assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 83, hpMax: 102, hpAvg: 93, atk: 7, dprMin: 33, dprMax: 41, dprAvg: 37, dc: 14 });
+  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 20, hpMin: 309, hpMax: 333, hpAvg: 321, atk: 15, dprMin: 145, dprMax: 153, dprAvg: 149, dc: 21 });
+  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 22, hpMin: 776, hpMax: 825, hpAvg: 801, atk: 19, dprMin: 209, dprMax: 216, dprAvg: 213, dc: 27 });
 });
 
 test("CR_EXPECT HP and DPR bands tile the ladder — no gaps, no overlaps (inverse lookup safety)", () => {
@@ -141,4 +141,66 @@ test("defensiveCR tolerates a missing AC (no shift) and clamps to the ladder", (
   assert.equal(ev("defensiveCR({hp:93,dmg:{}}).acDelta"), null);
   assert.equal(ev("defensiveCR({hp:99999,ac:30,dmg:{}}).cr"), "30");
   assert.equal(ev("defensiveCR({hp:1,ac:1,dmg:{}}).cr"), "0");
+});
+
+// ── Offensive CR / DPR extractor (T1.4) ─────────────────────────────────────
+// Minimal monster scaffold — dprExtract only reads cr/abilities/entry arrays.
+const mon = (over) => `Object.assign({cr:"1",str:16,dex:10,con:10,int:10,wis:10,cha:10,actions:[],bonus:[],legend:{on:false,items:[]}},${over})`;
+
+test("dprExtract — plain text attack: damage, to-hit, ok confidence", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"text",name:"Bite",text:"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 7 (1d8 + 3) Piercing damage."}]}`)})`);
+  assert.equal(x.dpr, 7); assert.equal(x.atk, 4); assert.equal(x.confidence, "ok");
+});
+
+test("dprExtract — multiattack multiplies named attacks; riders and best or-branch counted", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[
+    {mode:"text",name:"Multiattack",text:"It makes two Claw attacks."},
+    {mode:"text",name:"Claw",text:"*Melee Attack Roll:* +5. *Hit:* 6 (1d6 + 3) Slashing damage plus 3 (1d6) Fire damage, or 13 (3d6 + 3) Slashing damage if the target is Prone."}
+  ]}`)})`);
+  // best or-branch: max(6+3, 13) = 13 → routine 2×13 = 26
+  assert.equal(x.dpr, 26);
+});
+
+test("dprExtract — save-based AoE doubles damage (DMG two-target convention)", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"text",name:"Breath",text:"*Dexterity Saving Throw:* DC 13, each creature in a 20-foot Cone. *Failure:* 10 (3d6) Fire damage. *Success:* Half damage."}]}`)})`);
+  assert.equal(x.dpr, 20); assert.equal(x.dc, 13);
+});
+
+test("dprExtract — recharge nova: certain round 1, expected-value rounds 2-3", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[
+    {mode:"text",name:"Slam",text:"*Melee Attack Roll:* +4. *Hit:* 10 (2d6 + 3) Bludgeoning damage."},
+    {mode:"text",name:"Fire Breath (Recharge 5–6)",text:"*Dexterity Saving Throw:* DC 12, each creature in a 30-foot Cone. *Failure:* 20 (6d6) Fire damage. *Success:* Half damage."}
+  ]}`)})`);
+  // nova 40 (AoE ×2), base 10; r1 = 40, r2 = r3 = 10 + round((40-10)×1/3) = 20 → (40+20+20)/3 = 26.7
+  assert.equal(x.dpr, 26.7);
+  assert.equal(x.rounds[0].dmg, 40);
+});
+
+test("dprExtract — structured Forge attack entry mirrors attackText's damage maths", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"attack",name:"Greatsword",ability:"str",atk:"",dice:"2d6",addMod:true,dtype:"Slashing",extra:""}]}`)})`);
+  assert.equal(x.dpr, 10); // 2d6 avg 7 + STR mod 3, floored
+  assert.equal(x.atk, 5);  // mod 3 + PB 2 at CR 1
+});
+
+test("dprExtract — legendary actions add uses × best per-cost option each round", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"text",name:"Bite",text:"*Melee Attack Roll:* +4. *Hit:* 10 (2d6 + 3) Piercing damage."}],
+    legend:{on:true,intro:"Legendary Action Uses: 2.",items:[{mode:"text",name:"Tail",text:"*Melee Attack Roll:* +4. *Hit:* 5 (1d4 + 3) Bludgeoning damage."}]}}`)})`);
+  assert.equal(x.legendary, 10); // 2 uses × 5
+  assert.equal(x.dpr, 20);       // base 10 + legendary 10
+});
+
+test("dprExtract — spellcaster with nothing scored is flagged, not silently zero", () => {
+  const x = evJSON(`dprExtract(${mon(`{actions:[{mode:"spell",name:"Spellcasting",ability:"int",dc:14,atk:"",groups:[]}]}`)})`);
+  assert.equal(x.confidence, "none"); // no damage parsed at all
+  assert.equal(x.dc, 14);             // but the DC is still surfaced
+  assert.ok(x.notes.some(n => /Spellcasting/.test(n)));
+});
+
+test("offensiveCR — DPR band anchors the CR, attack bonus nudges at the softened rate", () => {
+  // dpr 36 → CR 5 band (33-41); atk +7 = expected → no step
+  const o = evJSON(`offensiveCR(${mon(`{actions:[
+    {mode:"text",name:"Multiattack",text:"It makes three Claw attacks."},
+    {mode:"text",name:"Claw",text:"*Melee Attack Roll:* +7. *Hit:* 12 (2d8 + 3) Slashing damage."}
+  ]}`)})`);
+  assert.equal(o.cr, "5"); assert.equal(o.step, 0); assert.equal(o.dpr, 36);
 });

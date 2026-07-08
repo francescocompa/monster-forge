@@ -17,7 +17,7 @@ const BOH={"0":[13,3,2,1,9,0],"1/8":[13,9,3,3,10,1],"1/4":[13,15,3,6,10,1],"1/2"
 // NOTE: BOH above is a separate, older empirical line that still drives the LIVE Forge suggestions;
 // it differs from this table by ±1 on most columns (DC by 1–2). Unification is deliberately deferred
 // to T1.5's regression run — don't reconcile the two before that, and don't add a third table.
-const CR_EXPECT={"0":[12,1,6,2,1,3,11],"1/8":[12,7,11,4,4,5,11],"1/4":[13,12,16,4,6,7,11],"1/2":[13,17,23,4,8,9,11],"1":[13,24,36,4,10,13,12],"2":[13,37,55,5,14,19,12],"3":[14,56,68,5,20,24,13],"4":[15,69,82,5,25,30,13],"5":[15,83,102,7,31,39,14],"6":[15,103,118,7,40,45,14],"7":[16,119,131,7,46,51,15],"8":[16,132,146,7,52,57,15],"9":[18,147,159,9,58,58,16],"10":[18,160,179,9,59,66,17],"11":[18,180,198,10,67,76,17],"12":[18,199,200,10,77,81,17],"13":[18,201,206,10,82,87,17],"14":[18,207,219,10,88,93,18],"15":[18,220,236,11,94,99,18],"16":[19,237,251,12,100,105,19],"17":[19,252,271,12,106,111,20],"18":[20,272,293,13,112,117,20],"19":[20,294,308,14,118,123,20],"20":[20,309,333,15,124,129,21],"21":[21,334,375,15,130,135,22],"22":[21,376,425,16,136,141,23],"23":[21,426,475,16,142,147,23],"24":[22,476,525,17,148,153,24],"25":[22,526,575,17,154,159,24],"26":[22,576,625,17,160,165,25],"27":[22,626,675,17,166,171,25],"28":[22,676,725,18,172,177,26],"29":[22,726,775,18,178,183,26],"30":[22,776,825,19,184,189,27]};
+const CR_EXPECT={"0":[12,1,6,2,1,3,11],"1/8":[12,7,11,4,4,6,11],"1/4":[13,12,16,4,7,7,11],"1/2":[13,17,23,4,8,9,11],"1":[13,24,36,4,10,13,12],"2":[13,37,55,5,14,20,12],"3":[14,56,68,5,21,26,13],"4":[15,69,82,5,27,32,13],"5":[15,83,102,7,33,41,14],"6":[15,103,118,7,42,47,14],"7":[16,119,131,7,48,54,15],"8":[16,132,146,7,55,60,15],"9":[18,147,159,9,61,66,16],"10":[18,160,179,9,67,75,17],"11":[18,180,198,10,76,80,17],"12":[18,199,200,10,81,82,17],"13":[18,201,206,10,83,87,17],"14":[18,207,219,10,88,95,18],"15":[18,220,236,11,96,108,18],"16":[19,237,251,12,109,118,19],"17":[19,252,271,12,119,119,20],"18":[20,272,293,13,120,127,20],"19":[20,294,308,14,128,144,20],"20":[20,309,333,15,145,153,21],"21":[21,334,375,15,154,154,22],"22":[21,376,425,16,155,157,23],"23":[21,426,475,16,158,163,23],"24":[22,476,525,17,164,171,24],"25":[22,526,575,17,172,178,24],"26":[22,576,625,17,179,186,25],"27":[22,626,675,17,187,193,25],"28":[22,676,725,18,194,201,26],"29":[22,726,775,18,202,208,26],"30":[22,776,825,19,209,216,27]};
 // Accessor over CR_EXPECT: the expected-stats envelope for a CR, with PB folded in and midpoints
 // precomputed (hpAvg/dprAvg) for callers that want one number instead of a range. Returns null for an
 // unknown CR key rather than guessing.
@@ -40,7 +40,9 @@ const PHYS_RES_MULT=1.28; // ≈ 1/0.78 — restores the toughness the low HP co
 // match is unambiguous; clamped to the ladder ends (hp<1 → "0", hp above the CR30 ceiling → "30").
 function crFromHP(hp){
   if(!(hp>0))return "0";
-  for(const cr of CR_LIST){const e=CR_EXPECT[cr];if(hp>=e[1]&&hp<=e[2])return cr;}
+  // bands tile the ladder, so the first band whose ceiling covers the value is the match —
+  // an exact [min,max] test would let fractional values fall through between integer edges
+  for(const cr of CR_LIST){if(hp<=CR_EXPECT[cr][2])return cr;}
   return "30";
 }
 // Structured defensive profile from a monster's damage map (m.dmg keys are DMG_TYPES-cased) plus the
@@ -71,6 +73,167 @@ function defensiveCR(m){
   const acDelta=hasAC?ac-expAC:0,acStep=Math.round(acDelta/AC_PER_CR_STEP);
   const idx=clamp(baseIdx+acStep,0,CR_LIST.length-1);
   return {cr:CR_LIST[idx],idx,rawHP,effHP,physRes:prof.physRes,baseCR,expAC,ac:hasAC?ac:null,acDelta:hasAC?acDelta:null,acStep};
+}
+// ── Offensive CR: the DPR extractor (T1.4) ──────────────────────────────────
+// Best-3-round damage from the monster's entries, DMG-method conventions calibrated per
+// CR_CALIBRATION.md: AoE counts 2 targets, save effects deal full failure damage, "or" damage
+// alternatives take the best branch, riders ("plus N (…)") are summed, a limited-use nova (recharge /
+// X-per-day / replace-one-attack) upgrades the rounds it's available for — recharge as expected value
+// on rounds 2-3. Legendary actions add each round. Spellcasting damage is NOT scored in this pass
+// (recorded as a note + confidence drop when it looks like the monster's primary offense).
+// Every number in the result is traceable: options carry their source entry name, rounds say what
+// they used — the T1.6 calculator UI explains itself from this structure alone.
+const _WORD_NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8};
+// resolve Forge bracket tokens ([ATK]/[SAVE]/[2d8+4]) to concrete text when the engine is loaded
+function _dprResolve(m,t){return (typeof applyRefsFor==="function")?applyRefsFor(m,t):String(t||"");}
+// sum the damage packets of one clause: "13 (2d8 + 4) Slashing damage plus 5 (2d4) Fire" → 18;
+// falls back to flat "N <Type> damage" (minions); null when the clause carries no damage at all
+function _clauseDmg(clause){
+  let total=0,found=false;
+  String(clause||"").replace(/(\d+)\s*\(([^)]*\d+\s*d\s*\d+[^)]*)\)/g,(_,avg)=>{total+=Number(avg);found=true;return "";});
+  if(!found)String(clause||"").replace(/(\d+)\s+[A-Z][a-z]+ damage/g,(_,n)=>{total+=Number(n);found=true;return "";});
+  return found?total:null;
+}
+// best "or"-branch of a damage clause (conditional bonus damage reads as the effective round)
+function _bestAltDmg(clause){
+  let best=null;
+  String(clause||"").split(/,?\s+or\s+/i).forEach(alt=>{const d=_clauseDmg(alt);if(d!=null)best=Math.max(best??0,d);});
+  return best;
+}
+const _AOE_RE=/each creature|each of|all creatures|-foot\s+(?:cone|line|sphere|cube|cylinder|emanation)/i;
+// one entry → a scored damage option {name,kind,dmg,toHit,dc,aoe,uses,rechargeP,unparsed} or null
+function _dprOption(m,e,section){
+  if(!e||e.mode==="spell")return null; // structured spellcasting handled by the caller (DC only)
+  const name=e.name||"";
+  // limited-use markers live in the entry name: "(Recharge 5–6)" / "(2/Day)"
+  const rch=name.match(/\(recharge\s*(\d)(?:\s*[–-]\s*6)?\)/i);
+  const day=name.match(/\((\d+)\s*\/\s*day/i);
+  const lim={rechargeP:rch?(7-Number(rch[1]))/6:null,uses:day?Number(day[1]):null};
+  if(e.mode==="attack"){ // Forge-structured attack: read the fields, mirror attackText's maths
+    const ab=mod(m[e.ability]??10),pb=pbForCR(m.cr);
+    const toHit=(e.atk!==""&&e.atk!=null)?Number(e.atk):ab+pb;
+    let dmg=Math.max(1,Math.floor(diceAvg(e.dice)+(e.addMod?ab:0)));
+    const extraDmg=_clauseDmg(_dprResolve(m,e.extra||""));if(extraDmg!=null)dmg+=extraDmg;
+    return Object.assign({name,section,kind:"attack",dmg,toHit,dc:null,aoe:false,unparsed:false},lim);
+  }
+  const text=_dprResolve(m,e.text||e.response||"");
+  if(!text)return null;
+  const toHitM=text.match(/Attack Roll:\*?\s*([+-]\d+)/i)||text.match(/Weapon Attack:\s*([+-]\d+)\s*to hit/i);
+  const dcM=text.match(/Saving Throw:\*?\s*(?:DC\s*)?(\d+)/i)||text.match(/\bDC\s+(\d+)/);
+  // damage clause: Hit: … (attacks) / Failure: … (saves); fall back to the whole text
+  const hitM=text.match(/\*?Hit:\*?\s*([^]*?)(?=\*?[A-Z][a-z]+:\*|$)/);
+  const failM=text.match(/\*?Failure:\*?\s*([^]*?)(?=\*?(?:Success|Failure or Success):\*?|$)/i);
+  const clause=hitM?hitM[1]:failM?failM[1]:text;
+  const dmg=_bestAltDmg(clause);
+  if(dmg==null)return (toHitM||dcM)?Object.assign({name,section,kind:dcM&&!toHitM?"save":"attack",dmg:null,toHit:toHitM?Number(toHitM[1]):null,dc:dcM?Number(dcM[1]):null,aoe:false,unparsed:true},lim):null;
+  const kind=(!toHitM&&dcM)?"save":"attack";
+  // AoE ×2 targets (DMG convention) — judge from the targeting text, not the damage clause
+  const target=dcM?text.slice(0,text.indexOf(clause)>0?text.indexOf(clause):text.length):text;
+  const aoe=kind==="save"&&_AOE_RE.test(target);
+  return Object.assign({name,section,kind,dmg:aoe?dmg*2:dmg,toHit:toHitM?Number(toHitM[1]):null,dc:dcM?Number(dcM[1]):null,aoe,unparsed:false},lim);
+}
+// Multiattack text → routine {dmg, parts[], resolved} against the sibling options
+function _dprRoutine(m,text,opts){
+  const byName={};opts.forEach(o=>{if(o.dmg!=null){byName[o.name.toLowerCase()]=o;}});
+  const find=(ref)=>{ref=ref.trim().toLowerCase();return byName[ref]||byName[ref.replace(/s$/,"")]||null;};
+  const basicBest=opts.filter(o=>o.kind==="attack"&&o.dmg!=null&&!o.rechargeP&&!o.uses).reduce((b,o)=>o.dmg>(b?b.dmg:0)?o:b,null);
+  let dmg=0,resolved=false;const parts=[];
+  // named counts: "makes two Rend attacks", "one Bite attack and two Claw attacks"
+  String(text).replace(/(\w+) ([A-Z][\w'’ -]*?) attacks?/g,(_,cnt,ref)=>{
+    const n=_WORD_NUM[cnt.toLowerCase()]||(/^\d+$/.test(cnt)?Number(cnt):0);if(!n)return "";
+    const o=find(ref);if(o){dmg+=n*o.dmg;parts.push(n+"× "+o.name);resolved=true;}
+    return "";});
+  // "and three other attacks(, using Claw or Tail in any combination)" → n × best basic attack
+  const other=String(text).match(/(\w+) other attacks/i);
+  if(other&&basicBest){const n=_WORD_NUM[other[1].toLowerCase()]||0;if(n){dmg+=n*basicBest.dmg;parts.push(n+"× "+basicBest.name);resolved=true;}}
+  // generic fallback: "makes two attacks" with nothing named
+  if(!resolved){const g=String(text).match(/makes? (\w+) attacks/i);
+    if(g&&basicBest){const n=_WORD_NUM[g[1].toLowerCase()]||0;if(n){dmg=n*basicBest.dmg;parts.push(n+"× "+basicBest.name);resolved=true;}}}
+  // "and uses X" / "uses either X or Y" / "uses A, B, or C": add the best resolvable named use of
+  // the list (unlimited ones only — limited uses are handled as novas by the round simulation).
+  // Capture the whole chunk to the sentence end, trim trailing conditions, then split the list.
+  String(text).replace(/uses(?: either)? ([A-Z][^.]*)/g,(_,chunk)=>{
+    chunk=chunk.split(/\s+if\s+|\s+to\s+/)[0];
+    let best=null;
+    chunk.split(/,\s*(?:or\s+)?|\s+or\s+/).forEach(ref=>{const o=find(ref);if(o&&!o.rechargeP&&!o.uses&&o.dmg!=null&&(!best||o.dmg>best.dmg))best=o;});
+    if(best){dmg+=best.dmg;parts.push("+ "+best.name);resolved=true;}
+    return "";});
+  return {dmg,parts,resolved,cheapest:basicBest};
+}
+function dprExtract(m){
+  const notes=[];let unparsed=false,casterDC=null;
+  const opts=[];
+  const scan=(arr,section)=>(arr||[]).forEach(e=>{
+    if(e&&e.mode==="spell"){const dc=(e.dc!==""&&e.dc!=null)?Number(e.dc):null;if(dc!=null)casterDC=Math.max(casterDC??0,dc);
+      notes.push("Spellcasting damage not scored ("+(e.name||"Spellcasting")+")");return;}
+    const o=_dprOption(m,e,section);
+    if(o){opts.push(o);if(o.unparsed){unparsed=true;notes.push("Couldn't read damage from \""+o.name+"\"");}}});
+  scan(m.actions,"action");scan(m.bonus,"bonus");
+  const multi=(m.actions||[]).find(e=>/^multiattack/i.test(e.name||""));
+  const routine=multi?_dprRoutine(m,_dprResolve(m,multi.text||""),opts.filter(o=>o.section==="action")):null;
+  if(multi&&routine&&!routine.resolved){unparsed=true;notes.push("Multiattack routine couldn't be resolved");}
+  // base per-round action: routine vs best single unlimited action
+  const bestSingle=opts.filter(o=>o.section==="action"&&o.dmg!=null&&!o.rechargeP&&!o.uses).reduce((b,o)=>Math.max(b,o.dmg),0);
+  let base=Math.max(routine&&routine.resolved?routine.dmg:0,bestSingle);
+  const baseLabel=(routine&&routine.resolved&&routine.dmg>=bestSingle)?("Multiattack ("+routine.parts.join(", ")+")"):"best single action";
+  // bonus action rides along every round
+  const bonusBest=opts.filter(o=>o.section==="bonus"&&o.dmg!=null&&!o.rechargeP&&!o.uses).reduce((b,o)=>Math.max(b,o.dmg),0);
+  // legendary actions: uses/round × best damage-per-cost (cost from "(Costs N Actions)")
+  let legendary=0;
+  if(m.legend&&m.legend.on&&(m.legend.items||[]).length){
+    const usesM=String(m.legend.intro||"").match(/Uses:\s*(\d+)/i);const uses=usesM?Number(usesM[1]):3;
+    let per=0,pick="";
+    (m.legend.items||[]).forEach(e=>{const o=_dprOption(m,e,"legendary");if(o&&o.dmg!=null){
+      const cost=Number((String(e.name||"").match(/costs?\s*(\d+)\s*actions/i)||[])[1]||1);
+      if(o.dmg/cost>per){per=o.dmg/cost;pick=o.name;}}});
+    legendary=Math.round(uses*per);
+    if(legendary>0)notes.push("Legendary actions add ~"+legendary+"/round ("+uses+"× best of "+pick+")");
+  }
+  // nova options: limited-use (recharge / X-day) actions, standalone or replacing one routine attack
+  const novas=opts.filter(o=>o.section==="action"&&o.dmg!=null&&(o.rechargeP||o.uses)).map(o=>{
+    let val=o.dmg,form="standalone";
+    if(routine&&routine.resolved&&multi&&routine.cheapest&&new RegExp("replace one attack","i").test(multi.text||"")){
+      const repl=routine.dmg-routine.cheapest.dmg+o.dmg;
+      if(repl>val){val=repl;form="replacing one "+routine.cheapest.name;}}
+    return {name:o.name,val,form,rechargeP:o.rechargeP,uses:o.uses};
+  }).sort((a,b)=>b.val-a.val);
+  // 3-round simulation: X/Day novas greedily fill rounds; recharge novas are certain on round 1
+  // (assume charged) and expected-value on rounds 2-3
+  const rounds=[];let dayUses=novas.filter(n=>n.uses).map(n=>({...n}));
+  for(let r=0;r<3;r++){
+    let best=base,used=baseLabel;
+    const rch=novas.find(n=>n.rechargeP&&n.val>base);
+    if(rch){const gain=rch.val-base;best=base+(r===0?gain:Math.round(gain*rch.rechargeP));used=r===0?rch.name+" ("+rch.form+")":used+" + expected "+rch.name;}
+    else{const dn=dayUses.find(n=>n.uses>0&&n.val>best);
+      if(dn){best=dn.val;used=dn.name+" ("+dn.form+")";dn.uses--;}}
+    rounds.push({dmg:best+bonusBest+legendary,used});
+  }
+  const dpr=Math.round(rounds.reduce((s,r)=>s+r.dmg,0)/3*10)/10;
+  // anchors for the CR nudge: the to-hit of the best attack, the best save/spell DC
+  const atk=opts.filter(o=>o.kind==="attack"&&o.toHit!=null).reduce((b,o)=>Math.max(b??-99,o.toHit),null);
+  const dc=Math.max(...opts.filter(o=>o.dc!=null).map(o=>o.dc),casterDC??-99);
+  const dcOut=dc>-99?dc:null;
+  // confidence: none = nothing scored; low = a parse hole, or unscored spellcasting that looks primary
+  const casterPrimary=casterDC!=null&&(base===0||(dcOut!=null&&casterDC>=dcOut&&base<(crExpected(m.cr)?.dprMin??1)));
+  const confidence=(dpr<=0)?"none":(unparsed||casterPrimary)?"low":"ok";
+  return {dpr,rounds,base,bonusBest,legendary,atk,dc:dcOut,notes,confidence};
+}
+// DPR → the CR whose band contains it (bands tile; clamped at the ladder ends)
+function crFromDPR(dpr){
+  if(!(dpr>0))return "0";
+  for(const cr of CR_LIST){if(dpr<=CR_EXPECT[cr][5])return cr;} // first ceiling that covers (see crFromHP)
+  return "30";
+}
+// Offensive CR: DPR → base CR, nudged by the primary anchor's deviation (attack bonus, else save DC)
+// from that CR's expectation — same softened ÷4 rate as the AC nudge, same corpus rationale.
+function offensiveCR(m){
+  const x=dprExtract(m);
+  const baseCR=crFromDPR(x.dpr),baseIdx=CR_LIST.indexOf(baseCR);
+  const e=CR_EXPECT[baseCR];
+  const anchor=x.atk!=null?{kind:"atk",val:x.atk,exp:e[3]}:x.dc!=null?{kind:"dc",val:x.dc,exp:e[6]}:null;
+  const step=anchor?Math.round((anchor.val-anchor.exp)/AC_PER_CR_STEP):0;
+  const idx=clamp(baseIdx+step,0,CR_LIST.length-1);
+  return {cr:CR_LIST[idx],idx,dpr:x.dpr,baseCR,anchor,step,confidence:x.confidence,notes:x.notes,rounds:x.rounds};
 }
 const BUDGET={1:[50,75,100],2:[100,150,200],3:[150,225,400],4:[250,375,500],5:[500,750,1100],6:[600,1000,1400],7:[750,1300,1700],8:[1000,1700,2100],9:[1300,2000,2600],10:[1600,2300,3100],11:[1900,2900,4100],12:[2200,3700,4700],13:[2600,4200,5400],14:[2900,4900,6200],15:[3300,5400,7800],16:[3800,6100,9800],17:[4500,7200,11700],18:[5000,8700,14200],19:[5500,10700,17200],20:[6400,13200,22000]};
 const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];

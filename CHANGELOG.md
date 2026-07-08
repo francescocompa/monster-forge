@@ -4,6 +4,26 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 261 — T1.4 (1/2): offensive CR — the DPR extractor
+- **`dprExtract(m)` + `crFromDPR` + `offensiveCR(m)` (data.js):** best-3-round DPR from the monster
+  model — structured Forge attacks AND imported/plain-text entries (bracket tokens resolved via
+  `applyRefsFor` first). Conventions: best "or"-branch, riders summed, AoE ×2 targets, full failure
+  damage on saves, multiattack resolution (named counts / "N other attacks" / "uses A, B, or C"
+  lists), recharge & X/Day novas (standalone or **replacing one routine attack** — how 2024 dragons
+  actually nova), recharge expected-value on rounds 2–3, legendary actions per round. Spellcasting/
+  aura/summon damage NOT scored yet (batch 2) — flagged in `notes` + confidence instead of silently
+  wrong. Full derivation returned for the T1.6 calculator UI.
+- **First full-pipeline corpus grade** (bestiary-xmm.json → `parseBestiaryJSON` → extractor,
+  n=503): final CR = round(avg(off, def)) scores **bias 0, mean |err| 0.70 CR steps, 89% within ±1,
+  97% within ±2** on ok-confidence rows (n=378). Grade caught two real bugs, both fixed: fractional
+  DPR fell through the integer band lookup (`crFromDPR(7.3)` → "30"; `crFromHP` had the same latent
+  bug), and "uses A, B, or C" comma-lists resolved only the first name.
+- **CR_EXPECT DPR columns re-derived from the production extractor** (definition match — the spike
+  parser's column made legendary monsters read +4…+12 high): pooled medians to CR 21, least-squares
+  extension above (per-CR medians there are noise). Dense region ≈ unchanged; CR 20 mid 126→152.
+  `CR_CALIBRATION.md` §T1.4 has the whole story + the characterized outliers for T1.5's review.
+- 40 tests green (8 new extractor/offensive tests).
+
 ## Batch 260 — T1.3: defensive CR (effective-HP model, corpus-calibrated)
 - **New pure functions in data.js:** `crFromHP` (HP → CR via the tiling `CR_EXPECT` bands),
   `defenseProfile`/`effectiveHP`, and `defensiveCR(m)` → `{cr, effHP, baseCR, acDelta, acStep, …}`

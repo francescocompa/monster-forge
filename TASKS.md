@@ -49,11 +49,14 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
   2014 blanket multipliers (only physical-resistance depresses HP → ×1.28; elemental/immunity get
   none) and softened the AC rule to ÷4; adopted config scores mean |err| 0.76 CR steps / 86% within
   ±1 on 503 monsters. See `CR_CALIBRATION.md` §T1.3.**
-- [ ] **T1.4 — Offensive CR: the DPR extractor** · Fable @ high · ~2
+- [ ] **T1.4 — Offensive CR: the DPR extractor** · Fable @ high · ~2 · **batch 1 done (B261)**
   The keystone function of the whole plan (CR calc, role inference, and the P3 composition model
   all consume it): best-3-round DPR from statblock entries — multiattack, recharge weighting,
   save-for-half, riders — with a confidence flag for what it can't parse. Batch 1 core, batch 2
-  edge cases against the corpus. (P1.3)
+  edge cases against the corpus. (P1.3) **Batch 1: `dprExtract`/`offensiveCR` in data.js; blended
+  CR grades 89% within ±1 on ok-confidence corpus rows; DPR column re-derived (definition match).
+  Batch 2 remaining: auras/trait damage, caster damage-spell table (most of the 123 low-confidence
+  rows), summons, reaction policy — see `CR_CALIBRATION.md` §T1.4.**
 - [ ] **T1.5 — Corpus regression run** · Opus @ high · ~1
   Derived CR across the full preset corpus; divergence distribution report.
   **🔍 REVIEW (with you):** read the outliers together — they're either parser bugs, table

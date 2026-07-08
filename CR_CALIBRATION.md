@@ -101,6 +101,11 @@ untouched (see Decisions).
 
 (`n` = 2024 MM monsters at that CR. PB is not in the tuple — `crExpected()` folds in `pbForCR`.)
 
+> **DPR column superseded in Batch 261:** the DPR bands above were calibrated with the T1.2 spike
+> parser. T1.4's production extractor uses a richer definition (legendary actions, replace-one-attack
+> novas, recharge expected value), so the DPR min/max columns were re-derived from it — see §T1.4.
+> All other columns are unchanged.
+
 ## Reference: the raw 2014 DMG p.274 table (NOT adopted)
 
 Kept only so future sessions don't re-transcribe it. Columns: AC · HP · Atk · DPR · DC.
@@ -201,13 +206,71 @@ exists and the two are averaged.
   variance are all unmodeled defensive factors — candidates for the role classifier's feature set
   (T1.11) and for T2.x, recorded here so they aren't rediscovered from scratch.
 
+## §T1.4 — Offensive CR: the DPR extractor (Batch 261, batch 1 of ~2)
+
+`dprExtract(m)` (data.js) reads best-3-round DPR from the app's monster model — both Forge-structured
+attack entries and imported/plain-text entries (Forge bracket tokens are resolved through
+`applyRefsFor` first, so `[ATK]`/`[2d8+4]` text parses identically). `offensiveCR(m)` maps DPR into
+the `CR_EXPECT` band and nudges by the primary anchor (attack bonus, else save DC) at the same
+softened ÷4 rate as T1.3's AC rule. Model conventions (all deliberate, all in the derivation the
+functions return):
+
+- Riders ("plus N (…)") summed; **"or" damage alternatives take the best branch**; save effects deal
+  full failure damage; **AoE counts 2 targets**; flat damage (minions) parses too.
+- **Multiattack** resolves named counts ("makes two Rend attacks"), "N other attacks", generic
+  fallbacks, and in-routine "uses A, B, or C" lists (best resolvable, unlimited only).
+- **Limited-use novas** (recharge / X-per-day) upgrade rounds: standalone or **replacing one routine
+  attack** when the multiattack allows it (this is how 2024 dragons actually nova — the spike missed
+  it); recharge is certain on round 1 and expected-value (probability-weighted) on rounds 2–3;
+  X/Day spends greedily.
+- **Legendary actions**: uses/round × best damage-per-cost option, added every round. No no-repeat
+  clause exists in the 2024 data, so 3× the same option is treated as RAW-legal.
+- **Not scored (flagged in `notes` + confidence)**: spellcasting damage (confidence drops when it
+  looks like the primary offense), aura/trait passive damage (Balor's Fire Aura), summons
+  (Galeb Duhr's boulders), reaction damage. These are the batch-2 edge cases.
+
+### The DPR column re-derivation (definition match)
+
+Grading immediately exposed **definition drift**: the DPR column was calibrated with the spike
+parser (no legendary actions, no replacement novas), so legendary monsters read +4…+12 high against
+it. Per this memo's own T1.2 note, the column was re-derived from the production extractor run over
+the corpus through the real import pipeline (`parseBestiaryJSON` → `mapMonsterJSON` → `dprExtract`,
+ok-confidence rows): pooled medians to CR 21, then a least-squares line fit on the CR 13–21 mids
+extended to CR 30 (per-CR medians above 21 are noise — the buckets hold a handful of dragons plus
+low-DPR control monsters and even bounce downward). Dense region barely moved (definition drift was
+real only at legendary CRs): CR 16 mid 102→117, CR 20 126→152, CR 30 187→213.
+
+### Bugs the corpus grade caught (all fixed this batch)
+
+1. **Fractional DPR fell through the band lookup** — `crFromDPR(7.3)` matched no integer band
+   (7 < 7.3 < 8) and returned "30", so a Steam Mephit graded +27. Band lookups now take the first
+   band whose ceiling covers the value (bands tile, so this is exact). Same latent bug fixed in
+   `crFromHP`.
+2. **"uses A, B, or C" comma-lists** resolved only the first name (Kraken's Lightning Strike/Swallow
+   were invisible). Now the whole list resolves and the best branch counts.
+
+### Grade after fixes (final CR = round(avg(offensive, defensive)) vs label)
+
+| population | bias | mean \|err\| | within ±1 | within ±2 |
+|---|---|---|---|---|
+| ok-confidence (n=378) | 0 | **0.70** | **89%** | **97%** |
+| all graded (n=503) | 0 | 0.88 | 83% | 93% |
+
+Offensive-only: mean 1.10, ±1 78% (ok-confidence) — noisier than defensive, as expected; the blend
+is what ships. Remaining characterized outliers for T1.5's review session: Black/Green dragons
++7…+9 (their damaging AoE legendary option × 3/round is RAW-legal but evidently not what the label
+budgets), aura monsters read low (Balor −7, Elemental Cataclysm −10 — Fire Aura-type trait damage
+unscored), control monsters read low on offense by design (Kraken −8, Galeb Duhr −4 — the defensive
+half carries them, which the blend partially absorbs).
+
 ## Open items
 
-- **T1.4** (real DPR extractor) re-grades the DPR column — the CR 13+ values are inherited from
-  BOH's line, not measured, and the sub-13 values come from a spike parser with documented blind
-  spots. It also unlocks offensive CR, which pairs with T1.3's defensive CR.
+- **T1.4 batch 2 (edge cases):** aura/trait passive damage, a curated damage-spell table for casters
+  (123 low-confidence monsters are mostly this), summon damage, reaction damage policy. Re-grade
+  after each addition; re-derive the DPR column only if the definition changes again.
 - **T1.5** (corpus regression run) averages defensive + offensive CR into a final CR, grades it on
   the full corpus, decides the BOH unification, and dispositions outliers with the user (parser bug /
-  miscalibration / mislabeled monster). This is where T1.3's AC-÷4 choice gets its real verification.
+  miscalibration / mislabeled monster). The scratch harness (`grade-corpus.mjs`) should graduate to a
+  committed, repeatable test there.
 - CR 26–29 have **no 2024 monsters at all** — those rows are interpolation and should be marked
   low-confidence in any UI that surfaces divergence.
