@@ -38,10 +38,11 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
 - [x] **T1.1 — CR expectation tables** · Sonnet @ medium · ~1 · Batch 258
   Audit the existing CR/XP tables in `data.js`, add the missing columns (expected AC, HP range,
   attack bonus, save DC, DPR per CR 0–30), accessors + unit tests. (P1.1)
-- [ ] **T1.2 — Corpus calibration spike** · Fable @ high · ~1 *(spike, scratch scripts)*
+- [x] **T1.2 — Corpus calibration spike** · Fable @ high · ~1 *(spike, scratch scripts)* · Batch 259
   Run the tables against the MM25/bestiary corpus: predicted vs actual stats per CR, drift report.
   Output: a calibration memo that settles Q1.A's numbers. Haiku may prep the corpus extraction;
-  Fable does the analysis.
+  Fable does the analysis. **Done — memo: `CR_CALIBRATION.md`; calibrated table adopted into
+  `CR_EXPECT`; BOH unification deferred to T1.5 by decision.**
 - [ ] **T1.3 — Defensive CR** · Opus @ high · ~1
   Effective-HP function: resistance/immunity multipliers by CR tier, AC adjustment steps. Pure
   function + tests. (P1.2)

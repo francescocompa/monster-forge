@@ -60,7 +60,7 @@ test("CR_EXPECT covers every CR_LIST key with a well-formed 7-tuple", () => {
   assert.equal(ev("CR_LIST.every(c=>Array.isArray(CR_EXPECT[c])&&CR_EXPECT[c].length===7)"), true);
 });
 
-test("CR_EXPECT is non-decreasing CR-over-CR on AC/HP/Attack/DPR/DC (2014 DMG table shape)", () => {
+test("CR_EXPECT is non-decreasing CR-over-CR on AC/HP/Attack/DPR/DC", () => {
   const monotonic = ev(`(()=>{
     for(let i=1;i<CR_LIST.length;i++){
       const a=CR_EXPECT[CR_LIST[i-1]],b=CR_EXPECT[CR_LIST[i]];
@@ -74,11 +74,23 @@ test("CR_EXPECT is non-decreasing CR-over-CR on AC/HP/Attack/DPR/DC (2014 DMG ta
 
 const evJSON = (expr) => JSON.parse(ev(`JSON.stringify(${expr})`));
 
-test("crExpected(cr) — known spot values from the 2014 DMG table", () => {
-  assert.deepEqual(evJSON("crExpected('1')"), { cr: "1", pb: 2, ac: 13, hpMin: 71, hpMax: 85, hpAvg: 78, atk: 3, dprMin: 9, dprMax: 14, dprAvg: 12, dc: 13 });
-  assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 131, hpMax: 145, hpAvg: 138, atk: 6, dprMin: 33, dprMax: 38, dprAvg: 36, dc: 15 });
-  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 19, hpMin: 356, hpMax: 400, hpAvg: 378, atk: 10, dprMin: 123, dprMax: 140, dprAvg: 132, dc: 19 });
-  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 19, hpMin: 806, hpMax: 850, hpAvg: 828, atk: 14, dprMin: 303, dprMax: 320, dprAvg: 312, dc: 23 });
+test("crExpected(cr) — known spot values from the calibrated table (CR_CALIBRATION.md)", () => {
+  assert.deepEqual(evJSON("crExpected('1')"), { cr: "1", pb: 2, ac: 13, hpMin: 24, hpMax: 36, hpAvg: 30, atk: 4, dprMin: 10, dprMax: 13, dprAvg: 12, dc: 12 });
+  assert.deepEqual(evJSON("crExpected('5')"), { cr: "5", pb: 3, ac: 15, hpMin: 83, hpMax: 102, hpAvg: 93, atk: 7, dprMin: 31, dprMax: 39, dprAvg: 35, dc: 14 });
+  assert.deepEqual(evJSON("crExpected('20')"), { cr: "20", pb: 6, ac: 20, hpMin: 309, hpMax: 333, hpAvg: 321, atk: 15, dprMin: 124, dprMax: 129, dprAvg: 127, dc: 21 });
+  assert.deepEqual(evJSON("crExpected('30')"), { cr: "30", pb: 9, ac: 22, hpMin: 776, hpMax: 825, hpAvg: 801, atk: 19, dprMin: 184, dprMax: 189, dprAvg: 187, dc: 27 });
+});
+
+test("CR_EXPECT HP and DPR bands tile the ladder — no gaps, no overlaps (inverse lookup safety)", () => {
+  const tiled = ev(`(()=>{
+    for(let i=1;i<CR_LIST.length;i++){
+      const a=CR_EXPECT[CR_LIST[i-1]],b=CR_EXPECT[CR_LIST[i]];
+      if(b[1]!==a[2]+1)return 'HP gap/overlap at CR '+CR_LIST[i]+': '+a[2]+' -> '+b[1];
+      if(b[4]!==a[5]+1)return 'DPR gap/overlap at CR '+CR_LIST[i]+': '+a[5]+' -> '+b[4];
+    }
+    return 'ok';
+  })()`);
+  assert.equal(tiled, "ok");
 });
 
 test("crExpected returns null for an unknown CR", () => {

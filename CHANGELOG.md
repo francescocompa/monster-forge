@@ -4,6 +4,21 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 259 — T1.2: corpus calibration spike — CR_EXPECT recalibrated to the 2024 MM
+- **The calibration memo is `CR_CALIBRATION.md`** (new, repo root) — corpus, method, residuals,
+  construction rules, the full adopted table, and the raw 2014 table kept for reference.
+- **Headline finding:** the raw 2014 DMG table misses published 2024 monsters badly (median HP error
+  **44%**); the pre-existing `BOH` empirical line tracks the corpus well. The hybrid model (Q1.A)
+  therefore lands on **BOH's shape re-anchored on 2024 corpus medians** (503 XMM monsters, spike-grade
+  extractor, 487 ok-confidence). Calibrated table beats BOH mainly on the **save-DC column** (BOH runs
+  ~1 low) and low-CR AC.
+- **`CR_EXPECT` (data.js) swapped to the calibrated values** (decided via AskUserQuestion: adopt now).
+  HP/DPR bands tile the ladder — no gaps/overlaps, strictly increasing mids — so value→CR inverse
+  lookups are unambiguous (new tiling unit test caught and killed a band-overlap bug in the generator).
+- **`BOH` deliberately untouched** (decided: live Forge suggestions don't move until T1.5's regression
+  run unifies the two tables). Don't add a third table in the interim.
+- Spot-value tests updated to the calibrated numbers; 26 tests green.
+
 ## Batch 258 — T1.1: CR expectation tables (Phase 1 math engine, Q1.A hybrid model)
 - **`CR_EXPECT` (data.js)** — the official 2014 DMG p.274 "Monster Statistics by Challenge Rating" table,
   transcribed in full for all 34 `CR_LIST` keys: AC, HP range, Attack Bonus, DPR range, Save DC. This is
