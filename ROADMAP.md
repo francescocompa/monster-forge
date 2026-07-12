@@ -47,42 +47,27 @@
 
 ---
 
-## Phase 1 — Monster math engine
+## Phase 1 — Monster math engine · CLOSED 2026-07-12 (Batches 258–273)
 
-**Goal:** CR is computed, not guessed; any statblock scales to any CR.
-Expands the existing CR calculator/adjuster plan into a general math layer.
+**Goal:** CR is computed, not guessed; any statblock scales to any CR. **Shipped.**
 
-- **P1.1 CR data tables.** Verify and complete the DMG-model tables in `data.js` (expected AC, HP
-  range, attack bonus, save DC, DPR per CR 0–30, plus XP — partially present already). Pure data
-  plus accessors, unit-tested.
-- **P1.2 Defensive CR.** Effective-HP calculator: HP × resistance/immunity multiplier (per-tier),
-  ± AC adjustment steps against the expected AC for the HP tier. Pure function + tests.
-- **P1.3 Offensive CR.** DPR extractor: best-3-round average parsed from statblock entries via the
-  existing `attackText`/`exprAvg` machinery — multiattack, recharge (probability-weighted),
-  save-for-half, rider damage. Returns a confidence flag for entries it can't parse.
-- **P1.4 Calculator UI.** Panel/popover off the Forge CR field: defensive CR, offensive CR,
-  suggested final, and the divergence line ("you set CR 5; the stats read as CR 7").
-  *Mockup + AskUserQuestion before build.*
-- **P1.5 CR adjuster, suggest mode.** Given a target CR: a concrete edit list (AC ±n, HP dice,
-  attack/DC ±n, damage dice) that lands the target, rendered as accept-per-line suggestions.
-- **P1.6 CR adjuster, auto-scale mode.** One-click proportional rescale, chassis-aware, one
-  reversible step in `_forgeHist`, respects locked fields. *Open design question to settle first:
-  which fields auto-scale may touch.*
-- **P1.7 Bestiary audit.** Library cards show computed-vs-set CR divergence; a bulk "audit my
-  bestiary" pass lists outliers.
-- **P1.8 Combat-role inference.** Classify any statblock — preset, imported, homebrew — into
-  combat roles from its stat profile (AC-to-HP ratio, DPR shape, speed, range profile, save DCs).
-  The taxonomy is ours and math-derived: cluster the preset corpus first, then a naming/design
-  pass with Francesco. Role badge on library cards; bestiary filterable by role.
-- **P1.9 Role validation benchmark.** The hard gate P1.8 must pass before anything builds on it:
-  a human-labeled benchmark set (100+ monsters across CR, type, and source) scored against the
-  classifier, with the disagreements reviewed one by one. Where the math *can't* see the role
-  (control/support value living in rider text the numbers don't capture), record the miss
-  explicitly — those cases define P2.8's work — and every creature gets a manual role override so
-  the classifier is never the last word.
+- **Math layer (P1.1–P1.3)** in `data.js`, corpus-calibrated (Q1.A hybrid): `CR_EXPECT`/`crExpected`
+  (the sole expected-stats source), `defensiveCR`, `dprExtract`/`offensiveCR`/`overallCR`. Blended CR
+  grades bias 0, mean |err| 0.78 steps, 86% within ±1 on the 503-monster corpus. Paper trail:
+  `CR_CALIBRATION.md`; harness: `npm run grade` + the `test/cr-model.test.js` accuracy floor.
+- **UI (P1.4, P1.7):** the read-out band in the Forge preview header + the preserve-character dial
+  scaler (absorbed P1.6's auto-scale); `reads N` card suffix + the bulk CR-audit modal.
+- **Roles (P1.8):** soldier · artillery · brute · skirmisher · controller — `classifyRole`/
+  `resolveRole` pure in data.js, card tags + Role filter + manual override on both surfaces. Memo:
+  `ROLE_CLUSTERS.md`. Stature (boss/elite/pack/fodder) is party-relative and ships only in the P3
+  designer.
+- **Phase review done** (`/code-review` high, fixes applied — CHANGELOG B273).
 
-**Exit:** the Forge shows live computed CR; a goblin scaled to CR 5 plays believably; the library
-knows its bruisers from its artillery — and the benchmark proves it; the math has a test floor.
+**Open remainders:** P1.5 suggest-mode + field locks await **Q1.C** (user); the **P1.9 benchmark gate
+re-arms at T2.10** (75.0/80.0 vs ≥85 — the remaining misses are the user-accepted control-garnish
+group and the kit-invisible blind spot that P2.8 exists to close); role-choice-during-scaling is
+backlog. Exit check otherwise met: live computed CR in the Forge, believable scaling, a role-aware
+library, a committed test floor.
 
 ## Phase 2 — Executable rules (the 5e effect engine)
 

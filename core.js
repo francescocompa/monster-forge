@@ -304,6 +304,7 @@ function normalizeMonster(m){
   if(m.res!==undefined||m.dimm!==undefined||m.vuln!==undefined){if(!m.dmg)m.dmg={};migrateDefenses(m);}
   if(!m.dmg)m.dmg={};
   if(m.dmgnote===undefined)m.dmgnote="";
+  if(m.roleOv===undefined)m.roleOv=""; // manual role override (T1.14); "" = auto (the calculator)
   m.legend=m.legend||{on:false,intro:"",items:[]};m.legend.intro=m.legend.intro||"";
   m.villain=m.villain||{on:false,intro:"",items:[]};m.villain.intro=m.villain.intro||"";
   m.lair=m.lair||{on:false,intro:"",items:[]};m.lair.intro=m.lair.intro||"";
@@ -437,7 +438,12 @@ function suggestGear(){
   if(add.length){M.gear=have.concat(add).join(", ");renderGear();renderPreview();toast(`Added ${add.length} item${add.length>1?"s":""}: ${add.join(", ")}.`);}
   else toast("No new gear found in attacks or AC note.");}
 function bindStatic(){
-  bindField("#f_name","name");bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");
+  bindField("#f_size","size");bindField("#f_type","type");bindField("#f_subtype","subtype");bindField("#f_align","align");bindField("#f_role","roleOv");
+  // The forge title IS the name field (B272, mirroring #advName): type in place, Enter commits.
+  {const ft=$("#forgeTitle");
+   ft.addEventListener("input",()=>{M.name=ft.textContent.trim();renderPreview();});
+   ft.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();ft.blur();}});
+   ft.addEventListener("blur",()=>{ft.textContent=M.name||"";});}
   bindField("#f_acnote","acnote");bindField("#f_init","init",true);
   $("#f_hpf").addEventListener("input",()=>{M.hpf=$("#f_hpf").value;
     // a valid dice formula auto-derives HP, but only when HP is empty or just the CR autofill (not a manual edit)
@@ -495,10 +501,10 @@ function setPreviewCollapsed(v){
 // behaves as the suggested value, no need to clear) — mirrors the ability placeholder-10 pattern.
 function syncAutoHP(){if(!M._auto.hp)return;const f=M.hpf||"";const badge=$("#wb_hp .badge");
   if(/\d+\s*d\s*\d+/i.test(f)){M.hp=exprAvg(f);if(badge)badge.textContent="avg";}
-  else{const boh=BOH[M.cr];if(boh)M.hp=boh[1];if(badge)badge.textContent="≈CR";}
+  else{const e=crExpected(M.cr);if(e)M.hp=e.hpAvg;if(badge)badge.textContent="≈CR";}
   const el=$("#f_hp");el.value="";el.placeholder=M.hp??"";}
-function applyCRAuto(){const boh=BOH[M.cr];if(!boh)return;
-  if(M._auto.ac){M.ac=boh[0];const el=$("#f_ac");el.value="";el.placeholder=String(boh[0]);$("#wb_ac").classList.add("suggested");}
+function applyCRAuto(){const e=crExpected(M.cr);if(!e)return;
+  if(M._auto.ac){M.ac=e.ac;const el=$("#f_ac");el.value="";el.placeholder=String(e.ac);$("#wb_ac").classList.add("suggested");}
   if(M._auto.hp){$("#wb_hp").classList.add("suggested");syncAutoHP();}}
 function updateHpDie(){const el=$("#f_hpf");if(!el)return;const sz=$("#f_size");const size=(sz&&sz.value)||M.size;el.placeholder="4"+(SIZE_DIE[size]||"d8")+" + 8";}
 function updateCRDisplay(){const el=$("#f_cr");if(el)el.value=M.cr;}

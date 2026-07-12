@@ -186,13 +186,13 @@ document.addEventListener("mouseout",e=>{if(!_truncEl)return;
 function skProfBonus(v,pb){return v==="exp"?pb*2:v==="none"?0:pb;}
 function passivePerc(m){const pb=pbForCR(m.cr);const sk=m.skills.find(s=>s[0]==="Perception");return 10+mod(m.wis)+(sk?skProfBonus(sk[1],pb):0);}
 // headline attack bonus / save DC: from the creature's first attack / first spell, else the CR target
-function mainAttackBonus(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const atk=m.actions.find(e=>e.mode==="attack");
+function mainAttackBonus(m){const pb=pbForCR(m.cr),e=crExpected(m.cr);const atk=m.actions.find(e=>e.mode==="attack");
   if(atk)return{val:atk.atk!==""&&atk.atk!=null?Number(atk.atk):mod(m[atk.ability])+pb,cr:false};
-  return{val:boh?boh[2]:null,cr:true};}
-function mainSaveDC(m){const pb=pbForCR(m.cr),boh=BOH[m.cr];const sp=m.actions.find(e=>e.mode==="spell");
+  return{val:e?e.atk:null,cr:true};}
+function mainSaveDC(m){const pb=pbForCR(m.cr),e=crExpected(m.cr);const sp=m.actions.find(e=>e.mode==="spell");
   if(sp)return{val:sp.dc!==""&&sp.dc!=null?Number(sp.dc):8+pb+mod(m[sp.ability]||0),cr:false,abil:sp.ability};
   // CR-target DC is keyed off the creature's best ability
-  return{val:boh?boh[4]:null,cr:true,abil:ABILS.reduce((a,b)=>mod(m[b])>mod(m[a])?b:a,"str")};}
+  return{val:e?e.dc:null,cr:true,abil:ABILS.reduce((a,b)=>mod(m[b])>mod(m[a])?b:a,"str")};}
 // renderPreview is split into pure HTML builders (header / ability table / meta / entry sections) plus
 // a coordinator that updates the surrounding chrome and commits + post-processes the statblock (B72).
 
@@ -213,7 +213,7 @@ function sbAbilityTableHTML(m,pb){
   return h;
 }
 // The meta block: skills, tools, defenses, immunities, gear, senses, languages, CR line.
-function sbMetaHTML(m,pb,xp){
+function sbMetaHTML(m,pb,xp,read){
   const def=defenseStrings(m);
   let h=`<hr class="rule thin"><div class="meta">`;
   // Skills/tools are rollable too: skill = 1d20 + its shown modifier; tool = 1d20 + PB (ability is DM's choice, so PB only).
@@ -233,7 +233,13 @@ function sbMetaHTML(m,pb,xp){
   const sStr=sensesStr(m);
   h+=`<p><span class="k">Senses</span> ${esc(sStr?sStr+", ":"")}Passive Perception ${passivePerc(m)}</p>`;
   h+=`<p><span class="k">Languages</span> ${esc(m.lang||"None")}</p>`;
-  h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})</p></div>`;
+  // Role on the statblock (T1.14 follow-up, user request): quiet suffix on the CR line — override
+  // wins and low-confidence reads keep the ~ prefix, both owned by resolveRole (data.js), which never
+  // throws (the preview must never die on the classifier). `read` reuses the render's overallCR halves.
+  let roleTxt="";
+  const rv=resolveRole(m,read?{off:read.off,def:read.def}:undefined);
+  if(rv)roleTxt=` <span class="sb-role" title="${rv.manual?"Role set by you":"Role by the calculator"}">· ${rv.manual?"":(rv.confidence!=="ok"?"~ ":"")}${roleLabel(rv.role)}</span>`;
+  h+=`<p><span class="k">CR</span> ${m.cr} (XP ${xp.toLocaleString()}; PB ${sgn(pb)})${roleTxt}</p></div>`;
   return h;
 }
 // One entry paragraph (trait / action / spellcasting / attack), bracket-refs applied.
@@ -273,6 +279,63 @@ function sbEntriesHTML(m){
 // fallback guarantees the render (and its persist/undo side effects) still flushes if rAF is paused —
 // e.g. a backgrounded tab. No caller reads #statblock synchronously after renderPreview(), so the
 // sub-frame defer is safe.
+// ── CR read-out band (T1.7) ─────────────────────────────────────────────────
+// The live calculator at the top of the preview: the creature's ACTUAL (blended) CR derived from its
+// stats vs the CR the author set, plus the defensive/offensive split (shield = defence, swords =
+// offence). Pure display over data.js's overallCR(); amber is reserved for the computed CR. The dial
+// (scaler) is wired by bindCrRead() via delegation, since this HTML is rebuilt every render.
+const CR_GLYPH={"1/8":"⅛","1/4":"¼","1/2":"½"};
+function crGlyph(cr){return CR_GLYPH[cr]||cr;}
+// Active scale preview (T1.7): {orig, scaled, target, showing:"changed"|"original"} while the author is
+// dialing a target CR, else null. A scale is a PREVIEW until Save resolves it (crScaleResolve). The band
+// swaps between two modes: diagnostic (no scale — the Actual CR + halves) and scaled (a target picked —
+// the target CR + the changed/original two-icon toggle). Interaction wired in forge.js (bindCrScaler).
+let _crScale=null;
+const _CRR_ICON={
+  dial:'<svg viewBox="0 0 24 24"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="9" cy="8" r="2.4" fill="currentColor"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="15" cy="16" r="2.4" fill="currentColor"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l7 3v6c0 4.4-3 8.4-7 9-4-.6-7-4.6-7-9V5z"/></svg>',
+  swords:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18.5 4.5l-7 7"/><path d="M5.5 4.5l7 7"/><path d="M4 20l4.5-4.5"/><path d="M20 20l-4.5-4.5"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5l1.7 4.3 4.3 1.4-4.3 1.7L12 16.2l-1.7-4.3L6 10.2l4.3-1.4z"/></svg>',
+  revert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 12a6.5 6.5 0 1 0 1.9-4.6"/><path d="M5 6v3h3"/></svg>',
+};
+function crReadBandHTML(m,read){
+  const dial=`<button type="button" class="crr-dial${_crScale?" on":""}" data-cr-dial aria-label="Scale this creature to a CR">${_CRR_ICON.dial}</button>`;
+  if(_crScale){
+    const changed=_crScale.showing==="changed";
+    const target=_crScale.scaled.cr; // the previewed CR lives on the scaled clone — one source of truth
+    const num=changed?crGlyph(target):crGlyph(_crScale.orig.cr);
+    const tag=changed
+      ?`<span class="t">Scaled CR</span><span class="s">from ${crGlyph(_crScale.orig.cr)}</span>`
+      :`<span class="t">Original CR</span><span class="s">preview ${crGlyph(target)}</span>`;
+    const toggle=`<span class="crr-toggle">`
+      +`<button type="button" data-cr-show="changed" class="${changed?"on chg":""}" title="Scaled numbers">${_CRR_ICON.spark}</button>`
+      +`<button type="button" data-cr-show="original" class="${changed?"":"on"}" title="Original numbers">${_CRR_ICON.revert}</button>`
+    +`</span>`;
+    return `<div class="cr-read scaled">`
+      +`<div class="crr-cr"><span class="crr-num${changed?"":" plain"}">${num}</span><span class="crr-tag">${tag}</span></div>`
+      +`<div class="crr-tools">${toggle}${dial}</div>`
+    +`</div>`;
+  }
+  const r=read||overallCR(m),def=r.def,off=r.off;
+  const setIdx=CR_LIST.indexOf(m.cr),aligned=r.idx===setIdx&&setIdx>=0;
+  const lowOff=off.confidence!=="ok";
+  const acTxt=`AC ${(def.ac??m.ac)??"—"}`;
+  const offAnchor=off.anchor?(off.anchor.kind==="atk"?` · ${sgn(off.anchor.val)}`:` · DC ${off.anchor.val}`):"";
+  const offCR=off.dpr>0?crGlyph(off.cr):"—";
+  const offSup=off.dpr>0?`DPR ${Math.round(off.dpr)}${offAnchor}`:"no damage read";
+  const tag=aligned
+    ?`<span class="t">Actual CR</span><span class="s on">● on target</span>`
+    :`<span class="t">Actual CR</span><span class="s">you set ${crGlyph(m.cr)}</span>`;
+  return `<div class="cr-read${aligned?" aligned":""}">`
+    +`<div class="crr-cr"><span class="crr-num${aligned?" plain":""}">${crGlyph(r.cr)}</span><span class="crr-tag">${tag}</span></div>`
+    +`<div class="crr-sep"></div>`
+    +`<div class="crr-break">`
+      +`<div class="crr-row"><span class="crr-ic">${_CRR_ICON.shield}</span><span class="crr-hcr">CR</span><span class="crr-v">${crGlyph(def.cr)}</span><span class="crr-sup">${acTxt} · ${def.rawHP} hp</span></div>`
+      +`<div class="crr-row${lowOff?" lowconf":""}"${lowOff?' title="Could not fully read the creature\'s damage. The offensive CR is a rough estimate."':""}><span class="crr-ic">${_CRR_ICON.swords}</span><span class="crr-hcr">CR</span><span class="crr-v">${offCR}</span><span class="crr-sup">${offSup}</span></div>`
+    +`</div>`
+    +`<div class="crr-tools">${dial}</div>`
+  +`</div>`;
+}
 let _previewRAF=null,_previewTO=null;
 function _flushPreview(){
   if(_previewRAF==null&&_previewTO==null)return;
@@ -286,24 +349,31 @@ function renderPreview(){
   _previewTO=setTimeout(_flushPreview,100);
 }
 function renderPreviewNow(){
-  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),boh=BOH[m.cr];
-  const acFromCR=m.ac==null,acVal=m.ac??(boh?boh[0]:null);
+  const m=M,pb=pbForCR(m.cr),xp=xpOf(m),e=crExpected(m.cr);
+  const acFromCR=m.ac==null,acVal=m.ac??(e?e.ac:null);
   const ab=mainAttackBonus(m),dc=mainSaveDC(m);
   const chip=(lbl,val,approx,tip,suf)=>`<div class="dchip2"${tip?` title="${tip}"`:""}>${lbl}<b>${approx?'<span style="color:var(--faint)">≈</span>':''}${val??"—"}${suf?` <span class="dabil">${suf}</span>`:""}</b></div>`;
   // SHOW_DERIVED gates the legacy AC/Attack/Save-DC chip row above the statblock (B23).
   // Kept (not deleted) so it can return as an opt-in "legacy" feature.
+  // One CR read per render: the band and the statblock's role suffix share it (each would otherwise
+  // run the full DPR extraction on its own — twice per keystroke burst). Scaled mode needs no read.
+  const crRead=(SHOW_DERIVED||_crScale)?null:overallCR(m);
   $("#derived").innerHTML=SHOW_DERIVED?(chip("AC",acVal,acFromCR,acFromCR?"from CR target, no AC set":"")
     +chip("Attack",ab.val==null?null:sgn(ab.val),ab.cr,ab.cr?"from CR target, no attack defined":"")
-    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target, no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):"";
-  crTargetsHTML=boh?`<b>CR ${m.cr} targets</b><br>AC ${boh[0]} · HP ${boh[1]} · Attack ${sgn(boh[2])} · Damage/round ~${boh[3]} · Save DC ${boh[4]} · best ability ${sgn(boh[5])}`:"";
-  $("#forgeTitle").textContent=m.name||"New Creature";
+    +chip("Save DC",dc.val,dc.cr,dc.cr?"from CR target, no save/spell defined":"",dc.val!=null&&dc.abil?dc.abil.toUpperCase():"")):crReadBandHTML(m,crRead);
+  crTargetsHTML=e?`<b>CR ${m.cr} targets</b><br>AC ${e.ac} · HP ${e.hpAvg} · Attack ${sgn(e.atk)} · Damage/round ~${e.dprAvg} · Save DC ${e.dc} · best ability ${sgn(e.atk-e.pb)}`:"";
+  // The title IS the name editor now (B272) — never repaint it under the user's caret; empty shows
+  // the data-ph placeholder via CSS.
+  {const ft=$("#forgeTitle");if(document.activeElement!==ft&&ft.textContent!==(m.name||""))ft.textContent=m.name||"";}
   refreshForgeStatus();
   if(previewCollapsed){const pfn=document.getElementById("pfName");if(pfn)pfn.textContent=m.name||"New Creature";}
-  const h=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xp)+sbEntriesHTML(m);
+  const h=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xp,crRead)+sbEntriesHTML(m);
   $("#statblock").innerHTML=h;
   linkSpellFeatures($("#statblock"));
   if(ruleFinder)ruleFindRoot($("#statblock"));else colorizeStatblock();
-  persistForgeDraft(); // remember what's being edited so a reload restores it (B78)
+  // A CR-scale preview is NOT the draft (T1.7 contract: preview until Save) — persisting it would make
+  // a mid-preview reload silently commit the scaled clone as the working draft, original gone.
+  if(!_crScale)persistForgeDraft(); // remember what's being edited so a reload restores it (B78)
   if(typeof scheduleForgeHistory==="function")scheduleForgeHistory(); // B193: coalesce edits into the undo history
   if(typeof refreshSaveState==="function")refreshSaveState(); // reflect unsaved-changes state on the save controls
 }

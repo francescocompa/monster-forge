@@ -77,6 +77,143 @@ test("aggregate: fixtures are unbiased and mostly within ±1 (accuracy floor)", 
   assert.ok(within1 >= 0.6, `only ${(within1 * 100).toFixed(0)}% within ±1 — accuracy floor breached`);
 });
 
+test("overallCR: the public helper equals the inline round(avg(off,def)) blend the read-out consumes", () => {
+  // overallCR(m) is what the Forge CR read-out band (T1.7) reports; it must match the exact blend the
+  // grader and the fixtures above compute, or the on-screen CR would diverge from the graded model.
+  for (const f of FIXTURES) {
+    const m = build(f.m);
+    const r = ev(`(()=>{const m=${m};const r=overallCR(m),o=offensiveCR(m),d=defensiveCR(m);`
+      + `return {idx:r.idx,cr:r.cr,inline:Math.round((o.idx+d.idx)/2),offIdx:r.off.idx,defIdx:r.def.idx,conf:r.confidence,offConf:o.confidence};})()`);
+    assert.equal(r.idx, r.inline, `${f.label}: overallCR idx ${r.idx} ≠ inline blend ${r.inline}`);
+    assert.equal(r.cr, ev(`CR_LIST[${r.idx}]`), `${f.label}: overallCR cr/idx mismatch`);
+    assert.equal(r.conf, r.offConf, `${f.label}: overallCR confidence must be the offensive half's`);
+  }
+});
+
+test("scaleMonster: preserve-character scaling tracks the target monotonically and stays close for balanced builds", () => {
+  // Preserve-character (× expected-ratio) keeps a creature's proportional deviation, so the scaled read
+  // equals the target only for a creature that already reads at its label; a below/above-average one
+  // stays below/above. The invariants that MUST hold: (1) scaling up raises the read and scaling down
+  // lowers it (monotonic — the dial always moves the CR the right way); (2) a creature that reads at its
+  // own label lands within ±1 of a nearby target. This is the committed floor; grade-corpus.mjs checks
+  // the distribution at scale.
+  const readIdx = (mObj, tgt) => ev(`(()=>{const s=scaleMonster(${mObj},${JSON.stringify(tgt)});return s?overallCR(s).idx:null;})()`);
+  const top = idxOf("30");
+  let balancedChecks = 0;
+  for (const f of FIXTURES) {
+    const orig = blendIdx(build(f.m));
+    if (orig.conf !== "ok") continue;
+    const li = idxOf(f.cr), self = orig.blend;
+    const upCR = CR_LIST_at(Math.min(li + 3, top)), downCR = CR_LIST_at(Math.max(li - 3, 0));
+    const up = readIdx(build(f.m), upCR), down = readIdx(build(f.m), downCR);
+    assert.ok(up >= self, `${f.label}: scaling up to ${upCR} must not lower the read (${up} < ${self})`);
+    assert.ok(down <= self, `${f.label}: scaling down to ${downCR} must not raise the read (${down} > ${self})`);
+    // if the fixture reads at its own label, a modest 2-step scale should land within ±1
+    if (orig.blend === li) {
+      const near = CR_LIST_at(Math.min(li + 2, top));
+      const r = readIdx(build(f.m), near);
+      assert.ok(Math.abs(r - idxOf(near)) <= 1, `${f.label} (reads at label) scaled to ${near}: idx ${r} vs ${idxOf(near)}`);
+      balancedChecks++;
+    }
+  }
+  assert.ok(balancedChecks >= 1, `expected at least one balanced-fixture scaling check, ran ${balancedChecks}`);
+});
+const CR_LIST_at = (i) => ev(`CR_LIST[${i}]`);
+
+test("scaleMonster: scaling to the same CR is a no-op, and off-ladder targets return null", () => {
+  const noop = ev(`(()=>{const m=${build({ cr: "5", hp: 100, ac: 15, actions: [{ mode: "text", name: "Slam", text: "*Melee Attack Roll:* +7, reach 5 ft. *Hit:* 14 (2d10 + 3) Bludgeoning damage." }] })};`
+    + `const s=scaleMonster(m,"5");return {hp:s.hp,ac:s.ac,cr:s.cr,txt:s.actions[0].text};})()`);
+  assert.equal(noop.cr, "5");
+  assert.equal(noop.hp, 100, "same-CR scale must not move HP");
+  assert.equal(noop.ac, 15, "same-CR scale must not move AC");
+  assert.equal(noop.txt, "*Melee Attack Roll:* +7, reach 5 ft. *Hit:* 14 (2d10 + 3) Bludgeoning damage.",
+    "same-CR scale must not rewrite entry text");
+  assert.equal(ev(`scaleMonster(${build({ cr: "5", hp: 100 })},"99")`), null, "off-ladder target → null");
+});
+
+test("scaleMonster: a save DC embedded in an attack's extra rider shifts with the target CR", () => {
+  // Review fix (Phase-1 close): the attack branch scaled rider DICE but left rider DCs frozen at the
+  // source CR (Wolf's "Prone condition (DC 11 Str save negates)"), while text-mode entries shifted.
+  // Both free-text carriers now go through the same scaleRider pass.
+  const r = ev(`(()=>{const m=${build({ cr: "1/4", hp: 11, ac: 13, actions: [
+    { mode: "attack", name: "Bite", ability: "str", atk: 4, dice: "1d6+2",
+      extra: "If the target is a creature, it has the Prone condition (DC 11 Str save negates)." }] })};`
+    + `const s=scaleMonster(m,"5"),dc=crExpected("5").dc-crExpected("1/4").dc;`
+    + `return {extra:s.actions[0].extra,shift:dc};})()`);
+  assert.ok(r.shift > 0, "fixture needs a real DC shift between CR 1/4 and 5");
+  assert.ok(r.extra.includes(`DC ${11 + r.shift} `), `rider DC must shift by ${r.shift} (got: ${r.extra})`);
+});
+
+test("scaleMonster: auto-delegated AC/HP land on the TARGET's expected values, and an auto-HP dice formula still scales", () => {
+  // An auto field (author left it empty, value tracks crExpected) carries zero deviation, so its
+  // preserve-character scale IS the target's expected — not the source CR's stale value. B264 audit fix:
+  // without this the scaled preview showed the old CR's AC/HP on auto monsters until Save resolved it.
+  const r = ev(`(()=>{const m=${build({ cr: "1", ac: 13, hp: 30 })};m._auto={ac:true,hp:true};`
+    + `const s=scaleMonster(m,"5"),e=crExpected("5");return {ac:s.ac,hp:s.hp,expAC:e.ac,expHP:e.hpAvg};})()`);
+  assert.equal(r.ac, r.expAC, "auto AC must track the target CR's expected AC");
+  assert.equal(r.hp, r.expHP, "auto HP must track the target CR's expected average HP");
+  const f = ev(`(()=>{const m=${build({ cr: "5", ac: 15, hp: 93, hpf: "12d10 + 24" })};m._auto={hp:true};`
+    + `const s=scaleMonster(m,"10");return {hpf:s.hpf,hp:s.hp,avg:exprAvg(s.hpf)};})()`);
+  assert.notEqual(f.hpf, "12d10 + 24", "auto-HP dice formula must still be rescaled");
+  assert.equal(f.hp, f.avg, "auto HP must equal the scaled formula's average");
+});
+
+test("classifyRole: five engineered archetypes land in their locked roles", () => {
+  // One fixture per role, each built to sit unambiguously on its role's side of the trade planes
+  // (ROLE_CLUSTERS.md): brute = HP-for-AC, skirmisher = AC-for-HP, artillery = damage-first + long
+  // range, controller = save-gated conditions + AoE over damage, soldier = at-expectation multiattack.
+  // If a retune of the centroids/features flips any of these, that's a regression to investigate.
+  const CASES = [
+    ["brute", { cr: "2", hp: 68, ac: 11, str: 18, actions: [
+      { mode: "text", name: "Greatclub", text: "*Melee Attack Roll:* +6, reach 5 ft. *Hit:* 13 (2d8 + 4) Bludgeoning damage." }] }],
+    ["skirmisher", { cr: "1", hp: 18, ac: 16, dex: 16, spd: { walk: 40 }, actions: [
+      { mode: "text", name: "Shortsword", text: "*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 10 (2d6 + 3) Piercing damage." }] }],
+    ["artillery", { cr: "2", hp: 33, ac: 13, dex: 14, actions: [
+      { mode: "text", name: "Multiattack", text: "It makes two Bolt attacks." },
+      { mode: "text", name: "Bolt", text: "*Ranged Attack Roll:* +5, range 150/600 ft. *Hit:* 13 (2d10 + 2) Piercing damage." }] }],
+    ["controller", { cr: "5", hp: 90, ac: 14, wis: 18, actions: [
+      { mode: "text", name: "Tentacle", text: "*Melee Attack Roll:* +6, reach 10 ft. *Hit:* 15 (2d10 + 4) Bludgeoning damage. *Constitution Saving Throw:* DC 15. *Failure:* The target has the Restrained condition." },
+      { mode: "text", name: "Dread Gaze", text: "*Wisdom Saving Throw:* DC 15, each creature in a 30-foot Cone. *Failure:* 7 (2d6) Psychic damage, and the target has the Frightened condition until the end of its next turn." },
+      { mode: "text", name: "Numbing Pulse", text: "*Constitution Saving Throw:* DC 15, one creature within 60 feet. *Failure:* The target has the Stunned condition until the end of its next turn." }] }],
+    ["soldier", { cr: "5", hp: 100, ac: 16, str: 18, actions: [
+      { mode: "text", name: "Multiattack", text: "It makes two Glaive attacks." },
+      { mode: "text", name: "Glaive", text: "*Melee Attack Roll:* +7, reach 10 ft. *Hit:* 18 (3d8 + 5) Slashing damage." }] }],
+  ];
+  for (const [want, mObj] of CASES) {
+    const r = ev(`classifyRole(${build(mObj)})`);
+    assert.ok(r, `${want}: classifyRole returned null`);
+    assert.equal(r.role, want, `${want} archetype read as ${r.role} (runner-up ${r.runnerUp}, margin ${r.margin?.toFixed(2)})`);
+  }
+  assert.equal(ev(`classifyRole({...${build({ cr: "5", hp: 90 })},cr:"99"})`), null, "off-ladder CR → null");
+});
+
+test("roleOf: a manual override (roleOv) wins over the calculator and keeps the auto read for the tooltip", () => {
+  const brute = { cr: "2", hp: 68, ac: 11, str: 18, actions: [
+    { mode: "text", name: "Greatclub", text: "*Melee Attack Roll:* +6, reach 5 ft. *Hit:* 13 (2d8 + 4) Bludgeoning damage." }] };
+  const r = ev(`(()=>{const m=${build(brute)};m.id="t-ov";m.roleOv="artillery";const r=roleOf(m);return {role:r.role,manual:!!r.manual,auto:r.auto};})()`);
+  assert.equal(r.role, "artillery", "override must win");
+  assert.ok(r.manual, "override result must be flagged manual");
+  assert.equal(r.auto, "brute", "the calculator's own read must ride along for the tooltip");
+  const auto = ev(`(()=>{const m=${build(brute)};m.id="t-ov2";m.roleOv="";return roleOf(m).role;})()`);
+  assert.equal(auto, "brute", "empty override = the calculator's read");
+});
+
+test("classifyRole: the skirmisher speed gate — slow glass is not a skirmisher unless it has evasion kit", () => {
+  // T1.14 benchmark finding: the glass stat-shape alone (AC up, HP down) pulled slow bodies (Azer
+  // Sentinel, Troll Limb) into skirmisher; the user's definition is "fast and evasive". Same glass
+  // chassis as the skirmisher archetype above, but at walk 25 (below the CR-1 band speed norm):
+  const slowGlass = { cr: "1", hp: 18, ac: 16, dex: 16, spd: { walk: 25 }, actions: [
+    { mode: "text", name: "Shortsword", text: "*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 10 (2d6 + 3) Piercing damage." }] };
+  const gated = ev(`classifyRole(${build(slowGlass)})`);
+  assert.notEqual(gated.role, "skirmisher", `slow glass with no evasion kit must not read skirmisher (got ${gated.role})`);
+  // …but the same slow body with a bonus-action escape (2024 Nimble Escape phrasing: the bonus
+  // section text does NOT contain the words "Bonus Action") keeps skirmisher eligibility:
+  const nimble = { ...slowGlass, bonus: [
+    { mode: "text", name: "Nimble Escape", text: "It takes the Disengage or Hide action." }] };
+  const kept = ev(`classifyRole(${build(nimble)})`);
+  assert.equal(kept.role, "skirmisher", `slow glass WITH evasion kit should read skirmisher (got ${kept.role})`);
+});
+
 test("confidence: a damage-dealing monster grades ok; a pure controller flags low/none", () => {
   // a monster whose only action deals no rollable damage should not silently read as high-confidence 0
   const controller = blendIdx(build({ cr: "5", hp: 93, ac: 15,

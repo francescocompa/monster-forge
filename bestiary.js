@@ -120,6 +120,8 @@ const LIB_DESC={search:true,group:true,
   params:[
     {key:"status",label:"Status",get:r=>r.status,values:()=>STATUS_ORDER.slice()},
     {key:"cr",label:"CR",fmt:v=>"CR "+v,get:r=>r.m.cr,values:()=>[...new Set(state.lib.map(m=>m.cr))].sort((a,b)=>(CR_NUM[a]??0)-(CR_NUM[b]??0))},
+    // Role by the classifier (T1.12) — memoized per save stamp, so filtering doesn't re-extract DPR.
+    {key:"role",label:"Role",get:r=>{const x=r.preset?null:roleOf(r.m);return x?x.role:"";},values:()=>ROLE_LIST.slice(),fmt:roleLabel},
     {key:"source",label:"Source",get:r=>r.preset?(bookLabelOf(r.m)||"Uploaded"):"Homebrew",values:()=>["Homebrew",...presetSourceLabels()]},
     {key:"tag",label:"Tag",multi:true,get:r=>r.m.tags||[],values:()=>[...new Set(state.lib.flatMap(m=>m.tags||[]))].sort((a,b)=>a.localeCompare(b))},
     {key:"encounter",label:"Encounter",multi:true,emptyLabel:"Not in any encounter",get:r=>r.m&&libUsage[r.m.id]?[...libUsage[r.m.id].enc]:[],values:()=>usageVals("enc")},
@@ -207,6 +209,7 @@ function wireLibCards(body){
   body.querySelectorAll("[data-notion]").forEach(b=>b.addEventListener("click",()=>{const sav=M;M=normalizeMonster(clone(find(b.dataset.notion)));const txt=notionSingle(M);M=sav;copyModal("Copy for Notion (manual)",txt,"Single-column, paste-safe. Set AC/HP/XP properties by hand.");}));
   body.querySelectorAll("[data-stchip]").forEach(ch=>ch.addEventListener("click",e=>{e.stopPropagation();openStatusMenu(find(ch.dataset.stchip),ch);}));
   body.querySelectorAll("[data-addtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openTagAdd(find(b.dataset.addtag),b);}));
+  body.querySelectorAll("[data-roletag]").forEach(t=>t.addEventListener("click",e=>{e.stopPropagation();openRoleMenu(find(t.dataset.roletag),t);}));
   body.querySelectorAll("[data-rmtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const m=find(b.dataset.rmtag);m.tags=(m.tags||[]).filter(t=>t!==b.dataset.tagval);saveLib();renderLibrary();}));
   body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(ch)applyChassis(ch,false,false);}));
   applyLibSelMarks(body);renderLibBatchBar();bindLibDrag(body);
@@ -278,6 +281,72 @@ function originBadgeHTML(m){const o=originOf(m);
   return o.kind==="chassis"
     ?`<span class="tag origin chassis" title="From the ${esc(o.name)} chassis (${esc(o.src||"built-in")}), saved without edits">${esc(o.src||"Built-in")}</span>`
     :`<span class="tag origin brew" title="Homebrew: created or edited here">Homebrew</span>`;}
+// ── Bestiary CR audit (T1.10) ────────────────────────────────────────────────
+// The calculator's blended read (data.js overallCR) over saved library monsters, memoized per id on the
+// save stamp — cards re-render on every filter keystroke, the derivation only changes on Save. Returns
+// {r, setIdx, diff} (diff = read − set, in CR steps) or null when the monster can't be read (throwing
+// record, or a CR off the ladder).
+const _crReadCache=new Map();
+function crReadOf(m){
+  const stamp=m._savedAt||0,c=_crReadCache.get(m.id);
+  if(c&&c.stamp===stamp)return c.v;
+  let v=null;
+  try{
+    const setIdx=CR_LIST.indexOf(m.cr);
+    if(setIdx>=0){const r=overallCR(m);v={r,setIdx,diff:r.idx-setIdx};}
+  }catch(_){v=null;}
+  _crReadCache.set(m.id,{stamp,v});
+  return v;
+}
+// The card's CR tag, with the calculator's divergence folded in as a lower-hierarchy suffix (user-decided
+// B265 — one tag, not a second badge): `CR 5  reads ¼`. Suffix only for a confident read ≥2 steps off the
+// set CR — the model is ±1 on 86% of the published corpus, so a 1-step read is within its noise and stays
+// off the cards (the bulk audit list still shows it). Numbers-only, same language as the read-out band.
+function crTagHTML(m){
+  const a=crReadOf(m);
+  if(!a||a.r.confidence!=="ok"||Math.abs(a.diff)<2)return `<span class="tag cr">CR ${m.cr}</span>`;
+  return `<span class="tag cr" title="Reads CR ${crGlyph(a.r.cr)} (defence ${crGlyph(a.r.def.cr)} · offence ${crGlyph(a.r.off.cr)}). Set CR ${crGlyph(m.cr)}.">CR ${m.cr}<span class="cr-sub">reads ${crGlyph(a.r.cr)}</span></span>`;
+}
+// Role classification for cards/filters (T1.12) — same memo discipline as crReadOf (classifyRole runs
+// the DPR extractor; cache per id on the save stamp). Stature is deliberately NOT shown in the
+// bestiary: it's party-level-relative and belongs to the encounter designer (P3, user-decided).
+// A manual override (m.roleOv, T1.14) wins over the calculator; the auto read is kept on the result
+// so the tooltip can still say what the calculator thinks.
+const _roleCache=new Map();
+function roleOf(m){
+  const stamp=(m._savedAt||0)+":"+(m.roleOv||""),c=_roleCache.get(m.id);
+  if(c&&c.stamp===stamp)return c.v;
+  const v=resolveRole(m); // override-wins + never-throws live in data.js — this is just the memo
+  _roleCache.set(m.id,{stamp,v});
+  return v;
+}
+// Role tag on a card: quiet by design (no per-role colour in the app yet — that's a design pass).
+// Borderline reads (small margin) name the runner-up in the tooltip instead of forcing a tie-break;
+// a low-confidence damage read shows as a rough read (~), matching the CR read-out's language.
+// Clicking the tag opens the override picker (T1.14 — quick correction without a Forge round-trip).
+function roleTagHTML(m){
+  const r=roleOf(m);
+  if(!r)return "";
+  if(r.manual){
+    const tip="Role set by you"+(r.auto&&r.auto!==r.role?` (the calculator reads ${r.auto})`:"")+". Click to change.";
+    return `<span class="tag role manual" data-roletag="${m.id}" title="${tip}">${r.role}</span>`;
+  }
+  const low=r.confidence!=="ok";
+  const tip=(low?"Rough read (damage extraction incomplete): ":"Role by the calculator: ")+r.role
+    +(r.margin<0.2?`, borderline with ${r.runnerUp}`:"")+". Click to override.";
+  return `<span class="tag role" data-roletag="${m.id}" title="${tip}">${low?"~ ":""}${r.role}</span>`;
+}
+// The override picker off a card's role tag: Auto (the calculator's read) + the five locked roles.
+function openRoleMenu(m,anchor){
+  if(!m)return;
+  const cur0=roleOf(m); // memoized — carries the calculator's read whether or not an override is set
+  const auto=cur0?(cur0.manual?cur0.auto:cur0.role):null;
+  const items=[["","Auto"+(auto?` (reads ${roleLabel(auto)})`:"")],...ROLE_LIST.map(r=>[r,roleLabel(r)])];
+  const cur=m.roleOv||"";
+  const p=showPopover(anchor,items.map(([v,l])=>`<button class="popitem${v===cur?" on":""}" data-r="${v}">${l}</button>`).join(""));
+  p.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{closePopover();
+    m.roleOv=b.dataset.r;m._savedAt=Date.now();saveLib();renderLibrary();}));
+}
 function cardHTML(m,dimmed){const arch=m.archived;return `<div class="card${arch?" archived":""}${m.pinned?" pinned":""}${dimmed?" filtered-out":""}" data-card="${m.id}" draggable="true">
   ${m.pinned?`<span class="card-pin" title="Pinned: ignores filters">${PIN_SVG}</span>`:""}
   <div class="menu-wrap cardmenu">
@@ -298,7 +367,8 @@ function cardHTML(m,dimmed){const arch=m.archived;return `<div class="card${arch
   </div>
   <h4>${esc(m.name)}</h4><div class="meta">${esc([m.size,m.type].filter(Boolean).join(" "))||"—"}</div>
   <div class="tags">
-    <span class="tag cr">CR ${m.cr}</span>
+    ${crTagHTML(m)}
+    ${roleTagHTML(m)}
     <span class="tag st st-${m.status} statchip" data-stchip="${m.id}">${m.status} <span class="caret">▾</span></span>
     ${originBadgeHTML(m)}
     <button class="tag addtag" data-addtag="${m.id}" title="Add tag">＋ tag</button>
@@ -367,6 +437,47 @@ function startFreshMonster(){guardedLoad(()=>{loadMonster(blankMonster());switch
 function refreshSaveState(){const dirty=typeof M!=="undefined"&&M&&forgeUnsaved();
   $("#forgeSaveFab")&&$("#forgeSaveFab").classList.toggle("is-dirty",!!dirty);
   $("#saveMonster")&&$("#saveMonster").classList.toggle("is-dirty",!!dirty);}
+// Bulk CR audit (T1.10): every saved creature graded by the calculator, grouped by how far the read
+// sits from the set CR. Rows open the creature in the Forge, where the read-out band explains the split.
+function openCrAudit(){
+  const groups={far:[],near:[],low:[]};
+  let onTarget=0;
+  state.lib.forEach(m=>{
+    const a=crReadOf(m);
+    if(!a){groups.low.push({m,a:null});return;}
+    if(a.r.confidence!=="ok"){groups.low.push({m,a});return;}
+    if(a.diff===0){onTarget++;return;}
+    (Math.abs(a.diff)>=2?groups.far:groups.near).push({m,a});
+  });
+  const byDiff=(x,y)=>Math.abs(y.a.diff)-Math.abs(x.a.diff)||x.m.name.localeCompare(y.m.name);
+  groups.far.sort(byDiff);groups.near.sort(byDiff);
+  groups.low.sort((x,y)=>x.m.name.localeCompare(y.m.name));
+  const row=({m,a})=>{
+    const read=!a?`<span class="cra-read low">no read</span>`
+      :a.r.confidence!=="ok"?`<span class="cra-read low">reads ~${crGlyph(a.r.cr)}</span>`
+      :`<span class="cra-read">reads ${crGlyph(a.r.cr)}</span>`;
+    const diff=a&&a.r.confidence==="ok"?`<span class="cra-diff">${a.diff>0?"+":""}${a.diff}</span>`:`<span class="cra-diff"></span>`;
+    return `<button type="button" class="cra-row" data-cra="${m.id}"><span class="cra-name">${esc(m.name)||"—"}</span><span class="cra-set">set ${crGlyph(m.cr)}</span>${read}${diff}</button>`;
+  };
+  const section=(title,rows)=>rows.length?`<div class="cra-sec">${title}</div>`+rows.map(row).join(""):"";
+  const total=state.lib.length;
+  const list=total
+    ?(section(`Off by 2 or more (${groups.far.length})`,groups.far)
+      +section(`Off by 1, within the model's noise (${groups.near.length})`,groups.near)
+      +section(`Couldn't read confidently (${groups.low.length})`,groups.low)
+      ||`<div class="cra-sec">Every creature reads at its set CR.</div>`)
+    :`<div class="cra-sec">No saved creatures to audit yet.</div>`;
+  openModalRaw(`<h3>CR audit</h3>`
+    +`<p class="cra-sum">${total} creature${total===1?"":"s"} · ${onTarget} on target · ${groups.near.length} off by 1 · ${groups.far.length} off by 2+ · ${groups.low.length} unreadable</p>`
+    +`<div class="cra-list">${list}</div>`
+    +`<div class="mrow"><button class="btn ghost sm" id="craClose" style="width:auto">Close</button></div>`);
+  $("#craClose").addEventListener("click",closeModal);
+  $("#modal").querySelectorAll("[data-cra]").forEach(b=>b.addEventListener("click",()=>{
+    const m=state.lib.find(x=>x.id===b.dataset.cra);if(!m)return;
+    closeModal();guardedLoad(()=>{loadMonster(m);switchView("forge");});
+  }));
+}
+$("#libAudit").addEventListener("click",openCrAudit);
 $("#libNew").addEventListener("click",startFreshMonster);
 $("#libChassis").addEventListener("click",()=>openChassis());
 $("#forgeChassis").addEventListener("click",()=>openChassis(true));
@@ -377,6 +488,10 @@ $("#clearForge").addEventListener("click",()=>confirmModal("Clear the Forge? Any
 
 // Save the current forge creature into the Bestiary (upsert by id). Returns false if unnamed.
 function saveCurrentToBestiary(){
+  // A pending CR-scale preview must resolve before anything persists. This path runs inside other
+  // modal flows (chassis conflict), so it can't stack the Save modal — it keeps what's ON SCREEN,
+  // the version the author is looking at when they chose to save.
+  if(_crScale)crScaleResolve(_crScale.showing==="changed"?"scaled":"original");
   if(!validName())return false;
   const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
   const i=state.lib.findIndex(x=>x.id===rec.id);
@@ -384,6 +499,7 @@ function saveCurrentToBestiary(){
   saveLib();refreshSaveState();return true;
 }
 $("#saveMonster").addEventListener("click",async()=>{
+  if(_crScale){crScaleSaveModal();return;} // a CR scale is still previewing — resolve it first (T1.7)
   if(!validName())return;
   const rec=clone(M);rec.chassis=false;rec._savedAt=Date.now();
   const i=state.lib.findIndex(x=>x.id===rec.id);

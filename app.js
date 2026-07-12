@@ -349,6 +349,7 @@ function wrapStepper(input,step,min){
   loadSettings();syncFeatureClasses();loadRollLogState();
   buildAbilityGrid();
   fillSelect("#f_size",SIZES);
+  $("#f_role").innerHTML=`<option value="">Auto (calculator)</option>`+ROLE_LIST.map(r=>`<option value="${r}">${roleLabel(r)}</option>`).join("");
   bindStatic();buildCRStepper();buildLibSelects();initFsCollapse();initForgeResizer();initBrandMark();
   ["sp_walk","sp_climb","sp_fly","sp_swim","sp_burrow","se_darkvision","se_blindsight","se_tremorsense","se_truesight"].forEach(id=>wrapStepper($("#"+id),5));
   wrapStepper($("#f_ac"),1,0);wrapStepper($("#f_init"),1,-20);

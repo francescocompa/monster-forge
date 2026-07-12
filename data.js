@@ -6,17 +6,16 @@ const CR_NUM={"0":0,"1/8":.125,"1/4":.25,"1/2":.5};CR_LIST.forEach(c=>{if(!(c in
 // far lower than a standard creature of the same CR (so ~5–10 minions ≈ one standard creature).
 const MINION_XP={"0":2,"1/8":5,"1/4":10,"1/2":20,"1":40,"2":90,"3":140,"4":220,"5":225,"6":285,"7":360,"8":485,"9":500,"10":590,"11":720,"12":840,"13":1000,"14":1150,"15":1300,"16":1500,"17":1800,"18":2000,"19":2200,"20":2500,"21":3300,"22":4100,"23":5000,"24":6200,"25":7500,"26":9000,"27":10500,"28":12000,"29":13500,"30":15500};
 function pbForCR(cr){const v={"0":2,"1/8":2,"1/4":2,"1/2":2,"1":2,"2":2,"3":2,"4":2,"5":3,"6":3,"7":3,"8":3,"9":4,"10":4,"11":4,"12":4,"13":5,"14":5,"15":5,"16":5,"17":6,"18":6,"19":6,"20":6,"21":7,"22":7,"23":7,"24":7,"25":8,"26":8,"27":8,"28":8,"29":9,"30":9};return v[cr]||2;}
-const BOH={"0":[13,3,2,1,9,0],"1/8":[13,9,3,3,10,1],"1/4":[13,15,3,6,10,1],"1/2":[14,24,4,9,11,2],"1":[14,30,4,12,11,2],"2":[14,45,5,18,12,3],"3":[15,60,5,24,12,3],"4":[15,75,6,30,13,4],"5":[15,90,6,36,13,4],"6":[16,105,7,42,14,4],"7":[16,120,7,48,14,4],"8":[16,135,8,54,15,4],"9":[17,150,8,60,15,4],"10":[17,165,9,66,16,5],"11":[17,180,9,72,16,5],"12":[18,195,10,78,17,5],"13":[18,210,10,84,17,5],"14":[18,225,11,90,18,6],"15":[19,240,11,96,18,6],"16":[19,255,12,102,19,6],"17":[19,270,12,108,19,6],"18":[20,285,13,114,20,7],"19":[20,300,13,120,20,7],"20":[20,315,14,126,21,7],"21":[21,350,14,132,21,7],"22":[21,400,15,138,22,8],"23":[21,450,15,144,22,8],"24":[22,500,16,150,23,8],"25":[22,550,16,156,23,8],"26":[22,600,17,162,24,9],"27":[22,650,17,168,24,9],"28":[22,700,18,174,25,9],"29":[22,750,18,180,25,9],"30":[22,800,19,186,26,9]};
-// Expected-stats-per-CR table for the CR calculator (T1.1/T1.2) — the CANONICAL envelope of the Q1.A
-// hybrid model: 2014 DMG p.274 structure, values recalibrated against the 2024 MM corpus (503 monsters).
+// Expected-stats-per-CR table for the CR calculator (T1.1/T1.2) — the CANONICAL and SOLE envelope of the
+// Q1.A hybrid model: 2014 DMG p.274 structure, values recalibrated against the 2024 MM corpus (503
+// monsters). B264 (T1.7) unified everything onto this table — the old `BOH` empirical line (which drove
+// the live Forge derived-stat suggestions and read ±1 below here) is GONE; `crExpected(cr)` is the one
+// source for AC/HP/attack/DPR/DC targets, so the live placeholders now match what the calculator reports.
 // Full derivation, per-CR sample sizes, construction rules, and the raw 2014 table live in
 // CR_CALIBRATION.md — read it before retuning any value here. Columns:
 // [AC, HP min, HP max, Attack Bonus, DPR min, DPR max, Save DC]. HP/DPR bands tile the number line
 // (no gaps/overlaps), mids strictly increasing, so value→CR inverse lookups are unambiguous.
 // CR 26–29 are interpolation (no 2024 monsters exist there — low confidence).
-// NOTE: BOH above is a separate, older empirical line that still drives the LIVE Forge suggestions;
-// it differs from this table by ±1 on most columns (DC by 1–2). Unification is deliberately deferred
-// to T1.5's regression run — don't reconcile the two before that, and don't add a third table.
 const CR_EXPECT={"0":[12,1,6,2,1,3,11],"1/8":[12,7,11,4,4,5,11],"1/4":[13,12,16,4,6,7,11],"1/2":[13,17,23,4,8,9,11],"1":[13,24,36,4,10,13,12],"2":[13,37,55,5,14,20,12],"3":[14,56,68,5,21,26,13],"4":[15,69,82,5,27,32,13],"5":[15,83,102,7,33,41,14],"6":[15,103,118,7,42,47,14],"7":[16,119,131,7,48,52,15],"8":[16,132,146,7,53,59,15],"9":[18,147,159,9,60,62,16],"10":[18,160,179,9,63,71,17],"11":[18,180,198,10,72,81,17],"12":[18,199,200,10,82,87,17],"13":[18,201,206,10,88,91,17],"14":[18,207,219,10,92,95,18],"15":[18,220,236,11,96,108,18],"16":[19,237,251,12,109,119,19],"17":[19,252,271,12,120,122,20],"18":[20,272,293,13,123,126,20],"19":[20,294,308,14,127,130,20],"20":[20,309,333,15,131,136,21],"21":[21,334,375,15,137,145,22],"22":[21,376,425,16,146,151,23],"23":[21,426,475,16,152,158,23],"24":[22,476,525,17,159,164,24],"25":[22,526,575,17,165,171,24],"26":[22,576,625,17,172,177,25],"27":[22,626,675,17,178,184,25],"28":[22,676,725,18,185,190,26],"29":[22,726,775,18,191,197,26],"30":[22,776,825,19,198,203,27]};
 // Accessor over CR_EXPECT: the expected-stats envelope for a CR, with PB folded in and midpoints
 // precomputed (hpAvg/dprAvg) for callers that want one number instead of a range. Returns null for an
@@ -318,6 +317,188 @@ function offensiveCR(m){
   const idx=clamp(baseIdx+step,0,CR_LIST.length-1);
   return {cr:CR_LIST[idx],idx,dpr:x.dpr,baseCR,anchor,step,confidence:x.confidence,notes:x.notes,rounds:x.rounds};
 }
+// Overall (blended) CR: the average of the offensive and defensive CR indices snapped back to the
+// ladder — the single number the calculator read-out reports (round(avg(off,def)), CR_CALIBRATION.md
+// §T1.5; this is exactly what grade-corpus.mjs and cr-model.test.js score). Carries both halves' full
+// derivations so the T1.6/T1.7 read-out can show the split and explain itself. `confidence` is the
+// offensive half's (the DPR extractor is the only source that can fail to read); the defensive half
+// always reads.
+function overallCR(m){
+  const off=offensiveCR(m),def=defensiveCR(m);
+  const idx=clamp(Math.round((off.idx+def.idx)/2),0,CR_LIST.length-1);
+  return {cr:CR_LIST[idx],idx,off,def,confidence:off.confidence};
+}
+// ── CR scaler (T1.7) ─────────────────────────────────────────────────────────
+// Rescale a monster to a target CR, PRESERVING CHARACTER (ratio/delta, not snap-to-expected): HP and
+// damage keep their proportional deviation from the CR-expected value (× the expected-ratio); AC, attack
+// bonus and save DC keep their absolute deviation (+ the expected delta); CR/PB move to the target. So a
+// glass cannon stays a glass cannon. Returns a NEW deep-cloned monster (original untouched, for the
+// read-out's changed/original toggle + preview-until-save); null if either CR is off-ladder.
+// Damage is scaled by DIE COUNT (the DMG's own way — more dice, same faces), keeping die size and the
+// ability modifier. Structured attacks recompute their shown average from `dice` at render, so only the
+// `dice` field is touched there; text-embedded "avg (NdX + M)" has its average recomputed, and embedded
+// "DC N" shifts by the expected delta in every free-text field (entry text AND attack riders alike).
+// Spell-list damage is keyed to spell identity (not editable dice), so it isn't scaled.
+function _scaleDieCount(str,r){return String(str).replace(/(\d+)(\s*[dD]\s*)(\d+)/g,(_,n,d,x)=>`${Math.max(1,Math.round(Number(n)*r))}${d}${x}`);}
+// scale a damage-carrying string: recompute "avg (dice)" averages and scale [dice] bracket tokens
+function _scaleTextDmg(text,r){
+  if(!text)return text;
+  let s=String(text);
+  s=s.replace(/(\d+)\s*\(([^()]*?\d+\s*[dD]\s*\d+[^()]*?)\)/g,(_,avg,dice)=>{const nd=_scaleDieCount(dice,r);return `${exprAvg(nd)} (${nd.trim()})`;});
+  s=s.replace(/\[([^\]]*?\d+\s*[dD]\s*\d+[^\]]*?)\]/g,(_,e)=>`[${_scaleDieCount(e,r)}]`);
+  return s;
+}
+// scale an HP dice formula ("16d10 + 48") — die count AND the flat con contribution scale together, so
+// the average tracks the HP ratio; returns null if it carries no dice
+function _scaleHpFormula(hpf,r){
+  if(!hpf||!/\d+\s*[dD]\s*\d+/.test(hpf))return null;
+  return String(hpf).replace(/(\d+)(\s*[dD]\s*\d+)/g,(_,n,rest)=>`${Math.max(1,Math.round(Number(n)*r))}${rest}`)
+    .replace(/([+\-]\s*)(\d+)(?!\s*[dD])/g,(_,sg,n)=>`${sg.replace(/\s+/g,"")}${Math.max(0,Math.round(Number(n)*r))}`);
+}
+function scaleMonster(m,targetCR){
+  const es=crExpected(m.cr),et=crExpected(targetCR);
+  if(!es||!et)return null;
+  const out=clone(m);
+  const auto=out._auto||{};
+  const rHP=et.hpAvg/es.hpAvg,rDPR=et.dprAvg/es.dprAvg;
+  const acShift=et.ac-es.ac,atkShift=et.atk-es.atk,dcShift=et.dc-es.dc;
+  // Auto-delegated AC/HP (author left the field empty) carry zero deviation by construction, so their
+  // preserve-character scale IS the target's expected value — set it here so the returned monster is
+  // consistent for headless callers too, not just after the UI's applyCRAuto repaints.
+  if(auto.ac)out.ac=et.ac;
+  else if(out.ac!=null&&out.ac!=="")out.ac=Math.round(Number(out.ac)+acShift);
+  const sf=_scaleHpFormula(out.hpf,rHP); // an HP dice formula scales whether or not HP is auto (auto reads its average)
+  if(sf){out.hpf=sf;out.hp=exprAvg(sf);}
+  else if(auto.hp)out.hp=et.hpAvg;
+  else if(out.hp!=null&&out.hp!=="")out.hp=Math.max(1,Math.round(Number(out.hp)*rHP));
+  out.cr=targetCR;
+  // a free-text fragment carries damage dice AND possibly an embedded save DC (attack riders like the
+  // Wolf's "Prone condition (DC 11 Str save negates)") — both must move together
+  const scaleRider=s=>_scaleTextDmg(s,rDPR).replace(/\bDC\s*(\d+)/gi,(_,n)=>`DC ${Number(n)+dcShift}`);
+  const scaleEntry=e=>{
+    if(e.mode==="attack"){
+      if(e.dice)e.dice=_scaleDieCount(e.dice,rDPR);
+      if(e.extra)e.extra=scaleRider(e.extra);
+      if(e.atk!==""&&e.atk!=null)e.atk=Number(e.atk)+atkShift;
+    }else if(e.mode==="spell"){
+      if(e.dc!==""&&e.dc!=null)e.dc=Number(e.dc)+dcShift;
+    }else if(e.text){
+      e.text=scaleRider(e.text);
+    }
+  };
+  ["actions","bonus","reactions","traits"].forEach(k=>(out[k]||[]).forEach(scaleEntry));
+  if(out.legend&&out.legend.items)out.legend.items.forEach(scaleEntry);
+  return out;
+}
+// ── Role classifier (T1.12) ──────────────────────────────────────────────────
+// Pure nearest-centroid classifier over CR-normalized role features. Roles are INTRINSIC (how a
+// monster fights, regardless of party level); the five names were decided in the Q1.D naming session.
+// Constants below are corpus-derived AGGREGATES (like CR_EXPECT) exported by scripts/role-map.mjs —
+// re-run it and re-paste after any change to the feature extraction or the CR tables; the full
+// derivation is ROLE_CLUSTERS.md. Two hard requirements carried from the T1.11 sweeps:
+//   1. atkN and spdR are CENTERED PER CR BAND (attacks/turn and speed rise with CR by design —
+//      band means 1.1→2.6 attacks — so uncentered they leak level into role and read 0% skirmishers
+//      at CR 9+ while the raw AC-for-HP signature still runs 5–8%).
+//   2. Conditions count SAVE-GATED in full and on-hit riders at half (2024 sprinkles riders on
+//      everything — a Hill Giant's Prone-on-club is not a controller).
+// Stature (boss/elite/pack/fodder) is deliberately NOT computed here: it is party-level-relative and
+// belongs to the encounter designer (P3), not the bestiary.
+const ROLE_LIST=["soldier","artillery","brute","skirmisher","controller"];
+// Display form for a role value ("soldier" → "Soldier") — values stay lowercase everywhere in data.
+const roleLabel=r=>r?r[0].toUpperCase()+r.slice(1):"";
+const ROLE_BANDS=[[0,1],[1.5,4],[5,8],[9,12],[13,30]];
+const ROLE_BAND_MEANS={"atkN":[0.1255,0.6191,0.9967,1.3043,1.2659],"spdR":[0.13,0.2804,0.3818,0.4582,0.9552]};
+const ROLE_STATS={"acD":{"mu":-0.1516,"sd":2.0395},"hpR":{"mu":-0.0825,"sd":0.4383},"dprR":{"mu":-0.1058,"sd":0.4749},"spdR":{"mu":0,"sd":0.5536},"atkN":{"mu":0,"sd":0.4809},"control":{"mu":0.1387,"sd":0.1981},"acc":{"mu":0.0879,"sd":1.5005}};
+const ROLE_W={"dprR":1.4,"hpR":1.4,"ranged":1.3,"control":1.2,"acD":1,"aoe":1,"atkN":0.9,"spdR":0.8,"caster":0.8,"fly":0.5,"acc":0.5};
+const ROLE_CENTROIDS={"soldier":[0.279,0.4811,-0.1044,-0.149,0.5998,-0.2946,0.1134,0.6167,0.293,0.2679,0.1116],"artillery":[-0.1072,-0.1848,1.6686,-0.2739,0.7155,-0.2288,-0.3817,0.705,0.2077,0.3692,0.0808],"brute":[-0.7686,1.3434,-0.6066,0.0584,-0.4916,-0.398,0.1492,0.1402,0.0944,0.0539,0.0742],"skirmisher":[0.7578,-0.8338,0.4729,0.014,-0.3348,-0.6178,0.0442,0.3212,0.0706,0.1553,0.1676],"controller":[-0.1151,-0.0491,-0.1396,-0.0292,-0.4822,2.3964,0.0807,0.2659,0.7909,0.1745,0.2045]};
+const ROLE_CONDS=["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious","Exhaustion"];
+const _ROLE_COND_RES=ROLE_CONDS.map(c=>new RegExp(c+" condition","i")); // compiled once — roleFeatures runs per preview render
+const _ROLE_W2N={two:2,three:3,four:4,five:5,six:6};
+// every damage-carrying entry's text, kept SEPARATE (the save-gated check is per entry)
+function _roleEntries(m){
+  const out=[];
+  ["actions","bonus","reactions","traits"].forEach(k=>(m[k]||[]).forEach(e=>out.push(String((e.name||"")+" "+(e.text||e.extra||"")))));
+  if(m.legend&&m.legend.items)m.legend.items.forEach(e=>out.push(String((e.name||"")+" "+(e.text||""))));
+  return out;
+}
+// the role feature vector in RAW units — exposed for tests and the future benchmark harness (T1.13).
+// `pre` optionally carries already-computed {off,def} so a caller that just ran overallCR (the preview
+// render does, every repaint) doesn't pay for a second full DPR extraction.
+function roleFeatures(m,pre){
+  const e=crExpected(m.cr);if(!e)return null;
+  const off=(pre&&pre.off)||offensiveCR(m),def=(pre&&pre.def)||defensiveCR(m),entries=_roleEntries(m),t=entries.join(" ");
+  const crv=CR_NUM[m.cr]??Number(m.cr);
+  let bi=ROLE_BANDS.findIndex(([lo,hi])=>crv>=lo&&crv<=hi);if(bi<0)bi=crv>1&&crv<1.5?1:ROLE_BANDS.length-1;
+  const ranged=/(Ranged|Melee or Ranged) Attack Roll/i.test(t);
+  const longRange=Math.max(0,...[...t.matchAll(/range (\d+)/gi)].map(x=>Number(x[1])))>=80;
+  const aoe=/each creature (?:in|within)|\d+-foot(?:-| )(?:Cone|Line|Sphere|Cube|Emanation|radius)/i.test(t);
+  let conds=0;
+  _ROLE_COND_RES.forEach(re=>{
+    const hits=entries.filter(x=>re.test(x));if(!hits.length)return;
+    conds+=hits.some(x=>/Saving Throw/i.test(x))?1:0.5;});
+  const caster=(m.actions||[]).some(a=>a.mode==="spell")||/Spellcasting/i.test(t);
+  const ma=t.match(/makes? (two|three|four|five|six|\d)\b[^.]{0,60}attack/i);
+  const atkN=ma?(_ROLE_W2N[ma[1].toLowerCase()]||Number(ma[1])||1):1;
+  const s=m.spd||{};
+  const maxSpd=Math.max(s.walk||0,s.fly||0,s.swim||0,s.burrow||0,s.climb||0)||30;
+  // Evasion kit (T1.14): the tricks that let a body play faster than its feet — Flyby /
+  // no-opportunity-attack movement, bonus-action Disengage/Hide (Nimble Escape, Cunning Action —
+  // 2024 puts these in the bonus section WITHOUT saying "Bonus Action" in the text, so that section
+  // is scanned directly), leap kits, ethereal/teleport escapes. Feeds classifyRole's skirmisher gate.
+  const bonusT=(m.bonus||[]).map(x=>String((x.name||"")+" "+(x.text||x.extra||""))).join(" ");
+  const evasive=/Flyby|doesn'?t provoke (?:an )?Opportunity Attacks?|Ethereal Jaunt|Etherealness|Misty Step|Standing Leap|teleports? (?:up to )?\d+/i.test(t)
+    ||/(?:Disengage|Hide)[^.]{0,40}\baction\b|teleport|\bLeap\b/i.test(bonusT)
+    ||/(?:Disengage|Hide) action as a Bonus Action/i.test(t);
+  return {
+    acD:def.acDelta==null?0:def.acDelta,
+    hpR:Math.log2(Math.max(def.rawHP,1)/e.hpAvg),
+    dprR:Math.log2(Math.max(off.dpr,e.dprAvg*0.05)/e.dprAvg),
+    spdR:Math.log2(maxSpd/30)-ROLE_BAND_MEANS.spdR[bi],
+    atkN:Math.log2(atkN)-ROLE_BAND_MEANS.atkN[bi],
+    control:Math.min(conds,4)/4,
+    acc:off.anchor?off.anchor.val-off.anchor.exp:0,
+    ranged:longRange?1:(ranged?0.5:0),
+    aoe:aoe?1:0,caster:caster?1:0,fly:(s.fly||0)>0?1:0,
+    evasive:evasive?1:0,
+    confidence:off.confidence,
+  };
+}
+// → {role, runnerUp, margin (0=coin flip, →1 clear), confidence}; null for an off-ladder CR.
+// `margin` lets the UI flag borderline reads (Ghoul, Medusa) without deciding the tie-break policy.
+// Skirmisher speed gate (T1.14, benchmark-driven): the user's definition is "fast and evasive" — but
+// the glass stat-shape (AC up, HP down) alone pulled slow bodies (Azer Sentinel, Troll Limb) into
+// skirmisher. HARD gate, a design pin like legendary→boss: a monster at-or-below its CR band's speed
+// norm that neither flies nor has evasion kit cannot read skirmisher (a soft distance penalty was
+// tried first and didn't move the far-from-boundary defect cases). Demotes only, never promotes.
+function classifyRole(m,pre){
+  const f=roleFeatures(m,pre);if(!f)return null;
+  const CONT=["acD","hpR","dprR","spdR","atkN","control","acc"],BIN=["ranged","aoe","caster","fly"];
+  const v=[
+    ...CONT.map(k=>clamp((f[k]-ROLE_STATS[k].mu)/ROLE_STATS[k].sd,-2.5,2.5)*ROLE_W[k]),
+    ...BIN.map(k=>f[k]*1.2*ROLE_W[k]),
+  ];
+  let best=null,d1=Infinity,second=null,d2v=Infinity;
+  ROLE_LIST.forEach(role=>{
+    if(role==="skirmisher"&&f.spdR<=0&&!f.evasive&&!f.fly)return;
+    const c=ROLE_CENTROIDS[role];
+    const d=v.reduce((s,x,i)=>s+(x-c[i])**2,0);
+    if(d<d1){second=best;d2v=d1;best=role;d1=d;}
+    else if(d<d2v){second=role;d2v=d;}
+  });
+  const s1=Math.sqrt(d1),s2=Math.sqrt(d2v);
+  return {role:best,runnerUp:second,margin:s2>0?(s2-s1)/s2:0,confidence:f.confidence};
+}
+// The ONE definition of "a manual override (m.roleOv) wins over the calculator" — every surface that
+// shows a role (card tag, statblock suffix, override picker, filter) resolves through here, so the
+// precedence rule can't drift between them. Never throws (a broken record must not kill a render):
+// a throwing classifier read degrades to null, and a valid override still wins over it.
+function resolveRole(m,pre){
+  let auto=null;
+  try{auto=classifyRole(m,pre);}catch(_){auto=null;}
+  if(m&&m.roleOv&&ROLE_LIST.includes(m.roleOv))
+    return {role:m.roleOv,runnerUp:null,margin:1,confidence:"ok",manual:true,auto:auto?auto.role:null};
+  return auto;
+}
 const BUDGET={1:[50,75,100],2:[100,150,200],3:[150,225,400],4:[250,375,500],5:[500,750,1100],6:[600,1000,1400],7:[750,1300,1700],8:[1000,1700,2100],9:[1300,2000,2600],10:[1600,2300,3100],11:[1900,2900,4100],12:[2200,3700,4700],13:[2600,4200,5400],14:[2900,4900,6200],15:[3300,5400,7800],16:[3800,6100,9800],17:[4500,7200,11700],18:[5000,8700,14200],19:[5500,10700,17200],20:[6400,13200,22000]};
 const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
 const SKILLS={Acrobatics:"dex",Animal_Handling:"wis",Arcana:"int",Athletics:"str",Deception:"cha",History:"int",Insight:"wis",Intimidation:"cha",Investigation:"int",Medicine:"wis",Nature:"int",Perception:"wis",Performance:"cha",Persuasion:"cha",Religion:"int",Sleight_of_Hand:"dex",Stealth:"dex",Survival:"wis"};
@@ -373,26 +554,31 @@ const MINION_GROUP_TEXT="Minions of the same kind can occupy the same space and 
 // chip's definition popover; `adj` (optional) is the state-adjective shown ON the chip (e.g. Haste → "Hasted")
 // so a tracked combatant reads as the state it's in — the popover keeps the proper `name`. Standard conditions
 // still come from the parsed conditions library (findCondition).
+// T2.2: each entry carries the `mech` payload (schema: DEVELOPMENT.md "The effect schema") built from
+// the XPHB 2024 text (5etools mirror v2.29.0 — spells-xphb.json / items-base.json itemMastery), which
+// also corrected four texts that had drifted from 2024: Resistance (now damage reduction, not a save
+// bonus), Guidance (chosen skill, not any check), Invisibility + Sanctuary (both also end on DEALING
+// damage), Hunter's Mark (the extra 1d6 is Force).
 const CURATED_EFFECTS=[
-  {name:"Sap",group:"mastery",adj:"Sapped",text:"On a hit, the target has disadvantage on its next attack roll before the start of your next turn."},
-  {name:"Slow",group:"mastery",adj:"Slowed",text:"On a hit, reduce the target's speed by 10 feet until the start of your next turn. Once per turn."},
-  {name:"Vex",group:"mastery",adj:"Vexed",text:"On a hit, you have advantage on your next attack roll against the target before the end of your next turn."},
-  {name:"Bless",group:"spell",adj:"Blessed",text:"+1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
-  {name:"Bane",group:"spell",adj:"Baned",text:"−1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute."},
-  {name:"Haste",group:"spell",adj:"Hasted",text:"+2 AC, advantage on Dexterity saving throws, doubled speed, and one extra limited action each turn. When it ends, the target can't move or take actions until the end of its next turn. Concentration."},
-  {name:"Hex",group:"spell",adj:"Hexed",text:"Your attacks deal an extra 1d6 necrotic to the target, and it has disadvantage on ability checks made with one chosen ability. Concentration."},
-  {name:"Hunter's Mark",group:"spell",adj:"Marked",text:"Your weapon attacks deal an extra 1d6 damage to the marked target. Concentration."},
-  {name:"Faerie Fire",group:"spell",adj:"Outlined",text:"Attack rolls against the target have advantage, and it can't benefit from being Invisible. Concentration, up to 1 minute."},
-  {name:"Blur",group:"spell",adj:"Blurred",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration."},
-  {name:"Shield of Faith",group:"spell",adj:"Shielded",text:"+2 AC. Concentration, up to 10 minutes."},
-  {name:"Heroism",group:"spell",adj:"Emboldened",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration."},
-  {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible. Attacks against it have disadvantage and its attacks have advantage. Ends if it attacks or casts a spell. Concentration, up to 1 hour."},
-  {name:"Hold Person",group:"spell",adj:"Held",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration."},
-  {name:"Slow",group:"spell",adj:"Slowed",text:"−2 AC and Dexterity saving throws, no Reactions, and it can take either an action or a Bonus Action on its turn (not both); Speed is halved. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on itself on a success. Concentration, up to 1 minute."},
-  {name:"Guidance",group:"spell",adj:"Guided",text:"+1d4 to one ability check of the target's choice. Concentration. (Cantrip.)"},
-  {name:"Resistance",group:"spell",text:"+1d4 to one saving throw of the target's choice. Concentration. (Cantrip.)"},
-  {name:"Sanctuary",group:"spell",adj:"Warded",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature attacks or casts a spell at an enemy."},
-  {name:"Aid",group:"spell",adj:"Aided",text:"The target's hit point maximum and current hit points increase by 5 (or more at higher levels) for 8 hours."}
+  {name:"Sap",group:"mastery",adj:"Sapped",text:"On a hit, the target has disadvantage on its next attack roll before the start of your next turn.",mech:{atoms:[{k:"dis",on:"attack",who:"self",once:true}]}},
+  {name:"Slow",group:"mastery",adj:"Slowed",text:"On a hit, reduce the target's speed by 10 feet until the start of your next turn. Once per turn.",mech:{atoms:[{k:"speed",delta:-10,who:"self"}]}},
+  {name:"Vex",group:"mastery",adj:"Vexed",text:"On a hit, you have advantage on your next attack roll against the target before the end of your next turn.",mech:{atoms:[{k:"adv",on:"attacked",who:"source",once:true}]}},
+  {name:"Bless",group:"spell",adj:"Blessed",text:"+1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute.",mech:{conc:true,atoms:[{k:"bonus",dice:"1d4",on:"attack",who:"self"},{k:"bonus",dice:"1d4",on:"save",who:"self"}]}},
+  {name:"Bane",group:"spell",adj:"Baned",text:"−1d4 to the target's attack rolls and saving throws. Concentration, up to 1 minute.",mech:{conc:true,atoms:[{k:"bonus",dice:"-1d4",on:"attack",who:"self"},{k:"bonus",dice:"-1d4",on:"save",who:"self"}]}},
+  {name:"Haste",group:"spell",adj:"Hasted",text:"+2 AC, advantage on Dexterity saving throws, doubled speed, and one extra limited action each turn. When it ends, the target can't move or take actions until the end of its next turn. Concentration.",mech:{conc:true,atoms:[{k:"ac",delta:2,who:"self"},{k:"adv",on:"save.dex",who:"self"},{k:"speed",mult:2,who:"self"},{k:"note",text:"One extra limited action each turn (Attack ×1, Dash, Disengage, Hide, or Utilize). When the spell ends: Incapacitated and Speed 0 until the end of its next turn."}]}},
+  {name:"Hex",group:"spell",adj:"Hexed",text:"Your attacks deal an extra 1d6 necrotic to the target, and it has disadvantage on ability checks made with one chosen ability. Concentration.",mech:{conc:true,atoms:[{k:"dmg",dice:"1d6",dtype:"Necrotic",who:"source"},{k:"note",text:"Disadvantage on ability checks with the chosen ability."}]}},
+  {name:"Hunter's Mark",group:"spell",adj:"Marked",text:"Your attacks deal an extra 1d6 Force damage to the marked target. Concentration.",mech:{conc:true,atoms:[{k:"dmg",dice:"1d6",dtype:"Force",who:"source"}]}},
+  {name:"Faerie Fire",group:"spell",adj:"Outlined",text:"Attack rolls against the target have advantage if the attacker can see it, and it can't benefit from being Invisible. Concentration, up to 1 minute.",mech:{conc:true,atoms:[{k:"adv",on:"attacked",who:"attackers",if:"sighted"},{k:"note",text:"Can't benefit from the Invisible condition; sheds dim light in a 10-foot radius."}]}},
+  {name:"Blur",group:"spell",adj:"Blurred",text:"Attack rolls against the target have disadvantage, unless the attacker doesn't rely on sight. Concentration.",mech:{conc:true,atoms:[{k:"dis",on:"attacked",who:"attackers",if:"sighted"}]}},
+  {name:"Shield of Faith",group:"spell",adj:"Shielded",text:"+2 AC. Concentration, up to 10 minutes.",mech:{conc:true,atoms:[{k:"ac",delta:2,who:"self"}]}},
+  {name:"Heroism",group:"spell",adj:"Emboldened",text:"Immune to the Frightened condition; gains temporary hit points equal to the caster's spellcasting modifier at the start of each of its turns. Concentration.",mech:{conc:true,atoms:[{k:"immune",to:"Frightened"},{k:"note",text:"Gains temp HP equal to the caster's spellcasting modifier at the start of each of its turns."}]}},
+  {name:"Invisibility",group:"spell",adj:"Invisible",text:"The target is Invisible. Attacks against it have disadvantage and its attacks have advantage. Ends immediately after it makes an attack roll, deals damage, or casts a spell. Concentration, up to 1 hour.",mech:{conc:true,implies:["Invisible"],end:{on:["attacks","dealsDamage","casts"]}}},
+  {name:"Hold Person",group:"spell",adj:"Held",text:"The target is Paralyzed. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on a success. Concentration.",mech:{conc:true,implies:["Paralyzed"],save:{abil:"wis",when:"end",who:"self",onSuccess:"end"}}},
+  {name:"Slow",group:"spell",adj:"Slowed",text:"−2 AC and Dexterity saving throws, no Reactions, and it can take either an action or a Bonus Action on its turn (not both); Speed is halved. It repeats the Wisdom saving throw at the end of each of its turns, ending the effect on itself on a success. Concentration, up to 1 minute.",mech:{conc:true,atoms:[{k:"ac",delta:-2,who:"self"},{k:"bonus",delta:-2,on:"save.dex",who:"self"},{k:"noreact"},{k:"speed",mult:0.5,who:"self"},{k:"note",text:"Action OR Bonus Action each turn, not both; at most one attack with the Attack action; somatic spells have a 25% chance to fail."}],save:{abil:"wis",when:"end",who:"self",onSuccess:"end"}}},
+  {name:"Guidance",group:"spell",adj:"Guided",text:"+1d4 to the target's ability checks with one chosen skill. Concentration. (Cantrip.)",mech:{conc:true,atoms:[{k:"bonus",dice:"1d4",on:"check",who:"self"},{k:"note",text:"Chosen skill only."}]}},
+  {name:"Resistance",group:"spell",text:"When the target takes damage of one chosen type, it reduces the total by 1d4 (once per turn). Concentration. (Cantrip.)",mech:{conc:true,atoms:[{k:"note",text:"Reduces damage of the chosen type by 1d4, once per turn."}]}},
+  {name:"Sanctuary",group:"spell",adj:"Warded",text:"An attacker must succeed on a Wisdom saving throw or choose a new target; ends if the warded creature makes an attack roll, casts a spell, or deals damage.",mech:{atoms:[{k:"note",text:"A creature targeting it with an attack or damaging spell must first succeed on a Wisdom save or retarget/lose the attempt. No protection from areas of effect."}],end:{on:["attacks","casts","dealsDamage"]}}},
+  {name:"Aid",group:"spell",adj:"Aided",text:"The target's hit point maximum and current hit points increase by 5 (or more at higher levels) for 8 hours.",mech:{atoms:[{k:"note",text:"HP maximum and current HP +5 (more at higher slot levels) for 8 hours."}]}}
 ];
 const CURATED_EFFECT_GROUP_LABEL={mastery:"Weapon masteries",spell:"Spell effects"};
 // Case-insensitive lookup into the curated library (matches on the bare name, ignoring any "(…)" qualifier).
@@ -402,6 +588,38 @@ const CURATED_EFFECT_GROUP_LABEL={mastery:"Weapon masteries",spell:"Spell effect
 function findCuratedEffect(name,group){const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();if(!n)return null;
   if(group){const hit=CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n&&e.group===group);if(hit)return hit;}
   return CURATED_EFFECTS.find(e=>e.name.toLowerCase()===n);}
+// T2.2 — mechanics payloads for the 15 XPHB 2024 conditions (schema: DEVELOPMENT.md "The effect
+// schema"). Their TEXT stays with the parsed reference library (findCondition); these are the
+// machine-readable facts, transcribed from the XPHB text (5etools mirror v2.29.0,
+// conditionsdiseases.json) — never from memory. Keyed by canonical condition name.
+// Exhaustion is per-level (2024): `perLevel` atoms scale by the instance's level.
+const CONDITION_MECH={
+  "Blinded":{atoms:[{k:"adv",on:"attacked",who:"attackers"},{k:"dis",on:"attack",who:"self"},{k:"note",text:"Can't see; automatically fails ability checks that require sight."}]},
+  "Charmed":{atoms:[{k:"note",text:"Can't attack the charmer or target it with damaging abilities or magical effects."},{k:"note",text:"The charmer has advantage on ability checks to interact with it socially."}]},
+  "Deafened":{atoms:[{k:"note",text:"Can't hear; automatically fails ability checks that require hearing."}]},
+  "Exhaustion":{atoms:[{k:"bonus",delta:-2,perLevel:true,on:"d20",who:"self"},{k:"speed",delta:-5,perLevel:true,who:"self"},{k:"note",text:"Cumulative (one level per receipt); dies at level 6. A Long Rest removes one level."}]},
+  "Frightened":{atoms:[{k:"dis",on:"attack",who:"self",if:"sourceVisible"},{k:"dis",on:"check",who:"self",if:"sourceVisible"},{k:"note",text:"Can't willingly move closer to the source of its fear."}]},
+  "Grappled":{atoms:[{k:"speed",set:0,who:"self"},{k:"dis",on:"attack",who:"self",if:"vsNonSource"},{k:"note",text:"The grappler can drag or carry it (each foot costs 1 extra unless the target is Tiny or two+ sizes smaller)."}]},
+  "Incapacitated":{atoms:[{k:"incap"},{k:"note",text:"Concentration is broken; can't speak; disadvantage on Initiative if Incapacitated when rolling it."}]},
+  "Invisible":{atoms:[{k:"adv",on:"attack",who:"self",if:"unseen"},{k:"dis",on:"attacked",who:"attackers",if:"unseen"},{k:"note",text:"Concealed (with worn/carried equipment) from effects that require sight; advantage on Initiative if Invisible when rolling it."}]},
+  "Paralyzed":{implies:["Incapacitated"],atoms:[{k:"speed",set:0,who:"self"},{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"adv",on:"attacked",who:"attackers"},{k:"autocrit",if:"melee5",who:"attackers"}]},
+  "Petrified":{implies:["Incapacitated"],atoms:[{k:"speed",set:0,who:"self"},{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"adv",on:"attacked",who:"attackers"},{k:"immune",to:"Poisoned"},{k:"note",text:"Transformed to inanimate substance (weight ×10, no aging); Resistance to all damage."}]},
+  "Poisoned":{atoms:[{k:"dis",on:"attack",who:"self"},{k:"dis",on:"check",who:"self"}]},
+  "Prone":{atoms:[{k:"dis",on:"attack",who:"self"},{k:"adv",on:"attacked",who:"attackers",if:"melee5"},{k:"dis",on:"attacked",who:"attackers",if:"beyond5"},{k:"note",text:"Movement limited to crawling; standing up costs half its Speed and ends the condition (impossible at Speed 0)."}]},
+  "Restrained":{atoms:[{k:"speed",set:0,who:"self"},{k:"adv",on:"attacked",who:"attackers"},{k:"dis",on:"attack",who:"self"},{k:"dis",on:"save.dex",who:"self"}]},
+  "Stunned":{implies:["Incapacitated"],atoms:[{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"adv",on:"attacked",who:"attackers"}]},
+  "Unconscious":{implies:["Incapacitated","Prone"],atoms:[{k:"speed",set:0,who:"self"},{k:"adv",on:"attacked",who:"attackers"},{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"autocrit",if:"melee5",who:"attackers"},{k:"note",text:"Drops what it's holding; unaware of its surroundings; remains Prone when the condition ends."}]},
+};
+// The closed `if` vocabulary (extend deliberately; anything situational beyond it is a `note` atom):
+// melee5 = attacker within 5 ft · beyond5 = attacker beyond 5 ft · sighted = attacker relies on sight /
+// can see the target · unseen = unless the attacker can somehow see it · sourceVisible = while the
+// effect's source is in line of sight · vsNonSource = against any target other than the effect's source.
+const EFFECT_IF_TERMS=["melee5","beyond5","sighted","unseen","sourceVisible","vsNonSource"];
+const EFFECT_ATOM_KINDS=["adv","dis","autofail","autocrit","bonus","ac","speed","incap","noreact","dmg","immune","note"];
+// T2.9 contract — control value per atom kind (the classifier, the benchmark, and future designer math
+// all read THIS map; see DEVELOPMENT.md). speed splits: set-0 = speedZero, mult/delta = speedPartial.
+// Values are the schema's design numbers, PROVISIONAL until T2.9 calibrates them against the corpus.
+const EFFECT_CONTROL_W={incap:1,autofail:0.8,speedZero:0.6,noreact:0.5,autocrit:0.4,adv:0.4,dis:0.4,speedPartial:0.3,immune:0,bonus:0,ac:0,dmg:0,note:0.1};
 // Gear self-suggestion (B38): manufactured weapons matched against attack names, armor against the AC note.
 const GEAR_WEAPONS=["Club","Dagger","Greatclub","Handaxe","Javelin","Light Hammer","Mace","Quarterstaff","Sickle","Spear","Dart","Light Crossbow","Shortbow","Sling","Battleaxe","Flail","Glaive","Greataxe","Greatsword","Halberd","Lance","Longsword","Maul","Morningstar","Pike","Rapier","Scimitar","Shortsword","Trident","War Pick","Warhammer","Whip","Blowgun","Hand Crossbow","Heavy Crossbow","Longbow","Net","Musket","Pistol","Scythe","Crossbow"];
 const GEAR_ARMOR=["Padded Armor","Studded Leather Armor","Leather Armor","Hide Armor","Chain Shirt","Scale Mail","Breastplate","Half Plate Armor","Ring Mail","Chain Mail","Splint Armor","Plate Armor","Shield"];

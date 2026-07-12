@@ -1,0 +1,607 @@
+{
+ "seed": 20260712,
+ "frozen": "2026-07-12",
+ "protocol": "Q1.E blind/two-tier-85/60-25-15",
+ "set": [
+  {
+   "name": "Stone Giant",
+   "cr": "7",
+   "type": "giant",
+   "pool": "clean"
+  },
+  {
+   "name": "Flesh Golem",
+   "cr": "5",
+   "type": "construct",
+   "pool": "clean"
+  },
+  {
+   "name": "Dire Worg",
+   "cr": "10",
+   "type": "fey",
+   "pool": "clean"
+  },
+  {
+   "name": "Goblin Boss",
+   "cr": "1",
+   "type": "fey",
+   "pool": "borderline"
+  },
+  {
+   "name": "Cyclops Sentry",
+   "cr": "6",
+   "type": "giant",
+   "pool": "clean"
+  },
+  {
+   "name": "Young Gold Dragon",
+   "cr": "10",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Chasme",
+   "cr": "6",
+   "type": "fiend",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Awakened Shrub",
+   "cr": "0",
+   "type": "plant",
+   "pool": "clean"
+  },
+  {
+   "name": "Goristro",
+   "cr": "17",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Medusa",
+   "cr": "6",
+   "type": "monstrosity",
+   "pool": "borderline"
+  },
+  {
+   "name": "Performer Legend",
+   "cr": "10",
+   "type": "humanoid",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Ancient Black Dragon",
+   "cr": "21",
+   "type": "dragon",
+   "pool": "borderline"
+  },
+  {
+   "name": "Adult Copper Dragon",
+   "cr": "14",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Roc",
+   "cr": "11",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Dryad",
+   "cr": "1",
+   "type": "fey",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Death Tyrant",
+   "cr": "14",
+   "type": "undead",
+   "pool": "clean"
+  },
+  {
+   "name": "Elemental Cataclysm",
+   "cr": "22",
+   "type": "elemental",
+   "pool": "clean"
+  },
+  {
+   "name": "Marilith",
+   "cr": "16",
+   "type": "fiend",
+   "pool": "borderline"
+  },
+  {
+   "name": "Vampire Spawn",
+   "cr": "5",
+   "type": "undead",
+   "pool": "clean"
+  },
+  {
+   "name": "Flaming Skeleton",
+   "cr": "3",
+   "type": "undead",
+   "pool": "clean"
+  },
+  {
+   "name": "Sphinx of Valor",
+   "cr": "17",
+   "type": "celestial",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Satyr Revelmaster",
+   "cr": "6",
+   "type": "fey",
+   "pool": "clean"
+  },
+  {
+   "name": "Mule",
+   "cr": "1/8",
+   "type": "beast",
+   "pool": "clean"
+  },
+  {
+   "name": "Helmed Horror",
+   "cr": "4",
+   "type": "construct",
+   "pool": "borderline"
+  },
+  {
+   "name": "Horned Devil",
+   "cr": "11",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Archmage",
+   "cr": "12",
+   "type": "humanoid",
+   "pool": "clean"
+  },
+  {
+   "name": "Hippopotamus",
+   "cr": "4",
+   "type": "beast",
+   "pool": "clean"
+  },
+  {
+   "name": "Arch-hag",
+   "cr": "21",
+   "type": "fey",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Ettin",
+   "cr": "4",
+   "type": "giant",
+   "pool": "clean"
+  },
+  {
+   "name": "Jackalwere",
+   "cr": "1/2",
+   "type": "fiend",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Stone Golem",
+   "cr": "10",
+   "type": "construct",
+   "pool": "borderline"
+  },
+  {
+   "name": "Gibbering Mouther",
+   "cr": "2",
+   "type": "aberration",
+   "pool": "clean"
+  },
+  {
+   "name": "Ankylosaurus",
+   "cr": "3",
+   "type": "beast",
+   "pool": "clean"
+  },
+  {
+   "name": "Azer Sentinel",
+   "cr": "2",
+   "type": "elemental",
+   "pool": "clean"
+  },
+  {
+   "name": "Merrow",
+   "cr": "2",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Aarakocra Aeromancer",
+   "cr": "4",
+   "type": "elemental",
+   "pool": "clean"
+  },
+  {
+   "name": "Faerie Dragon Youth",
+   "cr": "1",
+   "type": "dragon",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Githzerai Zerth",
+   "cr": "6",
+   "type": "aberration",
+   "pool": "clean"
+  },
+  {
+   "name": "Giant Shark",
+   "cr": "5",
+   "type": "beast",
+   "pool": "borderline"
+  },
+  {
+   "name": "Stirge",
+   "cr": "1/8",
+   "type": "monstrosity",
+   "pool": "borderline"
+  },
+  {
+   "name": "Tarrasque",
+   "cr": "30",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Guardian Naga",
+   "cr": "10",
+   "type": "celestial",
+   "pool": "clean"
+  },
+  {
+   "name": "Roper",
+   "cr": "5",
+   "type": "aberration",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Green Dragon Wyrmling",
+   "cr": "2",
+   "type": "dragon",
+   "pool": "borderline"
+  },
+  {
+   "name": "Ice Devil",
+   "cr": "14",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Myconid Sovereign",
+   "cr": "2",
+   "type": "plant",
+   "pool": "borderline"
+  },
+  {
+   "name": "Mud Mephit",
+   "cr": "1/4",
+   "type": "elemental",
+   "pool": "borderline"
+  },
+  {
+   "name": "Gray Slaad",
+   "cr": "9",
+   "type": "aberration",
+   "pool": "borderline"
+  },
+  {
+   "name": "Colossus",
+   "cr": "25",
+   "type": "construct",
+   "pool": "clean"
+  },
+  {
+   "name": "Ochre Jelly",
+   "cr": "2",
+   "type": "ooze",
+   "pool": "clean"
+  },
+  {
+   "name": "Abominable Yeti",
+   "cr": "9",
+   "type": "monstrosity",
+   "pool": "borderline"
+  },
+  {
+   "name": "Sahuagin Warrior",
+   "cr": "1/2",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Elemental Cultist",
+   "cr": "8",
+   "type": "humanoid",
+   "pool": "clean"
+  },
+  {
+   "name": "Ancient White Dragon",
+   "cr": "20",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Scout",
+   "cr": "1/2",
+   "type": "humanoid",
+   "pool": "clean"
+  },
+  {
+   "name": "Deva",
+   "cr": "10",
+   "type": "celestial",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Giant Owl",
+   "cr": "1/4",
+   "type": "celestial",
+   "pool": "clean"
+  },
+  {
+   "name": "Quasit",
+   "cr": "1",
+   "type": "fiend",
+   "pool": "borderline"
+  },
+  {
+   "name": "Hill Giant",
+   "cr": "5",
+   "type": "giant",
+   "pool": "borderline"
+  },
+  {
+   "name": "Homunculus",
+   "cr": "0",
+   "type": "construct",
+   "pool": "clean"
+  },
+  {
+   "name": "Barlgura",
+   "cr": "5",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Bandit Captain",
+   "cr": "2",
+   "type": "humanoid",
+   "pool": "clean"
+  },
+  {
+   "name": "Dracolich",
+   "cr": "17",
+   "type": "undead",
+   "pool": "borderline"
+  },
+  {
+   "name": "Wyvern",
+   "cr": "6",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Cloud Giant",
+   "cr": "9",
+   "type": "giant",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Grick Ancient",
+   "cr": "7",
+   "type": "aberration",
+   "pool": "borderline"
+  },
+  {
+   "name": "Efreeti",
+   "cr": "11",
+   "type": "elemental",
+   "pool": "clean"
+  },
+  {
+   "name": "Animal Lord",
+   "cr": "20",
+   "type": "celestial",
+   "pool": "clean"
+  },
+  {
+   "name": "Troll Limb",
+   "cr": "1/2",
+   "type": "giant",
+   "pool": "clean"
+  },
+  {
+   "name": "Couatl",
+   "cr": "4",
+   "type": "celestial",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Banshee",
+   "cr": "4",
+   "type": "undead",
+   "pool": "borderline"
+  },
+  {
+   "name": "Skeleton",
+   "cr": "1/4",
+   "type": "undead",
+   "pool": "borderline"
+  },
+  {
+   "name": "Quaggoth",
+   "cr": "2",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Ancient Brass Dragon",
+   "cr": "20",
+   "type": "dragon",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Ancient Copper Dragon",
+   "cr": "21",
+   "type": "dragon",
+   "pool": "borderline"
+  },
+  {
+   "name": "Phase Spider",
+   "cr": "3",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Spy Master",
+   "cr": "10",
+   "type": "humanoid",
+   "pool": "borderline"
+  },
+  {
+   "name": "Bullywug Warrior",
+   "cr": "1/4",
+   "type": "fey",
+   "pool": "clean"
+  },
+  {
+   "name": "Djinni",
+   "cr": "11",
+   "type": "elemental",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Half-Dragon",
+   "cr": "5",
+   "type": "dragon",
+   "pool": "borderline"
+  },
+  {
+   "name": "Adult Red Dragon",
+   "cr": "17",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Barbed Devil",
+   "cr": "5",
+   "type": "fiend",
+   "pool": "clean"
+  },
+  {
+   "name": "Water Elemental",
+   "cr": "5",
+   "type": "elemental",
+   "pool": "clean"
+  },
+  {
+   "name": "Winged Kobold",
+   "cr": "1/4",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Blue Slaad",
+   "cr": "7",
+   "type": "aberration",
+   "pool": "clean"
+  },
+  {
+   "name": "Warhorse",
+   "cr": "1/2",
+   "type": "beast",
+   "pool": "borderline"
+  },
+  {
+   "name": "Bugbear Warrior",
+   "cr": "1",
+   "type": "fey",
+   "pool": "clean"
+  },
+  {
+   "name": "Primeval Owlbear",
+   "cr": "7",
+   "type": "monstrosity",
+   "pool": "clean"
+  },
+  {
+   "name": "Githyanki Dracomancer",
+   "cr": "16",
+   "type": "aberration",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Ghast",
+   "cr": "2",
+   "type": "undead",
+   "pool": "clean"
+  },
+  {
+   "name": "Performer Maestro",
+   "cr": "6",
+   "type": "humanoid",
+   "pool": "clean"
+  },
+  {
+   "name": "Revenant",
+   "cr": "5",
+   "type": "undead",
+   "pool": "lowconf"
+  },
+  {
+   "name": "Dao",
+   "cr": "11",
+   "type": "elemental",
+   "pool": "borderline"
+  },
+  {
+   "name": "Flumph",
+   "cr": "1/8",
+   "type": "aberration",
+   "pool": "clean"
+  },
+  {
+   "name": "Tree Blight",
+   "cr": "7",
+   "type": "plant",
+   "pool": "clean"
+  },
+  {
+   "name": "Dragon Turtle",
+   "cr": "17",
+   "type": "dragon",
+   "pool": "borderline"
+  },
+  {
+   "name": "Violet Fungus Necrohulk",
+   "cr": "7",
+   "type": "plant",
+   "pool": "clean"
+  },
+  {
+   "name": "Juvenile Shadow Dragon",
+   "cr": "4",
+   "type": "dragon",
+   "pool": "clean"
+  },
+  {
+   "name": "Black Pudding",
+   "cr": "4",
+   "type": "ooze",
+   "pool": "clean"
+  },
+  {
+   "name": "Modron Quadrone",
+   "cr": "1",
+   "type": "construct",
+   "pool": "clean"
+  }
+ ]
+}

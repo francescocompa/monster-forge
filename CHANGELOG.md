@@ -4,6 +4,338 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 276 — T2.2: the effect data pass (payloads from the 2024 text)
+- **Every `CURATED_EFFECTS` entry now carries its `mech` payload, and `CONDITION_MECH` ships the 15
+  XPHB 2024 conditions** (Exhaustion and Invisible are among the 15 — the B275 doc phrasing implied
+  otherwise; corrected). All payloads transcribed from the XPHB text in the local 5etools mirror
+  (v2.29.0: conditionsdiseases.json, spells-xphb.json, items-base.json itemMastery) — text open,
+  never from memory, per the task.
+- **Four curated texts had drifted from 2024 and were corrected while the source was open:**
+  Resistance (2014's +1d4-to-a-save became 2024's reduce-damage-by-1d4-once-per-turn), Guidance
+  (chosen SKILL, not any check), Invisibility + Sanctuary (both also end on DEALING damage),
+  Hunter's Mark (the extra 1d6 is Force).
+- **Schema extensions the data needed (documented in DEVELOPMENT.md, locked by test):** `once:true`
+  (Sap/Vex spend on the next qualifying roll), flat `delta` + `perLevel:true` on bonus/speed
+  (Exhaustion's −2/level d20 and −5 ft/level), `bonus.on:"d20"`, `end.on` = attacks·casts·
+  dealsDamage, and three new `if` terms (unseen, sourceVisible, vsNonSource + beyond5).
+- **New exports beside the data:** `EFFECT_ATOM_KINDS`, `EFFECT_IF_TERMS` (the closed vocabularies)
+  and `EFFECT_CONTROL_W` (the T2.9 control-weight map, provisional until corpus calibration).
+  **`test/effect-mech.test.js`** is the schema-integrity floor: every atom validates against the
+  vocabularies, conc flags must match the text, and Paralyzed/Poisoned/Hold Person/Exhaustion are
+  asserted against the rules text. Baseline now **67 tests**; verified live (payloads resolve through
+  findCuratedEffect, corrected texts render, zero console errors). Nothing consumes `mech` yet —
+  that's T2.3+ by design.
+
+## Batch 275 — Phase 2 opens: Q2.A/Q2.B decided, T2.1 effect schema designed
+- **Q2.A DECIDED (user, AskUserQuestion): REMIND-FIRST.** Chips state the mechanical fact, the DM
+  rolls; every payload is still precise enough for per-class auto-apply to layer on later without a
+  schema change. **Q2.B DECIDED: PROMPT STRIP** — a slim dedicated strip on the tracker where
+  save-ends/concentration (later recharge, death saves, lair actions) queue; T2.5 mockups design it.
+- **T2.1 — the effect schema (documentation only, no JS this batch):** DEVELOPMENT.md gains "The
+  effect schema" — an optional `mech` payload on effect definitions: typed reminder **atoms**
+  (adv/dis, autofail, autocrit, bonus dice, AC/speed deltas, incap/noreact, damage riders, immunity,
+  and a verbatim `note` escape hatch so no rule ever gets contorted to fit), a repeat-**save**
+  descriptor riding the existing `combatAdvance`/`endWhen` edges, **end** triggers, **conc** linkage,
+  and condition `implies` chains. Payload homes: `mech` on `CURATED_EFFECTS` + a new `CONDITION_MECH`
+  table for the 15 standard conditions + Exhaustion (their text stays from the parsed library; the
+  mechanics are ours). Per the T2.1 requirement it was designed together with T2.9's classifier
+  contract: control value scores from atom kinds (incap 1.0 → adv/dis 0.4; bonus/dmg/ac = 0), weights
+  exported in one map shared by classifier, benchmark, and future designer math. Payloads are
+  optional everywhere — no `mech` degrades to today's text-only behavior, so T2.2 lands incrementally.
+
+## Batch 274 — Phase 1 consolidated
+Markdown-only. ROADMAP.md and TASKS.md Phase-1 sections collapsed to closed-phase summaries; the open
+remainders stay visible in both: **Q1.C** (adjuster suggest-mode + field locks, user decision, blocks
+T1.8), the **benchmark gate re-arming at T2.10** (75.0/80.0 vs ≥85), and the parked B273 review items.
+Memory consolidated (stale calculator-plan note retired; backlog updated). Phase 2 is next and opens
+with two user checkpoints: Q2.A (auto-apply vs remind, the DM↔tool trust contract) and Q2.B (where
+save-ends/concentration prompts live) — both block T2.1.
+
+## Batch 273 — Phase-1 close: /code-review high on the math layer, fixes applied
+Eight finder angles + per-candidate verification over the whole uncommitted Phase-1 arc (B264–272).
+19 findings confirmed, 5 refuted with evidence (notably: the render path's overallCR is fully guarded
+end-to-end — no try/catch needed; SHOW_DERIVED is a hardcoded const, its scaler-shadowing is a latent
+trap only). Fixes, all verified live + 62 tests green:
+- **The `_crScale` preview lifecycle was leaking (the big one).** The T1.7 preview-until-Save contract
+  now actually holds everywhere: (1) `renderPreviewNow` no longer persists the forge draft while a scale
+  preview is active — a mid-preview reload used to silently commit the scaled clone as the working draft,
+  original gone; (2) `recordForgeHistory` never records a preview snapshot, and `_forgeRestore` (undo/
+  redo) clears the preview — dialing CRs used to push transient scaled monsters into the undo stack, and
+  Ctrl+Z mid-preview left a stale toggle that could swap back and even save the stale clone; (3)
+  `saveCurrentToBestiary` (the chassis-conflict save path) resolves a pending preview to what's on screen
+  instead of silently persisting the scaled clone past the Save modal.
+- **`scaleMonster`: attack-rider save DCs now shift with the target CR** (Wolf's "Prone (DC 11 Str save
+  negates)" rider kept its DC while damage moved — text entries shifted, attack `extra` didn't; both now
+  go through one `scaleRider` pass; regression test added). The dead `changed`/`_scaled` bookkeeping is
+  deleted — nothing read it and it persisted into saved records as a junk field.
+- **One CR read per preview render.** `renderPreviewNow` computes `overallCR` once and threads it into
+  both the read-out band and the statblock role suffix (each ran its own full DPR extraction — 2× per
+  keystroke burst); the 14 role-condition regexes compile once at load; the scaler slider coalesces drag
+  ticks (rAF + timeout fallback, the renderPreview discipline — rAF alone starves in a background tab).
+- **`resolveRole(m)` in data.js is now the ONE definition of "override wins"** (never throws; carries the
+  auto read for tooltips). `roleOf` is just the memo over it; the statblock suffix and the card popover
+  consume it — the popover reuses the memo instead of re-running the classifier on every open. Card tag
+  copy stays lowercase, statblock capitalized (both pre-date this batch; flagged for the user, below).
+- Cleanups: dead `CR_SCALER_ON` flag removed; `_crScale.target` dropped (the previewed CR is
+  `scaled.cr` — one source of truth); em dashes removed from the five new UI strings (read-out tooltip,
+  CR-tag tooltip, audit header, both role-tag tooltips) per the B238 copy rule; stale "minion" comment.
+- **Parked (reported, deliberately not fixed here):** role-map.mjs still inlines its feature extraction
+  (only `evasive` comes from the shipped `roleFeatures`) and the pasted ROLE_* constants have no
+  regeneration-equality check — unifying the generator means re-running it against the corpus, which
+  belongs to a dedicated session, not a close-out; the global `input[type=text]{width:100%}` CSS rule
+  keeps breeding per-popover specificity overrides (third instance now); the entry-walk pattern exists in
+  ~7 hand-maintained copies. Also open for the user: should the card role tag match the statblock's
+  capitalization?
+
+## Batch 272 — Review follow-ups: name folds into the title, role display polish, fodder rename, label amendments
+- **Identity card simplified (user):** the Name field is gone — the Forge title (#forgeTitle) is now the
+  name editor, contenteditable exactly like #advName (placeholder via `data-ph`, Enter commits, blur
+  normalizes; the preview renderer never repaints it under the caret). Identity is two rows: Size/Type/CR
+  + Subtype/Alignment/Role, then Short name. Name autocomplete (suggested EXISTING monster names) died
+  with the field, on purpose. First step of a wider identity-card slim-down the user wants.
+- **Role display:** dropdown labels capitalized everywhere (Forge select, card popover incl. "Auto (reads
+  Brute)", the bestiary Role filter + its chips via the ctrl-bar `fmt` hook) — stored values stay
+  lowercase. **The statblock now carries the role** (user request): a quiet dim suffix on the CR line —
+  "CR 2 (XP 450; PB +2) · ~ Brute" — override wins, low-confidence keeps the `~`, try/catch so the
+  preview can never die on the classifier.
+- **Stature rename (user, via AskUserQuestion): "minion" → "fodder"** — boss · elite · pack · fodder.
+  The old name collided with the MCDM minion feature/tag the user uses; "minion" stays reserved for that
+  mechanic. Stature still ships nowhere in-app (P3); docs + role-map header updated.
+- **Benchmark labels amended after the review protocol (user rulings):** Bandit Captain skirmisher→
+  soldier and Wyvern soldier→brute (walk-backs); **Cloud Giant AFFIRMED skirmisher** (fly + at-will Misty
+  Step + 240 ft incapacitating ranged attack — AC low to pay for a skirmish kit; exactly the Phase-2
+  vocabulary) and **Satyr Revelmaster AFFIRMED skirmisher** (the Prance charm rider is its disengage
+  tool; only Fey Melody reads controller). Re-score: **clean 75.0% / ambiguous 80.0%** (from 71.7/80.0).
+  **Standing protocol (user): label disputes go to them via AskUserQuestion with kit evidence — they
+  either reason it out or walk it back.** 61 tests green, verified live.
+
+## Batch 271 — T1.14: benchmark scored, misses reviewed, the skirmisher speed gate, manual role override
+- **The blind pass was scored and FAILED both tiers: clean 41/60 (68.3%), ambiguous 30/40 (75.0%) vs the
+  ≥85% gate — but the user's label sits in the model's top two 80/100 times.** The 29 misses cluster into
+  four patterns, reviewed with the user (all dispositions theirs): **(A) skirmisher-without-speed** (Azer
+  Sentinel, Troll Limb — glass shape pulled slow bodies in; model defect, FIXED this batch); **(B)
+  control-garnish over-count** (Vampire Spawn, Tarrasque, Water Elemental — riders on full-damage attacks
+  read controller; user chose NOT to retune, recorded); **(C) kit-invisible control** (Performers,
+  Arch-hag, Roper, the Slaadi — spells/curses the extractor can't read; the documented blind spot,
+  deferred to Phase 2 → T2.10 re-run by design); **(D) genuine ambiguity** (the dragon family, Merrow,
+  Abominable Yeti + two user labels worth a second look: Cloud Giant, Bandit Captain).
+- **Fix A — the skirmisher speed gate (data.js):** HARD design pin in `classifyRole` (a soft distance
+  penalty was tried first and didn't move far-from-boundary cases): a monster at-or-below its CR band's
+  speed norm with no evasion kit and no flight cannot read skirmisher. New `evasive` feature in
+  `roleFeatures` (Flyby / no-opportunity-attack movement / bonus-action Disengage-Hide — 2024 puts these
+  in the bonus SECTION without the words "Bonus Action", so it's scanned directly / leap kits / ethereal
+  + teleport escapes). Gate mirrored into `scripts/role-map.mjs` (evasive sourced from the SHIPPED
+  roleFeatures so the vocabulary can't drift). Corpus effect: 36 flips, skirmisher 104→68 — tracking the
+  raw glass signature instead of over-reading it; the user's own skirmisher labels (Goblin Boss, Winged
+  Kobold, Dryad, Bullywug — flight/leap/tree-stride kits) all survive. **Re-score: clean 71.7%, ambiguous
+  80.0% — the ≥85% provisional pass is NOT met with fix A alone (expected: B and C stay by choice/design),
+  so the Phase-1 benchmark gate stays formally open pending T2.10.** Test locks the gate both ways.
+- **Labels graduated:** the user's 2026-07-12 blind pass is committed as `scripts/role-benchmark-labels.json`,
+  `score` defaults to it, and **`npm run benchmark`** is the repeatable one-liner (corpus-gated, live
+  classifier — the T2.10 re-run is the same command).
+- **Manual role override (user picked BOTH surfaces):** `m.roleOv` ("" = auto; normalized in
+  `normalizeMonster`). Forge: a native Role select in the identity row (Auto (calculator) + the five
+  roles), bound like its siblings, restored on load. Bestiary: the card's role tag is now clickable →
+  popover (Auto (reads X) + five roles), saves + re-renders; an overridden tag reads brighter
+  (`.tag.role.manual`) with "Role set by you — the calculator reads X" as the tooltip; `roleOf` returns
+  the override with the auto read riding along (cache key includes the override). Role filter follows
+  automatically. Verified live: select binds, popover round-trips, revert restores the `~` low-conf read.
+  61 tests green.
+
+## Batch 270 — Q1.E decided + T1.13: the role benchmark harness and the blind labeling sheet
+- **Q1.E decisions (user, via AskUserQuestion — all four on the recommended path):** (1) **blind
+  labeling** — the user labels the whole set with the classifier's guess hidden; disagreements reviewed
+  together in T1.14; (2) threshold = **two-tier ≥85%** — clean monsters must match the model's top pick,
+  deliberately-ambiguous ones may match top pick OR runner-up, both tiers pass at ≥85%; (3) set =
+  **diagnostic 60/25/15** — 60 clean reads (margin ≥0.2) + 25 tight borderlines (margin <0.1) + 15
+  low-confidence (the controller blind spot), stratified; (4) surface = **interactive Artifact**.
+- **`scripts/role-benchmark.mjs`** (corpus-gated dev tool, grade-corpus conventions): `select` freezes
+  the 100-monster set → **committed `scripts/role-benchmark-set.json`** (spoiler-free: name/cr/type/pool
+  only, seeded + deterministic, interleaved display order); `sheet` emits the blind statblock payload
+  (gitignored — corpus text stays out of the repo); `score labels.json` recomputes the classifier LIVE
+  and prints the two-tier verdict, per-role agreement, and the sorted disagreement list for T1.14.
+  Self-test: feeding the classifier's own answers scores 100/100 PASS-PASS.
+- **Set calibration:** plain proportional band quotas reproduced the corpus's CR 0–1 dominance (46/100 —
+  the rejected "proportional mirror" by the back door), so quotas use **square-root weighting**: final
+  bands 30/21/17/13/10/9 from CR 0–1 to 17+, no creature type above 14, roles 18–22 each by construction.
+- **The labeling Artifact** (https://claude.ai/code/artifact/cddd3bb1-b015-4251-aa89-0c2dff389b9b):
+  one statblock at a time, five identical role buttons (no per-role colour — the in-app design pass
+  hasn't happened, and colour could nudge labels), keys 1–5/arrows/backspace, auto-advance to the next
+  unlabeled, 100-cell jump grid, localStorage resume, export = copy/download JSON that feeds `score`
+  directly. Blind by construction: the payload carries no role, margin, or pool. Fixed en route: app-model
+  reactions are `{mode:"react", trigger, response}` — 13 entries rendered empty until the sheet renderer
+  learned the shape. Rebuild: scratchpad `build-labeling-page.mjs`.
+- **Blindness boundary clarified (user question) + CR yardstick added (user pick: strip + deltas).**
+  The rule: hidden = anything the MODEL computes from the statblock (role, runner-up, margin, extractor
+  DPR, pool); fair game = anything that's a function of the printed CR alone plus the user's own
+  expertise. The sheet now shows "CR N expects AC/HP/atk/DC/DPR" from `crExpected` plus two printed-number
+  deltas (HP×, AC±) — accepted tradeoff: the deltas pre-frame along the model's feature axes but leak no
+  answer. Also: don't browse bestiary cards mid-pass (T1.12 put role tags on them).
+- **Sheet follow-ups (user):** the delta line now also carries **actual DPR + ratio** (e.g.
+  "DPR 44 (0.88×)") and the header shows a **live per-role tally** of what's been labeled. The DPR
+  number is `dprExtract`'s read — user chose it over a blind naive-printed DPR knowing it de-blinds
+  the 15 low-conf controller cases (no confidence marker is shown, which would leak the pool too).
+  Watch when editing `role-benchmark.mjs`: the row builder runs inside a `window.eval(\`…\`)` template,
+  so backticks in its comments terminate the string — a stray `` `dpr` `` broke the parse this batch.
+- **T1.14 waits on the user's labeling pass.** Observation parked for the review: at the shipped tooltip
+  threshold (margin <0.2) 240 of 455 ok-confidence reads count as "borderline" (median margin 0.18) —
+  the Q1.E pools used <0.1; the card-tooltip cut may want the same retune.
+
+## Batch 269 — Q1.D closed + T1.12: the role classifier ships in the app
+- **Q1.D decisions recorded (user):** stature words locked (boss · elite · pack · minion; "pack" flagged
+  for a possible rename — gang/troop/mob parked); the elite line was delegated and set at **eff ≥ 0**
+  (elite starts where CR + packaging meets the party's level — below it a lone body loses the
+  action-economy war); **stature surfaces ONLY in the encounter designer** (it's party-level-relative, so
+  it has no stable meaning on a bestiary card). Noted for Phase 3 (TASKS Q3.B + backlog): the encounter
+  flow must let you plan for a FUTURE party level, not just the roster's current one.
+- **T1.12 — classifier + role badges (P1.8).** `classifyRole(m)` + `roleFeatures(m)` as pure functions in
+  data.js over corpus-derived constants (`ROLE_CENTROIDS`/`ROLE_STATS`/`ROLE_BAND_MEANS`, exported by
+  `scripts/role-map.mjs` like CR_EXPECT's calibration; re-run + re-paste after any feature/table change).
+  Both T1.11 requirements carried in: **atkN/spdR centered per CR band** and **save-gated conditions full
+  / on-hit riders half**. Port validated: **503/503 corpus monsters classify identically** to the sweep.
+  Returns {role, runnerUp, margin, confidence} — margin lets the UI flag borderline reads without
+  deciding the tie-break (that waits for Q1.E's benchmark review).
+- **Bestiary:** a quiet role tag on library cards (no per-role colour yet — that's a design pass;
+  borderline reads name the runner-up in the tooltip, low-confidence reads show `~`) and a **Role filter**
+  in the ctrl bar. Classification memoized per id on the save stamp (`roleOf`, same discipline as
+  `crReadOf`). Stature deliberately absent from the bestiary per the Q1.D decision. 59 tests green (new:
+  five engineered archetypes must land in their roles; off-ladder CR → null).
+- The naming-session Artifact's final panel now records the session decisions (same URL).
+
+## Batch 268 — T1.11 (cont.): four statures, the skirmisher diagnosis, the role-anatomy visuals
+- **Stature simplified to four (user call): boss · elite · pack · minion.** "Standard" was unclear and
+  is gone (its band splits into elite/pack); **swarm is a creature subtype, not a stature** (a Swarm
+  statblock is pinned to deploy as pack); the **nova tag left the UI** (stays internal for T3.2's
+  encounter math). Bands: eff ≥ +2.5 boss / ≥ 0 elite / ≥ −3 pack / else minion; legendary pin
+  unchanged; Pack Tactics biases elite→pack.
+- **The skirmisher question (user) answered with data: mostly the MM, partly us — our half fixed.**
+  Raw classifier-free glass signature thins 16→9→5→0→8% across CR bands (the MM stops publishing
+  fragile bodies; evasion migrates into speed, 35→68 ft band average). But the classifier exaggerated
+  it to 0% at CR 9+: attacks/turn and speed rise with CR by design (1.1→2.6 attacks) and un-normalized
+  they leaked level into role. **`role-map.mjs` now centers atkN/spdR per CR band** before assignment;
+  classified skirmisher now runs 37/18/11/4/4/7% — tracking reality. T1.12 must keep the centering.
+  Side effect verified by reading blocks: Hill Giant → brute (fits better than its soldier read).
+- **Role-anatomy visual series added to the Artifact (user request):** (1) five fingerprint small
+  multiples — per-role deviation bars vs the corpus on 7 axes; (2) the two trade planes — defense
+  (HP× vs AC) and offense (damage× vs save-gated control) scatters of all 503 with role-mean markers;
+  (3) role share per CR band (100% stacked) + the raw-vs-classified skirmisher table. Explorer updated:
+  4-stature filter/slider, simplified tooltip. Numbers in dossiers/notes refreshed to the re-centered
+  assignments (Medusa stays artillery-with-controller-kit — recorded as borderline, not overclaimed).
+
+## Batch 267 — T1.11 (cont.): party-RELATIVE stature + trend curves
+- **Stature reframed as party-relative (user insight).** The B266 stature keyed "boss" to legendary
+  actions — which only exist at high CR, so it found bosses nowhere else. Corrected: a boss is a monster
+  that stands alone against a party of a given level; the same body is a minion to an over-levelled party.
+  Stature = **intrinsic packaging × (CR − party level)**. Packaging (`scripts/role-map.mjs`, all CRs):
+  `0.5·(lhp+ldpr) − 0.3·|lhp−ldpr| + econ` — the imbalance penalty is the point, so a damage sponge and a
+  glass cannon both score low; only a body above par on its weaker axis reads heavy. This surfaces
+  boss-SHAPED monsters at low CR the legendary-only test missed (Saber-Toothed Tiger CR2, Giant
+  Constrictor CR2, Mummy CR3). Deployment stature `eff=(CR−L)+1.8·packZ` banded boss/elite/standard/
+  pack/minion; pins (legendary→boss, swarm→swarm) don't slide. Role stays intrinsic.
+- **Artifact rebuilt in place (same URL).** New: a **party-level slider** — drag it and the boss cloud
+  slides down the CR axis (L3 bosses ≈ CR 6–11, L14 ≈ CR 16–19), with a live caption; **per-role trend
+  curves** (rolling means over any X, dashed where data thins at high CR — the user's requested fuzziness);
+  packaging-tier crosstab replacing the absolute-stature one; a boss-shaped-at-low-CR evidence box. Role
+  palette reassigned so artillery=red (was aqua) — the aqua/green pair was the CVD-tight one; validated
+  CVD-safe on both surfaces with the legend/hover/trends as secondary encoding.
+- Repeatable via `scripts/role-map.mjs` (now emits packaging + pins + CR for the client-side relative
+  computation; its JSON dump gitignored). Q1.D remainder unchanged: stature naming, borderline policy,
+  whether packaging/nova surface in-app.
+
+## Batch 266 — T1.11: role-clustering spike (exhibits for Q1.D)
+- **The spike, not a taxonomy** — feature extraction + k-means over the 503-monster corpus (455 ok-conf
+  clustered; 48 low-conf assigned post hoc and flagged). Features are CR-NORMALIZED against `crExpected`
+  so clusters capture role, not level: AC/HP/DPR deltas, nova shape, accuracy, speed, attack count,
+  condition breadth, rangedness (graded: option → long-range ≥80 ft), AoE/fly/caster/legendary/physRes.
+  Scaling matters: a naive z-score run let the rare physical-resistance flag dominate (one 359-monster
+  blob); capped z + bounded binary weights fixed it. Silhouette optimum k=5; k=6/7 trade cohesion for
+  table-useful splits. **At k=7 the corpus reproduces (essentially) the 4e role taxonomy from 2024 data
+  alone:** durable soldiers · glass artillery (DPR 1.45×) · brutes (HP 1.30×/AC −1.4) · glass skirmishers
+  (AC +1.1/HP 0.79×) · controllers (2.6 conds, 49% AoE) · nova flyers (the dragon pattern = the T1.5
+  "runs hot" family, isolated by the math) · weak critters (the CR-floor population).
+- **Corpus findings** (standing retest directive): every ok-conf 2024 monster anchors offense on attack
+  rolls (save-anchored variance = 0 — save-only offense always co-occurs with an unreadable DPR, the
+  controller blind spot); no 2024 monster is ranged-ONLY (melee fallback is universal); the defensive
+  budget bends two ways from one point (brute vs skirmisher are mirror trades); physical resistance
+  concentrates in the weak-critter band (23% vs ~3%) — consistent with T1.3.
+- **Artifacts of the spike:** `ROLE_CLUSTERS.md` (the exhibits memo — profiles in plain units, 10
+  exemplars per cluster, the split hierarchy, what T1.12 builds on it) + `scripts/role-spike.mjs`
+  (graduated like the grader: corpus-gated, deterministic, `node scripts/role-spike.mjs [k]`; its JSON
+  dump is gitignored). An exhibit Artifact was published for the naming session (cluster dossiers, full
+  member lists, the three decisions).
+- **Second sweep (same batch, user-directed): the two-axis model.** Roles LOCKED by the user — soldier ·
+  artillery · brute · skirmisher · controller; nova-flyer/critter were stature wearing a role costume.
+  `scripts/role-map.mjs` assigns all 503 as (role, stature): role by nearest centroid over role-features
+  only (dragons split artillery-young/soldier-adult by whether breath or Rends dominate); STATURE by
+  statblock rules — boss=legendary (43), swarm (11), pack=Pack Tactics (21), fodder=under-label on both
+  axes (29; Goblin Minion lands there by stats alone), standard (399) — plus an independent nova tag (60).
+  Qualitative pass per the user's directive (statblocks read, not just numbers): the control signal now
+  counts save-gated conditions in full and on-hit riders at HALF (2024 sprinkles riders everywhere — the
+  Hill Giant no longer misreads as controller); Ghoul/Medusa recorded as honest borderline cases; support
+  (Priest) is invisible without Phase 2's effect vocabulary. The naming-session Artifact was rebuilt in
+  place (same URL): five role dossiers, the stature crosstab, reading-between-the-numbers notes, and an
+  interactive **parameter explorer** — X/Y over any feature pair, role chips with "only" isolation,
+  stature/nova filters, hover identity, hollow marks for low-confidence reads, both themes (palette
+  CVD-validated). Still open for the session: stature naming/membership, borderline policy, nova surfacing.
+
+## Batch 265 — B264 audit fix + T1.10: bestiary CR audit
+- **Audit of Batch 264 (T1.6/T1.7 + BOH unification):** verify green, corpus grade unchanged (bias 0,
+  mean|e| 0.78, 86% ±1 / 96% ±2 at 455/503 ok-conf — same 17-outlier list as T1.5), read-out band and
+  scaler round-trip re-verified live, no console errors. One defect found and fixed: **auto-delegated
+  AC/HP didn't track the target CR during a scale preview** — `scaleMonster` skipped auto fields
+  entirely (the returned monster kept the SOURCE CR's expected values) and `_crScaleShowMon` never
+  refreshed the placeholders. Now auto AC/HP land on the TARGET's expected values (the preserve-character
+  scale of a zero-deviation field is the expected value itself), an auto-HP dice formula still rescales,
+  and `_crScaleShowMon` calls `applyCRAuto` (mirrors `loadMonster`). New test locks it — 58 total.
+- **T1.10 — bestiary CR audit (P1.7):** the calculator turned on the library. (1) The card's CR tag gains
+  a lower-hierarchy `reads N` suffix (`CR 5 │ reads ¼` — one tag, not a second badge; user-revised from a
+  standalone badge same batch), shown only for a confident read ≥2 steps off the set CR (±1 is within the
+  model's published noise; flagging it would mark half of any library). Tooltip carries the
+  defence/offence split. (2) A bulk **CR audit**
+  modal off a balance-scale `ctrl-ico` in the Bestiary header (`openCrAudit`): summary counts, then rows
+  grouped "off by 2 or more" / "off by 1 — within the model's noise" / "couldn't read confidently"
+  (low-confidence rows show their rough read as `~N`), sorted by |diff|; clicking a row opens the creature
+  in the Forge, where the read-out band explains the split. Presets are excluded — the audit is for the
+  author's own bestiary. Reads are memoized per id on `_savedAt` (`crReadOf`), so filter keystrokes and
+  re-renders don't recompute the whole library.
+- Seed-library sanity check: Young Green Dragon reads +2 (the documented dragons-run-hot signature from
+  the T1.5 review), Dire Wolf +1, Bandit Captain flags low-confidence — consistent with the corpus memo.
+
+## Batch 264 — T1.6 + T1.7: the CR calculator (read-out band + scaler) in the Forge
+- **Design locked over 6 mockup rounds** (T1.6, AskUserQuestion + a redeployed Artifact): the calculator
+  lives as a read-out band in the preview's header slot (where the derived AC box was), numbers-only.
+  Resolved: "Actual CR" label after a number-first amber CR, shield/swords for the defensive/offensive
+  halves (each shown as its own CR), amber reserved strictly for the computed CR; a dial→popover scaler
+  (CR ⅛–30 ladder + inline typed-CR field, changed/original two-icon toggle, preview-until-save with a
+  save-time modal, no Apply step). Role-choice-during-scaling logged to the backlog for later.
+- **Read-out (diagnostic):** `overallCR(m)` in data.js — the public blend the band consumes,
+  `round(avg(off.idx, def.idx))` snapped to the ladder, carrying both halves' derivations + the offensive
+  confidence (exactly what `grade-corpus.mjs`/`cr-model.test.js` compute inline; a test locks them equal).
+  `crReadBandHTML(m)` in engine.js renders into the `#derived` slot (repurposed from the dead SHOW_DERIVED
+  legacy chips): amber Actual CR + "you set N" (green "on target" when aligned), shield=defence (CR · AC ·
+  HP), swords=offence (CR · DPR · atk/DC), muted when the DPR read is low-confidence.
+- **Scaler (`scaleMonster` in data.js) — PRESERVE-CHARACTER (decided with the user):** ratio/delta, not
+  snap-to-expected. HP & damage × the CR-expected-ratio (dice COUNT scaled, die size + ability mod kept),
+  AC/attack/save-DC + the expected delta, CR/PB → target. Handles structured attacks (`dice` field, whose
+  shown average recomputes at render) AND text-embedded damage (`"avg (NdX + M)"` average recomputed;
+  embedded `DC N` shifted) across actions/bonus/reactions/traits/legendary; HP dice formula rescaled so its
+  average tracks. Spell-list damage isn't scaled (keyed to spell identity). Verified live: the Young Green
+  Dragon scales 8→11 (HP 136→186 via `22d10+65`, AC→20, DPR→88) keeping its runs-hot character.
+- **Scaler UI (forge.js):** dial opens a popover (native range ⅛–30 + a synced typed CR field, higher-
+  specificity CSS so the global `input[type=text]` rule doesn't stretch it off-screen); scaling is a live
+  PREVIEW held in `_crScale` (orig snapshot + scaled result); the spark/revert two-icon toggle swaps which
+  the whole Forge shows; a genuine `loadMonster` clears it; Save with a pending preview fires a modal
+  ("Save at CR N?" / "Keep original") that resolves then re-saves. `.cr-read`/`.crr-*`/`.cr-scale-pop`
+  styles added.
+- **BOH unification (finally):** deleted the old `BOH` suggestion table — `crExpected(cr)` is now the SOLE
+  expected-stats source. The live Forge derived-stat placeholders (auto AC/HP via `applyCRAuto`/`syncAutoHP`,
+  the headline `mainAttackBonus`/`mainSaveDC`, the CR-field `?` "CR N targets" popover) read from it, so the
+  placeholders now MATCH what the calculator reports instead of sitting ±1 below. "Best ability" in the CR-
+  targets popover is derived as `atk − pb` (reproduces the old value at CR 5). Net effect on suggestions:
+  attack/DC/HP nudge up ~1 at most CRs — the shift the calculator now explains on screen.
+- 57 tests green (3 new: `overallCR` equals the inline blend; scaling tracks the target monotonically and
+  is close for balanced builds; same-CR no-op / off-ladder null). No console errors; lint/CSS clean.
+
 ## Batch 263 — T1.5: full-corpus regression, outlier review, harness graduated
 - **Final blended-CR grade** (503 monsters, production import pipeline): bias 0, mean |err| 0.78 CR
   steps, 41% exact, **86% within ±1, 96% within ±2** at 90% ok-confidence coverage. Defensive half

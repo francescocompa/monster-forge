@@ -24,120 +24,48 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
 
 ---
 
-## Phase 1 — Monster math engine (~14–16 batches)
+## Phase 1 — Monster math engine · CLOSED 2026-07-12 (Batches 258–273, ~16 batches)
 
-### 🔶 Decide first (blocks T1.1)
-- **Q1.A — Which math model is canonical?** (a) The 2014 DMG p.274 table as written; (b) empirical:
-  fit the expected-stats-per-CR tables from the 2024 MM corpus you already mirror locally
-  (`5etool_mirror/Sources/`); (c) **hybrid (recommended)** — 2014 table structure, recalibrated
-  against the 2024 corpus, divergences documented. The app targets 5e 2024 and 2024 monster math
-  drifted from the 2014 table; you own the data to measure by how much.
-  **DECIDED 2026-07-08: hybrid.**
+**Everything shipped and reviewed** — full history in `CHANGELOG.md` (B258–273), calibration paper
+trail in `CR_CALIBRATION.md`, role derivation in `ROLE_CLUSTERS.md`. Decisions: Q1.A hybrid ·
+Q1.B read-out band + dial scaler · Q1.D roles soldier/artillery/brute/skirmisher/controller, stature
+boss/elite/pack/fodder (designer-only) · Q1.E blind two-tier ≥85% benchmark. Deliverables: the
+data.js math layer (`crExpected`/`defensiveCR`/`offensiveCR`/`overallCR`, graded 86% within ±1 on
+503), the Forge read-out band + preserve-character scaler, bestiary CR audit (T1.10), the role
+classifier + tags/filter/override (T1.12), the committed benchmark harness (`npm run benchmark`),
+and the phase code review with fixes applied (B273).
 
-### Tasks
-- [x] **T1.1 — CR expectation tables** · Sonnet @ medium · ~1 · Batch 258
-  Audit the existing CR/XP tables in `data.js`, add the missing columns (expected AC, HP range,
-  attack bonus, save DC, DPR per CR 0–30), accessors + unit tests. (P1.1)
-- [x] **T1.2 — Corpus calibration spike** · Fable @ high · ~1 *(spike, scratch scripts)* · Batch 259
-  Run the tables against the MM25/bestiary corpus: predicted vs actual stats per CR, drift report.
-  Output: a calibration memo that settles Q1.A's numbers. Haiku may prep the corpus extraction;
-  Fable does the analysis. **Done — memo: `CR_CALIBRATION.md`; calibrated table adopted into
-  `CR_EXPECT`; BOH unification deferred to T1.5 by decision.**
-- [x] **T1.3 — Defensive CR** · Opus @ high · ~1 · Batch 260
-  Effective-HP function: resistance/immunity multipliers by CR tier, AC adjustment steps. Pure
-  function + tests. (P1.2) **Done — `defensiveCR(m)` in data.js. Corpus validation overturned the
-  2014 blanket multipliers (only physical-resistance depresses HP → ×1.28; elemental/immunity get
-  none) and softened the AC rule to ÷4; adopted config scores mean |err| 0.76 CR steps / 86% within
-  ±1 on 503 monsters. See `CR_CALIBRATION.md` §T1.3.**
-- [x] **T1.4 — Offensive CR: the DPR extractor** · Fable @ high · ~2 · Batches 261–262
-  The keystone function of the whole plan (CR calc, role inference, and the P3 composition model
-  all consume it): best-3-round DPR from statblock entries — multiattack, recharge weighting,
-  save-for-half, riders — with a confidence flag for what it can't parse. Batch 1 core, batch 2
-  edge cases against the corpus. (P1.3) **Done — `dprExtract`/`offensiveCR` in data.js. Final
-  grade: blended CR bias 0, mean |err| 0.78 steps, 86% within ±1, 96% within ±2, at 90%
-  ok-confidence coverage (455/503). Legendary = best option once/round (sweep-validated); auras +
-  ~28-spell SPELL_DPR scored; summons/reactions deliberately flagged-not-scored. Outliers
-  characterized for T1.5 — see `CR_CALIBRATION.md` §T1.4.**
-- [x] **T1.5 — Corpus regression run** · Opus @ high · ~1 · Batch 263
-  Derived CR across the full preset corpus; divergence distribution report.
-  **🔍 REVIEW (with you):** read the outliers together — they're either parser bugs, table
-  miscalibration, or genuinely mislabeled monsters. This session decides which, before the UI
-  exists. **Done — final blended CR: 86% within ±1, bias 0, mean 0.78 steps (455 ok-conf / 503).
-  Harness graduated (`npm run grade` + `test/cr-model.test.js`). Review done: 17 outliers, no
-  parser bugs — dragons accepted (run hot), control/curse monsters deferred to roles/effects; BOH
-  unification held to T1.7. Visual report published as an Artifact. See `CR_CALIBRATION.md` §T1.5.**
-
-### 🔶 Decide before UI (blocks T1.6–T1.7)
-- **Q1.B — Calculator UI home:** popover off the Forge CR field vs a Forge side panel; and what
-  the divergence line actually says (tone matters — it's judging the author's work).
-
-- [ ] **T1.6 — Calculator UI design session** · Opus @ high · *(design session, no production code)*
-  Mockups for the calc surface, 1–2 AskUserQuestion iterations. (P1.4)
-- [ ] **T1.7 — Calculator UI build** · Sonnet @ high · ~1
-
-### 🔶 Decide before adjuster (blocks T1.8–T1.9)
-- **Q1.C — Adjuster permissions:** which fields auto-scale may touch; is suggest-mode the only
-  default with auto-scale behind a confirm; how locked fields are marked. (The open question
-  carried from the original CR plan.)
-
-- [ ] **T1.8 — Adjuster: suggest mode** · Fable @ high · ~1
-  Target CR → concrete edit list (AC ±n, HP dice, attack/DC ±n, damage dice) rendered as
-  accept-per-line suggestions. This is constrained search over the stat envelope — the math must
-  find *coherent* combinations, not just any that sum right. (P1.5)
-- [ ] **T1.9 — Adjuster: auto-scale mode** · Opus @ high · ~1
-  One-click chassis-aware rescale; single reversible `_forgeHist` step; respects locks. (P1.6)
-- [ ] **T1.10 — Bestiary CR audit** · Sonnet @ medium · ~1
-  Divergence badge on library cards + bulk "audit my bestiary" list. (P1.7)
-
-### Combat roles
-- [ ] **T1.11 — Role clustering spike** · Fable @ high · ~1 *(spike)*
-  Feature extraction (AC/HP ratio, DPR shape, speed, range profile, DCs) + clustering over the
-  corpus. Output: proposed clusters, each with 5–10 exemplar monsters — the raw material for the
-  naming session, not a finished taxonomy.
-- **🔶 Q1.D — Taxonomy naming (design session, yours):** you name the roles from the cluster
-  exhibits. Copy is design material; the math proposes, you dispose. Also: how many roles is
-  right (too few = useless for shapes, too many = unreliable inference)?
-- [ ] **T1.12 — Classifier + role badges** · Sonnet @ high · ~1
-  Classifier as a pure function; badge on library cards; role filter in the bestiary. (P1.8)
-- **🔶 Q1.E — Benchmark protocol:** who labels the ~100-monster benchmark set (you, assisted — a
-  Haiku-prepped sheet with the classifier's guess *hidden* to avoid anchoring?); what agreement
-  threshold counts as passing (e.g. ≥85% before anything builds on roles); which monsters make
-  the set (spread across CR, type, source, including known-ambiguous ones on purpose).
-- [ ] **T1.13 — Benchmark harness + labeling pass** · Haiku @ medium (prep) + you (labels) · ~1
-  Sheet prep, your labeling pass, scoring harness as a repeatable test.
-- [ ] **T1.14 — Benchmark run + misses report** · Opus @ high · ~1
-  Score the classifier; review disagreements one by one **🔍 REVIEW (with you)**. Every miss gets
-  a diagnosis: parser bug / feature the math can't see (→ recorded for T2.9) / genuinely
-  ambiguous. Manual role override ships here. (P1.9)
-
-### Phase close
-- **🔍 REVIEW — Phase 1 code review:** `/code-review` at high on the whole math layer; fixes
-  applied same session. Sonnet @ high for the fix pass.
-- **Consolidation** · Sonnet @ medium · ~½ — collapse Phase 1 in ROADMAP/TASKS, memory update.
-
-**Exit check:** benchmark passed at the Q1.E threshold; corpus regression outliers dispositioned;
-the Forge computes CR live.
+**Still open, carried forward:**
+- **🔶 Q1.C — adjuster permissions (USER):** blocks T1.8 (suggest-mode edit list) and any field-lock
+  work; T1.7's dial scaler already absorbed old T1.9's auto-scale. Ask before building either.
+- **Benchmark gate:** 75.0 clean / 80.0 ambiguous vs ≥85 — re-arms at **T2.10** (`npm run benchmark`);
+  remaining misses = the user-accepted control-garnish group + the Phase-2 kit-invisible blind spot.
+- Parked from the B273 review (rationale in CHANGELOG): role-map.mjs extractor unification + a ROLE_*
+  constants regeneration check (needs a corpus-mounted session); the `input[type=text]` CSS global;
+  entry-walk dedup. Plus the card-role-tag casing question (lowercase card vs capitalized statblock).
 
 ---
 
 ## Phase 2 — Executable rules, the 5e effect engine (~10–12 batches)
 
 ### 🔶 Decide first (blocks everything here)
-- **Q2.A — Enforcement philosophy:** per effect class, does the tracker *auto-apply* mechanics
-  (disadvantage rolled for you) or *remind* (chip says "attacker has disadvantage", you roll)?
-  This is the trust contract between DM and tool — likely a per-class or global setting, but the
-  default is a design decision, yours.
-- **Q2.B — Prompt surface:** where save-ends/concentration prompts appear (roll-log toasts, init
-  row, a dedicated prompt strip) — sets the pattern every later prompt reuses.
+- **Q2.A — Enforcement philosophy: DECIDED 2026-07-12 (AskUserQuestion) — REMIND-FIRST.** Chips
+  state the mechanical fact ("attacker has disadvantage"); the DM rolls. The schema still carries
+  machine-readable mechanics so per-class auto-apply can layer on later without a schema change.
+- **Q2.B — Prompt surface: DECIDED 2026-07-12 (AskUserQuestion) — PROMPT STRIP.** A slim dedicated
+  strip on the combat tracker where pending prompts queue (save-ends, concentration; later recharge,
+  death saves, lair actions). T2.5 mockups design it before any code.
 
 ### Tasks
-- [ ] **T2.1 — Effect schema design** · Fable @ high · ~1
-  The mechanics payload shape (adv/dis grants, auto-fail, speed/incapacitation, damage
-  multipliers, triggers, repeat-save descriptors), documented in DEVELOPMENT.md. Schema only —
-  and it must be expressive enough for T2.9's classifier signals, so design them together. (P2.1)
-- [ ] **T2.2 — Effect data pass** · Sonnet @ medium · ~1–2
-  Populate the payloads across `CURATED_EFFECTS` from the 2024 rules text. Bulk but
-  correctness-sensitive: Sonnet, with the rules text open, never from memory.
+- [x] **T2.1 — Effect schema design** · Batch 275
+  DEVELOPMENT.md "The effect schema": `mech` payloads — typed reminder atoms + save/end/conc/implies,
+  closed `if` vocabulary, `note` escape hatch — designed together with T2.9's classifier contract
+  (atom-kind control weights, one exported map). Documentation-only by design. (P2.1)
+- [x] **T2.2 — Effect data pass** · Batch 276
+  All CURATED_EFFECTS payloads + `CONDITION_MECH` (the 15 XPHB conditions), transcribed from the
+  5etools mirror with the text open. Four curated texts 2024-corrected (Resistance, Guidance,
+  Invisibility, Sanctuary). Integrity floor: `test/effect-mech.test.js`; exports EFFECT_ATOM_KINDS/
+  EFFECT_IF_TERMS/EFFECT_CONTROL_W (weights provisional until T2.10's calibration).
 - [ ] **T2.3 — Duration engine** · Opus @ high · ~1
   Unify `rounds`/`endWhen` into the engine: tick on `combatAdvance`, expiry announcements,
   save-ends prompts. Includes migration of conditions saved in existing encounters. (P2.2)
@@ -173,7 +101,11 @@ the Forge computes CR live.
   the current bestiary-picker flow?
 - **Q3.B — The v1 shape list:** which 5–8 shapes ship first (boss+minions, swarm, pack of hunters,
   artillery+soldiers, ambush, elite duo…) and what the dials are (difficulty, theme, headcount).
-  Shape names are copy — yours.
+  Shape names are copy — yours. **Standing requirement (user, 2026-07-11): one dial must be the
+  TARGET party level, not just the roster's current level** — planning the post-level-up session
+  has no intuitive path today, and stature (boss/elite/pack/minion, decided in Q1.D) only exists
+  relative to that chosen level. The naming-session artifact's party-level slider is the
+  interaction seed.
 - **Q3.C — Theme/family model:** creature type only, or type + custom tags on library monsters?
   Determines how "undead ambush" finds candidates.
 

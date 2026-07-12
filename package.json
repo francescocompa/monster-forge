@@ -11,7 +11,8 @@
     "verify": "npm run check && npm run lint && npm test",
     "lint:css": "node scripts/lint-css.mjs",
     "typecheck": "node scripts/gen-globals.mjs && tsc -p tsconfig.json",
-    "grade": "node scripts/grade-corpus.mjs"
+    "grade": "node scripts/grade-corpus.mjs",
+    "benchmark": "node scripts/role-benchmark.mjs score"
   },
   "devDependencies": {
     "eslint": "^9.13.0",

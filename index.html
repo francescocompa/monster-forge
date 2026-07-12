@@ -57,7 +57,7 @@
         <div class="form-col" id="formCol">
           <div class="col-head">
             <div class="ch-left">
-              <h2 id="forgeTitle">New Creature</h2>
+              <h2 id="forgeTitle" contenteditable="true" data-ph="New Creature" spellcheck="false" style="outline:none"></h2>
               <span class="tag st st-Draft statchip" id="forgeStatus" title="Bestiary status">Draft <span class="caret">▾</span></span>
             </div>
             <div class="menu-wrap" style="flex:none">
@@ -76,7 +76,6 @@
           <fieldset class="fieldset">
             <div class="fs-title">Identity</div>
             <div class="grid g-name">
-              <label class="f">Name<input type="text" id="f_name" placeholder="Creature name" autocomplete="off"></label>
               <label class="f">Size<select id="f_size"></select></label>
               <label class="f">Type<span class="combo"><input type="text" id="f_type" class="combo-input" placeholder="Undead" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
               <label class="f"><span class="cr-lbl">CR <button type="button" class="cr-help" id="crHelp" aria-label="Show CR target guidance">?</button></span><span class="stepper" id="wb_cr"><input type="text" id="f_cr" class="cr-input" aria-label="Challenge Rating"></span></label>
@@ -84,6 +83,7 @@
             <div class="grid g-id2" style="margin-top:10px">
               <label class="f">Subtype / tag<span class="combo"><input type="text" id="f_subtype" class="combo-input" placeholder="Spirit" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
               <label class="f">Alignment<span class="combo"><input type="text" id="f_align" class="combo-input" placeholder="Lawful Evil" autocomplete="off"><select class="combo-native" tabindex="-1" aria-hidden="true"></select></span></label>
+              <label class="f">Role<select id="f_role"></select></label>
               <label class="f"><span class="cr-lbl">Short name <button type="button" class="cr-help" id="snHelp" aria-label="Short name help">?</button></span>
                 <div class="field-action">
                   <input type="text" id="f_snword" class="fa-input" placeholder="creature" autocomplete="off">
@@ -277,6 +277,7 @@
             <div class="grow"></div>
             <div class="head-right">
             <div class="ctrl-icons" id="libCtrlIcons"></div>
+            <button class="ctrl-ico" id="libAudit" title="Audit CRs" aria-label="Audit CRs"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15"/><path d="M9 19h6"/><path d="M5 6.5h14"/><path d="M2.2 11.5a2.8 2.8 0 0 0 5.6 0"/><path d="M5 6.5 2.2 11.5"/><path d="M5 6.5 7.8 11.5"/><path d="M16.2 11.5a2.8 2.8 0 0 0 5.6 0"/><path d="M19 6.5 16.2 11.5"/><path d="M19 6.5 21.8 11.5"/></svg></button>
             <div class="fab-split menu-wrap">
               <button class="btn primary sm" id="libNew" style="width:auto">＋ New</button>
               <button class="kebab split-caret" data-menu="libnew" title="More ways to add">▾</button>

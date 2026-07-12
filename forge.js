@@ -395,7 +395,8 @@ function attachCombo(input,valuesFn,opts){
   }
 }
 function setupIdentityCombos(){
-  attachCombo($("#f_name"),()=>monsterFieldValues("name"));
+  // Name lost its combo when it folded into the editable #forgeTitle (B272) — name autocomplete
+  // suggested existing monsters' names, which you rarely want for a new creature anyway.
   attachCombo($("#f_type"),()=>monsterFieldValues("type",TYPE_CANON));
   attachCombo($("#f_subtype"),()=>monsterFieldValues("subtype"));
   attachCombo($("#f_align"),()=>monsterFieldValues("align",ALIGN_CANON));
@@ -433,11 +434,13 @@ function _forgeSnap(){try{return JSON.stringify(M);}catch(e){return null;}}
 function resetForgeHistory(){clearTimeout(_forgeHistTimer);_forgeHistTimer=null;const s=_forgeSnap();_forgeHist=s==null?[]:[s];_forgeHi=_forgeHist.length-1;_forgeRestoring=false;}
 function scheduleForgeHistory(){if(_forgeRestoring||_forgeHi<0)return;clearTimeout(_forgeHistTimer);_forgeHistTimer=setTimeout(recordForgeHistory,500);}
 function recordForgeHistory(){clearTimeout(_forgeHistTimer);_forgeHistTimer=null;
+  if(_crScale)return; // never record a CR-scale preview snapshot — undo must step through real edits only (T1.7)
   if(_forgeHi<0){resetForgeHistory();return;}
   const cur=_forgeSnap();if(cur==null||cur===_forgeHist[_forgeHi])return; // unchanged since the last entry
   _forgeHist=_forgeHist.slice(0,_forgeHi+1);_forgeHist.push(cur);_forgeHi=_forgeHist.length-1; // drop the redo branch
   if(_forgeHist.length>FORGE_HIST_CAP){_forgeHist.shift();_forgeHi--;}}
-function _forgeRestore(i){_forgeRestoring=true;_forgeHi=i;loadMonster(JSON.parse(_forgeHist[i]),true);_forgeRestoring=false;}
+function _forgeRestore(i){_crScale=null; // an undo/redo ends any pending CR-scale preview (loadMonster's restore path deliberately keeps it)
+  _forgeRestoring=true;_forgeHi=i;loadMonster(JSON.parse(_forgeHist[i]),true);_forgeRestoring=false;}
 function forgeUndo(){recordForgeHistory(); // settle any pending burst first (keeps it redoable)
   if(_forgeHi>0){_forgeRestore(_forgeHi-1);toast("Undo.");}else toast("Nothing to undo.");}
 function forgeRedo(){recordForgeHistory();
@@ -452,9 +455,10 @@ document.addEventListener("keydown",e=>{
 });
 
 function loadMonster(m,_restoring){
+  if(!_restoring)_crScale=null; // a genuine load ends any pending CR-scale preview
   M=normalizeMonster(clone(m));M.id=m.id;M.chassis=false;
-  $("#f_name").value=M.name;$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
-  $("#f_size").value=M.size;updateCRDisplay();
+  $("#forgeTitle").textContent=M.name||"";$("#f_type").value=M.type;$("#f_subtype").value=M.subtype||"";$("#f_align").value=M.align||"";
+  $("#f_size").value=M.size;$("#f_role").value=M.roleOv||"";updateCRDisplay();
   $("#f_ac").value=M._auto.ac?"":(M.ac??"");$("#f_ac").placeholder="";$("#f_acnote").value=M.acnote||"";$("#f_hp").value=M._auto.hp?"":(M.hp??"");$("#f_hp").placeholder="";$("#f_hpf").value=M.hpf||"";$("#f_init").value=M.init??"";
   paintTri($("#f_initprof"),M.initProf||"none");updateHpDie();
   $("#wb_ac").classList.toggle("suggested",!!M._auto.ac);$("#wb_hp").classList.toggle("suggested",!!M._auto.hp);
@@ -473,6 +477,78 @@ function loadMonster(m,_restoring){
   if(!_restoring)requestAnimationFrame(()=>{const fc=document.getElementById("formCol");if(fc)fc.scrollTop=0;}); // forge starts at the top (undo/redo keeps scroll)
   if(!_restoring)resetForgeHistory(); // a genuine load begins a fresh undo history (B193); restores keep it
 }
+
+// ── CR scaler UI (T1.7) ──────────────────────────────────────────────────────
+// Drives the dial on the CR read-out band (engine.js crReadBandHTML): a popover with a CR ladder
+// (⅛–30) and a synced typed field. Scaling is a live PREVIEW held in `_crScale` (declared in engine.js:
+// {orig snapshot, scaled result, target, showing}); the changed/original toggle swaps which the Forge
+// shows; Save (guarded in bestiary.js) resolves it, else it stays a draft. Preserve-character scaling
+// itself lives in data.js (scaleMonster).
+function _crScaleShowMon(mon){ // point the Forge at a monster snapshot without disturbing undo history
+  M=mon;
+  $("#f_ac").value=(M._auto&&M._auto.ac)?"":(M.ac??"");
+  $("#f_hp").value=(M._auto&&M._auto.hp)?"":(M.hp??"");
+  $("#f_hpf").value=M.hpf||"";updateCRDisplay();
+  $("#wb_ac").classList.toggle("suggested",!!(M._auto&&M._auto.ac));
+  $("#wb_hp").classList.toggle("suggested",!!(M._auto&&M._auto.hp));
+  if(M._auto&&(M._auto.ac||M._auto.hp))applyCRAuto(); // auto placeholders track the snapshot's CR (mirrors loadMonster)
+  renderEntries();renderPreview();
+}
+function crScaleApply(target){
+  if(!CR_LIST.includes(target))return;
+  const orig=_crScale?_crScale.orig:clone(M);
+  if(target===orig.cr){if(_crScale){_crScale=null;_crScaleShowMon(orig);}return;} // back to original CR → drop preview
+  const scaled=scaleMonster(orig,target);
+  if(!scaled)return;
+  _crScale={orig,scaled,showing:"changed"}; // the target CR is scaled.cr — no separate copy to drift
+  _crScaleShowMon(scaled);
+}
+function crScaleShow(which){ // "changed" | "original" — swap the previewed version
+  if(!_crScale)return;
+  _crScale.showing=which;
+  _crScaleShowMon(which==="changed"?_crScale.scaled:_crScale.orig);
+}
+function crScaleResolve(keep){ // "scaled" | "original" — commit the choice and end the preview
+  if(!_crScale)return;
+  const mon=keep==="scaled"?_crScale.scaled:_crScale.orig;
+  _crScale=null;
+  loadMonster(mon,true); // normalise + repaint; keep undo history
+}
+function crScaleSaveModal(){ // Save fired with a scale still in preview — make the author choose
+  const t=crGlyph(_crScale.scaled.cr),o=crGlyph(_crScale.orig.cr);
+  openModalRaw(`<h3>Save at CR ${t}?</h3><p style="margin:-4px 0 14px">You scaled this creature from CR ${o} to <b style="color:var(--amber)">CR ${t}</b> and haven't kept it yet.</p><div class="mrow"><button class="btn ghost sm" id="cspKeepOrig" style="width:auto">Keep original ${o}</button><button class="btn primary sm" id="cspSaveScaled" style="width:auto">Save at CR ${t}</button></div>`);
+  $("#cspSaveScaled").addEventListener("click",()=>{closeModal();crScaleResolve("scaled");$("#saveMonster").click();});
+  $("#cspKeepOrig").addEventListener("click",()=>{closeModal();crScaleResolve("original");$("#saveMonster").click();});
+}
+function openCrScalePop(anchor){
+  const cur=_crScale?_crScale.scaled.cr:M.cr;
+  const origCR=(_crScale?_crScale.orig:M).cr;
+  const max=CR_LIST.length-1,idx=Math.max(0,CR_LIST.indexOf(cur));
+  const html=`<div class="cr-scale-pop">`
+    +`<div class="csp-hd">Scale to</div>`
+    +`<div class="csp-row"><input type="range" class="csp-range" min="0" max="${max}" step="1" value="${idx}">`
+    +`<input type="text" class="csp-cr" value="${crGlyph(cur)}" aria-label="Target CR" spellcheck="false"></div>`
+    +`<div class="csp-foot">from CR ${crGlyph(origCR)} · previews AC, HP, attack, damage, save DC</div>`
+  +`</div>`;
+  const pop=showPopover(anchor,html);
+  const range=pop.querySelector(".csp-range"),field=pop.querySelector(".csp-cr");
+  const go=(target,fromField)=>{const gi=CR_LIST.indexOf(target);if(gi<0)return;range.value=gi;if(!fromField)field.value=crGlyph(target);crScaleApply(target);};
+  // coalesce drag ticks to one apply per frame — each apply is a full deep-clone + regex rescale +
+  // repaint. rAF + timeout fallback, first wins (same discipline as renderPreview: rAF alone starves
+  // in a backgrounded tab).
+  let _pend=false;
+  const _flush=()=>{if(!_pend)return;_pend=false;go(CR_LIST[Number(range.value)],false);};
+  range.addEventListener("input",()=>{if(_pend)return;_pend=true;requestAnimationFrame(_flush);setTimeout(_flush,100);});
+  field.addEventListener("change",()=>{const t=parseCRInput(field.value);if(t)go(t,true);else field.value=crGlyph(_crScale?_crScale.scaled.cr:M.cr);});
+}
+function bindCrScaler(){
+  const host=$("#derived");if(!host)return;
+  host.addEventListener("click",e=>{
+    const dial=e.target.closest("[data-cr-dial]");if(dial){e.stopPropagation();openCrScalePop(dial);return;}
+    const show=e.target.closest("[data-cr-show]");if(show){e.stopPropagation();crScaleShow(show.dataset.crShow);}
+  });
+}
+bindCrScaler();
 
 function speedStr(m){const s=m.spd;let p=[`${s.walk||0} ft.`];
   if(s.climb)p.push(`Climb ${s.climb} ft.`);if(s.fly)p.push(`Fly ${s.fly} ft.${s.hover?" (hover)":""}`);
