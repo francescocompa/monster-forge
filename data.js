@@ -610,6 +610,19 @@ const CONDITION_MECH={
   "Stunned":{implies:["Incapacitated"],atoms:[{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"adv",on:"attacked",who:"attackers"}]},
   "Unconscious":{implies:["Incapacitated","Prone"],atoms:[{k:"speed",set:0,who:"self"},{k:"adv",on:"attacked",who:"attackers"},{k:"autofail",on:"save.str",who:"self"},{k:"autofail",on:"save.dex",who:"self"},{k:"autocrit",if:"melee5",who:"attackers"},{k:"note",text:"Drops what it's holding; unaware of its surroundings; remains Prone when the condition ends."}]},
 };
+// T2.3 — resolve the mech payload for a tracked effect instance. A curated effect's own `mech` wins
+// (with findCuratedEffect's group disambiguation — the "Slow" mastery/spell collision), else the
+// condition payload from CONDITION_MECH (case-insensitive; text and mechanics marry at consumption,
+// per the schema). Null = no payload: the effect degrades to text-popover/manual tracking.
+function effectMechOf(name,effGroup){
+  const eff=findCuratedEffect(name,effGroup);if(eff&&eff.mech)return eff.mech;
+  const n=String(name||"").replace(/\([^)]*\)/g,"").trim().toLowerCase();if(!n)return null;
+  const key=Object.keys(CONDITION_MECH).find(k=>k.toLowerCase()===n);
+  return key?CONDITION_MECH[key]:null;
+}
+// The edge ("start"|"end") at which a tracked effect repeats its save, or null when it has none —
+// drives both the prompt queue and the default tick timing for a new instance (T2.3).
+function saveEndsEdge(name,effGroup){const m=effectMechOf(name,effGroup);return (m&&m.save)?(m.save.when||"end"):null;}
 // The closed `if` vocabulary (extend deliberately; anything situational beyond it is a `note` atom):
 // melee5 = attacker within 5 ft · beyond5 = attacker beyond 5 ft · sighted = attacker relies on sight /
 // can see the target · unseen = unless the attacker can somehow see it · sourceVisible = while the

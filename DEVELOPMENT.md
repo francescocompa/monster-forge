@@ -92,7 +92,7 @@ after 30 days, after which one `GET /installs.json` would dump every install. Pa
 instead. If cloud saves or sharing ever break, check the Firebase console rules FIRST before assuming a code
 regression. Re-check the rules periodically; they are the whole game.
 
-## The effect schema (Phase 2 — designed T2.1, populated T2.2 · data lives in data.js)
+## The effect schema (Phase 2 — designed T2.1, populated T2.2, first consumer T2.3 · data lives in data.js)
 
 The mechanics payload that turns a tracked effect from prose into machine-readable facts. Decided
 context (Q2.A/Q2.B, 2026-07-12): the tracker is **remind-first** — payloads render as reminder chips
@@ -113,7 +113,8 @@ precise enough that a per-class auto-apply mode can consume it later without a s
   asserted against the rules text).
 - A tracked instance (`it.conditions[i]` in combat) stays `{name, rounds, endWhen, endWho, effGroup}`
   — the payload is looked up from the definition, never copied per-instance. Per-instance facts that
-  vary (a save DC from the inflicting statblock) ride on the instance as `dc` when known.
+  vary ride on the instance when known: `dc` (the inflicter's save DC, captured by the add popover —
+  T2.3) and `concBy` (the caster's combat-instance id for concentration effects — T2.4).
 
 ### The `mech` payload
 
@@ -160,12 +161,17 @@ includes `d20` (every D20 Test); `end.on` terms are `attacks` · `casts` · `dea
 ### Reminder timing (who consumes which atom, and when)
 
 - **Turn-start / turn-end edges** (the existing `combatAdvance` edge walk, `endWhen` semantics):
-  `save` descriptors surface on the **prompt strip** (Q2.B) at their edge; `speed`/`incap`/
-  `noreact` atoms render as chips when the afflicted combatant's turn starts (T2.3/T2.6).
+  `save` descriptors surface on the **prompt strip** (Q2.B) at their edge — SHIPPED T2.3 as a
+  skeleton (`effectMechOf`/`saveEndsEdge` in data.js; `queueSavePrompts`/`prunePrompts`/
+  `combatPromptStripHTML`/`migrateCombat` in combat.js; T2.5 designs the real surface);
+  `speed`/`incap`/`noreact` atoms render as chips when the afflicted combatant's turn starts (T2.6).
 - **Act-time:** `adv`/`dis`/`bonus`/`autofail` with `who:"self"` surface on the active combatant;
   `who:"attackers"`/`autocrit`/`dmg` surface when someone targets the afflicted creature.
 - **Concentration** (`conc`): damage to the source prompts the CON save on the strip
-  (DC max(10, ⌊dmg/2⌋)); a break removes every effect linked to that source (T2.4).
+  (DC max(10, ⌊dmg/2⌋)); a break removes every effect linked to that source — SHIPPED T2.4:
+  the link is `concBy` on the instance (caster's combat-instance id, picked at add time, default =
+  active turn); `breakConcentrationOn`/`dropLinkedEffects`/`rollConcSave` in combat.js; breaks
+  cascade from failed saves, the strip verdict, toggle-off, 0 HP, and player-reported drops.
 
 ### Classifier contract (T2.9 — designed together with this schema, by requirement)
 

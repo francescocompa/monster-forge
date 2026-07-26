@@ -220,9 +220,18 @@ function partyHPOn(){return !state.settings.combat||state.settings.combat.partyH
 function hpTracked(it){return it.hpMax!=null&&!(it.kind==="pc"&&!partyHPOn());}
 // Apply a signed HP change: positive = damage (depletes temp HP first), negative = heal (current only).
 function changeHP(it,amt){if(it.hpMax==null)return;
+  const wasConc=!!it.concentration,before=(it.hpCur||0)+(it.hpTemp||0);
   if(amt>0){let d=amt;const t=it.hpTemp||0;if(t>0){const u=Math.min(t,d);it.hpTemp=t-u;d-=u;}it.hpCur=clamp(it.hpCur-d,0,it.hpMax);}
   else it.hpCur=clamp(it.hpCur-amt,0,it.hpMax);
-  applyDownState(it);}
+  applyDownState(it);
+  // T2.4: damage while concentrating queues the CON save on the strip (DC max(10, ⌊damage/2⌋); temp-HP
+  // loss counts as damage taken). Each damage event is its own save, per the rules. Only while still
+  // up — at 0 HP concentration just ends, no save (B127, applyDownState above). DM-side only.
+  if(amt>0&&wasConc&&it.concentration&&!PLAYER_MODE){
+    const lost=Math.max(0,before-((it.hpCur||0)+(it.hpTemp||0)));
+    const ctx=combatOf();
+    if(lost>0&&ctx)(ctx.e.combat.prompts=ctx.e.combat.prompts||[]).push({id:uid(),kind:"conc",itId:it.id,dc:Math.max(10,Math.floor(lost/2)),round:ctx.e.combat.round});
+  }}
 // Adjust max HP by a signed delta (e.g. Aid: +5 raises max AND current); reductions clamp current.
 function adjustMaxHP(it,delta){if(it.hpMax==null)return;it.hpMax=Math.max(1,it.hpMax+delta);if(delta>0)it.hpCur=Math.min(it.hpCur+delta,it.hpMax);else it.hpCur=Math.min(it.hpCur,it.hpMax);}
 const CI_STATUSES=["active","waiting","dead"];
@@ -248,7 +257,16 @@ const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 // FA-free solid circle-check / circle-xmark — death-save success / failure pips in the HP popover (B127).
 const CIRCLE_CHECK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
 const CIRCLE_XMARK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
-function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;it.concentration=!it.concentration;saveAdv();
+function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
+  // Turning OFF is a deliberate break (T2.4): linked effects end with it, pending CON prompts clear.
+  if(it.concentration&&!PLAYER_MODE){const ctx=combatOf();
+    if(ctx){const cb=ctx.e.combat,hadP=(cb.prompts||[]).some(p=>p.kind==="conc"&&p.itId===it.id);
+      const gone=breakConcentrationOn(cb,it);saveAdv();
+      if(gone.length)toast(`${gone.join(", ")} ended.`);
+      if(gone.length||hadP){renderCombat();return;}
+      const el=document.querySelector(`[data-ciconc="${itId}"]`);if(el)el.classList.remove("on");else renderCombat();
+      return;}}
+  it.concentration=!it.concentration;saveAdv();
   const el=document.querySelector(`[data-ciconc="${itId}"]`);if(el)el.classList.toggle("on",it.concentration);else renderCombat();}
 let combatRolling=false; // transient: show the "Rolling initiative…" flourish over a freshly-started order
 let _caPeekId=null; // last previewed (peeked) combatant id — the peek only animates when this changes (B128)
@@ -282,7 +300,11 @@ function isStable(it){if(!(isDown(it)&&downEligible(it))||it.status==="dead")ret
 function applyDownState(it){
   if(!it||it.hpMax==null||it.kind==="event")return;
   if(it.hpCur<=0){
-    it.concentration=false; // down/dead drops concentration outright — no save prompt (B127)
+    // Down/dead drops concentration outright — no save prompt (B127); linked effects cascade with it
+    // (T2.4). Player devices only flip the flag — the DM device cascades when the edit arrives.
+    if(it.concentration&&!PLAYER_MODE){const ctx=combatOf();
+      if(ctx){const gone=breakConcentrationOn(ctx.e.combat,it);if(gone.length)toast(`${gone.join(", ")} ended.`);}}
+    it.concentration=false;
     if(it.status==="dead")return;
     if(downEligible(it)){if(!it.deathSaves)it.deathSaves={success:0,fail:0};}
     else it.status="dead";
@@ -299,7 +321,8 @@ function combatAdvance(dir){if(PLAYER_MODE)return;const ctx=combatOf();if(!ctx)r
     steps++;
   }while(isOut(cb.order[ti])&&steps<=n);
   cb.turnIndex=ti;cb.round=round;
-  if(dir>0){const cur=cb.order[ti];tickConditions(cb,prev,"end");tickConditions(cb,cur,"start");resetRoundResources(cur);if(cur)cur.reaction=true;} // regain reaction at the start of its turn
+  // Tick before queueing: an effect whose last round just expired shouldn't also prompt its save.
+  if(dir>0){const cur=cb.order[ti];tickConditions(cb,prev,"end");tickConditions(cb,cur,"start");queueSavePrompts(cb,prev,"end");queueSavePrompts(cb,cur,"start");resetRoundResources(cur);if(cur)cur.reaction=true;} // regain reaction at the start of its turn
   saveAdv();renderCombat();}
 function resetRoundResources(it){if(it&&it.resources)it.resources.forEach(r=>{if(r.perRound)r.used=0;});}
 // Duration tick: when `turnIt` reaches the given turn `edge` (start|end), decrement every effect (across all
@@ -319,9 +342,121 @@ function tickConditions(cb,turnIt,edge){
   });
   if(gone.length)toast(`${gone.join("; ")} ended.`);
 }
+// T2.3 save-ends prompts: when a combatant reaches the edge named by an effect's `mech.save` descriptor
+// (Hold Person / Slow: end of the afflicted creature's own turn), queue a prompt on the strip. The DM
+// resolves it there — remind-first (Q2.A): the engine never rolls or removes anything on its own.
+function queueSavePrompts(cb,turnIt,edge){
+  if(!cb||!turnIt)return;
+  cb.order.forEach(owner=>{
+    (owner.conditions||[]).forEach(c=>{
+      const mech=effectMechOf(c.name,c.effGroup),sv=mech&&mech.save;
+      if(!sv||(sv.who&&sv.who!=="self"))return; // "self" is the only committed save scope (see the schema)
+      if((sv.when||"end")!==edge||owner.id!==turnIt.id)return;
+      if(owner.status==="dead")return;
+      if((cb.prompts||[]).some(p=>p.kind==="save"&&p.itId===owner.id&&p.name===c.name&&(p.effGroup||null)===(c.effGroup||null)))return;
+      (cb.prompts=cb.prompts||[]).push({id:uid(),kind:"save",itId:owner.id,name:c.name,effGroup:c.effGroup||null,abil:sv.abil,dc:c.dc||null,round:cb.round});
+    });
+  });
+}
+// T2.4 — the effect→source link: a condition instance added with a known caster carries `concBy`
+// (that caster's combat-instance id). Dropping the link's source end removes every linked effect.
+// `exceptName` spares same-name instances (one multi-target cast adds several — Bless on three PCs).
+// Returns ["Owner: Effect", …] for the announcement.
+function dropLinkedEffects(cb,srcId,exceptName){
+  const gone=[];
+  cb.order.forEach(o=>{if(!o.conditions||!o.conditions.length)return;
+    o.conditions=o.conditions.filter(c=>{
+      if(c.concBy!==srcId||(exceptName!=null&&c.name===exceptName))return true;
+      gone.push(`${o.name}: ${c.name}`);return false;});});
+  return gone;
+}
+// Break a combatant's concentration: flag off, every linked effect ends, and its now-moot pending
+// CON prompts clear. Pure over `cb`; announcement text is returned for the caller's toast.
+function breakConcentrationOn(cb,it){
+  it.concentration=false;
+  const gone=dropLinkedEffects(cb,it.id);
+  cb.prompts=(cb.prompts||[]).filter(p=>!(p.kind==="conc"&&p.itId===it.id));
+  return gone;
+}
+// Drop prompts whose owner or condition no longer exists (cured by hand, combatant removed) — a prompt
+// is a pointer into the order, never its own copy of the fact. Conc prompts point at the flag instead.
+function prunePrompts(cb){
+  if(!cb||!cb.prompts||!cb.prompts.length)return;
+  cb.prompts=cb.prompts.filter(p=>{
+    const it=cb.order.find(x=>x.id===p.itId);if(!it)return false;
+    if(p.kind==="conc")return !!it.concentration;
+    return (it.conditions||[]).some(c=>c.name===p.name&&(c.effGroup||null)===(p.effGroup||null));
+  });
+}
+// Resolve a prompt against a combat object. `affirm` = the prompt's decisive outcome: a save-ends
+// success removes the tracked effect; a conc failure breaks concentration (linked effects cascade).
+// Not affirmed just clears the prompt. Pure over `cb` for the test floor; returns {p, gone}.
+function resolvePromptOn(cb,pid,affirm){
+  const i=(cb.prompts||[]).findIndex(p=>p.id===pid);if(i<0)return null;
+  const p=cb.prompts.splice(i,1)[0];
+  if(!affirm)return {p,gone:[]};
+  const it=cb.order.find(x=>x.id===p.itId);
+  if(p.kind==="conc")return {p,gone:it?breakConcentrationOn(cb,it):[]};
+  if(it&&it.conditions){const ci=it.conditions.findIndex(c=>c.name===p.name&&(c.effGroup||null)===(p.effGroup||null));if(ci>=0)it.conditions.splice(ci,1);}
+  return {p,gone:[]};
+}
+function resolvePrompt(pid,affirm){const ctx=combatOf();if(!ctx)return;
+  const res=resolvePromptOn(ctx.e.combat,pid,affirm);if(!res)return;
+  const it=combatItem(res.p.itId),nm=it?it.name:"";
+  if(affirm)toast(res.p.kind==="conc"
+    ?`${nm} concentration broken${res.gone.length?` — ${res.gone.join(", ")} ended`:""}.`
+    :`${nm?nm+": ":""}${res.p.name} ended.`);
+  saveAdv();renderCombat();}
+// One-tap CON save for concentration (shared by the strip and the B124 HP-popover prompt): auto-verdict,
+// a failure breaks with the full cascade, and the matching queued prompt clears either way.
+function rollConcSave(it,dc){const ctx=combatOf();if(!ctx||!it)return;const cb=ctx.e.combat;
+  const b=combatConSave(it)||0,r=rollFormula("1d20"+(b>=0?"+"+b:String(b))),pass=r.total>=dc;
+  {const i=(cb.prompts||[]).findIndex(p=>p.kind==="conc"&&p.itId===it.id&&p.dc===dc);if(i>=0)cb.prompts.splice(i,1);}
+  const gone=pass?[]:breakConcentrationOn(cb,it);
+  toast(`${it.name} concentration: rolled ${r.total} vs DC ${dc}, ${pass?"held":"broken"}${gone.length?` — ${gone.join(", ")} ended`:""}`);
+  saveAdv();renderCombat();}
+// One-tap save roll (same convenience as the concentration prompt, B124): DC known → auto-verdict and
+// resolve; DC unknown → show the total on the prompt and let the DM pick the verdict.
+function rollPromptSave(pid){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
+  const p=(cb.prompts||[]).find(x=>x.id===pid);if(!p)return;
+  const it=combatItem(p.itId);
+  if(p.kind==="conc"){rollConcSave(it,p.dc);return;}
+  const b=combatSaveBonus(it,p.abil)||0;
+  const r=rollFormula("1d20"+(b>=0?"+"+b:String(b)));
+  if(p.dc){const pass=r.total>=p.dc;
+    toast(`${it?it.name+" ":""}${(p.abil||"").toUpperCase()} save: rolled ${r.total} vs DC ${p.dc}, ${pass?"effect ends":"still going"}`);
+    resolvePrompt(pid,pass);return;}
+  p.roll=r.total;saveAdv();renderCombat();}
+// T2.3 migration: normalize condition instances saved by older builds (string entries from the pre-object
+// era, junk rounds) and default the prompt queue. Idempotent and cheap — runs on every combat render.
+function migrateCombat(cb){if(!cb)return;
+  if(!Array.isArray(cb.prompts))cb.prompts=[];
+  cb.order.forEach(it=>{
+    if(!Array.isArray(it.conditions)){it.conditions=[];return;}
+    it.conditions=it.conditions.filter(c=>c&&(typeof c==="string"||c.name)).map(c=>{
+      if(typeof c==="string")c={name:c};
+      c.rounds=Math.max(0,Number(c.rounds)||0);
+      return c;});
+  });
+}
 // Per-combatant edits (CT3): conditions, note, ungroup, remove.
 function combatItem(id){const ctx=combatOf();return ctx?ctx.e.combat.order.find(x=>x.id===id):null;}
-function addCombatCond(itId,name,rounds,timing,effGroup){const it=combatItem(itId);if(!it||!name)return;if(!playerCondAllowed(it))return;const c={name,rounds:Math.max(0,Number(rounds)||0)};if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}if(effGroup)c.effGroup=effGroup;(it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
+function addCombatCond(itId,name,rounds,timing,effGroup,dc,concBy){const it=combatItem(itId);if(!it||!name)return;if(!playerCondAllowed(it))return;const c={name,rounds:Math.max(0,Number(rounds)||0)};
+  if(timing){if(timing.endWhen==="end")c.endWhen="end";if(timing.endWho)c.endWho=timing.endWho;}
+  // No explicit timing → default the tick edge from the effect's own save descriptor (T2.3): Hold Person's
+  // duration and its repeat-save both live at the END of the afflicted creature's turn, per the rules text.
+  else if(saveEndsEdge(name,effGroup)==="end")c.endWhen="end";
+  if(effGroup)c.effGroup=effGroup;
+  const dcN=Number(dc)||0;if(dcN>0)c.dc=dcN; // per-instance fact (the inflicter's DC), per the schema
+  // T2.4 linkage: record the caster and light its concentration flag. Casting anew replaces the old
+  // concentration — the caster's linked effects with a DIFFERENT name end now (same-name instances stay:
+  // one multi-target cast adds several).
+  if(concBy){const src=combatItem(concBy);
+    if(src){c.concBy=concBy;
+      const ctx=combatOf(),gone=ctx?dropLinkedEffects(ctx.e.combat,concBy,name):[];
+      src.concentration=true;
+      if(gone.length)toast(`${gone.join(", ")} ended (new concentration).`);}}
+  (it.conditions=it.conditions||[]).push(c);saveAdv();renderCombat();}
 function removeCombatCond(itId,i){const it=combatItem(itId);if(!it||!it.conditions)return;if(!playerCondAllowed(it))return;it.conditions.splice(i,1);saveAdv();renderCombat();}
 function setCombatNote(itId,text){const it=combatItem(itId);if(!it)return;it.comment=text;saveAdv();renderCombat();}
 // Split a count:N group into independent combatants — each re-rolls its own initiative.
@@ -353,6 +488,10 @@ function openCondAdd(itId,anchor,targets){
   const ctx=combatOf(),order=ctx?ctx.e.combat.order:[];
   const self=order.find(o=>o.id===itId),selfName=self?self.name:"this creature";
   const whoItems=order.map(o=>`<button type="button" class="popitem" data-whoid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
+  // T2.4: concentration effects link to their caster (default = whoever's turn it is — effects are
+  // usually added as they're cast). "Not tracked" degrades to the unlinked manual behavior.
+  const cur=ctx?ctx.e.combat.order[ctx.e.combat.turnIndex]:null;
+  const srcItems=order.map(o=>`<button type="button" class="popitem" data-srcid="${esc(o.id)}">${esc(o.name)}</button>`).join("");
   const p=showPopover(anchor,`<div class="cond-add">
     <div class="cond-add-row">
       <div class="cond-combo">
@@ -361,6 +500,7 @@ function openCondAdd(itId,anchor,targets){
       </div>
       <button class="cond-clock" type="button" title="Set when it ends (whose turn · start/end)">${ALARM_CLOCK_ICON}</button>
       <input type="number" class="cond-rounds" min="0" placeholder="∞" title="Duration in rounds (blank = until removed)">
+      <input type="number" class="cond-dc" min="1" placeholder="DC" title="Save DC (from the caster) — the save-ends prompt resolves itself when set" hidden>
       <button class="btn primary sm cond-go" style="width:auto">Add</button>
     </div>
     <div class="cond-list" hidden></div>
@@ -372,9 +512,27 @@ function openCondAdd(itId,anchor,targets){
         <button type="button" class="cond-who is-self" data-whoid="${esc(itId)}" title="Whose turn ends it"><span class="cw-who-t">${esc(selfName)}</span>${FS_CHEVRON}</button>
         <div class="cond-who-list" hidden>${whoItems}</div>
       </div>
+    </div>
+    <div class="cond-conc" hidden>
+      <span class="cw-lbl">concentration by</span>
+      <div class="cond-who-wrap">
+        <button type="button" class="cond-who cond-src" data-srcid="${cur?esc(cur.id):""}" title="Who is concentrating on this effect"><span class="cw-who-t">${cur?esc(cur.name):"Not tracked"}</span>${FS_CHEVRON}</button>
+        <div class="cond-who-list cond-src-list" hidden><button type="button" class="popitem" data-srcid="">Not tracked</button>${srcItems}</div>
+      </div>
     </div></div>`);
-  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=p.querySelector(".cond-who"),list=p.querySelector(".cond-who-list"),clist=p.querySelector(".cond-list");
+  const inp=p.querySelector(".cond-input"),rd=p.querySelector(".cond-rounds"),dcIn=p.querySelector(".cond-dc"),clk=p.querySelector(".cond-clock"),when=p.querySelector(".cond-when"),edge=p.querySelector(".cond-edge"),who=when.querySelector(".cond-who"),list=when.querySelector(".cond-who-list"),clist=p.querySelector(".cond-list");
+  const concRow=p.querySelector(".cond-conc"),srcBtn=p.querySelector(".cond-src"),srcList=p.querySelector(".cond-src-list");
   inp.focus();
+  // T2.3: an effect with a repeat-save descriptor (Hold Person, Slow) reveals a DC field — the DC is the
+  // caster's, a per-instance fact the engine can't derive. `_dcEg` remembers the picked entry's group so
+  // the mastery/spell "Slow" collision resolves the same at commit as it did at pick time.
+  // T2.4: a concentration effect reveals the caster picker the same way.
+  let _dcEg=null;
+  const syncDc=(name,eg)=>{const m=effectMechOf(name,eg);
+    const dc=!!(m&&m.save);dcIn.toggleAttribute("hidden",!dc);if(!dc)dcIn.value="";
+    concRow.toggleAttribute("hidden",!(m&&m.conc));};
+  srcBtn.addEventListener("click",e=>{e.stopPropagation();const open=srcList.hasAttribute("hidden");srcList.toggleAttribute("hidden",!open);srcBtn.classList.toggle("open",open);});
+  srcList.querySelectorAll("[data-srcid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();srcBtn.dataset.srcid=b.dataset.srcid;srcBtn.querySelector(".cw-who-t").textContent=b.textContent;srcList.setAttribute("hidden","");srcBtn.classList.remove("open");}));
   // One inline grouped list inside the popover (B129 — reverted from the B127 tabs): Conditions (the library's
   // true conditions, not diseases/status), Masteries (the 2024 weapon masteries) and Spells (continuous —
   // non-instantaneous — effects) as headed sections in a single scrollable list, filtered by the search field.
@@ -402,19 +560,26 @@ function openCondAdd(itId,anchor,targets){
   // The grouped list is collapsed by default — it opens on the chevron (or once the user starts typing) (B133).
   const setList=open=>{clist.toggleAttribute("hidden",!open);chev.classList.toggle("open",open);if(open)renderList();};
   chev.addEventListener("click",ev=>{ev.preventDefault();setList(clist.hasAttribute("hidden"));inp.focus();});
-  inp.addEventListener("input",()=>{if(inp.value.trim())setList(true);else renderList();});
-  clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;commitName(b.dataset.v,b.dataset.eg||null);});
+  inp.addEventListener("input",()=>{if(inp.value.trim())setList(true);else renderList();_dcEg=null;syncDc(inp.value.trim(),null);});
+  clist.addEventListener("click",e=>{const b=e.target.closest(".cl-item");if(!b)return;const eg=b.dataset.eg||null;
+    // A save-ends or concentration effect pauses on pick instead of committing — it needs one more fact
+    // (the DC / the caster, defaulted to the active turn) that the DM confirms before Add.
+    const m=effectMechOf(b.dataset.v,eg);
+    if(m&&(m.save||m.conc)){inp.value=b.dataset.v;_dcEg=eg;syncDc(b.dataset.v,eg);setList(false);if(!dcIn.hasAttribute("hidden"))dcIn.focus();return;}
+    commitName(b.dataset.v,eg);});
   clk.addEventListener("click",()=>{const open=when.hasAttribute("hidden");when.toggleAttribute("hidden",!open);clk.classList.toggle("on",open);});
   edge.addEventListener("click",()=>{const toEnd=edge.dataset.edge==="start";edge.dataset.edge=toEnd?"end":"start";edge.querySelector(".cw-t").textContent=toEnd?"end turn":"turn start";edge.classList.toggle("is-end",toEnd);edge.classList.remove("pop");void edge.offsetWidth;edge.classList.add("pop");});
   // Custom whose-turn dropdown (inline — showPopover is single-instance so it can't nest in this popover).
   who.addEventListener("click",e=>{e.stopPropagation();const open=list.hasAttribute("hidden");list.toggleAttribute("hidden",!open);who.classList.toggle("open",open);});
   list.querySelectorAll("[data-whoid]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();who.dataset.whoid=b.dataset.whoid;who.querySelector(".cw-who-t").textContent=b.textContent;who.classList.toggle("is-self",b.dataset.whoid===itId);list.setAttribute("hidden","");who.classList.remove("open");}));
-  const commitName=(name,effGroup)=>{name=(name||"").trim();const timed=!when.hasAttribute("hidden");closePopover();if(!name)return;
-    (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null,effGroup));};
-  const commit=()=>commitName(inp.value);
+  const commitName=(name,effGroup)=>{name=(name||"").trim();const timed=!when.hasAttribute("hidden");const dc=dcIn.hasAttribute("hidden")?null:dcIn.value;
+    const concBy=concRow.hasAttribute("hidden")?null:(srcBtn.dataset.srcid||null);closePopover();if(!name)return;
+    (targets&&targets.length?targets:[itId]).forEach(tid=>addCombatCond(tid,name,rd.value,timed?{endWhen:edge.dataset.edge,endWho:who.dataset.whoid===tid?null:who.dataset.whoid}:null,effGroup,dc,concBy));};
+  const commit=()=>commitName(inp.value,_dcEg);
   p.querySelector(".cond-go").addEventListener("click",commit);
   inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
   rd.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}});
+  dcIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape")closePopover();});
 }
 function openNoteEdit(itId,anchor){
   const it=combatItem(itId);if(!it)return;
@@ -458,8 +623,16 @@ function openHPNumEdit(itId,anchor,kind){
 }
 // HP management popover (B124): opened from the row's compact HP control. Primary field is damage/heal
 // (positive damages — temp absorbs first; negative heals), with quick ±1/±5 chips and editable current/temp.
-// CON save bonus from the statblock (proficient → + PB), for the concentration prompt. Null when unknown (PCs).
-function combatConSave(it){if(!it||it.kind!=="monster")return null;const m=monById(it.srcId);if(!m)return null;const pb=pbForCR(m.cr);return mod(m.con)+((m.saves||[]).includes("con")?pb:0);}
+// Save bonus for an ability, when derivable: monsters from the statblock (proficient → + PB), PCs from
+// the roster sheet. Null when unknown (quick adds, events, unlinked sources). CON drives the concentration
+// prompt (B124); any ability drives the save-ends prompts (T2.3).
+function combatSaveBonus(it,abil){
+  if(!it||!abil)return null;
+  if(it.kind==="monster"){const m=monById(it.srcId);if(!m)return null;return mod(m[abil])+((m.saves||[]).includes(abil)?pbForCR(m.cr):0);}
+  if(it.kind==="pc"){const c=rosterById(it.srcId);if(!c)return null;const f=abilFieldOf(c,abil);return f?abilSave(c,f):null;}
+  return null;
+}
+function combatConSave(it){return combatSaveBonus(it,"con");}
 // Concentration save prompt for `lost` HP taken: DC = max(10, ⌊damage/2⌋), with the CON save bonus if known.
 function concCheckPrompt(it,lost){return {dc:Math.max(10,Math.floor(lost/2)),bonus:combatConSave(it)};}
 function openHPManage(itId,anchor,concPrompt){
@@ -491,9 +664,9 @@ function openHPManage(itId,anchor,concPrompt){
   p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));reopen(null);});
   p.querySelectorAll(".hpm-ds-pip").forEach(b=>b.addEventListener("click",()=>{const[kind,n]=b.dataset.ds.split(":");const t=combatItem(itId);if(!t)return;if(!t.deathSaves)t.deathSaves={success:0,fail:0};
     t.deathSaves[kind]=clamp(t.deathSaves[kind]===+n?+n-1:+n,0,3);if((t.deathSaves.fail||0)>=3)t.status="dead";reopen(null);}));
-  const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{const b=concPrompt.bonus||0,r=rollFormula("1d20"+(b>=0?"+"+b:String(b))),pass=r.total>=concPrompt.dc;
-    toast(`Concentration: rolled ${r.total} vs DC ${concPrompt.dc}, ${pass?"held":"broken"}`);
-    if(!pass)it.concentration=false;closePopover();saveAdv();renderCombat();});
+  // The inline roll routes through the shared T2.4 resolver: same verdict/cascade as the strip's
+  // one-tap, and the queued strip prompt for this damage event clears with it.
+  const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{closePopover();rollConcSave(combatItem(itId),concPrompt.dc);});
 }
 // Edit a combatant's initiative inline, then re-sort the order (preserving whose turn it is).
 function setCombatInit(itId,v){const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat,it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
@@ -987,6 +1160,35 @@ function combatRoundBarHTML(cb){
     <button class="ct-toolsbtn${active}" id="combatTools" title="Group · sort · filter · re-roll">${TUNE_ICON}</button>
   </div>`;
 }
+// T2.3 prompt strip — the Q2.B surface in skeleton form (T2.5 designs the real look; keep this quiet and
+// don't grow it feature-first). One row per pending prompt: who, the effect, the save to make, a one-tap
+// d20 when the bonus is derivable, and the two verdicts. DM-only; prompts persist until resolved.
+function combatPromptStripHTML(cb){
+  if(PLAYER_MODE)return "";
+  prunePrompts(cb);
+  if(!cb.prompts||!cb.prompts.length)return "";
+  return `<div class="ct-prompts">`+cb.prompts.map(p=>{
+    const it=cb.order.find(x=>x.id===p.itId),isConc=p.kind==="conc";
+    const bonus=combatSaveBonus(it,isConc?"con":p.abil);
+    const verdict=(p.roll!=null&&p.dc)?(p.roll>=p.dc?` <b class="ctp-pass">ends</b>`:` <b class="ctp-fail">holds</b>`):"";
+    const roll=p.roll!=null
+      ?`<span class="ctp-rolled">rolled <b>${p.roll}</b>${verdict}</span>`
+      :(bonus!=null?`<button class="ctp-roll" data-proll="${p.id}" title="Roll the save (d20 ${sgn(bonus)})">${D20_ICON}<span>${sgn(bonus)}</span></button>`:"");
+    const text=isConc
+      ?`<b>${esc(it?it.name:"?")}</b> · Concentration: CON save DC ${p.dc}`
+      :`<b>${esc(it?it.name:"?")}</b> · ${esc(p.name)}: ${(p.abil||"").toUpperCase()} save${p.dc?` DC ${p.dc}`:""} to end`;
+    // `data-pend` = the prompt's decisive outcome (a save-ends success / a conc failure), `data-pkeep`
+    // = nothing changes. Labels read as the outcome, not the roll.
+    const yes=isConc?["Breaks","The save fails — concentration breaks and its linked effects end"]:["Ends","The save succeeds and the effect ends"];
+    const no=isConc?["Holds","The save succeeds — concentration holds"]:["Continues","The save fails and the effect continues"];
+    return `<div class="ctp-item">
+      <span class="ctp-t">${text}</span>
+      ${roll}
+      <button class="ctp-btn" data-pend="${p.id}" title="${yes[1]}">${yes[0]}</button>
+      <button class="ctp-btn" data-pkeep="${p.id}" title="${no[1]}">${no[0]}</button>
+    </div>`;
+  }).join("")+`</div>`;
+}
 function openRoundEdit(anchor){if(PLAYER_MODE)return;
   const ctx=combatOf();if(!ctx)return;const cb=ctx.e.combat;
   const p=showPopover(anchor,`<div class="round-edit">Round <input type="number" class="round-in" min="1" value="${cb.round}"><button class="btn primary sm" style="width:auto">Set</button></div>`);
@@ -1270,7 +1472,12 @@ function applyPlayerEdit(it,e){
   if(Array.isArray(e.conds)){const cur=it.conditions||[];it.conditions=e.conds.map(n=>cur.find(c=>c.name===n)||{name:String(n)});}
   if(e.init!=null&&!isNaN(Number(e.init)))it.init=Number(e.init);
   if(typeof e.reaction==="boolean")it.reaction=e.reaction;
-  if(typeof e.concentration==="boolean")it.concentration=e.concentration;
+  if(typeof e.concentration==="boolean"){
+    // A player reporting concentration dropped cascades like the DM's own toggle (T2.4). Runs on the
+    // DM device (poll ingestion) where the combat ctx exists; standalone (tests) just flips the flag.
+    if(it.concentration&&!e.concentration){const ctx=combatOf();if(ctx)breakConcentrationOn(ctx.e.combat,it);else it.concentration=false;}
+    else it.concentration=e.concentration;
+  }
   if(e.status&&CI_STATUSES.indexOf(e.status)>=0)it.status=e.status;
   applyDownState(it);
 }
@@ -1687,6 +1894,7 @@ function renderCombat(){
   // restart (the not-started screen's own button, or Adventures' Resume-dropdown "Reset & restart").
   if(!cb&&e.status!=="completed"&&(e.combatants.some(c=>c.type!=="event")||a.party.length)){startCombat(a,e);if(!e.archived)e.status="active";cb=e.combat;}
   if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
+  if(cb)migrateCombat(cb); // T2.3 — normalize legacy condition instances + default the prompt queue
   const cur=cb?cb.order[cb.turnIndex]:null;
   // Attribute statblock / chip rolls to the combatant whose panel is shown — the peeked selection if any,
   // else the active turn (CT4; extended to PCs + the peek panel). PCs carry no id (not in the bestiary).
@@ -1704,7 +1912,7 @@ function renderCombat(){
   const _pOrd=body.querySelector(".combat-order"),_pAct=body.querySelector(".ca-scroll");
   const _ordTop=_pOrd?_pOrd.scrollTop:0,_actTop=_pAct?_pAct.scrollTop:0;
   body.innerHTML=combatHeaderHTML(a,e,sc,cb)+(cb?
-    combatRoundBarHTML(cb)+combatHintHTML()+`
+    combatRoundBarHTML(cb)+combatPromptStripHTML(cb)+combatHintHTML()+`
     <div class="combat-grid">
       <div class="combat-order"><div class="combat-rows" id="combatRows">${combatOrderBodyHTML(cb)}</div><button class="cbt-add" id="combatAddBtn">＋ Add combatant</button>${combatRolling?`<div class="combat-roll-overlay"><span class="cro-die">${D20_ICON}</span><span class="cro-t">Rolling initiative…</span></div>`:""}</div>
       <div class="combat-resizer" id="combatResizer" title="Drag to resize · double-click to reset"></div>
@@ -1789,6 +1997,10 @@ function bindCombatTracker(body,a,e,cb){
   });
   body.querySelectorAll("[data-cimenu]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCombatRowMenu(el.dataset.cimenu,el);}));
   body.querySelectorAll("[data-addcond]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openCondAdd(el.dataset.addcond,el);}));
+  // Prompt strip (T2.3): one-tap save roll + the two verdicts.
+  body.querySelectorAll("[data-proll]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();rollPromptSave(el.dataset.proll);}));
+  body.querySelectorAll("[data-pend]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();resolvePrompt(el.dataset.pend,true);}));
+  body.querySelectorAll("[data-pkeep]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();resolvePrompt(el.dataset.pkeep,false);}));
   body.querySelectorAll("[data-cinote]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openNoteEdit(el.dataset.cinote,el);}));
   // PC sheet "Edit" → open the full character detail (closing it re-renders combat — see openCharacterDetail).
   body.querySelectorAll("[data-pcedit]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const ctx=loadedCtx();openCharacterDetail(el.dataset.pcedit,ctx?ctx.a.id:null);}));

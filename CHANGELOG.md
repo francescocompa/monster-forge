@@ -4,6 +4,65 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 278 — T2.4: concentration (the link, the prompt, the cascade)
+- **The effect→source link:** a condition instance added with a known caster carries `concBy` (the
+  caster's combat-instance id). The add-effect popover reveals a **"concentration by" picker** for any
+  effect whose payload has `conc:true` — defaulting to whoever's turn it is (effects are usually added
+  as they're cast), with a "Not tracked" opt-out that degrades to the old manual behavior. Picking a
+  conc effect pauses for the caster the same way T2.3 pauses for a DC. Adding with a source lights the
+  caster's concentration flag and applies the **new-cast-replaces-old rule**: the caster's linked
+  effects with a DIFFERENT name end now ("ended (new concentration)"), same-name instances stay — one
+  multi-target Bless adds several.
+- **Damage → CON save prompt, now on the strip:** `changeHP` queues a `kind:"conc"` prompt (DC
+  max(10, ⌊lost/2⌋); temp-HP loss counts as damage taken; each damage event is its own save, per the
+  rules) whenever a still-up concentrating combatant takes damage — so multi-select damage and player
+  write-backs prompt too, not just the HP popover. At 0 HP concentration just ends (B127), no save.
+  The B124 inline popover prompt stays as the immediate affordance but now routes through the shared
+  resolver (`rollConcSave`), clearing its queued strip twin either way.
+- **The break cascade (`breakConcentrationOn`/`dropLinkedEffects`):** a failed save, the strip's
+  "Breaks" verdict, a deliberate concentration toggle-off, dropping to 0 HP, and a player-reported
+  conc-off all end EVERY linked effect across the order, cull the caster's now-moot conc prompts, and
+  announce the full list. Prune rule: a conc prompt lives on the flag, not a condition.
+- **Strip verdicts read as outcomes per kind:** save-ends = Ends/Continues; concentration =
+  Breaks/Holds (`data-pend` = the decisive outcome). One-tap d20 uses the CON save bonus.
+- **`test/concentration.test.js`** is the behavior floor (link + cascade + exceptName, the changeHP
+  queue via a real combat ctx incl. the 0-HP path, DC formula parity with `concCheckPrompt`, conc
+  pruning, resolver branches). Baseline now **84 tests**; verified live end to end (picker default →
+  linked add → damage → both prompt surfaces → broken-roll cascade over three linked instances →
+  re-cast replacement → toggle-off cascade → Holds), zero console errors.
+
+## Batch 277 — T2.3: the duration engine (save-ends prompts on the strip skeleton)
+- **The tracker now consumes `mech` for the first time.** `effectMechOf(name, effGroup)` in data.js
+  resolves a tracked instance's payload (curated effect first — the "Slow" mastery/spell collision
+  respects the group — else `CONDITION_MECH`, case-insensitive); `saveEndsEdge()` reads the repeat-save
+  edge off it. Null payload still degrades to today's manual tracking, per the schema rules.
+- **Save-ends prompts (Q2.B surface, skeleton form):** when a combatant reaches the edge named by an
+  effect's `save` descriptor (Hold Person / Slow: end of its own turn), `combatAdvance` queues a prompt
+  into `cb.prompts` (ticks run FIRST so an effect whose last round just expired doesn't also prompt;
+  duplicates and dead owners are skipped). The strip (`combatPromptStripHTML`, `.ct-prompts`) renders
+  under the round bar, DM-only, and persists until resolved: a one-tap d20 when the save bonus is
+  derivable (DC known → auto-verdict + toast, like the B124 concentration roll; DC unknown → the total
+  shows inline) plus explicit **Ends / Continues** verdicts — remind-first (Q2.A), the engine never
+  rolls or removes anything on its own. Prompts are pointers, never copies: `prunePrompts` culls them
+  when the condition is cured by hand or the combatant leaves. **The strip is a T2.5 placeholder —
+  design it there, don't grow it feature-first here.** It stays out of the share snapshot (DM-only).
+- **DC capture at add time:** picking a save-ends effect in the add-effect popover pauses for its DC
+  (a revealed `.cond-dc` field, focused) instead of committing on click — the caster's DC is a
+  per-instance fact the engine can't derive; it rides the instance as `dc` (schema T2.1). Committing
+  without a DC is fine (the prompt then defers the verdict to the DM). A save-ends effect added with
+  no explicit timing also defaults its tick edge from the descriptor (`endWhen:"end"`), so duration
+  expiry and the repeat save land on the same edge the rules text names.
+- **Save bonus generalized:** `combatSaveBonus(it, abil)` — monsters from the statblock (proficient →
+  +PB), PCs from the roster sheet (`abilSave`), null for quick adds/events; `combatConSave` is now the
+  CON specialization (concentration prompt unchanged).
+- **Migration (T2.3 scope):** `migrateCombat(cb)` runs on every combat render — defaults the
+  `cb.prompts` queue on pre-T2.3 combats and normalizes legacy condition instances (string entries →
+  `{name}`, junk `rounds` coerced, nameless entries dropped). Idempotent and cheap.
+- **`test/duration-engine.test.js`** is the behavior floor (mech resolution incl. the Slow collision,
+  queue edge/owner/dedup/dead-skip, prune, resolve semantics, migration, save bonuses). Baseline now
+  **77 tests**; verified live in the preview end to end (popover DC pause → strip → roll/verdicts →
+  prune → expiry toast), zero console errors.
+
 ## Batch 276 — T2.2: the effect data pass (payloads from the 2024 text)
 - **Every `CURATED_EFFECTS` entry now carries its `mech` payload, and `CONDITION_MECH` ships the 15
   XPHB 2024 conditions** (Exhaustion and Invisible are among the 15 — the B275 doc phrasing implied

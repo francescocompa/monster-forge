@@ -66,11 +66,18 @@ and the phase code review with fixes applied (B273).
   5etools mirror with the text open. Four curated texts 2024-corrected (Resistance, Guidance,
   Invisibility, Sanctuary). Integrity floor: `test/effect-mech.test.js`; exports EFFECT_ATOM_KINDS/
   EFFECT_IF_TERMS/EFFECT_CONTROL_W (weights provisional until T2.10's calibration).
-- [ ] **T2.3 — Duration engine** · Opus @ high · ~1
-  Unify `rounds`/`endWhen` into the engine: tick on `combatAdvance`, expiry announcements,
-  save-ends prompts. Includes migration of conditions saved in existing encounters. (P2.2)
-- [ ] **T2.4 — Concentration** · Sonnet @ high · ~1
-  Damage → CON save prompt (DC max(10, ⌊dmg/2⌋)), one-tap roll, break drops linked effect. (P2.3)
+- [x] **T2.3 — Duration engine** · Batch 277
+  `effectMechOf`/`saveEndsEdge` (data.js) resolve payloads; `combatAdvance` queues save-ends
+  prompts into `cb.prompts` after ticking; the strip (`combatPromptStripHTML`) is a deliberate
+  SKELETON for T2.5 to design — one-tap d20 + Ends/Continues, DM-only, prune-on-cure. DC captured
+  at add time (per-instance `dc`); tick edge defaults from the save descriptor. `migrateCombat`
+  normalizes legacy condition instances. Floor: `test/duration-engine.test.js`. (P2.2)
+- [x] **T2.4 — Concentration** · Batch 278
+  `concBy` links an instance to its caster (add-popover picker, defaults to the active turn;
+  new-cast-replaces-old, same-name spared). `changeHP` queues the CON prompt on the strip
+  (DC max(10, ⌊lost/2⌋); temp counts; 0 HP just drops it); B124 inline prompt routes through the
+  shared `rollConcSave`. Break by any path (`breakConcentrationOn`) cascades every linked effect.
+  Floor: `test/concentration.test.js`. (P2.3)
 - [ ] **T2.5 — Reminder chips design session** · Opus @ high · *(design session)*
   Mockups for where/how chips render on a turn — per Q2.A's philosophy. (P2.4)
 - [ ] **T2.6 — Reminder chips build** · Sonnet @ medium · ~1
