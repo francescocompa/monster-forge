@@ -63,11 +63,10 @@
   designer.
 - **Phase review done** (`/code-review` high, fixes applied — CHANGELOG B273).
 
-**Open remainders:** P1.5 suggest-mode + field locks await **Q1.C** (user); the **P1.9 benchmark gate
-re-arms at T2.10** (75.0/80.0 vs ≥85 — the remaining misses are the user-accepted control-garnish
-group and the kit-invisible blind spot that P2.8 exists to close); role-choice-during-scaling is
-backlog. Exit check otherwise met: live computed CR in the Forge, believable scaling, a role-aware
-library, a committed test floor.
+**Open remainders:** Phase 1 CLOSED 2026-07-12 (B258–273); open remainders + benchmark-gate details
+live in TASKS.md's Phase-1 close block. ROADMAP-only note: role-choice-during-scaling is backlog.
+Exit check otherwise met: live computed CR in the Forge, believable scaling, a role-aware library,
+a committed test floor.
 
 ## Phase 2 — Executable rules (the 5e effect engine)
 

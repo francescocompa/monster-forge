@@ -1,11 +1,13 @@
+STATUS: fully consumed — all findings fixed by B254 (2026-07-02). Historical audit at commit 929c03b; next audit starts fresh.
+
 # Monster Forge — Holistic Audit (2026-07-01)
 
 > Full-project re-audit at `929c03b` (Batch 249). Dimensions: code structure, engineering
 > practice, security & data integrity, performance, UX/copy/accessibility. The previous audit
 > (2026-06-22, post–Batch 190) is treated as input, not baseline — every claim re-derived, with
 > B190→B249 deltas called out. Findings verified statically **and** live in the preview + against
-> the real Firebase DB. All P1–P3 findings were then fixed across Batches 250–253 (see the priorities
-> table); the one open item is a tap-target sizing tweak awaiting the author's greenlight.
+> the real Firebase DB. All P1–P3 findings were then fixed across Batches 250–253, and the last
+> remaining item (the tap-target sizing tweak) in B254 — nothing here is still open.
 
 ---
 

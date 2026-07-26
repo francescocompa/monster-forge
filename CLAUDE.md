@@ -17,6 +17,9 @@
   straight `"` for a smart `"` — `node --check` catches it, so never skip verify.
   Update `CHANGELOG.md` (newest batch first) each batch; don't copy its history here.
 
+Long-range plan = `ROADMAP.md` (phases + decision log + non-goals); execution =
+`TASKS.md` (T-ids, model@effort, 🔶 decision gates — honor them before building past them).
+
 ## Working here
 
 - Match the existing patterns in the shared-scope files; no new globals without
