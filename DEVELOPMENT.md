@@ -223,13 +223,22 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   sections are whole-surface click targets to reopen; ritual dropdowns number their rows so
   physical dice map to picks; the ASI step is explicit (class default preselected, Apply commits).
   Identity (name + optional quirk/trinket) is typed.
-- **Spell rolls are cross-source clean (D-018):** any spell roll rerolls names already granted by
-  another source (`genSpellsGranted` — feat, legacy, tome, always-prepared), and rolled full
-  casters always land at least one damage cantrip. Spells roll from the install's own library
-  (D-012): `genSpellTables()` intersects the shipped per-class XPHB index (`GEN_CLASS_SPELLS`, also
-  the validation domain) with `enSpells()`, falling back to the index when uploads run thin; the
+- **Spell rolls are cross-source clean (D-018) and two-table (D-024, B283):** any spell roll
+  rerolls names already granted by another source (`genSpellsGranted` — feat, legacy, tome,
+  always-prepared). Cantrips and prepared spells roll PER SLOT on one of two tables — Damaging
+  (`GEN_CANTRIP_LINES` membership / `GEN_DMG_SPELLS`) or All — slot 1 defaulting to Damaging (which
+  subsumes the old damage-cantrip guarantee); the toggle strip lives with the step, overrides ride
+  the draft only (never the wire). Spells roll from the install's own library (D-012):
+  `genSpellTables()` intersects the shipped per-class XPHB index (`GEN_CLASS_SPELLS`, also the
+  validation domain) with `enSpells()`, falling back to the index when uploads run thin; the
   resolved tables ride the crew share `cfg` so phones roll the same lists. Gear adds a rolled pack
-  + one sundry from EACH of two disjoint d20 lists (D-014/D-022).
+  + one sundry from EACH of two disjoint d20 lists (D-014/D-022); pack names open content popovers
+  and unpack in the gear editor (D-027, `GEN_PACK_CONTENTS`). B283 also added: the kobold Draconic
+  Boon d20 (D-028 — 13-19 one boon each, nat-20 wings, old true/false payloads valid), familiars
+  (D-025 — chain d8 / Find-Familiar beasts, FULL statblock appended to the card from the in-code
+  `GEN_FAMILIARS` XMM pack, validation drops unearned forms), Str-gated armor fallback
+  (Chain Mail→Chain Shirt below Str 13), feature-gated kits (`needs:"pactBlade"` — the pact weapon
+  is the kit's melee weapon on Cha), and the crew share dialog split out of settings.
 - **The card renders through the app's real composer** (D-010/D-019): `genToMonster()` emits
   Forge-native entries; cast sources sharing a spellcasting ability collapse into ONE Spellcasting
   entry (per-source attack lines keep their numbers; traits the block fully covers are suppressed);

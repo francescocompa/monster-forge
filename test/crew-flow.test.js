@@ -32,14 +32,18 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     const tog=document.getElementById("advCrewTog");
     if(!tog)return {fail:"no advCrewTog in the kebab"};
     tog.click();
-    // D-021: no separate crew section — the roster header grows a settings gear, the add row
-    // becomes the split roll button, and the settings modal carries the player-link controls.
+    // D-021 (v4 revision): no separate crew section — the roster header grows a share button and
+    // an icon-only settings gear; the link controls live in their own share dialog, and the
+    // settings modal carries only the generator config.
     const gear=document.getElementById("crewSettings");
-    let share=false;
-    if(gear){gear.click();share=!!document.getElementById("crewShare");
+    let shareInSettings=false;
+    if(gear){gear.click();shareInSettings=!!document.getElementById("crewShareStart");
       const x=document.getElementById("crewCfgClose");if(x)x.click();}
+    const shareBtn=document.getElementById("crewShareBtn");
+    let share=false;
+    if(shareBtn){shareBtn.click();share=!!document.getElementById("crewShareStart");closeModal();}
     return {crewOn:!!a.crew,panelGone:!document.querySelector(".gk-panel"),
-            roll:!!document.getElementById("rollPC"),gear:!!gear,share,
+            roll:!!document.getElementById("rollPC"),gear:!!gear,share,shareInSettings,
             caret:!!document.querySelector('[data-menu="pcadd"]'),
             regularAdd:!!document.getElementById("addPC")};})()`);
   assert.equal(setup.fail, undefined);
@@ -47,7 +51,8 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
   assert.equal(setup.panelGone, true, "the old crew panel is dissolved");
   assert.equal(setup.roll, true, "split Roll button is the roster primary");
   assert.equal(setup.gear, true, "settings gear in the roster header");
-  assert.equal(setup.share, true, "player-link controls live in the settings modal");
+  assert.equal(setup.share, true, "the share dialog opens from the roster-header share button");
+  assert.equal(setup.shareInSettings, false, "the settings modal no longer carries link controls");
   assert.equal(setup.caret, true);
   assert.equal(setup.regularAdd, true, "regular add stays behind the caret");
 
@@ -57,7 +62,8 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     // The class step must show its option table BEFORE any class roll (D-011)
     let stats=0,guard=0;
     while(guard++<10&&document.querySelector('.gk-step.gk-active[data-step="stats"]')){
-      document.querySelector('.gk-step.gk-active [data-gkroll="stats"]').click();stats++;}
+      // the CELL button (walking one-ability roll) — the header also carries a Roll-all now (B284)
+      document.querySelector('.gk-step.gk-active .gk-ab-roll[data-gkroll="stats"]').click();stats++;}
     const clsTable=document.querySelector('.gk-step.gk-active[data-step="cls"] .gk-tbl');
     const clsRows=clsTable?clsTable.querySelectorAll(".gk-tr").length:0;
     ${ROLL_THROUGH}

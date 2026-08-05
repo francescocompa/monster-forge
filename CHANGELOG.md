@@ -4,6 +4,84 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 284 — Crew generator: pre-commit polish (stats entry, MI manual picks, boon fixes, sub editing)
+Francesco's last four notes before the v4 commit.
+- **Ability scores:** the stats step joins the header roll like every other step — "Roll all"
+  rolls every remaining ability at once (one 3D volley; reroll icon when done); a "Type them in"
+  link under the grid opens the manual editor BEFORE any roll (the walking one-die-at-a-time
+  button stays, D-015 preserved).
+- **Magic Initiate manual picks:** the sub-editor now carries the list select plus two cantrip
+  selects and a spell select ("Choose" applies them via the existing validated genApplySubPick
+  path); "Roll from it" keeps the pick-list-roll-spells flow with cross-source dedupe. The list
+  select re-renders the spell selects.
+- **Boon fixes:** Dragon Fear is a Bonus Action against ONE creature (was an action vs a group);
+  Grasping Tail moves to Bonus Actions with hadozee-style object manipulation (manipulate an
+  object, open/close a door or container, pick up or set down a Tiny object) plus the Grapple.
+- **Sub elements editable on click:** every auto-rolled sub chip (Dragon's Breath/Resistance
+  type, legacy skill/cantrip, Magic Initiate spells, Tome cantrips, feat triples) clears its sub
+  on click and reopens the sub editor (roll or choose again).
+- crew-flow's stats assertion re-targeted to the walking cell button (the header now also
+  matches). **107 tests green**, all four behaviors verified live.
+
+## Batch 283 — Crew generator v4: nine-note round (D-024…D-028 + five direct fixes)
+Francesco's second notes batch, settled over two AskUserQuestion rounds; decisions in `DECISIONS.md`.
+- **Magic Initiate ability fixed:** the feat's spellcasting ability is the character's best of
+  Int/Wis/Cha (2024 rule), not the rolled list's class ability (`GEN_MI_ABIL` deleted).
+- **Armor Str gates (v4 note):** Chain Mail atoms carry `str:13` + a lighter `alt`; below the gate
+  the derive lands on Chain Shirt (shield preserved) and the gear line swaps with it.
+- **Two spell tables (D-024):** cantrips AND prepared spells roll per-slot on Damaging or All
+  (`GEN_DMG_SPELLS`, `genRollSlots`, `genStepTabs`); slot 1 defaults to Damaging (subsumes D-018's
+  guarantee), a toggle strip above the step's two independently-numbered tables overrides per roll
+  (toggling a rolled step rerolls it); per-slot dice replay on the 3D layer. Tabs are draft-only —
+  the wire payload and validator are unchanged.
+- **Draconic Boon table (D-028):** the wings d20 becomes 1-12 nothing / 13-19 one boon each
+  (grasping tail, Draconic Resistance with a rolled chromatic type — real resistance line, Grovel
+  Cower and Beg 1/SR, Medium size + Powerful Build, Dragon Fear 1/LR, Dragon's Breath 2/LR with a
+  rolled type, Pack Tactics) / nat 20 wings. Legacy true/false payload values stay valid.
+- **Familiars (D-025):** Pact of the Chain rolls d8 over the 2024 special forms; any character
+  knowing Find Familiar rolls the beast forms; the familiar's FULL statblock (composer-rendered,
+  colorized, rollable) appends under a Familiar heading on the card. The 19 XMM blocks ship in
+  gen.js (`GEN_FAMILIARS`, extracted via the app's own 5etools parser) so phones stay
+  payload-only (D-007). Validation re-derives eligibility and drops unearned forms.
+- **Pact of the Blade (v4 note):** the kit's main melee weapon IS the bonded pact weapon (attacks
+  with Cha, noted); three blade-gated martial kits (greatsword/halberd/rapier) join the warlock
+  table only when the invocation is Pact of the Blade (`needs` gating: roll, pick, table, and
+  validator all honor it; a feature change reopens a now-illegal kit).
+- **Kit rebalance (D-026):** slings 10→4 (kept where thematic: Druid ×2, Monk, Rogue); casters
+  standardize on dagger + light crossbow; darts absorb the variety (2→6).
+- **Pack contents (D-027):** `GEN_PACK_CONTENTS` (XPHB); pack names on the Gear line are click
+  popovers listing contents; the gear editor unpacks packs into component chips (first edit
+  materializes the expansion; reset restores the pack name). Plural rules extended (+es).
+- **Ritual ? popovers** are real site popovers (tailPopover) instead of inline lines; step info
+  texts tightened (spell steps now describe the two tables).
+- **Crew share split (v4 note):** the roster header gains a share button (before the icon-only
+  settings gear) opening a crew-share dialog modeled on the combat share modal (create / link +
+  Copy + QR / stop, Live badge); the settings modal carries only generator config.
+- Floors: +5 gen tests (tables default+override, boons, familiar validate/derive/render,
+  blade gating, armor fallback + plural stepper); crew-flow updated to the share/settings split.
+  **107 tests green**, verified live (ritual, card with familiar block, pack popover, share and
+  settings modals). Fixed live: the familiar meta line needed pb/xp args (pbForCR/xpOf).
+
+## Batch 282 — Crew generator: v3 eyeball-pass fixes (species-blind copy, panel collapse, gear counts)
+Five fixes from Francesco's first live pass over v3.
+- **Species-blind copy:** no "kobold" hardcoded outside the kobold species pack. Feat texts say
+  "the character", cantrip rider texts say "the caster", the legacy trait name derives from the
+  species table's label (`Kobold Legacy` comes from `GEN_SPECIES.kobold.tables`, not the engine),
+  and the phone screens (`Roll your …`, the replace-confirm) read the share's species label. The
+  roster's "Roll a …" button already derived from `a.crew.sp` (B281) and is unchanged.
+- **Skills/gear panels actually collapse:** `.gk-allskills`/`.gk-gearedit` set `display:flex`,
+  which beat the UA's `[hidden]{display:none}` — both panels rendered permanently open, and the
+  empty gear box was the "ghost section" under Gear. One CSS rule (`[hidden]{display:none}` on
+  both classes) restores the chevron toggle; panels now start closed.
+- **Gear counts editable:** numbered items ("4 Javelins", "20 Bolts") get − / + steppers in the
+  gear editor (`gkGearStep`): count 1 renders singular ("1 Javelin"), 0 removes the item, naive
+  +s pluralization (fits the whole kit vocabulary).
+- **HP line:** the ", maxed" suffix is gone — `hpf` is just the die + Con ("1d8 + 1").
+- **Phone death button:** "NAME died. Roll the next one" (read like a status) is now
+  "Mark NAME dead and roll the next one".
+- Verified: 102 tests green, live pass in the preview (panel toggles, steppers end to end,
+  card copy), zero console errors.
+
 ## Batch 281 — Crew generator v3: live feedback round applied end to end (D-015…D-022)
 Same-day revision of B280 from a four-round live interview; all decisions in `DECISIONS.md`.
 - **Ritual (D-015/016/017):** the scores step is now the statblock-style six-cell grid — ONE

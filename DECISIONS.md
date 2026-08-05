@@ -170,3 +170,45 @@ Raw note: "I think we need more kits, for all classes" + "Increase the number of
 Chosen: every class's kit table grows (martials stay broader than casters per D-013's shape; counts land on clean dice); the sundries pool grows to two distinct d20 lists — roll 1 draws from list A, roll 2 from list B. Supersedes D-013's counts (6/3) and D-014's single shared d20.
 Enforced by: kit/gear integrity tests (die coverage, class legality, list disjointness).
 Affects: gen.js data packs, tests.
+
+### D-023 — Roll button copy stays species-driven · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, 1 round (B282 follow-up interview)
+Raw note: eyeball-pass note "instead of Roll a kobold, remove all hard coded references to kobolds, it needs to work regardless of the selected species"; on the follow-up question picked "Species-driven" over generic.
+Chosen: the roster's primary roll button reads the crew's selected species ("Roll a kobold" while the species is kobold, "Roll a goblin" if it changes) — the intent of the original note was no hardcoded kobold STRINGS (fixed in B282: feat/cantrip texts, legacy trait name, phone screens), not generic copy. Supersedes the species-agnostic "Roll a character" label clause inside D-021 (everything else in D-021 stands). Generic "Roll a character" is rejected — don't re-propose.
+Enforced by: roster.js split button reading GEN_SPECIES[a.crew.sp].label; B282 purged the hardcoded strings.
+Affects: roster.js, gen.js, CHANGELOG B282.
+
+### D-024 — Spell rolls: two tables per class, Damaging and All · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, v4 feedback round 1
+Raw note: "divide the cantrips into three tables: all cantrips and damaging cantrips. By default, the first roll with spellcasting is on the damaging cantrips table and the rest on the all cantrips, but you should be able to choose the table. The same should be done for prepared spells."
+Chosen: per class TWO roll tables — Damaging (entries with a damage line) and All — for cantrips AND prepared level-1 spells. The first roll of each step defaults to Damaging, later rolls to All; every roll slot carries a table toggle. (The "three" in the note resolved to two on the follow-up — Utility was rejected as redundant.) Subsumes D-018's guaranteed-damage-cantrip invariant for rolled casters.
+Enforced by: gen.js tables + ritual UI; tests.
+Affects: gen.js, tests.
+
+### D-025 — Familiars roll, and land as a full appended statblock · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, v4 feedback round 1 (user free-text upgrade over both offered options)
+Raw note: "pact of the chain should roll the familiar (or any time the find familiar spell is selected as well)" + "Append the full familiar or summon statblock after the player statblock"
+Chosen: Pact of the Chain rolls a d8 over the 2024 special forms; any character knowing Find Familiar rolls the standard beast forms; the familiar's FULL statblock renders after the PC card. The blocks ship as a compact data pack in gen.js so phones stay self-sufficient — the wire stays payload-only (D-007).
+Enforced by: gen.js familiar pack + card composer; tests.
+Affects: gen.js, styles.css, tests.
+
+### D-026 — Kit weapon standard: daggers universal, casters dagger + light crossbow · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, v4 feedback round 1
+Raw note: "make sure kits do not feature some weapons too frequently compared to others unless the golden standard (ex. daggers)" + "Casters default to dagger and light crossbows"
+Chosen: dagger stays the universal sidearm; caster kits standardize on dagger + light crossbow as the ranged default (slings thinned); martial throwers (handaxe/javelin) stay the martial standard; the rest spread more evenly.
+Enforced by: gen.js kit data; kit integrity tests.
+Affects: gen.js.
+
+### D-027 — Pack contents open as click popovers, packs unpack in the gear editor · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, v4 feedback round 1
+Raw note: "hovering on the packs should show a tooltip with the content of the pack. The full gear list should have the packs unpacked by items"
+Chosen: pack names on the Gear line are reflink-style CLICK popovers (site convention; hover does not exist on phones — accepted over the hover phrasing); the gear editor expands a pack into its component item chips so single items can be removed.
+Enforced by: gen.js pack-contents data + card bind; styles.css.
+Affects: gen.js, styles.css.
+
+### D-028 — The wings table becomes the Draconic Boon table · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion, v4 feedback round 2 (joint design per the note "let's think on them together")
+Raw note: "the wings section should have other buffs and boons ... (one could be the legacy pack tactics feature for example)" + pool picks "Pack Tactics, Grovel Cower and Beg, Draconic Resistance" + "Other options could be: dragon's breath from dragonborn locked to a rolled dmg type, medium size + powerful build from goliath, a 1/LR dragon fear effect, a tail that can grasp and grapple"
+Chosen: one d20 roll — 1-12 nothing, 13-19 one boon each (ascending: grasping tail, Draconic Resistance w/ rolled chromatic type, Grovel Cower and Beg, Medium size + Powerful Build, Dragon Fear 1/LR, Dragon's Breath w/ rolled type, Pack Tactics at 19), natural 20 = functional wings. Extra-sorcerer-cantrip was offered and NOT picked — out. Old wings payload values (true/false) stay valid.
+Enforced by: gen.js kobold species pack + deriveGenChar boon handling; tests.
+Affects: gen.js, tests.

@@ -346,3 +346,122 @@ test("craftiness sub-table rerolls skills the draft already owns", () => {
     return {v,owned:["Arcana","Investigation"].includes(v)};})()`);
   assert.equal(r.owned, false, "craftiness must not duplicate an owned skill: got " + r.v);
 });
+
+// ── v4 round (D-024…D-028) floors ────────────────────────────────────────────
+
+test("D-024: first spell-step roll lands on the Damaging table by default, toggles are honored", () => {
+  const r = ev(`(()=>{
+    const out=[];
+    for(let s=60;s<70;s++){
+      const d=genNewDraft({sp:"kobold",set:{},counts:{}});genRollAll(d,${RNG}(s));
+      genApplyPick(d,"cls","Wizard");genRollAll(d,${RNG}(s+100));
+      out.push({firstDmg:!!GEN_CANTRIP_LINES[d.steps.cantrips.value[0]],
+        firstSpellDmg:GEN_DMG_SPELLS.includes(d.steps.spells.value[0]),
+        tabs:d.steps.cantrips.tabs});
+    }
+    const d2=genNewDraft({sp:"kobold",set:{},counts:{}});genRollAll(d2,${RNG}(7));
+    genApplyPick(d2,"cls","Wizard");
+    d2.tabs={cantrips:["all","all","all"]};genRollAll(d2,${RNG}(8));
+    return {out,tabs2:d2.steps.cantrips.tabs};})()`);
+  r.out.forEach(o => {
+    assert.equal(o.firstDmg, true, "first cantrip must come from the Damaging table");
+    assert.equal(o.firstSpellDmg, true, "first prepared spell must come from the Damaging table");
+    assert.deepEqual(o.tabs[0], "dmg");
+  });
+  assert.deepEqual(r.tabs2, ["all","all","all"], "draft-level tab overrides drive the roll");
+});
+
+test("D-028: boons derive to traits/actions/resources; legacy true/false wings values stay valid", () => {
+  const r = ev(`(()=>{
+    const mk=v=>{const d=genNewDraft({sp:"kobold",set:{},counts:{}});genRollAll(d,${RNG}(9));
+      genApplyPick(d,"cls","Fighter");genRollAll(d,${RNG}(10));
+      genApplyPick(d,"sp:wings",v);
+      if(d.steps["sp:wings"]&&!genStepDone(d,"sp:wings"))genRollSub(d,"sp:wings",${RNG}(3));
+      genApplyPick(d,"name","Boonling");
+      const p=genCompletePayload(d);const val=validateGenPayload(p);
+      if(!val.ok)return {fail:val.err,v:String(v)};
+      return deriveGenChar(val.clean);};
+    const breath=mk("breath"),build=mk("build"),pt=mk("packtactics"),wings=mk(true),none=mk(false);
+    return {
+      breathAct:breath.actions.some(a=>/Dragon's Breath/.test(a.n)),
+      breathRes:breath.resources.some(x=>x.k==="breath"&&x.max===2),
+      buildSize:build.size,buildTrait:build.traits.some(t=>t.n==="Powerful Build"),
+      ptTrait:pt.traits.some(t=>t.n==="Pack Tactics"),
+      wingsFly:wings.speed.fly,noneFly:none.speed.fly};})()`);
+  assert.equal(r.fail, undefined, "boon payload failed validation: " + r.fail);
+  assert.equal(r.breathAct, true);
+  assert.equal(r.breathRes, true);
+  assert.equal(r.buildSize, "Medium");
+  assert.equal(r.buildTrait, true);
+  assert.equal(r.ptTrait, true);
+  assert.equal(r.wingsFly, 30, "value true still means wings");
+  assert.equal(r.noneFly, 0);
+});
+
+test("D-025: chain warlock rolls a familiar; the payload validates; ineligible familiars are dropped", () => {
+  const r = ev(`(()=>{
+    const d=genNewDraft({sp:"kobold",set:{},counts:{}});genRollAll(d,${RNG}(21));
+    genApplyPick(d,"cls","Warlock");genRollAll(d,${RNG}(22));
+    genApplyPick(d,"feature","Pact of the Chain");genRollAll(d,${RNG}(23));
+    genApplyPick(d,"name","Chainling");
+    const p=genCompletePayload(d);if(!p)return {fail:"incomplete"};
+    const val=validateGenPayload(p);if(!val.ok)return {fail:val.err};
+    const ch=deriveGenChar(val.clean);
+    // tamper: claim a chain form on a non-chain payload
+    const p2=JSON.parse(JSON.stringify(p));p2.steps.feature={value:"Eldritch Mind"};
+    delete p2.steps.equip;p2.steps.equip={value:0};
+    const val2=validateGenPayload(p2);
+    const cardHTML=genCardHTML(ch,{});
+    return {form:val.clean.steps.familiar&&val.clean.steps.familiar.value,
+      chainForm:GEN_FAMILIAR_CHAIN.includes(val.clean.steps.familiar.value),
+      chFam:ch.familiar,hasBlock:!!GEN_FAMILIARS[ch.familiar],
+      famRendered:cardHTML.includes("gk-fam")&&cardHTML.includes(ch.familiar),
+      tamperedKept:!!(val2.ok&&val2.clean.steps.familiar)};})()`);
+  assert.equal(r.fail, undefined, "chain payload failed: " + r.fail);
+  assert.equal(r.chainForm, true, "familiar must be a chain form: got " + r.form);
+  assert.equal(r.hasBlock, true, "the derived familiar has a shipped statblock");
+  assert.equal(r.famRendered, true, "the familiar block renders on the card without throwing");
+  assert.equal(r.tamperedKept, false, "a familiar without a qualifying source is dropped");
+});
+
+test("v4: pact-blade kits are feature-gated and the kit weapon attacks with Charisma", () => {
+  const r = ev(`(()=>{
+    const d=genNewDraft({sp:"kobold",set:{},counts:{}});genRollAll(d,${RNG}(25));
+    genApplyPick(d,"cls","Warlock");genRollAll(d,${RNG}(26));
+    genApplyPick(d,"feature","Pact of the Blade");
+    const K=GEN_CLASSES.Warlock,bladeIdx=K.kits.findIndex(k=>k.needs==="pactBlade");
+    const okPick=genApplyPick(d,"equip",bladeIdx);
+    genRollAll(d,${RNG}(27));genApplyPick(d,"name","Blade");
+    const p=genCompletePayload(d),val=validateGenPayload(p);
+    if(!val.ok)return {fail:val.err};
+    const ch=deriveGenChar(val.clean);
+    const pact=ch.attacks.find(a=>/pact weapon/.test(a.note||""));
+    // gate: same kit index on a payload without the blade feature must be rejected
+    const p2=JSON.parse(JSON.stringify(p));p2.steps.feature={value:"Eldritch Mind"};
+    const val2=validateGenPayload(p2);
+    return {okPick,pactAbil:pact&&pact.ability,gateRejects:!val2.ok&&val2.err==="equip"};})()`);
+  assert.equal(r.fail, undefined, "blade payload failed: " + r.fail);
+  assert.equal(r.okPick, true);
+  assert.equal(r.pactAbil, "cha", "the kit melee weapon is the Cha pact weapon");
+  assert.equal(r.gateRejects, true, "a gated kit without its feature fails validation");
+});
+
+test("v4: Chain Mail falls back to Chain Shirt under Str 13, gear line follows; gear steps pluralize", () => {
+  const r = ev(`(()=>{
+    const d=genNewDraft({sp:"kobold",set:{},counts:{}});
+    genApplyPick(d,"stats",[8,14,12,10,10,10]); // Str 8: below the Chain Mail gate
+    genRollAll(d,${RNG}(33));
+    genApplyPick(d,"cls","Fighter");genRollAll(d,${RNG}(34));
+    const K=GEN_CLASSES.Fighter,cmIdx=K.kits.findIndex(k=>k.ac==="chainMailShield");
+    genApplyPick(d,"equip",cmIdx);genApplyPick(d,"name","Weakling");
+    const ch=deriveGenChar(validateGenPayload(genCompletePayload(d)).clean);
+    return {ac:ch.ac,acSrc:ch.acSrc,gearHasShirt:/Chain Shirt/.test(ch.gear),gearHasMail:/Chain Mail/.test(ch.gear),
+      torch:gkGearStep("10 Torches",-1),torchUp:gkGearStep("1 Torch",1),gone:gkGearStep("1 Javelin",-1)};})()`);
+  assert.equal(r.acSrc, "Chain Shirt, Shield");
+  assert.equal(r.ac, 13 + 2 + 2, "chain shirt 13 + dex cap 2 + shield 2");
+  assert.equal(r.gearHasShirt, true);
+  assert.equal(r.gearHasMail, false);
+  assert.equal(r.torch, "9 Torches");
+  assert.equal(r.torchUp, "2 Torches");
+  assert.equal(r.gone, null);
+});

@@ -37,6 +37,32 @@ const GEN_SKILLS=[["Acrobatics","dex"],["Animal Handling","wis"],["Arcana","int"
 const GEN_SKILL_ABIL={};GEN_SKILLS.forEach(([n,a])=>{GEN_SKILL_ABIL[n]=a;});
 const GEN_SKILL_NAMES=GEN_SKILLS.map(s=>s[0]);
 
+// D-025: familiar statblocks (XMM, via the app's own 5etools parser) — shipped in-code so
+// phones render them without the DM's bestiary; the wire stays payload-only (D-007).
+const GEN_FAMILIAR_CHAIN=["Imp","Pseudodragon","Quasit","Skeleton","Slaad Tadpole","Sphinx of Wonder","Sprite","Venomous Snake"];
+const GEN_FAMILIAR_BEASTS=["Bat","Cat","Frog","Hawk","Lizard","Octopus","Owl","Rat","Raven","Spider","Weasel"];
+const GEN_FAMILIARS={
+"Bat":{"name":"Bat","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":12,"hp":1,"hpf":"1d4 - 1","spd":{"walk":5,"climb":0,"fly":30,"swim":0,"burrow":0,"hover":false},"str":2,"dex":15,"con":8,"int":2,"wis":12,"cha":4,"senses":{"darkvision":0,"blindsight":60,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","actions":[{"name":"Bite","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]},
+"Cat":{"name":"Cat","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":12,"hp":2,"hpf":"1d4","spd":{"walk":40,"climb":40,"fly":0,"swim":0,"burrow":0,"hover":false},"str":3,"dex":15,"con":10,"int":3,"wis":12,"cha":7,"saves":["dex"],"skills":[["Perception","prof"],["Stealth","prof"]],"senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Jumper","text":"The cat's jump distance is determined using its Dexterity rather than its Strength.","mode":"text"}],"actions":[{"name":"Scratch","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 1 Slashing damage.","mode":"text"}]},
+"Frog":{"name":"Frog","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":11,"hp":1,"hpf":"1d4 - 1","spd":{"walk":20,"climb":0,"fly":0,"swim":20,"burrow":0,"hover":false},"str":1,"dex":13,"con":8,"int":1,"wis":8,"cha":3,"skills":[["Perception","prof"],["Stealth","prof"]],"senses":{"darkvision":30,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Amphibious","text":"The frog can breathe air and water.","mode":"text"},{"name":"Standing Leap","text":"The frog's Long Jump is up to 10 feet and its High Jump is up to 5 feet with or without a running start.","mode":"text"}],"actions":[{"name":"Bite","text":"*Melee Attack Roll:* +3, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]},
+"Hawk":{"name":"Hawk","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":13,"hp":1,"hpf":"1d4 - 1","spd":{"walk":10,"climb":0,"fly":60,"swim":0,"burrow":0,"hover":false},"str":5,"dex":16,"con":8,"int":2,"wis":14,"cha":6,"skills":[["Perception","exp"]],"senses":{"darkvision":0,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","actions":[{"name":"Talons","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 1 Slashing damage.","mode":"text"}]},
+"Imp":{"name":"Imp","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Fiend","subtype":"devil","align":"Lawful Evil","ac":13,"hp":21,"hpf":"6d4 + 6","spd":{"walk":20,"climb":0,"fly":40,"swim":0,"burrow":0,"hover":false},"str":6,"dex":17,"con":13,"int":11,"wis":12,"cha":14,"skills":[["Deception","prof"],["Insight","prof"],["Stealth","prof"]],"dmg":{"Fire":"imm","Poison":"imm","Cold":"res"},"cimm":"poisoned","senses":{"darkvision":120,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":"(unimpeded by magical Darkness)"},"lang":"Common, Infernal","cr":"1","traits":[{"name":"Magic Resistance","text":"The imp has Advantage on saving throws against spells and other magical effects.","mode":"text"}],"actions":[{"name":"Sting","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 6 (1d6 + 3) Piercing damage plus 7 (2d6) Poison damage.","mode":"text"},{"name":"Shape-Shift","text":"The imp shape-shifts to resemble a rat (Speed 20 ft.), a raven (20 ft., Fly 60 ft.), or a spider (20 ft., Climb 20 ft.), or it returns to its true form. Its statistics are the same in each form, except for its Speed. Any equipment it is wearing or carrying isn't transformed.","mode":"text"},{"mode":"text","name":"Invisibility","text":"The imp casts Invisibility on itself, requiring no spell components and using Charisma as the spellcasting ability.","_spells":["Invisibility"]}]},
+"Lizard":{"name":"Lizard","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":10,"hp":2,"hpf":"1d4","spd":{"walk":20,"climb":20,"fly":0,"swim":0,"burrow":0,"hover":false},"str":2,"dex":11,"con":10,"int":1,"wis":8,"cha":3,"senses":{"darkvision":30,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Spider Climb","text":"The lizard can climb difficult surfaces, including along ceilings, without needing to make an ability check.","mode":"text"}],"actions":[{"name":"Bite","text":"*Melee Attack Roll:* +2, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]},
+"Octopus":{"name":"Octopus","shortName":{"word":"creature","proper":false,"plural":false},"size":"Small","type":"Beast","align":"Unaligned","ac":12,"hp":3,"hpf":"1d6","spd":{"walk":5,"climb":0,"fly":0,"swim":30,"burrow":0,"hover":false},"str":4,"dex":15,"con":11,"int":3,"wis":10,"cha":4,"skills":[["Perception","prof"],["Stealth","exp"]],"senses":{"darkvision":30,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Compression","text":"The octopus can move through a space as narrow as 1 inch without expending extra movement to do so.","mode":"text"},{"name":"Water Breathing","text":"The octopus can breathe only underwater.","mode":"text"}],"actions":[{"name":"Tentacles","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 1 Bludgeoning damage.","mode":"text"}],"reactions":[{"mode":"react","name":"Ink Cloud (1/Day)","trigger":"A creature ends its turn within 5 feet of the octopus while underwater.","response":"The octopus releases ink that fills a 5-foot Cube centered on itself, and the octopus moves up to its Swim Speed. The Cube is Heavily Obscured for 1 minute or until a strong current or similar effect disperses the ink."}]},
+"Owl":{"name":"Owl","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":11,"hp":1,"hpf":"1d4 - 1","spd":{"walk":5,"climb":0,"fly":60,"swim":0,"burrow":0,"hover":false},"str":3,"dex":13,"con":8,"int":2,"wis":12,"cha":7,"skills":[["Perception","exp"],["Stealth","exp"]],"senses":{"darkvision":120,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Flyby","text":"The owl doesn't provoke Opportunity Attacks when it flies out of an enemy's reach.","mode":"text"}],"actions":[{"name":"Talons","text":"*Melee Attack Roll:* +3, reach 5 ft. *Hit:* 1 Slashing damage.","mode":"text"}]},
+"Pseudodragon":{"name":"Pseudodragon","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Dragon","align":"Neutral Good","ac":14,"hp":10,"hpf":"3d4 + 3","spd":{"walk":15,"climb":0,"fly":60,"swim":0,"burrow":0,"hover":false},"str":6,"dex":15,"con":13,"int":10,"wis":12,"cha":10,"skills":[["Perception","exp"],["Stealth","prof"]],"senses":{"darkvision":60,"blindsight":10,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"understands Common and Draconic but can't speak","cr":"1/4","traits":[{"name":"Magic Resistance","text":"The pseudodragon has Advantage on saving throws against spells and other magical effects.","mode":"text"}],"actions":[{"name":"Multiattack","text":"The pseudodragon makes two Bite attacks.","mode":"text"},{"name":"Bite","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 4 (1d4 + 2) Piercing damage.","mode":"text"},{"name":"Sting","text":"*Constitution Saving Throw:* DC 12, one creature the pseudodragon can see within 5 feet. *Failure:* 5 (2d4) Poison damage, and the target has the Poisoned condition for 1 hour. While Poisoned, the target also has the Unconscious condition, which ends early if the target takes damage or a creature within 5 feet of it takes an action to wake it.","mode":"text"}]},
+"Quasit":{"name":"Quasit","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Fiend","subtype":"demon","align":"Chaotic Evil","ac":13,"hp":25,"hpf":"10d4","spd":{"walk":40,"climb":0,"fly":0,"swim":0,"burrow":0,"hover":false},"str":5,"dex":17,"con":10,"int":7,"wis":10,"cha":10,"skills":[["Stealth","prof"]],"dmg":{"Poison":"imm","Cold":"res","Fire":"res","Lightning":"res"},"cimm":"poisoned","senses":{"darkvision":120,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Abyssal, Common","cr":"1","traits":[{"name":"Magic Resistance","text":"The quasit has Advantage on saving throws against spells and other magical effects.","mode":"text"}],"actions":[{"name":"Rend","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 5 (1d4 + 3) Slashing damage, and the target has the Poisoned condition until the start of the quasit's next turn.","mode":"text"},{"name":"Scare (1/Day)","text":"*Wisdom Saving Throw:* DC 10, one creature within 20 feet. *Failure:* The target has the Frightened condition. At the end of each of its turns, the target repeats the save, ending the effect on itself on a success. After 1 minute, it succeeds automatically.","mode":"text"},{"name":"Shape-Shift","text":"The quasit shape-shifts to resemble a bat (Speed 10 ft., Fly 40 ft.), a centipede (40 ft., Climb 40 ft.), or a toad (40 ft., Swim 40 ft.), or it returns to its true form. Its game statistics are the same in each form, except for its Speed. Any equipment it is wearing or carrying isn't transformed.","mode":"text"},{"mode":"text","name":"Invisibility","text":"The quasit casts Invisibility on itself, requiring no spell components and using Charisma as the spellcasting ability.","_spells":["Invisibility"]}]},
+"Rat":{"name":"Rat","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":10,"hp":1,"hpf":"1d4 - 1","spd":{"walk":20,"climb":20,"fly":0,"swim":0,"burrow":0,"hover":false},"str":2,"dex":11,"con":9,"int":2,"wis":10,"cha":4,"skills":[["Perception","prof"]],"senses":{"darkvision":30,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Agile","text":"The rat doesn't provoke Opportunity Attacks when it moves out of an enemy's reach.","mode":"text"}],"actions":[{"name":"Bite","text":"*Melee Attack Roll:* +2, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]},
+"Raven":{"name":"Raven","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":12,"hp":2,"hpf":"1d4","spd":{"walk":10,"climb":0,"fly":50,"swim":0,"burrow":0,"hover":false},"str":2,"dex":14,"con":10,"int":5,"wis":13,"cha":6,"skills":[["Perception","prof"]],"senses":{"darkvision":0,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Mimicry","text":"The raven can mimic simple sounds it has heard, such as a whisper or chitter. A hearer can discern the sounds are imitations with a successful DC 10 Wisdom (Insight) check.","mode":"text"}],"actions":[{"name":"Beak","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]},
+"Skeleton":{"name":"Skeleton","shortName":{"word":"creature","proper":false,"plural":false},"size":"Medium","type":"Undead","align":"Lawful Evil","ac":14,"hp":13,"hpf":"2d8 + 4","spd":{"walk":30,"climb":0,"fly":0,"swim":0,"burrow":0,"hover":false},"str":10,"dex":16,"con":15,"int":6,"wis":8,"cha":5,"dmg":{"Poison":"imm","Bludgeoning":"vuln"},"cimm":"exhaustion, poisoned","senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"understands Common plus one other language but can't speak","cr":"1/4","actions":[{"name":"Shortsword","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 6 (1d6 + 3) Piercing damage.","mode":"text"},{"name":"Shortbow","text":"*Ranged Attack Roll:* +5, range 80/320 ft. *Hit:* 6 (1d6 + 3) Piercing damage.","mode":"text"}]},
+"Slaad Tadpole":{"name":"Slaad Tadpole","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Aberration","align":"Chaotic Neutral","ac":12,"hp":7,"hpf":"3d4","spd":{"walk":30,"climb":0,"fly":0,"swim":0,"burrow":10,"hover":false},"str":7,"dex":15,"con":10,"int":3,"wis":5,"cha":3,"skills":[["Stealth","prof"]],"dmg":{"Acid":"res","Cold":"res","Fire":"res","Lightning":"res","Thunder":"res"},"senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"understands Slaad but can't speak","cr":"1/8","traits":[{"name":"Magic Resistance","text":"The slaad has Advantage on saving throws against spells and other magical effects.","mode":"text"}],"actions":[{"name":"Bite","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 5 (1d6 + 2) Piercing damage.","mode":"text"}]},
+"Sphinx of Wonder":{"name":"Sphinx of Wonder","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Celestial","align":"Lawful Good","ac":13,"hp":24,"hpf":"7d4 + 7","spd":{"walk":20,"climb":0,"fly":40,"swim":0,"burrow":0,"hover":false},"str":6,"dex":17,"con":13,"int":15,"wis":12,"cha":11,"skills":[["Arcana","prof"],["Religion","prof"],["Stealth","prof"]],"dmg":{"Necrotic":"res","Psychic":"res","Radiant":"res"},"senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Celestial, Common","cr":"1","traits":[{"name":"Magic Resistance","text":"The sphinx has Advantage on saving throws against spells and other magical effects.","mode":"text"}],"actions":[{"name":"Rend","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 5 (1d4 + 3) Slashing damage plus 7 (2d6) Radiant damage.","mode":"text"}],"reactions":[{"mode":"react","name":"Burst of Ingenuity (2/Day)","trigger":"The sphinx or another creature within 30 feet makes an ability check or a saving throw.","response":"The sphinx adds 2 to the roll."}]},
+"Spider":{"name":"Spider","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":12,"hp":1,"hpf":"1d4 - 1","spd":{"walk":20,"climb":20,"fly":0,"swim":0,"burrow":0,"hover":false},"str":2,"dex":14,"con":8,"int":1,"wis":10,"cha":2,"skills":[["Stealth","prof"]],"senses":{"darkvision":30,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","traits":[{"name":"Spider Climb","text":"The spider can climb difficult surfaces, including along ceilings, without needing to make an ability check.","mode":"text"},{"name":"Web Walker","text":"The spider ignores movement restrictions caused by webs, and the spider knows the location of any other creature in contact with the same web.","mode":"text"}],"actions":[{"name":"Bite","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 1 Piercing damage plus 2 (1d4) Poison damage.","mode":"text"}]},
+"Sprite":{"name":"Sprite","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Fey","align":"Neutral Good","ac":15,"hp":10,"hpf":"4d4","spd":{"walk":10,"climb":0,"fly":40,"swim":0,"burrow":0,"hover":false},"str":3,"dex":18,"con":10,"int":14,"wis":13,"cha":11,"skills":[["Perception","prof"],["Stealth","exp"]],"senses":{"darkvision":0,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common, Elvish, Sylvan","cr":"1/4","actions":[{"name":"Needle Sword","text":"*Melee Attack Roll:* +6, reach 5 ft. *Hit:* 6 (1d4 + 4) Piercing damage.","mode":"text"},{"name":"Enchanting Bow","text":"*Ranged Attack Roll:* +6, range 40/160 ft. *Hit:* 1 Piercing damage, and the target has the Charmed condition until the start of the sprite's next turn.","mode":"text"},{"name":"Heart Sight","text":"*Charisma Saving Throw:* DC 10, one creature within 5 feet the sprite can see (Celestials, Fiends, and Undead automatically fail the save). *Failure:* The sprite knows the target's emotions and alignment.","mode":"text"},{"mode":"text","name":"Invisibility","text":"The sprite casts Invisibility on itself, requiring no spell components and using Charisma as the spellcasting ability.","_spells":["Invisibility"]}]},
+"Venomous Snake":{"name":"Venomous Snake","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":12,"hp":5,"hpf":"2d4","spd":{"walk":30,"climb":0,"fly":0,"swim":30,"burrow":0,"hover":false},"str":2,"dex":15,"con":11,"int":1,"wis":10,"cha":3,"senses":{"darkvision":0,"blindsight":10,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"1/8","actions":[{"name":"Bite","text":"*Melee Attack Roll:* +4, reach 5 ft. *Hit:* 4 (1d4 + 2) Piercing damage plus 3 (1d6) Poison damage.","mode":"text"}]},
+"Weasel":{"name":"Weasel","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":13,"hp":1,"hpf":"1d4 - 1","spd":{"walk":30,"climb":30,"fly":0,"swim":0,"burrow":0,"hover":false},"str":3,"dex":16,"con":8,"int":2,"wis":12,"cha":3,"skills":[["Acrobatics","prof"],["Perception","prof"],["Stealth","prof"]],"senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","actions":[{"name":"Bite","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]}
+};
+
 // ── Species packs (D-001) ─────────────────────────────────────────────────────
 const GEN_SPECIES={
   kobold:{
@@ -58,8 +84,19 @@ const GEN_SPECIES={
                  "Minor Illusion","Poison Spray","Prestidigitation","Ray of Frost","Shocking Grasp",
                  "Sorcerous Burst","Thunderclap","True Strike"]}}
       ]},
-      {id:"wings",label:"Wings",die:20,entries:[
-        {lo:1,hi:19,label:"No wings",value:false},
+      // D-028: the boon table — most rolls land nothing, 13-19 one boon each (ascending power),
+      // a natural 20 keeps the mythic wings. Old payloads (value true/false) stay valid.
+      {id:"wings",label:"Draconic Boon",die:20,entries:[
+        {lo:1,hi:12,label:"No boon",value:false},
+        {lo:13,hi:13,label:"Grasping tail",value:"tail"},
+        {lo:14,hi:14,label:"Draconic Resistance",value:"resist",
+          sub:{id:"boontype",label:"Draconic type",die:6,entries:["Acid","Cold","Fire","Lightning","Poison"]}},
+        {lo:15,hi:15,label:"Grovel, Cower, and Beg",value:"grovel"},
+        {lo:16,hi:16,label:"Medium size and Powerful Build",value:"build"},
+        {lo:17,hi:17,label:"Dragon Fear",value:"fear"},
+        {lo:18,hi:18,label:"Dragon's Breath",value:"breath",
+          sub:{id:"boontype",label:"Breath type",die:6,entries:["Acid","Cold","Fire","Lightning","Poison"]}},
+        {lo:19,hi:19,label:"Pack Tactics",value:"packtactics"},
         {lo:20,hi:20,label:"Functional wings: Fly Speed 30 ft.",value:true}
       ]}
     ]
@@ -89,6 +126,13 @@ const GEN_CLASS_SPELLS={
 };
 // The union of every class cantrip list (Pact of the Tome rolls over it).
 const GEN_ALL_CANTRIPS=[...new Set(Object.values(GEN_CLASS_SPELLS).flatMap(c=>c[0]))].sort();
+// D-024: the Damaging subset for level-1 spells — spells that roll damage of their own (riders like
+// Hex count; buffs and control without a damage line don't). Cantrips use GEN_CANTRIP_LINES instead.
+const GEN_DMG_SPELLS=["Armor of Agathys","Arms of Hadar","Burning Hands","Chromatic Orb",
+  "Dissonant Whispers","Divine Favor","Divine Smite","Ensnaring Strike","Guiding Bolt",
+  "Hail of Thorns","Hellish Rebuke","Hex","Hunter's Mark","Ice Knife","Inflict Wounds",
+  "Magic Missile","Ray of Sickness","Searing Smite","Thunderous Smite","Thunderwave",
+  "Witch Bolt","Wrathful Smite"];
 
 // ── Weapon and armor atoms for the kit tables (XPHB numbers) ─────────────────
 // w: {n, ability ("dex" marks finesse/ranged use), dice, dtype, kind, reach/range, mastery?, note?}
@@ -131,8 +175,8 @@ const GEN_AC={
   chainShirt:{kind:"armor",base:13,dex:true,dexMax:2,label:"Chain Shirt"},
   chainShirtShield:{kind:"armor",base:13,dex:true,dexMax:2,shield:true,label:"Chain Shirt, Shield"},
   scaleShield:{kind:"armor",base:14,dex:true,dexMax:2,shield:true,label:"Scale Mail, Shield"},
-  chainMail:{kind:"fixed",base:16,label:"Chain Mail"},
-  chainMailShield:{kind:"fixed",base:16,shield:true,label:"Chain Mail, Shield"},
+  chainMail:{kind:"fixed",base:16,label:"Chain Mail",str:13,alt:"chainShirt"},
+  chainMailShield:{kind:"fixed",base:16,shield:true,label:"Chain Mail, Shield",str:13,alt:"chainShirtShield"},
   unarmCon:{kind:"unarmored-con",label:"Unarmored Defense"},
   unarmConShield:{kind:"unarmored-con",shield:true,label:"Unarmored Defense, Shield"},
   unarmWis:{kind:"unarmored-wis",label:"Unarmored Defense"}
@@ -164,7 +208,7 @@ const GEN_CLASSES={
       {n:"Daggers and a lute",ac:"leather",weapons:[{w:"dagger",count:2}],gear:"Leather Armor, 2 Daggers, Lute"},
       {n:"Spear and a drum",ac:"leather",weapons:[{w:"spear"}],gear:"Leather Armor, Spear, Drum"},
       {n:"Light crossbow and a flute",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Flute"},
-      {n:"Sling and a lyre",ac:"leather",weapons:[{w:"sling"},{w:"club"}],gear:"Leather Armor, Sling, Club, Lyre"}],
+      {n:"Quarterstaff and a lyre",ac:"leather",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Leather Armor, Quarterstaff, Dagger, Lyre"}],
     traits:[],
     bonus:[{n:"Bardic Inspiration (d6)",t:"One creature within 60 feet that can hear the bard gains a d6 it can add to one d20 Test within the next hour. Uses per Long Rest equal the bard's Charisma modifier (minimum 1)."}],
     res:[{k:"insp",label:"Bardic Inspiration",max:"chaMin1",per:"Long Rest"}],
@@ -176,7 +220,7 @@ const GEN_CLASSES={
       {n:"Warhammer",ac:"scaleShield",weapons:[{w:"warhammer",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Holy Symbol",note:"Warhammer needs Protector's Martial training"},
       {n:"Crossbow and mace",ac:"chainShirt",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Light Crossbow, 20 Bolts, Mace, Holy Symbol"},
       {n:"Quarterstaff and shield",ac:"chainShirtShield",weapons:[{w:"quarterstaff"}],gear:"Chain Shirt, Shield, Quarterstaff, Holy Symbol"},
-      {n:"Spear and sling",ac:"scaleShield",weapons:[{w:"spear"},{w:"sling"}],gear:"Scale Mail, Shield, Spear, Sling, Holy Symbol"}],
+      {n:"Spear and crossbow",ac:"scaleShield",weapons:[{w:"spear"},{w:"lightxbow"}],gear:"Scale Mail, Shield, Spear, Light Crossbow, 20 Bolts, Holy Symbol"}],
     traits:[],bonus:[],
     featureOpt:{label:"Divine Order",options:[
       {label:"Protector",value:"protector",t:"Divine Order: Protector. Trained for battle — proficient with Martial weapons and Heavy armor."},
@@ -263,7 +307,7 @@ const GEN_CLASSES={
       {n:"Rapier and dagger",ac:"leather",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Leather Armor, Rapier, 2 Daggers, Thieves' Tools"},
       {n:"Rapier and hand crossbow",ac:"leather",weapons:[{w:"rapier"},{w:"handxbow"}],gear:"Leather Armor, Rapier, Hand Crossbow, 20 Bolts, Thieves' Tools"},
       {n:"Twin shortswords",ac:"leather",weapons:[{w:"shortsword",count:2},{w:"sling"}],gear:"Leather Armor, 2 Shortswords, Sling, Thieves' Tools"},
-      {n:"Daggers everywhere",ac:"leather",weapons:[{w:"dagger",count:4},{w:"sling"}],gear:"Leather Armor, 4 Daggers, Sling, Thieves' Tools"},
+      {n:"Daggers everywhere",ac:"leather",weapons:[{w:"dagger",count:4},{w:"dart",count:2}],gear:"Leather Armor, 4 Daggers, 2 Darts, Thieves' Tools"},
       {n:"Scimitar and shortbow",ac:"leather",weapons:[{w:"scimitar"},{w:"shortbow"}],gear:"Leather Armor, Scimitar, Shortbow, 20 Arrows, Thieves' Tools"}],
     traits:[{n:"Sneak Attack (1d6)",t:"Once per turn, +1d6 damage on a hit with a Finesse or Ranged weapon if the rogue has Advantage, or if an able ally is within 5 feet of the target and the rogue doesn't have Disadvantage."},
             {n:"Thieves' Cant",t:"The rogue knows Thieves' Cant and one other language."}],
@@ -276,7 +320,7 @@ const GEN_CLASSES={
       {n:"Spear and daggers",ac:"none",weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
       {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (crystal)"},
       {n:"Quarterstaff",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (crystal)"},
-      {n:"Sling and staff",ac:"none",weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Sling, Quarterstaff, Arcane Focus (crystal)"}],
+      {n:"Darts and staff",ac:"none",weapons:[{w:"dart",count:4},{w:"quarterstaff"}],gear:"4 Darts, Quarterstaff, Arcane Focus (crystal)"}],
     traits:[],
     bonus:[{n:"Innate Sorcery (2/Long Rest)",t:"For 1 minute: the sorcerer's spell save DC increases by 1 and it has Advantage on Sorcerer spell attack rolls."}],
     res:[{k:"innate",label:"Innate Sorcery",max:2,per:"Long Rest"}],
@@ -287,7 +331,12 @@ const GEN_CLASSES={
       {n:"Sickle and daggers",ac:"leather",weapons:[{w:"sickle"},{w:"dagger",count:2}],gear:"Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb)"},
       {n:"Light crossbow",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (orb)"},
       {n:"Spear",ac:"leather",weapons:[{w:"spear"},{w:"club"}],gear:"Leather Armor, Spear, Club, Arcane Focus (orb)"},
-      {n:"Dagger and sling",ac:"leather",weapons:[{w:"dagger",count:2},{w:"sling"}],gear:"Leather Armor, 2 Daggers, Sling, Arcane Focus (orb)"}],
+      {n:"Daggers and darts",ac:"leather",weapons:[{w:"dagger",count:2},{w:"dart",count:3}],gear:"Leather Armor, 2 Daggers, 3 Darts, Arcane Focus (orb)"},
+      // Blade-pact kits (v4 note): only on the table once Pact of the Blade is the invocation —
+      // the pact makes the warlock proficient with its bonded martial weapon.
+      {n:"Pact greatsword",ac:"leather",needs:"pactBlade",weapons:[{w:"greatsword"},{w:"dagger"}],gear:"Leather Armor, Greatsword, Dagger, Arcane Focus (orb)"},
+      {n:"Pact halberd",ac:"leather",needs:"pactBlade",weapons:[{w:"halberd"},{w:"dagger"}],gear:"Leather Armor, Halberd, Dagger, Arcane Focus (orb)"},
+      {n:"Pact rapier",ac:"leather",needs:"pactBlade",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Leather Armor, Rapier, 2 Daggers, Arcane Focus (orb)"}],
     traits:[{n:"Pact Magic",t:"One level-1 Pact slot; it refills on a Short or Long Rest."}],
     bonus:[],
     featureOpt:{label:"Eldritch Invocation",options:[
@@ -301,7 +350,7 @@ const GEN_CLASSES={
     skills:{from:["Arcana","History","Insight","Investigation","Medicine","Nature","Religion"],n:2},
     kits:[
       {n:"Staff and daggers",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger",count:2}],gear:"Quarterstaff (Arcane Focus), 2 Daggers, Robe, Spellbook"},
-      {n:"Dagger and sling",ac:"none",weapons:[{w:"dagger"},{w:"sling"}],gear:"Dagger, Sling, Arcane Focus (wand), Robe, Spellbook"},
+      {n:"Dagger and darts",ac:"none",weapons:[{w:"dagger"},{w:"dart",count:3}],gear:"Dagger, 3 Darts, Arcane Focus (wand), Robe, Spellbook"},
       {n:"Traveling scholar",ac:"none",weapons:[{w:"quarterstaff"}],gear:"Quarterstaff (Arcane Focus), Robe, Spellbook, Ink and Quill"},
       {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand), Spellbook"}],
     traits:[{n:"Arcane Recovery (1/day)",t:"On a Short Rest, the wizard recovers one expended level-1 spell slot."},
@@ -318,23 +367,32 @@ const GEN_CLASSES={
 const GEN_TOOLS8=["Carpenter's Tools","Leatherworker's Tools","Mason's Tools","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools"];
 const GEN_INSTR10=["Bagpipes","Drum","Dulcimer","Flute","Horn","Lute","Lyre","Pan Flute","Shawm","Viol"];
 const GEN_MI_LISTS=["Cleric","Druid","Wizard"];
-const GEN_MI_ABIL={Cleric:"wis",Druid:"wis",Wizard:"int"};
 const GEN_FEATS=[
-  {n:"Alert",t:"Initiative includes the proficiency bonus (counted). Immediately after rolling Initiative, the kobold can swap its result with one willing ally in the same combat (neither can be Incapacitated).",initPB:true},
+  {n:"Alert",t:"Initiative includes the proficiency bonus (counted). Immediately after rolling Initiative, the character can swap its result with one willing ally in the same combat (neither can be Incapacitated).",initPB:true},
   {n:"Crafter",t:"Proficient with three Artisan's Tools (rolled). 20 percent discount on nonmagical items; on each Long Rest, craft one piece of gear from the Fast Crafting table with the right tools in hand.",sub:"tools"},
-  {n:"Healer",t:"Battle Medic (needs a Healer's Kit): as a Utilize action, a creature within 5 feet expends one of its Hit Dice; it regains the roll + the kobold's proficiency bonus. The kobold rerolls 1s on any die rolled to determine Hit Points restored.",act:"action"},
-  {n:"Lucky",t:"Luck Points equal to the proficiency bonus (2), regained on a Long Rest. Spend 1 to give the kobold Advantage on a d20 Test, or to impose Disadvantage on an attack roll made against it.",res:{k:"luck",label:"Luck Points",max:2,per:"Long Rest"}},
+  {n:"Healer",t:"Battle Medic (needs a Healer's Kit): as a Utilize action, a creature within 5 feet expends one of its Hit Dice; it regains the roll + the character's proficiency bonus. The character rerolls 1s on any die rolled to determine Hit Points restored.",act:"action"},
+  {n:"Lucky",t:"Luck Points equal to the proficiency bonus (2), regained on a Long Rest. Spend 1 to give the character Advantage on a d20 Test, or to impose Disadvantage on an attack roll made against it.",res:{k:"luck",label:"Luck Points",max:2,per:"Long Rest"}},
   {n:"Magic Initiate",t:"Two cantrips and one always-prepared level-1 spell from the rolled list (one free cast per Long Rest; also castable with slots).",sub:"mi",res:{k:"mi",label:"Feat spell (free cast)",max:1,per:"Long Rest"}},
   {n:"Musician",t:"Proficient with three instruments (rolled). After a Short or Long Rest, play a tune to give Heroic Inspiration to allies who heard it, up to the proficiency bonus (2).",sub:"instr"},
   {n:"Savage Attacker",t:"Once per turn when a weapon attack hits, roll the weapon's damage dice twice and use either result."},
   {n:"Skilled",t:"Proficient in three more skills (rolled; counted in the Skills line).",sub:"skills"},
-  {n:"Tavern Brawler",t:"Unarmed Strike deals 1d4 + Str Bludgeoning and rerolls 1s on that damage. Proficient with improvised weapons. Once per turn, a creature hit by the kobold's Unarmed Strike can be pushed 5 feet."},
+  {n:"Tavern Brawler",t:"Unarmed Strike deals 1d4 + Str Bludgeoning and rerolls 1s on that damage. Proficient with improvised weapons. Once per turn, a creature hit by the character's Unarmed Strike can be pushed 5 feet."},
   {n:"Tough",t:"Hit Point maximum increases by 2 per level (counted).",hp2:true}
 ];
 
 // ── Gear rolls (D-014, expanded D-022): pack d6 + one sundry from EACH d20 list.
 // The two lists are disjoint, so the two rolls can never collide.
 const GEN_PACKS=["Burglar's Pack","Dungeoneer's Pack","Entertainer's Pack","Explorer's Pack","Priest's Pack","Scholar's Pack"];
+// D-027: pack contents (XPHB) — the Gear line's pack popover and the gear editor's unpacked view.
+// Numbered items follow the "<n> <plural>" convention so the editor's count steppers work on them.
+const GEN_PACK_CONTENTS={
+  "Burglar's Pack":["Backpack","Ball Bearings","Bell","10 Candles","Crowbar","Hooded Lantern","7 Oil Flasks","5 Rations","Rope (50 ft)","Tinderbox","Waterskin"],
+  "Dungeoneer's Pack":["Backpack","Caltrops","Crowbar","2 Oil Flasks","10 Rations","Rope (50 ft)","Tinderbox","10 Torches","Waterskin"],
+  "Entertainer's Pack":["Backpack","Bedroll","Bell","Bullseye Lantern","3 Costumes","Mirror","8 Oil Flasks","9 Rations","Tinderbox","Waterskin"],
+  "Explorer's Pack":["Backpack","Bedroll","2 Oil Flasks","10 Rations","Rope (50 ft)","Tinderbox","10 Torches","Waterskin"],
+  "Priest's Pack":["Backpack","Blanket","Holy Water","Lamp","7 Rations","Robe","Tinderbox"],
+  "Scholar's Pack":["Backpack","Book","Ink","Ink Pen","Lamp","10 Oil Flasks","10 Parchment Sheets","Tinderbox"]
+};
 const GEN_SUNDRIES_A=["Rope (50 ft.)","Crowbar","Grappling Hook","Caltrops (bag)","Ball Bearings (bag)",
   "Chalk (10 pieces)","Steel Mirror","Hooded Lantern and Oil Flask","Tinderbox and 10 Torches","Shovel",
   "Manacles","Fishing Tackle","Healer's Kit","Hunting Trap","Bell and String (10 ft.)","Playing Cards",
@@ -394,12 +452,37 @@ function genStepOrder(d){
     ids.push("equip");
     if(genCantripCount(d)>0)ids.push("cantrips");
     if(GEN_CLASSES[cls].caster)ids.push("spells");
+    if(genFamiliarKind(d))ids.push("familiar"); // D-025: appears once chain/Find Familiar resolves
   }
   ids.push("gearPack","sundries");
   (GEN_SPECIES[d.sp].tables||[]).forEach(t=>ids.push("sp:"+t.id));
   return ids.concat(["name"]);
 }
 function genSpTable(sp,id){return (GEN_SPECIES[sp].tables||[]).find(t=>t.id===id)||null;}
+// Hooks of the currently-resolved class feature option (invocation etc.); {} when none.
+function genFeatureHooks(d){
+  const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,fe=d.steps.feature;
+  if(!K||!K.featureOpt||K.featureOpt.kind||!fe)return {};
+  const o=(K.featureOpt.options||[]).find(x=>x.value===fe.value);
+  return (o&&o.hooks)||{};
+}
+// Kits legal for the draft right now — full-array indexes, so payloads stay stable.
+function genKitIdx(d,K){
+  const fh=genFeatureHooks(d);
+  return K.kits.map((k,i)=>k.needs&&!fh[k.needs]?null:i).filter(i=>i!=null);
+}
+// D-025: which familiar list applies — the Chain invocation's special forms, or the plain
+// Find Familiar beasts when the spell is known through any source. Null = no familiar step.
+function genFamiliarKind(d){
+  const fe=d.steps.feature;
+  if(fe&&fe.value==="Pact of the Chain")return "chain";
+  const K=genCasterOf(d),knows=new Set();
+  if(K&&K.caster)(K.caster.always||[]).forEach(n=>knows.add(n));
+  if(d.steps.spells&&Array.isArray(d.steps.spells.value))d.steps.spells.value.forEach(n=>knows.add(n));
+  const ft=d.steps.feat;
+  if(ft&&ft.sub&&ft.sub.kind==="mi"&&ft.sub.sp&&ft.sub.sp.value)knows.add(ft.sub.sp.value);
+  return knows.has("Find Familiar")?"beast":null;
+}
 function genClassShortlist(scores,counts){
   const mod=s=>Math.floor((s-10)/2);
   return GEN_CLASS_LIST.map(c=>{const k=GEN_CLASSES[c];
@@ -412,6 +495,28 @@ function genStatTotal(dice,method){
 }
 // N distinct rolls over a plain list (die = next die over its length, reroll dupes/overshoot).
 // The die is stamped on the record so the UI can hand the raw faces to the 3D dice (D-015).
+// D-024: per-slot table assignment for the spell steps — slot 1 defaults to the Damaging table,
+// the rest to All; the user's overrides live on the draft (d.tabs) so Roll-the-rest honors them.
+function genStepTabs(d,id,n){
+  const t=(d.tabs&&d.tabs[id])||[];
+  return Array.from({length:n},(x,i)=>t[i]==="dmg"||t[i]==="all"?t[i]:(i===0?"dmg":"all"));
+}
+// Slot-by-slot roll over each slot's chosen table; names stay distinct across both tables.
+// A dmg table with nothing left falls back to the full list rather than stalling the slot.
+function genRollSlots(rng,full,dmg,tabs,takenNames){
+  const taken=new Set(takenNames||[]);
+  const rolls=[],names=[],dice=[];
+  tabs.forEach(tab=>{
+    let list=(tab==="dmg"&&dmg.length)?dmg:full;
+    if(!list.some(nm=>!taken.has(nm)))list=full;
+    if(!list.some(nm=>!taken.has(nm)))return;
+    const die=genDieFor(list.length),tk=new Set();
+    list.forEach((nm,i)=>{if(taken.has(nm))tk.add(i+1);});
+    const r=genRollTable(rng,die,list.length,tk);
+    taken.add(list[r-1]);rolls.push(r);names.push(list[r-1]);dice.push(die);
+  });
+  return {rolls,value:names,die:genDieFor(full.length),dice,tabs:[...tabs]};
+}
 function genRollN(rng,list,n,takenNames){
   const die=genDieFor(list.length),taken=new Set();
   (takenNames||[]).forEach(nm=>{const i=list.indexOf(nm);if(i>=0)taken.add(i+1);});
@@ -431,6 +536,7 @@ function genClsCascade(d){
   }
   if(d.steps.asi&&!d.steps.asi.pick)delete d.steps.asi;
   delete d.steps.feature;delete d.steps.equip;delete d.steps.cantrips;delete d.steps.spells;
+  delete d.steps.familiar;
 }
 function genRollStep(d,id,rng){
   rng=rng||Math.random;
@@ -479,30 +585,31 @@ function genRollStep(d,id,rng){
     }
   }else if(id==="equip"){
     if(!K)return null;
-    const span=genSpanFor(K.kits.length);
-    const r=genRollTable(rng,span.die,span.reroll?K.kits.length:span.die,null);
-    d.steps.equip={rolls:[r],value:span.reroll?r-1:genSpanHit(span,r),die:span.die};
+    const avail=genKitIdx(d,K),span=genSpanFor(avail.length);
+    const r=genRollTable(rng,span.die,span.reroll?avail.length:span.die,null);
+    d.steps.equip={rolls:[r],value:avail[span.reroll?r-1:genSpanHit(span,r)],die:span.die};
   }else if(id==="cantrips"){
     if(!cls)return null;
-    // D-018: avoid spells granted elsewhere, and a full caster never lands zero damage cantrips —
-    // reroll the set (bounded) until one damages; if the live table simply has none, force the last
-    // slot from the shipped index's damage subset.
+    // D-024 (subsumes D-018): slot 1 rolls on the Damaging table by default, so a rolled caster
+    // structurally lands a damage cantrip; a thin live table borrows the shipped index's subset.
     const granted=[...genSpellsGranted(d,"cantrips")];
-    const isDmg=n=>!!GEN_CANTRIP_LINES[n];
-    const tbl=T.can[cls]||[];
-    let st=genRollN(rng,tbl,genCantripCount(d),granted);
-    if(st.value.length&&!st.value.some(isDmg)){
-      if(tbl.some(isDmg)){let tries=0;
-        while(!st.value.some(isDmg)&&++tries<40)st=genRollN(rng,tbl,genCantripCount(d),granted);}
-      if(!st.value.some(isDmg)){
-        const pool=GEN_CLASS_SPELLS[cls][0].filter(n=>isDmg(n)&&!granted.includes(n)&&!st.value.includes(n));
-        if(pool.length){const rep=genRollN(rng,pool,1,[]);
-          st.value[st.value.length-1]=rep.value[0];st.rolls[st.rolls.length-1]=rep.rolls[0];}}
-    }
-    d.steps.cantrips=st;
+    const full=T.can[cls]||[];
+    let dmg=full.filter(n=>!!GEN_CANTRIP_LINES[n]);
+    if(!dmg.length)dmg=GEN_CLASS_SPELLS[cls][0].filter(n=>!!GEN_CANTRIP_LINES[n]);
+    d.steps.cantrips=genRollSlots(rng,full,dmg,genStepTabs(d,"cantrips",genCantripCount(d)),granted);
   }else if(id==="spells"){
     if(!K||!K.caster)return null;
-    d.steps.spells=genRollN(rng,T.l1[cls]||[],K.caster.prepared,[...genSpellsGranted(d,"spells")]);
+    const granted=[...genSpellsGranted(d,"spells")];
+    const full=T.l1[cls]||[];
+    let dmg=full.filter(n=>GEN_DMG_SPELLS.includes(n));
+    if(!dmg.length)dmg=GEN_CLASS_SPELLS[cls][1].filter(n=>GEN_DMG_SPELLS.includes(n));
+    d.steps.spells=genRollSlots(rng,full,dmg,genStepTabs(d,"spells",K.caster.prepared),granted);
+  }else if(id==="familiar"){
+    const kind=genFamiliarKind(d);if(!kind)return null;
+    const list=kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS;
+    const span=genSpanFor(list.length);
+    const r=genRollTable(rng,span.die,span.reroll?list.length:span.die,null);
+    d.steps.familiar={rolls:[r],value:list[span.reroll?r-1:genSpanHit(span,r)],die:span.die,kind};
   }else if(id==="gearPack"){
     const r=genRollDie(rng,6);d.steps.gearPack={rolls:[r],value:GEN_PACKS[r-1],die:6};
   }else if(id==="sundries"){
@@ -623,6 +730,7 @@ function genApplyPick(d,id,value){
   if(id==="equip"){
     if(!K)return false;const i=Number(value);
     if(!(i>=0&&i<K.kits.length))return false;
+    if(K.kits[i].needs&&!genFeatureHooks(d)[K.kits[i].needs])return false;
     d.steps.equip={rolls:[],pick:true,value:i};return true;}
   if(id==="cantrips"){
     if(!cls)return false;const T=genTablesOf(d),need=genCantripCount(d);
@@ -639,6 +747,10 @@ function genApplyPick(d,id,value){
     if(!Array.isArray(value)||value.length!==2)return false;
     if(!GEN_SUNDRIES_A.includes(value[0])||!GEN_SUNDRIES_B.includes(value[1]))return false;
     d.steps.sundries={rolls:[],pick:true,value:[...value]};return true;}
+  if(id==="familiar"){
+    const kind=genFamiliarKind(d);if(!kind)return false;
+    if(!(kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS).includes(value))return false;
+    d.steps.familiar={rolls:[],pick:true,value,kind};return true;}
   if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return false;
     const e=t.entries.find(x=>x.value===value||x.label===value||String(x.value)===String(value));if(!e)return false;
@@ -687,6 +799,11 @@ function genStepDone(d,id){
   if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];
     const o=K&&K.featureOpt&&K.featureOpt.options&&K.featureOpt.options.find(x=>x.value===s.value);
     if(o&&o.hooks&&o.hooks.tome)return !!(s.sub&&Array.isArray(s.sub.value)&&s.sub.value.length===3);}
+  if(id==="familiar"){const kind=genFamiliarKind(d);
+    return !!kind&&(kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS).includes(s.value);}
+  if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const kit=K&&K.kits[s.value];
+    if(!kit)return false;
+    if(kit.needs&&!genFeatureHooks(d)[kit.needs])return false;} // feature changed under a gated kit
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));const e=t&&t.entries.find(x=>x.value===s.value);
     if(e&&e.sub&&(!s.sub||s.sub.value==null))return false;}
   return true;
@@ -777,9 +894,13 @@ function validateGenPayload(raw){
         }
       }
     }
-    // equipment kit
+    // equipment kit (a feature-gated kit must be earned by the payload's own feature)
     const eq=S.equip||{};const ki=intIn(eq.value,0,K.kits.length-1);
     if(ki==null)return {ok:false,err:"equip"};
+    if(K.kits[ki].needs){
+      const fo=out.feature&&(K.featureOpt&&K.featureOpt.options||[]).find(x=>x.value===out.feature.value);
+      if(!(fo&&fo.hooks&&fo.hooks[K.kits[ki].needs]))return {ok:false,err:"equip"};
+    }
     out.equip={rolls:[],pick:!!eq.pick,value:ki};
     // spells (validated against the shipped index — the superset of any live table)
     if(K.caster){
@@ -795,6 +916,16 @@ function validateGenPayload(raw){
       const legalL1=GEN_CLASS_SPELLS[cl.value][1].filter(x=>!(K.caster.always||[]).includes(x));
       if(!distinctIn(spl.value,K.caster.prepared,legalL1))return {ok:false,err:"spells"};
       out.spells={rolls:[],pick:!!spl.pick,value:[...spl.value]};
+    }
+    // familiar (D-025) — optional so pre-familiar payloads stay valid; kind re-derived here, and
+    // a form that doesn't match the payload's own sources is dropped, not trusted.
+    if(S.familiar&&S.familiar.value!=null){
+      const knows=new Set([...(K.caster&&K.caster.always||[]),...(out.spells?out.spells.value:[])]);
+      if(out.feat.sub&&out.feat.sub.kind==="mi"&&out.feat.sub.sp)knows.add(out.feat.sub.sp.value);
+      const kind=(out.feature&&out.feature.value==="Pact of the Chain")?"chain":(knows.has("Find Familiar")?"beast":null);
+      const fv=S.familiar.value;
+      if(kind&&(kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS).includes(fv))
+        out.familiar={rolls:[],pick:!!S.familiar.pick,value:fv,kind};
     }
     // gear
     const gp=S.gearPack||{};if(!GEN_PACKS.includes(gp.value))return {ok:false,err:"gearPack"};
@@ -836,8 +967,13 @@ function deriveGenChar(p){
   const fh=(featureOpt&&featureOpt.hooks)||{};
   const kit=K.kits[p.steps.equip?p.steps.equip.value:0];
   const hp=Math.max(1,K.hd+mods.con+(feat.hp2?2:0));
-  // AC from the kit recipe (+Defense style; Armor of Shadows upgrades an unarmored kit)
-  const A=GEN_AC[kit.ac]||GEN_AC.none;
+  // AC from the kit recipe (+Defense style; Armor of Shadows upgrades an unarmored kit).
+  // Str-gated armor falls back to its lighter counterpart when the requirement is unmet;
+  // the gear string swaps with it so the card and the armor agree.
+  let A=GEN_AC[kit.ac]||GEN_AC.none,gearSwap=null;
+  if(A.str&&scores.str<A.str&&A.alt&&GEN_AC[A.alt]){
+    gearSwap=[A.label.replace(/, Shield$/,""),GEN_AC[A.alt].label.replace(/, Shield$/,"")];
+    A=GEN_AC[A.alt];}
   let ac=10+mods.dex,acSrc=A.label||"Unarmored";
   if(A.kind==="unarmored-con")ac=10+mods.dex+mods.con+(A.shield?2:0);
   else if(A.kind==="unarmored-wis")ac=10+mods.dex+mods.wis+(A.shield?2:0);
@@ -865,7 +1001,13 @@ function deriveGenChar(p){
     if(!ref.noMastery&&(K.masteries||0)>0&&w.mastery&&mastLeft>0){entry.mastery=w.mastery;mastLeft--;}
     weapons.push(entry);
   });
-  if(fh.pactBlade)weapons.push({n:"Pact Blade",ability:"cha",dice:"1d8",dtype:"Slashing",kind:"Melee",count:1,mastery:"",note:"conjured; uses Charisma"});
+  // Pact of the Blade bonds the kit's main melee weapon by default (uses Charisma); a kit with
+  // no melee weapon still gets the conjured blade.
+  if(fh.pactBlade){
+    const pw=weapons.find(w=>w.kind==="Melee");
+    if(pw){pw.ability="cha";pw.note=(pw.note?pw.note+"; ":"")+"pact weapon; uses Charisma";}
+    else weapons.push({n:"Pact Blade",ability:"cha",dice:"1d8",dtype:"Slashing",kind:"Melee",count:1,mastery:"",note:"conjured; uses Charisma"});
+  }
   const rangedBonus=fh.rangedAtk||0;
   const attacks=weapons.map(w=>{
     const ab=mods[w.ability]||0;
@@ -884,7 +1026,8 @@ function deriveGenChar(p){
   if(p.steps.feature&&p.steps.feature.sub&&caster)caster.cantrips=[...caster.cantrips,...p.steps.feature.sub.value]; // Pact of the Tome
   const extraCasts=[];
   if(feat.sub==="mi"&&p.steps.feat.sub){
-    const s=p.steps.feat.sub,ab=GEN_MI_ABIL[s.list.value],km=mods[ab];
+    // 2024 Magic Initiate: the ability is the chooser's pick of Int/Wis/Cha — default to the best.
+    const s=p.steps.feat.sub,ab=["int","wis","cha"].sort((a,b)=>mods[b]-mods[a])[0],km=mods[ab];
     extraCasts.push({label:"Magic Initiate ("+s.list.value+")",abil:ab,dc:8+pb+km,atk:pb+km,
       cantrips:[...s.cans.value],spell:s.sp.value});}
   let sorcery=null;
@@ -897,12 +1040,28 @@ function deriveGenChar(p){
   const actions=[];
   if(featureOpt)traits.push({n:K.featureOpt.label+": "+featureOpt.label,t:featureOpt.t.replace(/^[^.]*\.\s*/,"")});
   if(p.steps.feature&&p.steps.feature.kind==="expertise")traits.push({n:"Expertise",t:"Double proficiency with "+p.steps.feature.value.join(" and ")+" (counted in the Skills line)."});
-  if(fh.pactBlade)bonus.push({n:"Pact of the Blade",t:"The warlock conjures its bonded pact weapon in its hand; the weapon's attack and damage rolls use Charisma."});
+  if(fh.pactBlade)bonus.push({n:"Pact of the Blade",t:"The kit's melee weapon is the bonded pact weapon: its attack and damage rolls use Charisma, and it can be conjured to hand as a Bonus Action."});
   // D-019: features fully expressed by a spellcasting entry don't repeat as traits — Draconic
   // Sorcery and Magic Initiate live in the (merged) Spellcasting block, not the trait list.
-  if(leg){if(leg.value==="craftiness"&&leg.sub)traits.push({n:"Kobold Legacy: Craftiness",t:"Proficient in "+leg.sub.value+" (counted in the Skills line)."});
-    if(leg.value==="defiance")traits.push({n:"Kobold Legacy: Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."});}
-  const wings=p.steps["sp:wings"]&&p.steps["sp:wings"].value===true;
+  if(leg){const legLabel=((sp.tables||[]).find(t=>t.id==="legacy")||{}).label||"Legacy";
+    if(leg.value==="craftiness"&&leg.sub)traits.push({n:legLabel+": Craftiness",t:"Proficient in "+leg.sub.value+" (counted in the Skills line)."});
+    if(leg.value==="defiance")traits.push({n:legLabel+": Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."});}
+  // D-028: the boon roll — one trait/action per value; false (no boon) and true (wings) are the
+  // legacy payload values and stay valid.
+  const boonRec=p.steps["sp:wings"],boon=boonRec?boonRec.value:false;
+  const boonType=boonRec&&boonRec.sub?boonRec.sub.value:null;
+  const wings=boon===true;
+  let resist=null,sizeOv=null;const boonRes=[];
+  if(boon==="tail")bonus.push({n:"Grasping Tail",t:"As a Bonus Action, the character can use its tail to manipulate an object, open or close a door or container, or pick up or set down a Tiny object. The tail can also Grapple (escape DC "+(8+pb+mods.str)+")."});
+  if(boon==="resist"&&boonType){resist=boonType;traits.push({n:"Draconic Resistance",t:"Resistance to "+boonType+" damage."});}
+  if(boon==="grovel"){actions.push({n:"Grovel, Cower, and Beg (1/Short Rest)",t:"The character throws a distracting fit. Until the start of its next turn, its allies have Advantage on attack rolls against enemies within 10 feet of it."});
+    boonRes.push({k:"grovel",label:"Grovel, Cower, and Beg",max:1,per:"Short Rest"});}
+  if(boon==="build"){sizeOv="Medium";traits.push({n:"Powerful Build",t:"Counts as one size larger for carrying capacity; Advantage on ability checks made to end the Grappled condition."});}
+  if(boon==="fear"){bonus.push({n:"Dragon Fear (1/Long Rest)",t:`*Wisdom Saving Throw:* DC ${8+pb+mods.cha}, one creature within 10 feet. *Failure:* the target has the Frightened condition until the end of the character's next turn.`});
+    boonRes.push({k:"fear",label:"Dragon Fear",max:1,per:"Long Rest"});}
+  if(boon==="breath"&&boonType){actions.push({n:"Dragon's Breath (2/Long Rest)",t:`*Dexterity Saving Throw:* DC ${8+pb+mods.con}, each creature in a 15-foot Cone. *Failure:* 1d10 ${boonType} damage. *Success:* Half damage.`});
+    boonRes.push({k:"breath",label:"Dragon's Breath",max:2,per:"Long Rest"});}
+  if(boon==="packtactics")traits.push({n:"Pack Tactics",t:"Advantage on an attack roll if at least one of the character's allies is within 5 feet of the target and the ally doesn't have the Incapacitated condition."});
   if(feat.act==="action")actions.push({n:feat.n,t:feat.t});
   else if(feat.sub!=="mi"){
     let ftxt=feat.t;
@@ -916,12 +1075,15 @@ function deriveGenChar(p){
   (K.res||[]).forEach(r=>resources.push({...r,max:r.max==="chaMin1"?Math.max(1,mods.cha):r.max}));
   if(caster&&caster.slots)resources.push({k:"slots",label:"Spell Slots (Level 1)",max:caster.slots,per:caster.short?"Short Rest":"Long Rest"});
   if(feat.res)resources.push({...feat.res});
-  // gear line: kit + rolled pack + rolled sundries
-  const gear=[kit.gear,p.steps.gearPack.value].concat(p.steps.sundries.value).join(", ");
+  boonRes.forEach(r=>resources.push(r));
+  // gear line: kit + rolled pack + rolled sundries (armor swapped if the Str gate demoted it)
+  const kitGear=gearSwap?kit.gear.replace(gearSwap[0],gearSwap[1]):kit.gear;
+  const gear=[kitGear,p.steps.gearPack.value].concat(p.steps.sundries.value).join(", ");
   const tools=[...(K.tools||[])];
   if(feat.sub==="tools"&&p.steps.feat.sub)tools.push(...p.steps.feat.sub.value);
   const langs=[...sp.langs,...(K.langs||[])];
-  return {name:p.steps.name.value,species:sp.label,cls,size:sp.size,level:1,pb,
+  const familiar=p.steps.familiar&&GEN_FAMILIARS[p.steps.familiar.value]?p.steps.familiar.value:null;
+  return {name:p.steps.name.value,species:sp.label,cls,size:sizeOv||sp.size,level:1,pb,resist,familiar,
     scores,mods,hp,hd:"1d"+K.hd,ac,acSrc,gear,tools,kitName:kit.n,
     speed:{walk:sp.speed,fly:wings?30:0},
     init:mods.dex+(feat.initPB?pb:0),
@@ -938,17 +1100,17 @@ function deriveGenChar(p){
 // mode:"attack" entries so attackText/colorize/click-to-roll treat them exactly like a monster's.
 const GEN_CANTRIP_LINES={
   "Acid Splash":{save:"dex",r:"range 60 ft. (5-ft. sphere)",d:"1d6",t:"Acid"},
-  "Chill Touch":{atk:"Melee",reach:5,d:"1d10",t:"Necrotic",x:"the target can't regain Hit Points until the start of the kobold's next turn."},
+  "Chill Touch":{atk:"Melee",reach:5,d:"1d10",t:"Necrotic",x:"the target can't regain Hit Points until the start of the caster's next turn."},
   "Eldritch Blast":{atk:"Ranged",range:"120",d:"1d10",t:"Force"},
   "Fire Bolt":{atk:"Ranged",range:"120",d:"1d10",t:"Fire"},
-  "Mind Sliver":{save:"int",r:"range 60 ft.",d:"1d6",t:"Psychic",x:"the target subtracts 1d4 from its next saving throw before the end of the kobold's next turn."},
+  "Mind Sliver":{save:"int",r:"range 60 ft.",d:"1d6",t:"Psychic",x:"the target subtracts 1d4 from its next saving throw before the end of the caster's next turn."},
   "Poison Spray":{atk:"Ranged",range:"30",d:"1d12",t:"Poison"},
   "Produce Flame":{atk:"Ranged",range:"60",d:"1d8",t:"Fire"},
-  "Ray of Frost":{atk:"Ranged",range:"60",d:"1d8",t:"Cold",x:"the target's Speed decreases by 10 ft. until the start of the kobold's next turn."},
+  "Ray of Frost":{atk:"Ranged",range:"60",d:"1d8",t:"Cold",x:"the target's Speed decreases by 10 ft. until the start of the caster's next turn."},
   "Sacred Flame":{save:"dex",r:"range 60 ft.",d:"1d8",t:"Radiant",x:"the target gains no benefit from Half or Three-Quarters Cover on this save."},
   "Shocking Grasp":{atk:"Melee",reach:5,d:"1d8",t:"Lightning",x:"the target can't take Reactions until the start of its next turn."},
   "Sorcerous Burst":{atk:"Ranged",range:"120",d:"1d8",t:"Force",x:"on a die showing 8, roll and add one extra d8 (max 2 extra)."},
-  "Starry Wisp":{atk:"Ranged",range:"60",d:"1d8",t:"Radiant",x:"the target sheds Dim Light until the end of the kobold's next turn."},
+  "Starry Wisp":{atk:"Ranged",range:"60",d:"1d8",t:"Radiant",x:"the target sheds Dim Light until the end of the caster's next turn."},
   "Thorn Whip":{atk:"Melee",reach:30,d:"1d6",t:"Piercing",x:"a Large or smaller target is pulled up to 10 ft. closer."},
   "Thunderclap":{save:"con",r:"5-ft. Emanation",d:"1d6",t:"Thunder"},
   "Toll the Dead":{save:"wis",r:"range 60 ft.",d:"1d8",t:"Necrotic",x:"1d12 instead if the target is missing Hit Points."},
@@ -965,8 +1127,9 @@ function genToMonster(ch){
   const m=blankMonster();
   m.name=ch.name;m.size=ch.size;m.type="Humanoid";m.subtype=ch.species;m.align="";
   m.ac=ch.ac;m.acnote=ch.acSrc&&ch.acSrc!=="Unarmored"?ch.acSrc:"";
-  m.hp=ch.hp;m.hpf=`${ch.hd}${ch.mods.con?(ch.mods.con>0?" + ":" − ")+Math.abs(ch.mods.con):""}, maxed`;
+  m.hp=ch.hp;m.hpf=`${ch.hd}${ch.mods.con?(ch.mods.con>0?" + ":" − ")+Math.abs(ch.mods.con):""}`;
   m.spd.walk=ch.speed.walk;m.spd.fly=ch.speed.fly||0;
+  if(ch.resist)m.dmg[ch.resist]="res"; // Draconic Resistance boon → the real resistance line
   m.init=String(ch.init);
   GEN_ABILS.forEach(a=>{m[a]=ch.scores[a];});
   m.saves=ch.saves.map(s=>s.abil);
@@ -1063,6 +1226,12 @@ function genRetirePC(a,pcId,opts){
 // global M (attack math, spell lines, colour categories), so the render swaps M to the generated
 // monster for its synchronous duration and always restores it.
 // ═══════════════════════════════════════════════════════════════════════════
+// D-027: pack names on the Gear line are click popovers listing the pack's contents.
+function genGearLineHTML(gear){
+  return String(gear||"").split(",").map(s=>s.trim()).filter(Boolean)
+    .map(it=>GEN_PACK_CONTENTS[it]?`<button class="gk-pack" data-gkpack="${esc(it)}">${esc(it)}</button>`:esc(it))
+    .join(", ");
+}
 function genPcMetaHTML(ch,opts){
   const sgnf=n=>(n>=0?"+":"")+n;
   const rollSpan=(n,b,abil)=>`<span class="roll-num" data-roll="1d20${b>=0?"+":""}${b}" data-rolltype="check" data-rolllabel="${esc(n)}" data-abil="${abil}">${sgnf(b)}</span>`;
@@ -1076,7 +1245,7 @@ function genPcMetaHTML(ch,opts){
     return `<span class="gk-ask${prof?" gk-ask-p":""}">${esc(n)} ${rollSpan(n,b,abil)}</span>`;
   }).join("")}</div>`;
   if(ch.tools&&ch.tools.length)h+=`<p><span class="k">Tools</span> ${ch.tools.map(esc).join(", ")}</p>`;
-  if(ch.gear)h+=`<p class="gk-metarow"><span class="k">Gear</span> <span class="gk-meta-b" id="gkGearLine">${esc(ch.gear)}</span>${opts&&opts.gearEdit?`<button class="gk-chev" data-gkchev="gear" title="Edit gear" aria-label="Edit gear">▾</button>`:""}</p>`;
+  if(ch.gear)h+=`<p class="gk-metarow"><span class="k">Gear</span> <span class="gk-meta-b" id="gkGearLine">${genGearLineHTML(ch.gear)}</span>${opts&&opts.gearEdit?`<button class="gk-chev" data-gkchev="gear" title="Edit gear" aria-label="Edit gear">▾</button>`:""}</p>`;
   if(opts&&opts.gearEdit)h+=`<div class="gk-gearedit" hidden></div>`;
   h+=`<p><span class="k">Senses</span> Darkvision ${ch.darkvision} ft., Passive Perception ${ch.pp}</p>`;
   h+=`<p><span class="k">Languages</span> ${ch.langs.map(esc).join(", ")}</p>`;
@@ -1109,8 +1278,22 @@ function genCardHTML(ch,opts){
   if(fl.quirk)rows.push(`<div><b>Quirk:</b> ${esc(fl.quirk)}</div>`);
   if(fl.trinket)rows.push(`<div><b>Trinket:</b> ${esc(fl.trinket)}</div>`);
   const flavor=rows.length?`<div class="gk-flavor">${rows.join("")}</div>`:"";
+  // D-025: the familiar's full statblock rides below the PC card, through the same composer.
+  let fam="";
+  if(!opts.dead&&ch.familiar&&GEN_FAMILIARS[ch.familiar]){
+    const fm=genFamiliarMonster(ch.familiar);
+    const prevF=M,fpb=pbForCR(fm.cr);
+    try{M=fm;fam=`<div class="gk-fam-h">Familiar</div><div class="sb gk-card gk-fam">${sbHeaderHTML(fm)+sbAbilityTableHTML(fm,fpb)+sbMetaHTML(fm,fpb,xpOf(fm))+sbEntriesHTML(fm)}</div>`;}
+    finally{M=prevF;}
+  }
   return `<div class="sb gk-card${opts.dead?" gk-dead":""}">${core}${flavor}</div>`
-    +(opts.dead||opts.pips==="off"?"":genResTrackerHTML(ch,opts.res,opts.pips==="live"));
+    +(opts.dead||opts.pips==="off"?"":genResTrackerHTML(ch,opts.res,opts.pips==="live"))
+    +fam;
+}
+function genFamiliarMonster(name){
+  const m={...blankMonster(),...JSON.parse(JSON.stringify(GEN_FAMILIARS[name]||{}))};
+  m._auto={ac:false,hp:false};
+  return m;
 }
 // Mount + post-process: the colour/link/rollable pass runs with M swapped so DCs, damage, spell
 // names, and condition names light up exactly like a bestiary statblock.
@@ -1119,30 +1302,59 @@ function genMountCard(host,ch,opts,handlers){
   if(handlers.onGear){opts={...opts,gearEdit:true};
     if(handlers.gearGet){const g=handlers.gearGet();if(g!=null)ch={...ch,gear:g};}}
   host.innerHTML=genCardHTML(ch,opts);
-  const cardEl=host.querySelector(".gk-card");
+  const cardEl=host.querySelector(".gk-card:not(.gk-fam)");
   if(cardEl&&typeof colorizeStatblock==="function"){
     const prevM=M;
     try{M=genToMonster(ch);colorizeStatblock(cardEl);}catch(e){/* colour pass is cosmetic */}
+    finally{M=prevM;}
+  }
+  const famEl=host.querySelector(".gk-card.gk-fam");
+  if(famEl&&ch.familiar&&typeof colorizeStatblock==="function"){
+    const prevM=M;
+    try{M=genFamiliarMonster(ch.familiar);colorizeStatblock(famEl);}catch(e){/* cosmetic */}
     finally{M=prevM;}
   }
   bindGenCard(host,handlers);
 }
 // The gear editor (D-019): remove/add items by hand — used or lost gear stays edited on THIS
 // character (an overlay owned by the card's holder; the wire payload never carries it).
+// Count stepping over "<n> <plural>" items; the singular/plural rules cover the kit and pack
+// vocabulary (Javelins/Bolts +s, Torches +es).
+function gkGearStep(item,delta){
+  const m=String(item||"").match(/^(\d+)\s+(.+)$/);if(!m)return item;
+  const n=Number(m[1])+delta;if(n<=0)return null;
+  let base=m[2];
+  if(/(ch|sh|x|ss)es$/i.test(base))base=base.slice(0,-2);
+  else if(/s$/i.test(base)&&!/ss$/i.test(base))base=base.slice(0,-1);
+  const plural=/(ch|sh|x|s)$/i.test(base)?base+"es":base+"s";
+  return n===1?`1 ${base}`:`${n} ${plural}`;
+}
 function gkBuildGearEditor(root,h){
   const box=root.querySelector(".gk-gearedit");if(!box||!h.gearGet)return;
-  const items=String(h.gearGet()||"").split(",").map(s=>s.trim()).filter(Boolean);
-  box.innerHTML=items.map((it,i)=>`<span class="gk-gitem">${esc(it)}<button class="gk-gx" data-gkgx="${i}" aria-label="Remove ${esc(it)}">✕</button></span>`).join("")
+  // D-027: packs unpack into their component items in the editor; the first edit materializes
+  // the expansion into the stored overlay (Back-to-rolled-gear still restores the pack name).
+  const items=String(h.gearGet()||"").split(",").map(s=>s.trim()).filter(Boolean)
+    .flatMap(it=>GEN_PACK_CONTENTS[it]||[it]);
+  box.innerHTML=items.map((it,i)=>{
+    const num=/^\d+\s+/.test(it);
+    return `<span class="gk-gitem">${esc(it)}${num?`<button class="gk-gq" data-gkgq="${i}" data-d="-1" aria-label="One fewer: ${esc(it)}">−</button><button class="gk-gq" data-gkgq="${i}" data-d="1" aria-label="One more: ${esc(it)}">+</button>`:""}<button class="gk-gx" data-gkgx="${i}" aria-label="Remove ${esc(it)}">✕</button></span>`;
+  }).join("")
     +`<span class="gk-gadd"><input type="text" class="popinput gk-gin" maxlength="60" placeholder="Add an item"><button class="btn ghost sm gk-gbtn" style="width:auto">Add</button></span>`
     +(h.gearDirty&&h.gearDirty()?`<button class="gk-linklike gk-greset">Back to the rolled gear</button>`:"");
   const commit=str=>{
     if(h.onGear)h.onGear(str);
     const line=root.querySelector("#gkGearLine");
-    if(line)line.textContent=h.gearGet()||"";
+    if(line)line.innerHTML=genGearLineHTML(h.gearGet()||"");
     gkBuildGearEditor(root,h);
   };
   box.querySelectorAll("[data-gkgx]").forEach(x=>x.addEventListener("click",()=>{
     const arr=items.slice();arr.splice(Number(x.dataset.gkgx),1);commit(arr.join(", "));}));
+  // Numbered items ("4 Javelins", "20 Bolts") step their count; 0 removes the item.
+  box.querySelectorAll("[data-gkgq]").forEach(x=>x.addEventListener("click",()=>{
+    const arr=items.slice(),i=Number(x.dataset.gkgq);
+    const next=gkGearStep(arr[i],Number(x.dataset.d));
+    if(next==null)arr.splice(i,1);else arr[i]=next;
+    commit(arr.join(", "));}));
   const add=()=>{const inp=box.querySelector(".gk-gin");
     const v=String(inp.value||"").replace(/[<>]/g,"").trim().slice(0,60);
     if(!v)return;commit(items.concat([v]).join(", "));};
@@ -1152,6 +1364,13 @@ function gkBuildGearEditor(root,h){
   if(rst)rst.addEventListener("click",()=>commit(null));
 }
 function bindGenCard(root,h){
+  // D-027: pack-name popover (delegated, so gear-line rewrites keep working).
+  root.addEventListener("click",e=>{
+    const pk=e.target.closest("[data-gkpack]");if(!pk)return;
+    const items=GEN_PACK_CONTENTS[pk.dataset.gkpack];if(!items)return;
+    e.stopPropagation();
+    showPopover(pk,`<div class="gk-packpop"><b>${esc(pk.dataset.gkpack)}</b>${items.map(i=>`<div>${esc(i)}</div>`).join("")}</div>`);
+  });
   // D-019: the card is rollable wherever it's mounted — same delegation the statblock preview
   // uses, bound on the card's own host (the modal is outside #statblock's listener).
   root.addEventListener("click",e=>{
@@ -1228,7 +1447,7 @@ function openGenCard(a,payload,o){
 // THE RITUAL — one step at a time; the option table shows before the roll; any result is clickable
 // to override (D-011). Identity is typed. A "Roll the rest" fast-path fills everything but the name.
 // ═══════════════════════════════════════════════════════════════════════════
-let _genR=null; // {mode, pn, editing, draft, done, more:{}, info:{}}
+let _genR=null; // {mode, pn, editing, draft, done, more:{}}
 // Font Awesome gear (free solid) — the crew-settings button in the roster header (D-021).
 const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
 // D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
@@ -1242,6 +1461,7 @@ function genStepLabel(d,id){
   if(id==="equip")return "Equipment kit";
   if(id==="cantrips")return "Cantrips";
   if(id==="spells")return "Prepared spells";
+  if(id==="familiar")return "Familiar";
   if(id==="gearPack")return "Pack";
   if(id==="sundries")return "Sundries";
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?t.label:id;}
@@ -1259,10 +1479,14 @@ function genStepInfo(d,id){
     if(K&&K.featureOpt&&K.featureOpt.kind==="expertise")return "Two of the rolled skills, duplicates rerolled.";
     if(K&&K.featureOpt)return `${genDieLabel(K.featureOpt.options.length)} over the ${K.featureOpt.options.length} options.`;
     return "";}
-  if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];return `${genDieLabel(K?K.kits.length:0)} over the class kit table. Every item is within the class's training.`;}
-  if(id==="cantrips")return `${genCantripCount(d)} rolls on ${genDieLabel((genTablesOf(d).can[genClsOf(d)]||[]).length)} over the class cantrip table; at least one damage cantrip always lands.`;
+  if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const n=K?genKitIdx(d,K).length:0;
+    return `${genDieLabel(n)} over the class kit table. Every item is within the class's training; some kits unlock with a class feature.`;}
+  if(id==="cantrips")return `${genCantripCount(d)} rolls over the class cantrips, one table each: the first defaults to Damaging, the rest to All. Duplicates and cantrips granted elsewhere reroll.`;
   if(id==="spells"){const K=GEN_CLASSES[genClsOf(d)];
-    return `${K.caster.prepared} rolls on ${genDieLabel((genTablesOf(d).l1[genClsOf(d)]||[]).length)} over the class level-1 table. Spells already granted by a feat or species are rerolled.`;}
+    return `${K.caster.prepared} rolls over the class level-1 spells, one table each: the first defaults to Damaging, the rest to All. Duplicates and spells granted elsewhere reroll.`;}
+  if(id==="familiar"){const kind=genFamiliarKind(d);
+    return kind==="chain"?"d8 over the eight Pact of the Chain special forms; the familiar's statblock joins the card."
+      :"Find Familiar is known: "+genDieLabel(GEN_FAMILIAR_BEASTS.length)+" over the beast forms; the familiar's statblock joins the card.";}
   if(id==="gearPack")return "d6 over the six equipment packs.";
   if(id==="sundries")return "Two d20 rolls, one on each sundries list.";
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?`d${t.die} on the ${t.label} table.`:"";}
@@ -1292,13 +1516,23 @@ function genStepTable(d,id){
     return {die:span.die,rows:opts.map((o,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:o.label,value:o.value,hit:s&&s.value===o.value})),
       note:span.reroll?"reroll over "+opts.length:""};
   }
-  if(id==="equip"&&K){const span=genSpanFor(K.kits.length);
-    return {die:span.die,rows:K.kits.map((k,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:k.n,sub:k.gear,value:i,hit:s&&s.value===i})),
-      note:span.reroll?"reroll over "+K.kits.length:""};}
-  if(id==="cantrips"&&cls)return mk(genTablesOf(d).can[cls]||[]);
+  if(id==="equip"&&K){const avail=genKitIdx(d,K),span=genSpanFor(avail.length);
+    return {die:span.die,rows:avail.map((ki,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:K.kits[ki].n,sub:K.kits[ki].gear,value:ki,hit:s&&s.value===ki})),
+      note:span.reroll?"reroll over "+avail.length:""};}
+  // D-024: the spell steps show BOTH tables — Damaging and All — numbered independently.
+  const mk2=(full,dmg)=>{
+    const one=(list,title)=>({title:`${title} (${genDieLabel(list.length)})`,die:genDieFor(list.length),multi:true,
+      rows:list.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value.includes(v)}))});
+    return {pair:[one(dmg,"Damaging"),one(full,"All")]};};
+  if(id==="cantrips"&&cls){const full=genTablesOf(d).can[cls]||[];
+    return mk2(full,full.filter(n=>!!GEN_CANTRIP_LINES[n]));}
   if(id==="spells"&&cls){const K2=GEN_CLASSES[cls];
     const list=(genTablesOf(d).l1[cls]||[]).filter(x=>!(K2.caster.always||[]).includes(x));
-    return mk(list);}
+    return mk2(list,list.filter(n=>GEN_DMG_SPELLS.includes(n)));}
+  if(id==="familiar"){const kind=genFamiliarKind(d);if(!kind)return null;
+    const list=kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS,span=genSpanFor(list.length);
+    return {die:span.die,note:span.reroll?"reroll over "+list.length:"",
+      rows:list.map((v,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:v,value:v,hit:s&&s.value===v}))};}
   if(id==="gearPack")return {die:6,rows:GEN_PACKS.map((p,i)=>({span:String(i+1),label:p,value:p,hit:s&&s.value===p}))};
   if(id==="sundries")return {pair:[
     {title:"First roll (d20)",die:20,rows:GEN_SUNDRIES_A.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[0]===v}))},
@@ -1334,21 +1568,21 @@ function genStepValueHTML(d,id){
   if(id==="feature"&&s.kind==="expertise")return s.value.map(x=>`<span class="gk-chip2" data-gkedit="feature">${esc(x)}</span>`).join(" ")+" "+genDiceChips(s);
   if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];const o=K.featureOpt.options.find(x=>x.value===s.value);
     let h=`<b data-gkedit="feature">${esc(o?o.label:String(s.value))}</b> ${genDiceChips(s)}`;
-    if(o&&o.hooks&&o.hooks.tome)h+=s.sub&&s.sub.value?(" → "+s.sub.value.map(x=>`<span class="gk-chip2">${esc(x)}</span>`).join(" ")):` <span class="gk-warn">three cantrips pending</span>`;
+    if(o&&o.hooks&&o.hooks.tome)h+=s.sub&&s.sub.value?(" → "+s.sub.value.map(x=>`<span class="gk-chip2" data-gksubedit="feature" title="Change">${esc(x)}</span>`).join(" ")):` <span class="gk-warn">three cantrips pending</span>`;
     return h;}
   if(id==="feat"){let h=`<b data-gkedit="feat">${esc(String(s.value))}</b> ${genDiceChips(s)}`;
     const sub=s.sub;
     if(sub){
-      if(sub.kind==="mi"&&sub.list)h+=` → <span class="gk-chip2">${esc(sub.list.value)}</span> `+
-        (sub.cans&&sub.cans.value?sub.cans.value.map(x=>`<span class="gk-chip2">${esc(x)}</span>`).join(" "):"")+
-        (sub.sp&&sub.sp.value?` <span class="gk-chip2">${esc(sub.sp.value)}</span>`:"");
-      else if(Array.isArray(sub.value))h+=" → "+sub.value.map(x=>`<span class="gk-chip2">${esc(x)}</span>`).join(" ");
+      if(sub.kind==="mi"&&sub.list)h+=` → <span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(sub.list.value)}</span> `+
+        (sub.cans&&sub.cans.value?sub.cans.value.map(x=>`<span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(x)}</span>`).join(" "):"")+
+        (sub.sp&&sub.sp.value?` <span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(sub.sp.value)}</span>`:"");
+      else if(Array.isArray(sub.value))h+=" → "+sub.value.map(x=>`<span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(x)}</span>`).join(" ");
     }else if(GEN_FEATS.find(x=>x.n===s.value&&x.sub))h+=` <span class="gk-warn">extra rolls pending</span>`;
     return h;}
   if(Array.isArray(s.value))return s.value.map(x=>`<span class="gk-chip2" data-gkedit="${id}">${esc(String(x))}</span>`).join(" ")+" "+genDiceChips(s);
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3)),e=t.entries.find(x=>x.value===s.value);
     let h=`<b data-gkedit="${id}">${esc(e?e.label:String(s.value))}</b> ${genDiceChips(s)}`;
-    if(e&&e.sub)h+=s.sub&&s.sub.value!=null?` → <span class="gk-chip2">${esc(String(s.sub.value))}</span> ${genDiceChips(s.sub)}`:` <span class="gk-warn">${esc(e.sub.label)} pending</span>`;
+    if(e&&e.sub)h+=s.sub&&s.sub.value!=null?` → <span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(String(s.sub.value))}</span> ${genDiceChips(s.sub)}`:` <span class="gk-warn">${esc(e.sub.label)} pending</span>`;
     return h;}
   if(id==="name"){const extras=["quirk","trinket"].filter(k=>d.steps[k]&&d.steps[k].value).length;
     return `<b data-gkedit="name">${esc(String(s.value))}</b>${extras?` <span class="gk-dim">notes: ${extras}/2</span>`:""}`;}
@@ -1388,7 +1622,13 @@ function genSubEditorHTML(d,id){
   const s=d.steps[id];if(!s)return "";
   const roll=`<button class="btn ghost sm" data-gkrollsub="${id}">${D20_ICON}<span>Roll</span></button>`;
   if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===s.value);if(!f||!f.sub)return "";
-    if(f.sub==="mi")return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,"",null,true)}<button class="btn primary sm" data-gksubapply="feat">Choose list, roll spells</button></div>`;
+    if(f.sub==="mi"){
+      // v4 follow-up: the spells are manually pickable too — list select drives the spell selects,
+      // "Roll from it" keeps the pick-list-roll-spells flow, Choose applies the four selects as-is.
+      const curList=_genR.miList||(s.sub&&s.sub.list&&s.sub.list.value)||"Cleric";
+      const can=GEN_CLASS_SPELLS[curList][0],l1=GEN_CLASS_SPELLS[curList][1];
+      const curC=(s.sub&&s.sub.cans&&s.sub.cans.value)||[],curS=s.sub&&s.sub.sp&&s.sub.sp.value;
+      return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,curList,null,true)}<button class="btn ghost sm" data-gkmiroll="1" style="width:auto">Roll from it</button>${genSel("gkMiC_0",can,can.includes(curC[0])?curC[0]:can[0],null,true)}${genSel("gkMiC_1",can,can.includes(curC[1])?curC[1]:can[1],null,true)}${genSel("gkMiS",l1,l1.includes(curS)?curS:l1[0],null,true)}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
     const list=f.sub==="skills"?GEN_SKILL_NAMES:f.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
     const lbl=f.sub==="skills"?"three skills":f.sub==="tools"?"three artisan tools ("+genDieLabel(list.length)+")":"three instruments (d10)";
     return `<div class="gk-subrow"><span class="gk-dim">${esc(s.value)}: ${lbl}.</span>${roll}${[0,1,2].map(i=>genSel("gkFs_"+i,list,list[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
@@ -1398,8 +1638,9 @@ function genSubEditorHTML(d,id){
   return `<div class="gk-subrow"><span class="gk-dim">${esc(e.sub.label)} (${genDieLabel(e.sub.entries.length)}).</span>${roll}${genSel("gkSub_"+id.slice(3),e.sub.entries,"",null,true)}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;
 }
 // D-015: the six abilities render as the statblock-style grid — one editable score per ability,
-// no printed dice strings (the 3D roll is the theater). Cells are editable once all six landed.
-function genStatsRowsHTML(d){
+// no printed dice strings (the 3D roll is the theater). Cells are editable once all six landed;
+// before that, "Type them in" opens the manual editor (v4 follow-up).
+function genStatsRowsHTML(d,editing){
   const s=d.steps.stats,n=s&&!s.pick?s.rolls.length:0;
   const complete=!!s&&(s.pick||n===6);
   return `<div class="gk-ab6">${GEN_ABILS.map((a,i)=>{
@@ -1410,7 +1651,8 @@ function genStatsRowsHTML(d){
       ${rolled?`<input class="gk-ab-in" type="number" min="3" max="20" data-gkstat="${i}" value="${s.value[i]}"${complete?"":" disabled"} aria-label="${GEN_ABIL_LABEL[a]} score">`
         :next?`<button class="btn primary sm gk-ab-roll" data-gkroll="stats" aria-label="Roll ${GEN_ABIL_LABEL[a]}">${D20_ICON}<span>Roll</span></button>`
         :`<span class="gk-ab-dot">·</span>`}
-    </div>`;}).join("")}</div>`;
+    </div>`;}).join("")}</div>`
+    +(!complete&&!editing?`<button class="gk-linklike gk-typein" data-gkedit="stats">Type them in</button>`:"");
 }
 function genTableHTML(d,id,tbl){
   if(tbl.pair)return tbl.pair.map(p=>`<div class="gk-tbl-h">${esc(p.title)}</div>`+genTableHTML(d,id,p)).join("");
@@ -1429,6 +1671,15 @@ function genTableHTML(d,id,tbl){
     ${tbl.note?`<div class="gk-tbl-note">${esc(tbl.note)}</div>`:""}
   </div>`;
 }
+// D-024: one Damaging/All toggle per roll slot, shown with the spell steps' tables.
+function genTabStripHTML(d,id){
+  const cls=genClsOf(d);if(!cls)return "";
+  const n=id==="cantrips"?genCantripCount(d):(GEN_CLASSES[cls].caster?GEN_CLASSES[cls].caster.prepared:0);
+  if(n<1)return "";
+  const tabs=genStepTabs(d,id,n);
+  return `<div class="gk-tabstrip">${tabs.map((t,i)=>`<span class="gk-tabslot"><span class="gk-dim">Roll ${i+1}</span>
+    <button class="gk-tab${t==="dmg"?" gk-tab-on":""}" data-gktab="${id}:${i}:dmg">Damaging</button><button class="gk-tab${t==="all"?" gk-tab-on":""}" data-gktab="${id}:${i}:all">All</button></span>`).join("")}</div>`;
+}
 function renderGenRitual(){
   const R=_genR;if(!R)return;
   const d=R.draft,host=$("#gkR");if(!host)return;
@@ -1446,16 +1697,18 @@ function renderGenRitual(){
     const rollable=id!=="name"&&id!=="asi"&&!(id==="stats"&&s&&s.pick);
     const tbl=(active&&!done&&id!=="stats"&&id!=="asi")||(editing&&id!=="asi"&&id!=="name")?genStepTable(d,id):null;
     if(tbl&&!tbl.pair)tbl.moreOpen=!!R.more[id];
-    const wholeRoll=id!=="stats"&&rollable&&(active||done)&&!needsSub;
+    // v4 follow-up: stats join the header roll like every other step — it rolls all remaining
+    // abilities at once (the walking per-cell button stays for the one-at-a-time ritual).
+    const wholeRoll=rollable&&(active||done)&&!needsSub;
     const info=genStepInfo(d,id);
     return `<div class="gk-step gk-${state}" data-step="${id}">
       <div class="gk-step-h"><span class="gk-step-l">${esc(genStepLabel(d,id))}${info?`<button class="gk-q" data-gkq="${id}" aria-label="How this step works">?</button>`:""}</span>
         <span class="gk-step-acts">${wholeRoll?(done
-          ?`<button class="gk-roll-ico" data-gkroll="${id}" title="Reroll" aria-label="Reroll">${D20_ICON}</button>`
-          :`<button class="btn primary sm gk-roll" data-gkroll="${id}">${D20_ICON}<span>Roll</span></button>`):""}</span></div>
-      ${R.info[id]&&info?`<div class="gk-info">${esc(info)}</div>`:""}
-      ${id==="stats"?genStatsRowsHTML(d):""}
+          ?`<button class="gk-roll-ico" data-gkroll="${id}"${id==="stats"?' data-gkall="1"':""} title="Reroll" aria-label="Reroll">${D20_ICON}</button>`
+          :`<button class="btn primary sm gk-roll" data-gkroll="${id}"${id==="stats"?' data-gkall="1"':""}>${D20_ICON}<span>${id==="stats"?"Roll all":"Roll"}</span></button>`):""}</span></div>
+      ${id==="stats"?genStatsRowsHTML(d,editing):""}
       ${id!=="stats"&&(done||s&&s.value!=null)?`<div class="gk-step-v">${genStepValueHTML(d,id)}</div>`:""}
+      ${(id==="cantrips"||id==="spells")&&(tbl||editing)?genTabStripHTML(d,id):""}
       ${tbl&&!(isMulti&&editing)?genTableHTML(d,id,tbl):""}
       ${needsSub?genSubEditorHTML(d,id):""}
       ${editing&&id!=="stats"?`<div class="gk-editor${id==="name"?" gk-ed-id":""}">${genEditorHTML(d,id)}</div>`:""}
@@ -1474,7 +1727,15 @@ function bindGenRitual(){
   const R=_genR,d=R.draft,host=$("#gkR");
   host.querySelectorAll("[data-gkroll]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gkroll;
-    if(id==="stats"){
+    if(id==="stats"&&b.dataset.gkall){
+      // Header Roll all: reroll from scratch when complete, else fill the remaining abilities.
+      if(genStepDone(d,"stats")||(d.steps.stats&&d.steps.stats.pick))d.steps.stats={rolls:[],value:[]};
+      let st=d.steps.stats;
+      while(!st||st.rolls.length<6){st=genRollStep(d,"stats");if(!st)break;}
+      if(st&&st.rolls.length)genFire3D("Ability scores",
+        st.rolls.map(dice=>({rolls:dice,die:6,k:d.set.stat==="4d6"?"kh3":""})),
+        "Scores: "+st.value.join(" · "));
+    }else if(id==="stats"){
       const st=genRollStep(d,"stats");
       if(st&&!st.pick&&st.rolls.length){
         const i=st.rolls.length-1,dice=st.rolls[i],a=GEN_ABILS[i];
@@ -1485,7 +1746,9 @@ function bindGenRitual(){
       genRollStep(d,id);
       const rec=d.steps[id];
       if(rec&&!rec.pick){
-        const groups=[{rolls:rec.rolls,die:rec.die}].concat(genSubGroups(rec.sub));
+        // Per-slot dice (D-024 spell steps) replay one group per slot; single-die steps as before.
+        const main=rec.dice?rec.rolls.map((r,i)=>({rolls:[r],die:rec.dice[i]})):[{rolls:rec.rolls,die:rec.die}];
+        const groups=main.concat(genSubGroups(rec.sub));
         const face=rec.rolls&&rec.rolls.length===1?rec.rolls[0]:undefined;
         genFire3D(genStepLabel(d,id),groups,`${genStepLabel(d,id)}: ${rec.rolls.join(" · ")}`,face);
       }
@@ -1497,10 +1760,29 @@ function bindGenRitual(){
     if(e.target.closest("button,input,select,a,[data-gkopt],[data-gkedit],[data-gkq]"))return;
     const id=sec.dataset.step;
     if(R.editing!==id){R.editing=id;renderGenRitual();}}));
+  // The ? opens a real site popover (tailed, dismiss-anywhere) — not an inline line (v4 note).
   host.querySelectorAll("[data-gkq]").forEach(b=>b.addEventListener("click",e=>{
-    e.stopPropagation();const id=b.dataset.gkq;R.info[id]=!R.info[id];renderGenRitual();}));
+    e.stopPropagation();
+    const info=genStepInfo(d,b.dataset.gkq);
+    if(info)tailPopover(b,`<div class="gk-infopop">${esc(info)}</div>`);}));
   host.querySelectorAll("[data-gkmore]").forEach(b=>b.addEventListener("click",e=>{
     e.stopPropagation();const id=b.dataset.gkmore;R.more[id]=!R.more[id];renderGenRitual();}));
+  // D-024: table toggles set the slot's table on the draft; an already-rolled step rerolls so the
+  // landed names always come from the tables on show.
+  host.querySelectorAll("[data-gktab]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const [id,slot,tab]=b.dataset.gktab.split(":");
+    const cls=genClsOf(d);if(!cls)return;
+    const n=id==="cantrips"?genCantripCount(d):(GEN_CLASSES[cls].caster?GEN_CLASSES[cls].caster.prepared:0);
+    d.tabs=d.tabs||{};d.tabs[id]=genStepTabs(d,id,n);
+    d.tabs[id][Number(slot)]=tab;
+    const rec=d.steps[id];
+    if(rec&&!rec.pick){
+      genRollStep(d,id);
+      const nr=d.steps[id];
+      if(nr)genFire3D(genStepLabel(d,id),nr.rolls.map((r,i)=>({rolls:[r],die:nr.dice?nr.dice[i]:nr.die})),`${genStepLabel(d,id)}: ${nr.rolls.join(" · ")}`);
+    }
+    renderGenRitual();}));
   // Manual score edits (D-015): once all six landed, typing over any score converts the step to a
   // chosen array (the override) and cascades through the usual pick path.
   host.querySelectorAll(".gk-ab-in").forEach(inp=>{
@@ -1513,13 +1795,31 @@ function bindGenRitual(){
   host.querySelectorAll("[data-gkopt]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gkstep;let v=b.dataset.gkopt;
     if(id==="equip")v=Number(v);
-    if(id==="sp:wings")v=v==="true";
+    // Species-table values normalize inside genApplyPick (String comparison covers true/false).
     const isMulti=["skills","cantrips","spells","sundries"].includes(id)||(id==="feature"&&GEN_CLASSES[genClsOf(d)]&&GEN_CLASSES[genClsOf(d)].featureOpt&&GEN_CLASSES[genClsOf(d)].featureOpt.kind==="expertise");
     if(isMulti){R.editing=id;renderGenRitual();return;} // multi-pick steps edit through the selects
     if(genApplyPick(d,id,v)){R.editing=null;renderGenRitual();}
     else toast("That option doesn't fit here.");}));
   host.querySelectorAll("[data-gkedit]").forEach(el=>el.addEventListener("click",()=>{
     R.editing=R.editing===el.dataset.gkedit?null:el.dataset.gkedit;renderGenRitual();}));
+  // Magic Initiate: the list select re-renders the spell selects; "Roll from it" keeps the
+  // pick-list-roll-spells flow (cross-source dedupe included).
+  {const miL=host.querySelector("#gkMiL");
+   if(miL)miL.addEventListener("change",()=>{R.miList=miL.value;renderGenRitual();});}
+  host.querySelectorAll("[data-gkmiroll]").forEach(b=>b.addEventListener("click",()=>{
+    const list=$("#gkMiL").value,T=genTablesOf(d);
+    const granted=[...genSpellsGranted(d,"feat")];
+    const cans=genRollN(Math.random,T.can[list]||GEN_CLASS_SPELLS[list][0],2,granted);
+    const sp=genRollN(Math.random,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,granted);
+    d.steps.feat.sub={kind:"mi",list:{rolls:[],pick:true,value:list},cans,sp:{rolls:sp.rolls,value:sp.value[0]}};
+    genFire3D("Magic Initiate",[cans,{rolls:sp.rolls,die:sp.die}],"");
+    R.miList=null;renderGenRitual();}));
+  // v4 follow-up: any auto-rolled sub element is editable on click — the chip clears the sub and
+  // reopens its editor (roll or choose again).
+  host.querySelectorAll("[data-gksubedit]").forEach(el=>el.addEventListener("click",e=>{
+    e.stopPropagation();
+    const rec=d.steps[el.dataset.gksubedit];if(!rec)return;
+    rec.sub=null;R.editing=null;renderGenRitual();}));
   host.querySelectorAll("[data-gkrollsub]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gkrollsub;
     if(genRollSub(d,id)){
@@ -1531,13 +1831,11 @@ function bindGenRitual(){
     const id=b.dataset.gksubapply;
     if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===d.steps.feat.value);
       if(f.sub==="mi"){
-        const list=$("#gkMiL").value;
-        // Choosing the list still rolls the two cantrips and the spell from it.
-        const T=genTablesOf(d);
-        const cans=genRollN(Math.random,T.can[list]||GEN_CLASS_SPELLS[list][0],2,[]);
-        const sp=genRollN(Math.random,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,[]);
-        d.steps.feat.sub={kind:"mi",list:{rolls:[],pick:true,value:list},cans,sp:{rolls:sp.rolls,value:sp.value[0]}};
-        renderGenRitual();return;
+        // Manual pick of all four (v4 follow-up); "Roll from it" handles the rolled path.
+        const v={list:$("#gkMiL").value,cans:[$("#gkMiC_0").value,$("#gkMiC_1").value],sp:$("#gkMiS").value};
+        if(v.cans[0]===v.cans[1]){toast("Two different cantrips needed.");return;}
+        if(!genApplySubPick(d,"feat",v)){toast("Those picks don't fit that list.");return;}
+        R.miList=null;renderGenRitual();return;
       }
       const v=[0,1,2].map(i=>$("#gkFs_"+i).value);
       if(new Set(v).size!==3){toast("Three different picks needed.");return;}
@@ -1591,7 +1889,7 @@ function bindGenRitual(){
 }
 function openGenRitual(ctx){
   const set=ctx.set;
-  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},info:{},
+  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},
     draft:genNewDraft({sp:ctx.sp,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
@@ -1628,7 +1926,8 @@ function renderCrewPanel(a){
     const f=a.crew.fallen[Number(b.dataset.gkfallen)];if(!f||!f.payload)return;
     openGenCard(a,f.payload,{dead:true,pn:f.pn||""});}));
 }
-// The crew settings modal (D-021): species, scores, class mode, background ASI, the player link.
+// The crew settings modal (D-021, slimmed in the v4 round): species, scores, class mode,
+// background ASI. The player link lives in its own share dialog now.
 function openCrewSettings(a){
   if(!a.crew)return;
   const sp=GEN_SPECIES[a.crew.sp],spOpts=Object.keys(GEN_SPECIES);
@@ -1639,11 +1938,6 @@ function openCrewSettings(a){
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
     </div>
-    <div class="gk-share">
-      ${a.crew.shareId
-        ?`<span class="gk-share-on">Player link active</span><button class="btn ghost sm" id="crewCopy" style="width:auto">Copy link</button><button class="btn ghost sm" id="crewQR" style="width:auto">QR</button><button class="btn ghost sm" id="crewStop" style="width:auto">Stop</button>`
-        :`<button class="btn ghost sm" id="crewShare" style="width:auto">Create the player link</button><span class="gk-dim">Players roll their own ${esc(sp.label.toLowerCase())}s from their phones.</span>`}
-    </div>
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
   const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
   sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
@@ -1651,11 +1945,43 @@ function openCrewSettings(a){
   sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
   sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
   $("#crewCfgClose").addEventListener("click",()=>{closeModal();preserveScroll(".adv-detail-body",renderAdvDetail);});
-  const share=$("#crewShare");if(share)share.addEventListener("click",async()=>{await crewMintShare(a);openCrewSettings(a);});
-  const copy=$("#crewCopy");if(copy)copy.addEventListener("click",()=>{navigator.clipboard.writeText(genCrewUrl(a.crew.shareId)).then(()=>toast("Link copied."),()=>toast("Copy failed. Use the QR instead."));});
-  const qr=$("#crewQR");if(qr)qr.addEventListener("click",()=>openShareQR(genCrewUrl(a.crew.shareId)));
-  const stop=$("#crewStop");if(stop)stop.addEventListener("click",()=>confirmModal("Stop the player link? Phones lose access until you create a new one.",async()=>{
-    const id=a.crew.shareId;a.crew.shareId="";saveAdv();openCrewSettings(a);await jbinDeletePublic(id);}));
+}
+// The crew share dialog (v4 round): mirrors the combat share modal — primer + create when off,
+// live link with Copy/QR and a low-key stop when on.
+function openCrewShareDialog(a){
+  if(!a.crew)return;
+  const draw=()=>{
+    const sp=GEN_SPECIES[a.crew.sp];
+    if(!a.crew.shareId){
+      openModalRaw(`<h3>Share the crew</h3>
+        <div class="share-dlg">
+          <p class="share-sub">Players roll their own ${esc(sp.label.toLowerCase())}s from their phones and land straight in this adventure's party.</p>
+          <div class="mrow"><button class="btn primary sm" id="crewShareStart" style="width:auto">Create the player link</button></div>
+        </div>`);
+      $("#crewShareStart").addEventListener("click",async()=>{
+        const b=$("#crewShareStart");b.disabled=true;b.textContent="Creating…";
+        await crewMintShare(a);
+        if(a.crew.shareId){draw();preserveScroll(".adv-detail-body",renderAdvDetail);}
+        else{b.disabled=false;b.textContent="Create the player link";}});
+      return;
+    }
+    const url=genCrewUrl(a.crew.shareId);
+    openModalRaw(`<h3 class="share-h">Crew link is live<span class="share-badge">Live</span></h3>
+      <div class="share-dlg">
+        <p class="share-sub">Players open the link to roll and keep their characters.</p>
+        <div class="share-link"><input type="text" id="crewUrl" class="popinput" readonly value="${esc(url)}"><button class="btn ghost sm" id="crewCopy" title="Copy link" style="width:auto">${COPY_ICON}<span>Copy</span></button><button class="btn ghost sm" id="crewQR" title="Show QR code" style="width:auto">${QR_ICON}<span>QR</span></button></div>
+        <button class="share-stop" id="crewStop">Stop the link</button>
+      </div>`);
+    $("#crewCopy").addEventListener("click",()=>{const inp=$("#crewUrl");inp.select();
+      const done=()=>{const s=$("#crewCopy").querySelector("span");s.textContent="Copied";setTimeout(()=>{s.textContent="Copy";},1500);};
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(inp.value).then(done,()=>{try{document.execCommand("copy");done();}catch(_){}});
+      else{try{document.execCommand("copy");done();}catch(_){}}});
+    $("#crewQR").addEventListener("click",()=>openShareQR(url));
+    $("#crewStop").addEventListener("click",()=>confirmModal("Stop the player link? Phones lose access until you create a new one.",async()=>{
+      const id=a.crew.shareId;a.crew.shareId="";saveAdv();draw();
+      preserveScroll(".adv-detail-body",renderAdvDetail);await jbinDeletePublic(id);}));
+  };
+  draw();
 }
 // Config under /cfg (never clobbers the phones' /crew subtree). Carries the resolved spell tables
 // so phones roll over the same lists the DM's library produces (D-012).
@@ -1771,8 +2097,8 @@ function renderCrewScreen(){
     const v=validateGenPayload(my.cur);
     if(v.ok){const ch=deriveGenChar(v.clean);
       main=`<div id="crewCard"></div>
-        <button class="btn ghost crew-die" id="crewDied">${esc(ch.name)} died. Roll the next one</button>`;
-    }else main=`<p class="gk-dim">Your character data can't be read. Roll a fresh one.</p><button class="btn primary" id="crewRollBtn">Roll your kobold</button>`;
+        <button class="btn ghost crew-die" id="crewDied">Mark ${esc(ch.name)} dead and roll the next one</button>`;
+    }else main=`<p class="gk-dim">Your character data can't be read. Roll a fresh one.</p><button class="btn primary" id="crewRollBtn">Roll your ${esc(GEN_SPECIES[sp].label.toLowerCase())}</button>`;
   }else{
     main=`<div class="crew-claim"><p>No ${esc(GEN_SPECIES[sp].label.toLowerCase())} yet, ${esc(_crew.pn)}.</p>
       <button class="btn primary" id="crewRollBtn">Roll your ${esc(GEN_SPECIES[sp].label.toLowerCase())}</button></div>`;
@@ -1805,7 +2131,7 @@ function bindCrewScreen(sp,cfg,my){
   const roll=$("#crewRollBtn");
   if(roll)roll.addEventListener("click",()=>crewOpenRitual(sp,cfg,false));
   const died=$("#crewDied");
-  if(died)died.addEventListener("click",()=>confirmModal("Rolling a new kobold marks this one as dead for the whole crew. Continue?",()=>crewOpenRitual(sp,cfg,true)));
+  if(died)died.addEventListener("click",()=>confirmModal(`Rolling a new ${esc(GEN_SPECIES[sp].label.toLowerCase())} marks this one as dead for the whole crew. Continue?`,()=>crewOpenRitual(sp,cfg,true)));
 }
 function crewCounts(){
   const c={};Object.values(_crew.node.crew||{}).forEach(r=>{
