@@ -86,11 +86,15 @@ That means the rules ARE the security boundary. They must stay scoped to exactly
 - `shares/<random-id>` — ephemeral combat-share snapshots + the player write-back channel (open by design;
   players must write to it). Player-supplied data from here is untrusted — sanitize at ingestion
   (`_pmSafeRoll` and friends in `combat.js`) and never render it unescaped (see `esc()` in `core.js`).
-  **Crew shares (B279) live here too:** `{v, kind:"crew", cfg, crew:{<pid>:{pn, deaths, cur}}}` — each
-  player device PUTs only its own `crew/<pid>` subtree, and `cur` is a generator PAYLOAD (roll results +
-  picks + two capped free-text fields), never a derived statblock. The DM app re-derives locally through
-  `validateGenPayload` → `deriveGenChar` (gen.js); anything that fails the closed-domain validator is
-  dropped. Keep it that way: the payload-only wire IS the crew feature's trust boundary (D-007).
+  **Crew shares (B279) live here too:** `{v, kind:"crew", cfg, refs, crew:{<pid>:{pn, deaths, cur}}}` —
+  each player device PUTs only its own `crew/<pid>` subtree, and `cur` is a generator PAYLOAD (roll
+  results + picks + two capped free-text fields), never a derived statblock. The DM app re-derives
+  locally through `validateGenPayload` → `deriveGenChar` (gen.js); anything that fails the
+  closed-domain validator is dropped. `refs` (B281) is DM-written reference text (trimmed spell/
+  condition entries for the card popovers) — but the share is world-writable, so phones treat it as
+  hostile too: `crewCleanRefs` whitelists keys, strips brackets, and caps lengths at ingestion before
+  seeding the reference stores. Keep it that way: the payload-only wire IS the crew feature's trust
+  boundary (D-007), and every cloud-read field stays sanitized.
 
 **Do NOT leave the console's default "test mode" rule in place** — it grants root read/write and expires
 after 30 days, after which one `GET /installs.json` would dump every install. Paste the scoped rules above
@@ -192,34 +196,55 @@ kit-invisible misses close without new regressions (`npm run benchmark`).
 No new atom kinds without a consumer. The payload is optional everywhere: an effect with no `mech`
 degrades to today's behavior (text popover, manual tracking), so T2.2 can land incrementally.
 
-## The crew PC generator (gen.js, B279–280 · decisions D-001…D-014 in DECISIONS.md)
+## The crew PC generator (gen.js, B279–281 · decisions D-001…D-022 in DECISIONS.md)
 
 A species-blind random level-1 PC generator for one-shots ("death → next kobold in seconds"),
 adventure-tied: enable it from the adventure kebab, hand players the crew link (`?crew=<id>`), and
 generated PCs land in that adventure's party; the dead archive into `a.crew.fallen` (the Caduti).
 Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
 
+- **No separate crew surface (D-021):** the party-roster header carries a gear button opening the
+  crew-settings modal (species/scores/class/ASI + the player link); the roster's primary action is
+  the split "Roll a ..." button (regular add behind the caret); generated members are ordinary
+  party rows whose click opens the statblock modal (card + tracker + notes + a Full page escape);
+  only the Caduti render below the roster.
 - **A species = one data object** in `GEN_SPECIES`; a class = one package in `GEN_CLASSES` carrying
-  equipment KITS (drafted PHB-legal loadouts, more for martials — D-013), feature-option tables
-  (Divine/Primal Order, Fighting Styles, Invocations, Expertise), spell counts, statblock-section
-  entries (`traits`/`bonus`), and resource declarations. Weapon/armor atoms live in `GEN_W`/`GEN_AC`.
-- **Every step is pick-or-roll with the table on show** (D-004/D-011): the option table renders
-  before the dice land (rows tappable as choices), every span is EQUAL WEIGHT (`genSpanFor`), scores
-  roll one ability at a time with raw dice kept, and any result is clickable to override (class
-  changes cascade via `genClsCascade`). Identity (name + optional quirk/trinket) is typed.
-- **Spells roll from the install's own library** (D-012): `genSpellTables()` intersects the shipped
-  per-class XPHB index (`GEN_CLASS_SPELLS`, also the validation domain) with `enSpells()`, falling
-  back to the index when uploads run thin; the resolved tables ride the crew share `cfg` so phones
-  roll the same lists. Gear adds a rolled pack + two sundries (D-014).
-- **The card renders through the app's real composer** (D-010): `genToMonster()` emits Forge-native
-  entries (`mode:"attack"`, `mode:"spell"` with dc/atk overrides and character-style slot groups);
-  `genMountCard` swaps the global `M` to the generated monster for the synchronous render + the
-  `colorizeStatblock` pass, then restores it — highlights, reflinks, and click-to-roll behave like
-  any bestiary statblock. The pip tracker below persists on `pc.gen.res` (per-device on phones);
-  the recharge label resets its row.
+  equipment KITS (drafted PHB-legal loadouts, Fighter 8 / most martials 6 / casters 4-5 — D-013 as
+  expanded by D-022), feature-option tables (Divine/Primal Order, Fighting Styles, Invocations,
+  Expertise), spell counts, statblock-section entries (`traits`/`bonus`), and resource declarations
+  (a declaration may carry `sr:N` — regain N on a Short Rest, all on the `per` rest; the tracker
+  renders both resets — D-020). Weapon/armor atoms live in `GEN_W`/`GEN_AC`.
+- **Every step is pick-or-roll with the table on show** (D-004/D-011/D-015/D-016/D-017): the option
+  table renders before the dice land (rows tappable as choices), every span is EQUAL WEIGHT
+  (`genSpanFor`); scores fill a statblock-style grid one ability at a time — one editable number
+  each, the ritual's rolls REPLAYED on the real 3D dice (`genFire3D` → `rollDice3D`; the engine's
+  faces are what settle). The class table shows all twelve, top-3 span-marked, the rest behind a
+  pick-only expander. Bare section labels carry a `?` popover with the method text; completed
+  sections are whole-surface click targets to reopen; ritual dropdowns number their rows so
+  physical dice map to picks; the ASI step is explicit (class default preselected, Apply commits).
+  Identity (name + optional quirk/trinket) is typed.
+- **Spell rolls are cross-source clean (D-018):** any spell roll rerolls names already granted by
+  another source (`genSpellsGranted` — feat, legacy, tome, always-prepared), and rolled full
+  casters always land at least one damage cantrip. Spells roll from the install's own library
+  (D-012): `genSpellTables()` intersects the shipped per-class XPHB index (`GEN_CLASS_SPELLS`, also
+  the validation domain) with `enSpells()`, falling back to the index when uploads run thin; the
+  resolved tables ride the crew share `cfg` so phones roll the same lists. Gear adds a rolled pack
+  + one sundry from EACH of two disjoint d20 lists (D-014/D-022).
+- **The card renders through the app's real composer** (D-010/D-019): `genToMonster()` emits
+  Forge-native entries; cast sources sharing a spellcasting ability collapse into ONE Spellcasting
+  entry (per-source attack lines keep their numbers; traits the block fully covers are suppressed);
+  `genMountCard` swaps the global `M` for the synchronous render + `colorizeStatblock`, restores
+  it, and binds the same roll delegation `#statblock` uses, so cards roll wherever they're mounted
+  (`.modal .sb h3` keeps statblock heading specs against the modal-title rule). The Skills line's
+  chevron opens the all-18-skills panel; the Gear chevron opens the manual editor (per-character
+  overlay: `pc.gen.gear` DM-side, localStorage on phones — never on the wire). The pip tracker
+  persists on `pc.gen.res` (per-device on phones); labels reset rows, `SR +N` restores partially.
 - **Payloads, never statblocks, on the wire** (D-007) — see the crew-share note in the security
-  section above. `test/gen.test.js` + `test/crew-flow.test.js` are the floors (102 tests).
+  section above (incl. the B281 `/refs` popover texts and their phone-side sanitizer). The phone
+  poll reads only `/crew`; cfg refreshes on focus, refs load once at boot.
+  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (102 tests).
 - Backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, further species packs.
+  Parked by the user (2026-08-05): the phone-flow polish pass waits for the next real playtest.
 
 ## Conventions
 

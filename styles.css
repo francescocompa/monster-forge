@@ -2430,7 +2430,7 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .modal.gk-host{max-width:640px}
 .gk-steps{display:flex;flex-direction:column;gap:7px}
 .gk-step{border:1px solid var(--line);border-radius:7px;padding:8px 11px;opacity:.45;transition:opacity .15s,border-color .15s}
-.gk-step.gk-active{opacity:1;border-color:var(--accent-soft);box-shadow:0 0 0 1px rgba(217,169,65,.12)}
+.gk-step.gk-active{opacity:1;border-color:var(--accent-soft)}
 .gk-step.gk-done{opacity:1}
 .gk-step-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .gk-step-l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
@@ -2453,6 +2453,33 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-foot{margin-top:12px}
 /* card — a real statblock (.sb) framed by PC-only extras */
 .gk-cardhost{margin:2px 0 4px}
+/* D-019: `.modal h3` (the modal-title rule) was clobbering the statblock's section headings inside
+   card modals — "Actions" rendered at title size. Restore the .sb h3 spec with a scoped rule. */
+.modal .sb h3{margin:13px 0 5px;font-size:12px;color:var(--accent-soft);font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:3px}
+.gk-metarow{display:flex;align-items:baseline;gap:4px}
+.gk-metarow .gk-meta-b{flex:1;min-width:0}
+.gk-chev{flex:none;background:none;border:none;color:var(--faint);font-size:10px;cursor:pointer;padding:1px 4px;transition:transform .12s}
+.gk-chev.gk-chev-open{transform:rotate(180deg)}
+.gk-chev:hover{color:var(--txt)}
+.gk-allskills{display:flex;flex-wrap:wrap;gap:3px 12px;margin:2px 0 6px;padding:7px 9px;border:1px dashed var(--line);border-radius:6px;font-size:11.5px;color:var(--faint)}
+.gk-ask{white-space:nowrap}
+.gk-ask.gk-ask-p{color:var(--txt)}
+.gk-gearedit{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:2px 0 6px;padding:7px 9px;border:1px dashed var(--line);border-radius:6px}
+.gk-gitem{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 9px;font-size:11.5px}
+.gk-gx{background:none;border:none;color:var(--faint);cursor:pointer;font-size:10px;padding:1px 4px}
+.gk-gx:hover{color:#e08585}
+.gk-gadd{display:inline-flex;gap:5px;align-items:center}
+.gk-gin{width:140px}
+.gk-noterow{margin-top:10px}
+.gk-noterow textarea{min-height:52px}
+.gk-res-sr{margin-right:2px}
+/* D-021: the roster's split roll button borrows the FAB's look but sits inline in the add row. */
+.pc-rollsplit.fab-split.menu-wrap{position:relative;right:auto;bottom:auto;z-index:5;box-shadow:none;flex:1;min-width:0}
+.pc-rollsplit .btn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-rollsplit .menu{top:calc(100% + 6px);bottom:auto;right:0}
+.gk-cfg-modal{margin-bottom:12px}
+.gk-cfg-modal .gk-f{min-width:130px}
+#partyHead .lvlup-btn{margin-left:0}
 .gk-dead .topbar{background:linear-gradient(90deg,#5a2626,#2e1414)}
 .gk-dead-line{color:#e08585;font-weight:700;font-size:12px;letter-spacing:.06em}
 .gk-flavor{margin-top:10px;padding:8px 11px;border:1px dashed var(--line);border-radius:6px;background:rgba(217,169,65,.05);font-size:12px;display:flex;flex-direction:column;gap:3px}
@@ -2503,16 +2530,33 @@ body.crew-mode .app{display:none}
 .gk-td{flex:none;min-width:30px;color:var(--amber);font-size:11px;font-weight:700;text-align:right}
 .gk-tl{flex:1;min-width:0}
 .gk-tbl-note{font-size:10px;color:var(--faint);padding:2px 7px}
-.gk-stat6{display:flex;flex-direction:column;gap:3px;margin-top:6px}
-.gk-st{display:flex;align-items:center;gap:10px;border:1px solid transparent;border-radius:5px;padding:2px 7px;min-height:30px}
-.gk-st-next{border-color:var(--accent-soft)}
-.gk-st-k{flex:none;min-width:34px;font-size:11px;font-weight:700;color:var(--accent-soft)}
-.gk-st-v{font-size:15px;font-weight:700;cursor:pointer}
-.gk-st .gk-dice{color:var(--faint);font-size:11px}
-.gk-st .gk-roll1{width:auto;padding:3px 10px}
+/* D-015: the scores step is the statblock ability grid — six bordered cells, one editable number
+   each, neutral chrome (the Roll button is the only accent). */
+.gk-ab6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.gk-ab{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);border-radius:6px;padding:7px 4px 6px;min-height:56px;justify-content:flex-start}
+.gk-ab-next{border-color:var(--dim)}
+.gk-ab-k{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--faint)}
+.gk-ab-in{width:100%;max-width:52px;text-align:center;background:none;border:none;color:var(--txt);font-size:17px;font-weight:700;padding:1px 0;border-radius:4px}
+.gk-ab-in:hover:not(:disabled),.gk-ab-in:focus{background:rgba(255,255,255,.05);outline:none}
+.gk-ab-in:disabled{color:var(--txt);opacity:1}
+.gk-ab-in::-webkit-outer-spin-button,.gk-ab-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.gk-ab-dot{color:var(--faint);font-size:15px;line-height:26px}
+.gk-ab-roll{width:auto;padding:3px 8px}
+.gk-ab-roll svg{width:12px;height:12px;margin-right:3px;vertical-align:-2px}
+@media (max-width:560px){.gk-ab6{grid-template-columns:repeat(3,1fr)}}
+/* D-017: bare labels get a small ? for the method info; closed sections shrink Reroll to a die. */
+.gk-q{background:none;border:1px solid var(--line);color:var(--faint);border-radius:50%;width:15px;height:15px;font-size:9.5px;line-height:1;padding:0;margin-left:6px;cursor:pointer;vertical-align:1px}
+.gk-q:hover{color:var(--txt);border-color:var(--dim)}
+.gk-info{font-size:11px;color:var(--faint);margin-top:5px;padding:5px 8px;border-left:2px solid var(--line)}
+.gk-roll-ico{background:none;border:1px solid transparent;border-radius:5px;color:var(--faint);padding:3px 5px;cursor:pointer;width:auto}
+.gk-roll-ico:hover{color:var(--txt);border-color:var(--line)}
+.gk-roll-ico svg{width:13px;height:13px;display:block}
+.gk-tbl-h{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:8px}
+.gk-tr.gk-more .gk-tl{color:var(--faint);font-style:italic}
+.gk-allbtn svg{width:13px;height:13px;margin-right:4px;vertical-align:-2px;flex:none}
 .gk-step-v [data-gkedit]{cursor:pointer;border-bottom:1px dashed transparent}
 .gk-step-v [data-gkedit]:hover{border-bottom-color:var(--accent-soft)}
-.gk-roll svg,.gk-roll1 svg,.gk-subrow svg{width:13px;height:13px;margin-right:4px;vertical-align:-2px}
+.gk-roll svg,.gk-subrow svg{width:13px;height:13px;margin-right:4px;vertical-align:-2px}
 .gk-res-per{background:none;border:1px solid var(--line);border-radius:999px;color:var(--faint);font-size:10px;padding:2px 9px;cursor:pointer;flex:none}
 .gk-res-per:hover{border-color:var(--accent);color:var(--txt)}
 .gk-res-per-s{border-color:transparent;cursor:default}

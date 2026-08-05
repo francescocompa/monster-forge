@@ -178,7 +178,7 @@ function renderAdvDetail(){
     </div></div></div>
     <div id="advInfoWrap">
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
-    <div class="section-label" id="partyHead"><span>Party roster${a.party.length?` <span class="pc-count2">${a.party.length}</span>`:""}</span><button class="lvlup-btn" id="partyLvlUp" title="Level up the party">${ARROW_TREND_UP}<span class="lvlup-txt">Level Up</span></button></div>
+    <div class="section-label" id="partyHead"><span>Party roster${a.party.length?` <span class="pc-count2">${a.party.length}</span>`:""}</span><span class="sl-acts"><button class="lvlup-btn" id="partyLvlUp" title="Level up the party">${ARROW_TREND_UP}<span class="lvlup-txt">Level Up</span></button>${a.crew?`<button class="lvlup-btn" id="crewSettings" title="Crew generator settings">${GEN_GEAR_ICON}<span class="lvlup-txt">Crew</span></button>`:""}</span></div>
     <div id="partyWrap"></div>
     <div id="crewWrap"></div>
     </div>
@@ -223,6 +223,7 @@ function renderAdvDetail(){
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
   {const lu=$("#partyLvlUp");if(lu)lu.addEventListener("click",()=>levelUpParty(a));}
+  {const cs=$("#crewSettings");if(cs)cs.addEventListener("click",()=>openCrewSettings(a));}
   renderParty(a);renderCrewPanel(a);renderEncList(a);
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).

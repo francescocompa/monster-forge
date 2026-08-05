@@ -4,6 +4,52 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 281 — Crew generator v3: live feedback round applied end to end (D-015…D-022)
+Same-day revision of B280 from a four-round live interview; all decisions in `DECISIONS.md`.
+- **Ritual (D-015/016/017):** the scores step is now the statblock-style six-cell grid — ONE
+  editable number per ability (editing converts the step to chosen), no printed dice strings, no
+  summary strip, one walking Roll button starting at STR; **ritual rolls fire the real 3D dice**
+  (`genFire3D` hands the engine's raw faces to `rollDice3D`, which replays them — what settles is
+  what the step recorded; dice stamped on step records as `die`). Class table lists all twelve
+  (top-3 span-marked, other nine behind a pick-only expander). Section labels are bare names with
+  a small `?` popover carrying the die/method text; whole completed sections are click targets to
+  reopen; collapsed sections shrink Reroll to an icon-only ghost; every ritual dropdown numbers its
+  rows (physical dice can drive picks); background ASI is an explicit step (editor opens on the
+  class default, waits for Apply — Roll-the-rest still auto-applies it); Roll-the-rest icon sized.
+- **Engine constraints (D-018):** every spell roll rerolls names already granted by another source
+  (feat, legacy, tome, always-prepared — `genSpellsGranted`), and a rolled full caster always ends
+  with at least one damage cantrip (bounded rerolls, index-subset fallback). Locked in the 160-seed
+  batch alongside a no-cross-source-dupes invariant.
+- **Card (D-019):** `.modal .sb h3` scoped rule restores statblock heading specs inside modals (the
+  `.modal h3` title rule was clobbering "Actions"); the card host now carries the same roll
+  delegation as `#statblock`, so click-to-roll works in every card modal; the Skills line gains a
+  chevron opening an all-18-skills panel (every bonus rollable, proficient highlighted); Gear gains
+  a chevron opening a manual editor (remove/add items — stored as a per-character overlay:
+  `pc.gen.gear` DM-side, localStorage on phones; never on the wire); spellcasting sources sharing
+  an ability collapse into ONE Spellcasting entry (attack lines keep per-source numbers); traits
+  fully covered by the spellcasting block (Draconic Sorcery, Magic Initiate) no longer repeat.
+- **Tracker (D-020):** resource declarations may carry `sr:N` — such rows render an `SR +N` partial
+  reset beside the full reset (Rage and Second Wind regain 1 on a Short Rest, all on Long).
+- **Roster restructure (D-021):** the crew section is dissolved. The party-roster header carries a
+  gear button (after Level Up) opening the crew-settings modal (species/scores/class/ASI + the
+  player link); the roster's primary action is the split "Roll a kobold" button (regular add behind
+  the caret, encounter-FAB pattern); generated members are ordinary rows that open the statblock
+  modal (with a notes section at the bottom and a Full page escape) instead of the roster page;
+  only the Caduti list remains under the roster. "Add to the crew" closes back to the roster.
+- **Content (D-022):** kit tables grew for all twelve classes (Fighter 8, Barbarian/Paladin/Ranger/
+  Rogue 6, Cleric 5, the rest 4 — PHB-legal, clean dice; new `unarmConShield` AC atom, shields now
+  count in unarmored AC recipes); sundries split into TWO disjoint d20 lists (roll 1 from each).
+- **Player tooltips (D-019):** the crew share gains `/refs` — trimmed spell/condition texts for
+  every generator-reachable name, written at mint + config pushes; phones sanitize at ingestion
+  (whitelisted keys, brackets stripped, caps) and seed their reference stores so card links pop the
+  same texts the DM sees. The phone poll now reads only the light `/crew` subtree; cfg refreshes on
+  focus, refs load once at boot.
+- Fixed in passing: B280's two lint warnings (dead `useMast`, dead `root`). **102 tests green**
+  (floors updated: two-list sundries, dedupe + damage-cantrip + merged-spellcasting invariants over
+  160 seeds, SR partial reset, restructured-roster DOM flow). Live pass done in the pane this time
+  — 3D dice verified in flight, modal rolls land in the log. Phone flow parked until the next real
+  playtest (his call).
+
 ## Batch 280 — Crew generator v2: Francesco's thirteen notes + the depth interview (D-011…D-014)
 Full revision of B279 on written review notes; gen.js rewritten (1550 lines), payloads bumped to v:2.
 - **No AI tells:** every emoji replaced (D20 icon or plain text), all copy rewritten matter-of-fact;

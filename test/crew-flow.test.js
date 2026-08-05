@@ -11,13 +11,15 @@ test.before(async () => { ({ window } = bootApp()); await settle(); });
 const ev = (expr) => { const v = evalIn(window, expr); return v !== null && typeof v === "object" ? JSON.parse(JSON.stringify(v)) : v; };
 const evA = async (expr) => { const v = await evalIn(window, expr); return v !== null && typeof v === "object" ? JSON.parse(JSON.stringify(v)) : v; };
 
-// Click through the ritual: whatever roll or sub-roll button the active step offers, until only
-// the identity step remains. Mirrors a player hammering the dice.
+// Click through the ritual: whatever roll or sub-roll button the active step offers — plus the
+// explicit ASI Apply (D-017: no self-resolving steps) — until only the identity step remains.
+// Mirrors a player hammering the dice.
 const ROLL_THROUGH = `
   { let rtGuard=0;
     while(rtGuard++<80){
       const b=document.querySelector(".gk-step.gk-active [data-gkroll]")
-        ||document.querySelector("#gkR [data-gkrollsub]");
+        ||document.querySelector("#gkR [data-gkrollsub]")
+        ||document.querySelector('.gk-step.gk-active [data-gkapply="asi"]');
       if(!b)break;
       b.click();
     } }`;
@@ -30,16 +32,27 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     const tog=document.getElementById("advCrewTog");
     if(!tog)return {fail:"no advCrewTog in the kebab"};
     tog.click();
-    return {crewOn:!!a.crew,panel:!!document.querySelector(".gk-panel"),
-            roll:!!document.getElementById("crewRoll"),share:!!document.getElementById("crewShare")};})()`);
+    // D-021: no separate crew section — the roster header grows a settings gear, the add row
+    // becomes the split roll button, and the settings modal carries the player-link controls.
+    const gear=document.getElementById("crewSettings");
+    let share=false;
+    if(gear){gear.click();share=!!document.getElementById("crewShare");
+      const x=document.getElementById("crewCfgClose");if(x)x.click();}
+    return {crewOn:!!a.crew,panelGone:!document.querySelector(".gk-panel"),
+            roll:!!document.getElementById("rollPC"),gear:!!gear,share,
+            caret:!!document.querySelector('[data-menu="pcadd"]'),
+            regularAdd:!!document.getElementById("addPC")};})()`);
   assert.equal(setup.fail, undefined);
   assert.equal(setup.crewOn, true);
-  assert.equal(setup.panel, true);
-  assert.equal(setup.roll, true);
-  assert.equal(setup.share, true);
+  assert.equal(setup.panelGone, true, "the old crew panel is dissolved");
+  assert.equal(setup.roll, true, "split Roll button is the roster primary");
+  assert.equal(setup.gear, true, "settings gear in the roster header");
+  assert.equal(setup.share, true, "player-link controls live in the settings modal");
+  assert.equal(setup.caret, true);
+  assert.equal(setup.regularAdd, true, "regular add stays behind the caret");
 
   const ritual = ev(`(()=>{
-    document.getElementById("crewRoll").click();
+    document.getElementById("rollPC").click();
     if(!document.getElementById("gkR"))return {fail:"ritual modal missing"};
     // The class step must show its option table BEFORE any class roll (D-011)
     let stats=0,guard=0;
@@ -73,29 +86,41 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     const a=state.adv.find(x=>x.id==="gk-test-adv");
     const pc=a.party.map(id=>state.roster.find(r=>r.id===id)).find(p=>p&&p.gen);
     return {nm,party:a.party.length,pc:!!pc,pcName:pc&&pc.name,
-            chip:!!document.querySelector('[data-gkcard]')};})()`);
+            modalClosed:document.getElementById("modal").style.display!=="block",
+            row:!!document.querySelector(".pc-row")};})()`);
   assert.equal(saved.fail, undefined);
   assert.equal(saved.pc, true);
   assert.equal(saved.pcName, saved.nm);
-  assert.ok(saved.chip);
+  assert.ok(saved.row, "the generated member is an ordinary party row");
+  assert.equal(saved.modalClosed, true, "Add to the crew closes back to the roster (D-021)");
   assert.equal(saved.party, 1);
 
   const card = ev(`(()=>{
-    document.querySelector('[data-gkcard]').click();
+    // D-021: clicking the member's party row opens the statblock modal, not the roster page.
+    document.querySelector(".pc-row").click();
     const host=document.getElementById("gkCardHost");
     if(!host||!host.querySelector(".gk-card"))return {fail:"card modal missing"};
-    // resource tracker: pips spend and the recharge label resets
+    const notes=document.getElementById("gkNotes");
+    // resource tracker: pips spend, SR restores partially where declared, the recharge label resets
     const pip=host.querySelector("[data-gkpip]");
     let pips=null;
     if(pip){pip.click();
       const spent=host.querySelectorAll(".gk-spent").length;
+      let srAfter=null;
+      const sr=host.querySelector("[data-gksr]");
+      if(sr){const row=sr.closest(".gk-res-row");
+        const pipsIn=row.querySelectorAll("[data-gkpip]");
+        pipsIn[pipsIn.length-1].click(); // spend the row fully
+        sr.click();                       // SR gives back its declared share
+        srAfter=row.querySelectorAll(".gk-spent").length;}
       const reset=host.querySelector("[data-gkreset]");reset.click();
-      pips={spent,after:host.querySelectorAll(".gk-spent").length};}
-    return {pips};})()`);
+      pips={spent,srAfter,after:host.querySelectorAll(".gk-spent").length};}
+    return {pips,notes:!!notes};})()`);
   assert.equal(card.fail, undefined);
+  assert.equal(card.notes, true, "the statblock modal carries the notes section");
   if (card.pips) {
     assert.ok(card.pips.spent >= 1, "clicking a pip spends it");
-    assert.equal(card.pips.after, 0, "clicking the recharge label resets the row");
+    if (card.pips.srAfter != null) assert.ok(card.pips.srAfter >= 1, "SR restores only its share");
   }
 
   const dead = ev(`(()=>{

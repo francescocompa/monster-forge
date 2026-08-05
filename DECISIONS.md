@@ -114,3 +114,59 @@ Raw note: (handoff) "rules-legal D&D 2024 level-1 characters (with a flagged 201
 Locks: ~~2014 MPMM Kobold verbatim as the flagged species substitution~~ **SUPERSEDED → D-011: the flag line is removed from the app; the species pack still carries only 2014 MPMM Kobold mechanics** (no 2024 kobold exists — the substitution is real, just no longer narrated) · all 12 D&D 2024 PHB classes as fixed iconic level-1 packages, now with rolled kits/features/spells on top (D-012–D-014) rather than fully fixed · origin feat d10 = exactly the ten XPHB origin feats, now with comprehensive texts + internal sub-rolls (D-011) · custom background = +2/+1 class-appropriate ASI + rolled feat + rolled class skills · UI/mechanics English · ~~flavor content Italian, drafted flavor tables locked after review~~ **SUPERSEDED → D-009 (tables shelved) → D-011 (last words removed): identity is name + optional quirk/trinket, free-typed by whoever rolls, no language constraint** · defaults 3d6 / Plausible / ASI-on, DM-set per adventure as crew settings.
 Enforced by: `test/gen.test.js` legality invariants (HP ≥ 1, attack = mod+PB, DC = 8+PB+mod, ASI +2/+1 legality, all 12 classes reachable).
 Affects: generator data tables.
+
+### D-015 — Ritual v3: Forge-style scores grid, real 3D dice, quiet chrome · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 1), live walkthrough on the B280 build
+Raw note: "The score section is a mess. Instead, display it like we display the stat section in monster forge for example, with less abundant use of accent color. Also, right now the same score is repeated 3 times, keep only one that can also be edited manually. Also, the actual 3d dice roll is missing" + "Drop the whole strip"
+Chosen: scores render as the Forge-style six-ability grid; ONE score display per ability, manually editable (editing IS the override); the totals+dice summary strip is deleted; accent color use cut back; ritual rolls fire the app's real 3D dice. Partially supersedes D-011's raw-dice-inline for scores — the roll theater moves from printed dice strings to the 3D roll itself.
+Enforced by: gen.js ritual renderer + styles; test keeps per-ability edit → derived-stat cascade.
+Affects: gen.js, styles.css, dice3d integration.
+
+### D-016 — Class table: all 12 visible, top-3 span-marked, rest collapsed · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 1)
+Raw note: "Show all 12, top-3 span marked (the rest are collapsed to reduce space)"
+Chosen: the class step lists all twelve classes; the plausible three carry the d6 spans; the other nine sit collapsed behind an expander and are pickable when expanded. Rejected: top-3-only table (hides the pick space), fully expanded 12 (too tall on phones).
+Enforced by: gen.js class step renderer.
+Affects: gen.js.
+
+### D-017 — Ritual interaction conventions v3 · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (rounds 1-3)
+Raw notes: "Keep the labels clean to only the label name, hide the other info behind a small ? tooltip button right after the name." · "Clicking over a completed step should open the section, not only clicking the result" · "Make it an explicit step" (background ASI) · "when a section is closed, the reroll button should collapse to a small ghost dice icon instead of a full button" · "on the dropdown lists (ex. equipment), make the items always numbered so they can be rolled manually" · "The Roll the rest button icon is wrongly sized" · post-add closes to the panel (picked recommended)
+Chosen: section labels = bare names with a small ? popover carrying die/method info; whole completed sections are click targets to reopen; no self-resolving steps (ASI waits like the rest); collapsed sections shrink Reroll to an icon-only ghost; every pick dropdown numbers its items so physical dice map to rows; the one-shot button's icon is sized right; "Add to the crew" closes the modal back to the panel.
+Enforced by: gen.js ritual renderer + styles; DOM test covers section-reopen-by-header-click and the explicit ASI step.
+Affects: gen.js, styles.css, test/crew-flow.test.js.
+
+### D-018 — Generation constraints: cross-source spell dedupe, guaranteed damage cantrip · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (rounds 2-3; dupe observed live — Detect Poison and Disease from both Magic Initiate and the prepared roll)
+Raw note: "Reroll cross-source dupes" (picked recommended) + "we need to make sure to always have at least one damage cantrip for full spellcasters"
+Chosen: any spell roll rerolls names already granted by another source (feat, legacy, class kit) — a card never lists the same spell twice; cantrip rolls for full casters are constrained so at least one damage cantrip lands. Rejected: RAW-honest dupes (wasted rolls read as bugs).
+Enforced by: gen.js engine + test/gen.test.js (dedupe invariant, damage-cantrip invariant over seed batches).
+Affects: gen.js, tests.
+
+### D-019 — Card v3: statblock fidelity, chevron panels, merged spellcasting, player tooltips · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 3)
+Raw note: "the section labels type specs are wrong (ex. Actions) · the dice rolls don't seem to work in the modal · add a chevron aligned to the right with the skills row that shows a section with all skills (even those w/o prof. and their bonuses), collapsed by default · add a chevron also next to gear, and clicking on it shows a menu where you can edit the gear manually (ex. you used or lost something and you need to remove it) · collapse the spellcasting features into one if they share the same ability … · Do not show redundant features (ex. draconic sorcery is already featured in the spellcasting, no need to have it as a trait) · Can we embed spell and condition tooltips even for players?"
+Chosen: card section labels match the real statblock type specs; click-to-roll works inside the ritual/card modal; skills row gains a right-aligned chevron opening a collapsed all-skills panel (every skill with its bonus, proficient or not); gear row gains a chevron opening a manual gear editor (remove/add — post-roll state, stored as a per-PC overlay, never in the wire payload); spellcasting groups sharing the spellcasting ability collapse into one entry; traits fully covered by a spellcasting entry are suppressed; phone player cards get spell/condition popovers by shipping a trimmed name→text map in the crew share cfg (texts sanitized at ingestion like all share data).
+Enforced by: gen.js (genToMonster + card mount), styles.css, crew share cfg schema, tests.
+Affects: gen.js, styles.css, core.js (esc/popovers reuse), DEVELOPMENT.md crew section.
+
+### D-020 — Tracker: dual-recharge resources (X on short rest, all on long) · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 3)
+Raw note: "Keep as is. Make sure there is also a functioning version for features that recharge X on SR and Y on LR (ex. recharge 1 on short rest and all on long rest, like Rage)"
+Chosen: resource declarations may carry a short-rest partial recharge (regain N) beside the long-rest full reset; such rows render both reset affordances.
+Enforced by: gen.js resource schema + pip renderer; test covers partial vs full reset.
+Affects: gen.js, tests.
+
+### D-021 — The crew dissolves into the party roster · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 3)
+Raw note: "The species restriction, score style, classes, background and other settings should lie in a dedicated modal that can be opened as settings. The name of the section should changed to be agnostic. In general, this section should collapsed into the party roster, adding a setting button after level up, move the roll a character button replacing add character (but keep the option for adding a regular character in a submenu that can be opened from an arrow after a divider like the encounter FAB button). Generated party members default open the statblock modal instead of their dedicated page, which should include a note section at the bottom."
+Chosen: no separate CREW section — on a generator-enabled adventure the party-roster header carries a settings (gear) button after Level Up opening a dedicated crew-settings modal (species, scores, class mode, background ASI, player link); the primary roster action becomes species-agnostic "Roll a character", replacing Add character, as a split button whose divider+arrow submenu keeps "Add a regular character"; generated members open the statblock modal (card + tracker + a notes section at the bottom) instead of the roster detail page. Supersedes D-002's in-detail crew panel layout (the adventure-tied principle stands).
+Enforced by: adventures.js/roster.js render paths + gen.js modal; DOM test covers the split button and member-click → statblock modal.
+Affects: adventures.js, roster.js, gen.js, styles.css, tests.
+
+### D-022 — Content expansion: more kits everywhere, sundries split into two lists · 2026-08-05 · DECIDED
+Mechanism: AskUserQuestion feedback session (round 4)
+Raw note: "I think we need more kits, for all classes" + "Increase the number of sundries that can be drafted, if we have enough we can do two different lists for the 2 rolls"
+Chosen: every class's kit table grows (martials stay broader than casters per D-013's shape; counts land on clean dice); the sundries pool grows to two distinct d20 lists — roll 1 draws from list A, roll 2 from list B. Supersedes D-013's counts (6/3) and D-014's single shared d20.
+Enforced by: kit/gear integrity tests (die coverage, class legality, list disjointness).
+Affects: gen.js data packs, tests.

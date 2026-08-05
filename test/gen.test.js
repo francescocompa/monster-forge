@@ -11,12 +11,14 @@ test.before(async () => { ({ window } = bootApp()); await settle(); });
 const ev = (expr) => { const v = evalIn(window, expr); return v !== null && typeof v === "object" ? JSON.parse(JSON.stringify(v)) : v; };
 const RNG = `(seed=>{let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};})`;
 
-test("locked tables: classes d12, feats d10, legacy cantrips d20, packs d6, sundries d20, tools d8, instruments d10", () => {
+test("locked tables: classes d12, feats d10, legacy cantrips d20, packs d6, two disjoint d20 sundries lists, tools d8, instruments d10", () => {
   const r = ev(`(()=>{
     const legacy=GEN_SPECIES.kobold.tables.find(t=>t.id==="legacy");
     return {cls:GEN_CLASS_LIST,feats:GEN_FEATS.map(f=>f.n),
       can:legacy.entries.find(e=>e.value==="sorcery").sub.entries.length,
-      packs:GEN_PACKS.length,sundries:GEN_SUNDRIES.length,tools:GEN_TOOLS8.length,instr:GEN_INSTR10.length,
+      packs:GEN_PACKS.length,sundriesA:GEN_SUNDRIES_A.length,sundriesB:GEN_SUNDRIES_B.length,
+      overlap:GEN_SUNDRIES_A.filter(x=>GEN_SUNDRIES_B.includes(x)).length,
+      tools:GEN_TOOLS8.length,instr:GEN_INSTR10.length,
       union:GEN_ALL_CANTRIPS.length,
       casters:Object.keys(GEN_CLASS_SPELLS).length};})()`);
   assert.equal(r.cls.length, 12);
@@ -25,7 +27,9 @@ test("locked tables: classes d12, feats d10, legacy cantrips d20, packs d6, sund
   assert.deepEqual([...r.feats].sort(), r.feats);
   assert.equal(r.can, 20);
   assert.equal(r.packs, 6);
-  assert.equal(r.sundries, 20);
+  assert.equal(r.sundriesA, 20);
+  assert.equal(r.sundriesB, 20);
+  assert.equal(r.overlap, 0, "the two sundries lists never collide (D-022)");
   assert.equal(r.tools, 8);
   assert.equal(r.instr, 10);
   assert.equal(r.casters, 8);
@@ -118,7 +122,22 @@ test("seeded batch of 160 full rolls: complete, rules-legal, deterministic, all 
       if(ch.cls==="Rogue"&&ch.skills.filter(s=>s.exp).length!==2)out.bad.push(seed+":expertise");
       if(!ch.gear.includes(p.steps.gearPack.value))out.bad.push(seed+":pack");
       for(const su of p.steps.sundries.value)if(!ch.gear.includes(su))out.bad.push(seed+":sundry");
+      if(!GEN_SUNDRIES_A.includes(p.steps.sundries.value[0])||!GEN_SUNDRIES_B.includes(p.steps.sundries.value[1]))out.bad.push(seed+":sundrylist");
       if(ch.caster&&!ch.resources.some(x=>x.k==="slots"))out.bad.push(seed+":slots");
+      // D-018: no spell name appears twice across sources on one character…
+      const allSpells=[]
+        .concat(ch.caster?ch.caster.cantrips:[]).concat(ch.caster?ch.caster.prepared:[])
+        .concat(ch.sorcery?[ch.sorcery.cantrip]:[])
+        .concat((ch.extraCasts||[]).flatMap(x=>x.cantrips.concat([x.spell])));
+      if(new Set(allSpells).size!==allSpells.length)out.bad.push(seed+":spelldupe:"+allSpells.join("|"));
+      // …and a rolled full caster always knows at least one damage cantrip.
+      if(ch.caster&&ch.caster.cantrips.length&&!p.steps.cantrips.pick){
+        if(!ch.caster.cantrips.some(n=>GEN_CANTRIP_LINES[n]))out.bad.push(seed+":nodmgcantrip");
+      }
+      // D-019: spellcasting entries sharing an ability collapse into one.
+      const spellEntries=genToMonster(ch).actions.filter(e=>e.mode==="spell");
+      const byAbil={};spellEntries.forEach(e=>{const k=e.ability+":"+e.dc+":"+e.atk;byAbil[k]=(byAbil[k]||0)+1;});
+      if(Object.values(byAbil).some(n=>n>1))out.bad.push(seed+":unmerged");
     }
     return out;})()`);
   assert.deepEqual(r.bad, []);

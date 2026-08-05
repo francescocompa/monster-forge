@@ -134,6 +134,7 @@ const GEN_AC={
   chainMail:{kind:"fixed",base:16,label:"Chain Mail"},
   chainMailShield:{kind:"fixed",base:16,shield:true,label:"Chain Mail, Shield"},
   unarmCon:{kind:"unarmored-con",label:"Unarmored Defense"},
+  unarmConShield:{kind:"unarmored-con",shield:true,label:"Unarmored Defense, Shield"},
   unarmWis:{kind:"unarmored-wis",label:"Unarmored Defense"}
 };
 
@@ -151,16 +152,19 @@ const GEN_CLASSES={
       {n:"Greataxe and handaxes",ac:"unarmCon",weapons:[{w:"greataxe"},{w:"handaxe",count:4}],gear:"Greataxe, 4 Handaxes"},
       {n:"Maul and javelins",ac:"unarmCon",weapons:[{w:"maul"},{w:"javelin",count:4}],gear:"Maul, 4 Javelins"},
       {n:"Twin handaxes",ac:"unarmCon",weapons:[{w:"handaxe",count:2},{w:"javelin",count:2}],gear:"2 Handaxes, 2 Javelins"},
-      {n:"Greatsword and daggers",ac:"unarmCon",weapons:[{w:"greatsword"},{w:"dagger",count:2}],gear:"Greatsword, 2 Daggers"}],
+      {n:"Greatsword and daggers",ac:"unarmCon",weapons:[{w:"greatsword"},{w:"dagger",count:2}],gear:"Greatsword, 2 Daggers"},
+      {n:"Halberd",ac:"unarmCon",weapons:[{w:"halberd"},{w:"javelin",count:3}],gear:"Halberd, 3 Javelins"},
+      {n:"Spear and shield",ac:"unarmConShield",weapons:[{w:"spear"},{w:"javelin",count:3}],gear:"Shield, Spear, 3 Javelins"}],
     traits:[{n:"Unarmored Defense",t:"AC equals 10 + Dex modifier + Con modifier while the barbarian isn't wearing armor (a Shield is allowed)."}],
-    bonus:[{n:"Rage (2/Long Rest)",t:"While not wearing Heavy armor: +2 bonus to damage with Strength-based weapon attacks, Resistance to Bludgeoning, Piercing, and Slashing damage, and Advantage on Strength checks and Strength saving throws. Lasts 10 minutes while the barbarian attacks a foe or takes damage each round."}],
-    res:[{k:"rage",label:"Rage",max:2,per:"Long Rest"}]},
+    bonus:[{n:"Rage (2/Long Rest)",t:"While not wearing Heavy armor: +2 bonus to damage with Strength-based weapon attacks, Resistance to Bludgeoning, Piercing, and Slashing damage, and Advantage on Strength checks and Strength saving throws. Lasts 10 minutes while the barbarian attacks a foe or takes damage each round. One use returns on a Short Rest, all of them on a Long Rest."}],
+    res:[{k:"rage",label:"Rage",max:2,per:"Long Rest",sr:1}]},
   Bard:{hd:8,saves:["dex","cha"],prim:"cha",sec:"dex",
     skills:{from:GEN_SKILL_NAMES,n:3},
     kits:[
       {n:"Daggers and a lute",ac:"leather",weapons:[{w:"dagger",count:2}],gear:"Leather Armor, 2 Daggers, Lute"},
       {n:"Spear and a drum",ac:"leather",weapons:[{w:"spear"}],gear:"Leather Armor, Spear, Drum"},
-      {n:"Light crossbow and a flute",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Flute"}],
+      {n:"Light crossbow and a flute",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Flute"},
+      {n:"Sling and a lyre",ac:"leather",weapons:[{w:"sling"},{w:"club"}],gear:"Leather Armor, Sling, Club, Lyre"}],
     traits:[],
     bonus:[{n:"Bardic Inspiration (d6)",t:"One creature within 60 feet that can hear the bard gains a d6 it can add to one d20 Test within the next hour. Uses per Long Rest equal the bard's Charisma modifier (minimum 1)."}],
     res:[{k:"insp",label:"Bardic Inspiration",max:"chaMin1",per:"Long Rest"}],
@@ -170,7 +174,9 @@ const GEN_CLASSES={
     kits:[
       {n:"Mace and shield",ac:"chainShirtShield",weapons:[{w:"mace"}],gear:"Chain Shirt, Shield, Mace, Holy Symbol"},
       {n:"Warhammer",ac:"scaleShield",weapons:[{w:"warhammer",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Holy Symbol",note:"Warhammer needs Protector's Martial training"},
-      {n:"Crossbow and mace",ac:"chainShirt",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Light Crossbow, 20 Bolts, Mace, Holy Symbol"}],
+      {n:"Crossbow and mace",ac:"chainShirt",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Light Crossbow, 20 Bolts, Mace, Holy Symbol"},
+      {n:"Quarterstaff and shield",ac:"chainShirtShield",weapons:[{w:"quarterstaff"}],gear:"Chain Shirt, Shield, Quarterstaff, Holy Symbol"},
+      {n:"Spear and sling",ac:"scaleShield",weapons:[{w:"spear"},{w:"sling"}],gear:"Scale Mail, Shield, Spear, Sling, Holy Symbol"}],
     traits:[],bonus:[],
     featureOpt:{label:"Divine Order",options:[
       {label:"Protector",value:"protector",t:"Divine Order: Protector. Trained for battle — proficient with Martial weapons and Heavy armor."},
@@ -181,7 +187,8 @@ const GEN_CLASSES={
     kits:[
       {n:"Sickle and shield",ac:"leatherShield",weapons:[{w:"sickle"}],gear:"Leather Armor, Shield, Sickle, Druidic Focus (Quarterstaff), Herbalism Kit"},
       {n:"Spear",ac:"leather",weapons:[{w:"spear"}],gear:"Leather Armor, Spear, Druidic Focus (sprig of mistletoe), Herbalism Kit"},
-      {n:"Sling and staff",ac:"leather",weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Leather Armor, Sling, Quarterstaff (Druidic Focus), Herbalism Kit"}],
+      {n:"Sling and staff",ac:"leather",weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Leather Armor, Sling, Quarterstaff (Druidic Focus), Herbalism Kit"},
+      {n:"Club and shield",ac:"leatherShield",weapons:[{w:"club"},{w:"sling"}],gear:"Leather Armor, Shield, Club, Sling, Druidic Focus (yew wand), Herbalism Kit"}],
     traits:[{n:"Druidic",t:"The druid knows Druidic and always has Speak with Animals prepared."}],
     bonus:[],langs:["Druidic"],
     featureOpt:{label:"Primal Order",options:[
@@ -196,10 +203,12 @@ const GEN_CLASSES={
       {n:"Archer",ac:"studded",weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword"},
       {n:"Two scimitars",ac:"studded",weapons:[{w:"scimitar",count:2},{w:"dagger"}],gear:"Studded Leather, 2 Scimitars, Dagger"},
       {n:"Polearm",ac:"chainMail",weapons:[{w:"halberd"},{w:"handaxe",count:2}],gear:"Chain Mail, Halberd, 2 Handaxes"},
-      {n:"Crossbow and shield",ac:"chainShirtShield",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Shield, Light Crossbow, 20 Bolts, Mace"}],
+      {n:"Crossbow and shield",ac:"chainShirtShield",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Shield, Light Crossbow, 20 Bolts, Mace"},
+      {n:"Warhammer and shield",ac:"chainMailShield",weapons:[{w:"warhammer"},{w:"handaxe",count:2}],gear:"Chain Mail, Shield, Warhammer, 2 Handaxes"},
+      {n:"Duelist",ac:"chainShirt",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Chain Shirt, Rapier, 2 Daggers"}],
     traits:[],
     bonus:[{n:"Second Wind (2 uses)",t:"The fighter regains 1d10 + 1 Hit Points. One use returns on a Short Rest, all of them on a Long Rest."}],
-    res:[{k:"wind",label:"Second Wind",max:2,per:"Short/Long Rest"}],
+    res:[{k:"wind",label:"Second Wind",max:2,per:"Long Rest",sr:1}],
     featureOpt:{label:"Fighting Style",options:[
       {label:"Archery",value:"Archery",t:"Fighting Style: Archery. +2 bonus to attack rolls with Ranged weapons (counted).",hooks:{rangedAtk:2}},
       {label:"Blind Fighting",value:"Blind Fighting",t:"Fighting Style: Blind Fighting. Blindsight within 10 feet."},
@@ -216,7 +225,8 @@ const GEN_CLASSES={
     kits:[
       {n:"Spear and daggers",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"spear"},{w:"dagger",count:5}],gear:"Spear, 5 Daggers"},
       {n:"Shortsword and darts",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"shortsword"},{w:"dart",count:6}],gear:"Shortsword, 6 Darts"},
-      {n:"Staff and sling",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"quarterstaff"},{w:"sling"}],gear:"Quarterstaff, Sling"}],
+      {n:"Staff and sling",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"quarterstaff"},{w:"sling"}],gear:"Quarterstaff, Sling"},
+      {n:"Handaxes and darts",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"handaxe",count:2},{w:"dart",count:4}],gear:"2 Handaxes, 4 Darts"}],
     traits:[{n:"Martial Arts (d6)",t:"Unarmed Strikes and Monk weapons (Simple Melee, plus Light Martial Melee) deal 1d6 and can use Dexterity."},
             {n:"Unarmored Defense",t:"AC equals 10 + Dex modifier + Wis modifier while wearing no armor and no Shield."}],
     bonus:[{n:"Bonus Unarmed Strike",t:"The monk makes one Unarmed Strike as a Bonus Action."}]},
@@ -226,7 +236,9 @@ const GEN_CLASSES={
       {n:"Longsword and shield",ac:"chainMailShield",weapons:[{w:"longsword"},{w:"javelin",count:6}],gear:"Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol"},
       {n:"Greatsword",ac:"chainMail",weapons:[{w:"greatsword"},{w:"javelin",count:3}],gear:"Chain Mail, Greatsword, 3 Javelins, Holy Symbol"},
       {n:"Warhammer and shield",ac:"chainMailShield",weapons:[{w:"warhammer"},{w:"handaxe",count:2}],gear:"Chain Mail, Shield, Warhammer, 2 Handaxes, Holy Symbol"},
-      {n:"Flail and shield",ac:"scaleShield",weapons:[{w:"flail"},{w:"javelin",count:4}],gear:"Scale Mail, Shield, Flail, 4 Javelins, Holy Symbol"}],
+      {n:"Flail and shield",ac:"scaleShield",weapons:[{w:"flail"},{w:"javelin",count:4}],gear:"Scale Mail, Shield, Flail, 4 Javelins, Holy Symbol"},
+      {n:"Halberd",ac:"chainMail",weapons:[{w:"halberd"},{w:"javelin",count:3}],gear:"Chain Mail, Halberd, 3 Javelins, Holy Symbol"},
+      {n:"Battleaxe and shield",ac:"scaleShield",weapons:[{w:"battleaxe"},{w:"handaxe",count:2}],gear:"Scale Mail, Shield, Battleaxe, 2 Handaxes, Holy Symbol"}],
     traits:[],
     bonus:[{n:"Lay on Hands (5 HP pool)",t:"The paladin touches a creature and restores any number of Hit Points remaining in the pool. The pool refills on a Long Rest."}],
     res:[{k:"loh",label:"Lay on Hands (HP)",max:5,per:"Long Rest"}],
@@ -237,7 +249,9 @@ const GEN_CLASSES={
       {n:"Longbow and shortsword",ac:"studded",weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword, Druidic Focus"},
       {n:"Twin shortswords",ac:"studded",weapons:[{w:"shortsword",count:2},{w:"dagger",count:2}],gear:"Studded Leather, 2 Shortswords, 2 Daggers, Druidic Focus"},
       {n:"Heavy crossbow",ac:"studded",weapons:[{w:"heavyxbow"},{w:"scimitar"}],gear:"Studded Leather, Heavy Crossbow, 20 Bolts, Scimitar, Druidic Focus"},
-      {n:"Spear and shield",ac:"studdedShield",weapons:[{w:"spear"},{w:"shortbow"}],gear:"Studded Leather, Shield, Spear, Shortbow, 20 Arrows, Druidic Focus"}],
+      {n:"Spear and shield",ac:"studdedShield",weapons:[{w:"spear"},{w:"shortbow"}],gear:"Studded Leather, Shield, Spear, Shortbow, 20 Arrows, Druidic Focus"},
+      {n:"Scimitar and shield",ac:"studdedShield",weapons:[{w:"scimitar"},{w:"dagger",count:2}],gear:"Studded Leather, Shield, Scimitar, 2 Daggers, Druidic Focus"},
+      {n:"Shortbow and handaxes",ac:"studded",weapons:[{w:"shortbow"},{w:"handaxe",count:2}],gear:"Studded Leather, Shortbow, 20 Arrows, 2 Handaxes, Druidic Focus"}],
     traits:[],
     bonus:[{n:"Favored Enemy (Hunter's Mark)",t:"Hunter's Mark is always prepared and castable twice per Long Rest without a spell slot."}],
     res:[{k:"fav",label:"Hunter's Mark (free)",max:2,per:"Long Rest"}],
@@ -248,7 +262,9 @@ const GEN_CLASSES={
       {n:"Shortsword and shortbow",ac:"leather",weapons:[{w:"shortsword"},{w:"shortbow"},{w:"dagger",count:2}],gear:"Leather Armor, Shortsword, Shortbow, 20 Arrows, 2 Daggers, Thieves' Tools"},
       {n:"Rapier and dagger",ac:"leather",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Leather Armor, Rapier, 2 Daggers, Thieves' Tools"},
       {n:"Rapier and hand crossbow",ac:"leather",weapons:[{w:"rapier"},{w:"handxbow"}],gear:"Leather Armor, Rapier, Hand Crossbow, 20 Bolts, Thieves' Tools"},
-      {n:"Twin shortswords",ac:"leather",weapons:[{w:"shortsword",count:2},{w:"sling"}],gear:"Leather Armor, 2 Shortswords, Sling, Thieves' Tools"}],
+      {n:"Twin shortswords",ac:"leather",weapons:[{w:"shortsword",count:2},{w:"sling"}],gear:"Leather Armor, 2 Shortswords, Sling, Thieves' Tools"},
+      {n:"Daggers everywhere",ac:"leather",weapons:[{w:"dagger",count:4},{w:"sling"}],gear:"Leather Armor, 4 Daggers, Sling, Thieves' Tools"},
+      {n:"Scimitar and shortbow",ac:"leather",weapons:[{w:"scimitar"},{w:"shortbow"}],gear:"Leather Armor, Scimitar, Shortbow, 20 Arrows, Thieves' Tools"}],
     traits:[{n:"Sneak Attack (1d6)",t:"Once per turn, +1d6 damage on a hit with a Finesse or Ranged weapon if the rogue has Advantage, or if an able ally is within 5 feet of the target and the rogue doesn't have Disadvantage."},
             {n:"Thieves' Cant",t:"The rogue knows Thieves' Cant and one other language."}],
     bonus:[],tools:["Thieves' Tools"],langs:["Thieves' Cant"],
@@ -259,7 +275,8 @@ const GEN_CLASSES={
     kits:[
       {n:"Spear and daggers",ac:"none",weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
       {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (crystal)"},
-      {n:"Quarterstaff",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (crystal)"}],
+      {n:"Quarterstaff",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (crystal)"},
+      {n:"Sling and staff",ac:"none",weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Sling, Quarterstaff, Arcane Focus (crystal)"}],
     traits:[],
     bonus:[{n:"Innate Sorcery (2/Long Rest)",t:"For 1 minute: the sorcerer's spell save DC increases by 1 and it has Advantage on Sorcerer spell attack rolls."}],
     res:[{k:"innate",label:"Innate Sorcery",max:2,per:"Long Rest"}],
@@ -269,7 +286,8 @@ const GEN_CLASSES={
     kits:[
       {n:"Sickle and daggers",ac:"leather",weapons:[{w:"sickle"},{w:"dagger",count:2}],gear:"Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb)"},
       {n:"Light crossbow",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (orb)"},
-      {n:"Spear",ac:"leather",weapons:[{w:"spear"},{w:"club"}],gear:"Leather Armor, Spear, Club, Arcane Focus (orb)"}],
+      {n:"Spear",ac:"leather",weapons:[{w:"spear"},{w:"club"}],gear:"Leather Armor, Spear, Club, Arcane Focus (orb)"},
+      {n:"Dagger and sling",ac:"leather",weapons:[{w:"dagger",count:2},{w:"sling"}],gear:"Leather Armor, 2 Daggers, Sling, Arcane Focus (orb)"}],
     traits:[{n:"Pact Magic",t:"One level-1 Pact slot; it refills on a Short or Long Rest."}],
     bonus:[],
     featureOpt:{label:"Eldritch Invocation",options:[
@@ -284,7 +302,8 @@ const GEN_CLASSES={
     kits:[
       {n:"Staff and daggers",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger",count:2}],gear:"Quarterstaff (Arcane Focus), 2 Daggers, Robe, Spellbook"},
       {n:"Dagger and sling",ac:"none",weapons:[{w:"dagger"},{w:"sling"}],gear:"Dagger, Sling, Arcane Focus (wand), Robe, Spellbook"},
-      {n:"Traveling scholar",ac:"none",weapons:[{w:"quarterstaff"}],gear:"Quarterstaff (Arcane Focus), Robe, Spellbook, Ink and Quill"}],
+      {n:"Traveling scholar",ac:"none",weapons:[{w:"quarterstaff"}],gear:"Quarterstaff (Arcane Focus), Robe, Spellbook, Ink and Quill"},
+      {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand), Spellbook"}],
     traits:[{n:"Arcane Recovery (1/day)",t:"On a Short Rest, the wizard recovers one expended level-1 spell slot."},
             {n:"Ritual Adept",t:"The wizard can cast Ritual-tagged spells straight from its spellbook without preparing them."}],
     bonus:[],
@@ -313,12 +332,17 @@ const GEN_FEATS=[
   {n:"Tough",t:"Hit Point maximum increases by 2 per level (counted).",hp2:true}
 ];
 
-// ── Gear rolls (D-014): pack d6 + two sundries off a drafted d20 ─────────────
+// ── Gear rolls (D-014, expanded D-022): pack d6 + one sundry from EACH d20 list.
+// The two lists are disjoint, so the two rolls can never collide.
 const GEN_PACKS=["Burglar's Pack","Dungeoneer's Pack","Entertainer's Pack","Explorer's Pack","Priest's Pack","Scholar's Pack"];
-const GEN_SUNDRIES=["Rope (50 ft.)","Crowbar","Grappling Hook","Caltrops (bag)","Ball Bearings (bag)",
+const GEN_SUNDRIES_A=["Rope (50 ft.)","Crowbar","Grappling Hook","Caltrops (bag)","Ball Bearings (bag)",
   "Chalk (10 pieces)","Steel Mirror","Hooded Lantern and Oil Flask","Tinderbox and 10 Torches","Shovel",
   "Manacles","Fishing Tackle","Healer's Kit","Hunting Trap","Bell and String (10 ft.)","Playing Cards",
   "Net","Bedroll and Blanket","3 Empty Vials","Signal Whistle"];
+const GEN_SUNDRIES_B=["Block and Tackle","Iron Pot and Ladle","Waterskin (full)","Bar of Soap","Perfume (vial)",
+  "Ink, Quill, and 5 Sheets of Parchment","Candles (10)","Oil Flask (spare)","Whetstone","Two Sacks",
+  "Bucket","Iron Spikes (10)","Padlock with Key","Merchant's Scale","Hourglass",
+  "String (50 ft.)","Sealing Wax and Plain Seal","Dice Set","Two-Person Tent","Blank Book"];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENGINE — draft, steps, rolls, picks, completion, validation, derivation.
@@ -387,13 +411,14 @@ function genStatTotal(dice,method){
   return method==="4d6"?s[1]+s[2]+s[3]:dice.reduce((a,b)=>a+b,0);
 }
 // N distinct rolls over a plain list (die = next die over its length, reroll dupes/overshoot).
+// The die is stamped on the record so the UI can hand the raw faces to the 3D dice (D-015).
 function genRollN(rng,list,n,takenNames){
   const die=genDieFor(list.length),taken=new Set();
   (takenNames||[]).forEach(nm=>{const i=list.indexOf(nm);if(i>=0)taken.add(i+1);});
   const rolls=[],names=[];
   for(let i=0;i<n&&taken.size<list.length;i++){
     const r=genRollTable(rng,die,list.length,taken);taken.add(r);rolls.push(r);names.push(list[r-1]);}
-  return {rolls,value:names};
+  return {rolls,value:names,die};
 }
 // Cascade: a re-resolved class invalidates its dependents (skills domain, feature, equipment,
 // spells, defaulted ASI). Rolled dependents re-roll; picked skills survive only if still legal.
@@ -424,15 +449,15 @@ function genRollStep(d,id,rng){
   }
   if(id==="cls"){
     const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=d.steps.stats&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
-    if(d.set.mode==="chaos"){const r=genRollDie(rng,12);d.steps.cls={rolls:[r],value:GEN_CLASS_LIST[r-1]};}
+    if(d.set.mode==="chaos"){const r=genRollDie(rng,12);d.steps.cls={rolls:[r],value:GEN_CLASS_LIST[r-1],die:12};}
     else{const top3=genClassShortlist(scores,d.counts);const span=genSpanFor(3);const r=genRollDie(rng,span.die);
-      d.steps.cls={rolls:[r],top3,value:top3[genSpanHit(span,r)]};}
+      d.steps.cls={rolls:[r],top3,value:top3[genSpanHit(span,r)],die:span.die};}
     genClsCascade(d);
   }else if(id==="asi"){
     d.steps.asi={rolls:[],value:[K?K.prim:"str",K?K.sec:"con"]};
   }else if(id==="feat"){
     const r=genRollDie(rng,10);const f=GEN_FEATS[r-1];
-    d.steps.feat={rolls:[r],value:f.n};
+    d.steps.feat={rolls:[r],value:f.n,die:10};
     if(f.sub)genRollSub(d,"feat",rng);
   }else if(id==="skills"){
     if(!K)return null;
@@ -447,30 +472,46 @@ function genRollStep(d,id,rng){
       const opts=K.featureOpt.options,span=genSpanFor(opts.length);
       const r=genRollTable(rng,span.die,span.reroll?opts.length:span.die,null);
       const idx=span.reroll?r-1:genSpanHit(span,r);
-      const rec={rolls:[r],value:opts[idx].value};
+      const rec={rolls:[r],value:opts[idx].value,die:span.die};
       d.steps.feature=rec;
       const o=opts[idx];
-      if(o.hooks&&o.hooks.tome)rec.sub=genRollN(rng,GEN_ALL_CANTRIPS,3,[]);
+      if(o.hooks&&o.hooks.tome)rec.sub=genRollN(rng,GEN_ALL_CANTRIPS,3,[...genSpellsGranted(d,"feature")]);
     }
   }else if(id==="equip"){
     if(!K)return null;
     const span=genSpanFor(K.kits.length);
     const r=genRollTable(rng,span.die,span.reroll?K.kits.length:span.die,null);
-    d.steps.equip={rolls:[r],value:span.reroll?r-1:genSpanHit(span,r)};
+    d.steps.equip={rolls:[r],value:span.reroll?r-1:genSpanHit(span,r),die:span.die};
   }else if(id==="cantrips"){
     if(!cls)return null;
-    d.steps.cantrips=genRollN(rng,T.can[cls]||[],genCantripCount(d),[]);
+    // D-018: avoid spells granted elsewhere, and a full caster never lands zero damage cantrips —
+    // reroll the set (bounded) until one damages; if the live table simply has none, force the last
+    // slot from the shipped index's damage subset.
+    const granted=[...genSpellsGranted(d,"cantrips")];
+    const isDmg=n=>!!GEN_CANTRIP_LINES[n];
+    const tbl=T.can[cls]||[];
+    let st=genRollN(rng,tbl,genCantripCount(d),granted);
+    if(st.value.length&&!st.value.some(isDmg)){
+      if(tbl.some(isDmg)){let tries=0;
+        while(!st.value.some(isDmg)&&++tries<40)st=genRollN(rng,tbl,genCantripCount(d),granted);}
+      if(!st.value.some(isDmg)){
+        const pool=GEN_CLASS_SPELLS[cls][0].filter(n=>isDmg(n)&&!granted.includes(n)&&!st.value.includes(n));
+        if(pool.length){const rep=genRollN(rng,pool,1,[]);
+          st.value[st.value.length-1]=rep.value[0];st.rolls[st.rolls.length-1]=rep.rolls[0];}}
+    }
+    d.steps.cantrips=st;
   }else if(id==="spells"){
     if(!K||!K.caster)return null;
-    d.steps.spells=genRollN(rng,T.l1[cls]||[],K.caster.prepared,K.caster.always||[]);
+    d.steps.spells=genRollN(rng,T.l1[cls]||[],K.caster.prepared,[...genSpellsGranted(d,"spells")]);
   }else if(id==="gearPack"){
-    const r=genRollDie(rng,6);d.steps.gearPack={rolls:[r],value:GEN_PACKS[r-1]};
+    const r=genRollDie(rng,6);d.steps.gearPack={rolls:[r],value:GEN_PACKS[r-1],die:6};
   }else if(id==="sundries"){
-    d.steps.sundries=genRollN(rng,GEN_SUNDRIES,2,[]);
+    const rA=genRollDie(rng,20),rB=genRollDie(rng,20);
+    d.steps.sundries={rolls:[rA,rB],value:[GEN_SUNDRIES_A[rA-1],GEN_SUNDRIES_B[rB-1]],die:20};
   }else if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
     const r=genRollDie(rng,t.die);const e=t.entries.find(x=>r>=x.lo&&r<=x.hi);
-    const rec={rolls:[r],value:e.value};
+    const rec={rolls:[r],value:e.value,die:t.die};
     d.steps[id]=rec;
     if(e.sub)genRollSub(d,id,rng);
   }
@@ -487,24 +528,50 @@ function genRollSub(d,id,rng){
     else if(f.sub==="mi"){
       const span=genSpanFor(3),r=genRollDie(rng,span.die);
       const list=GEN_MI_LISTS[genSpanHit(span,r)],T=genTablesOf(d);
-      rec.sub={kind:"mi",list:{rolls:[r],value:list},
-        cans:genRollN(rng,T.can[list]||GEN_CLASS_SPELLS[list][0],2,[]),
-        sp:(()=>{const s=genRollN(rng,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,[]);return {rolls:s.rolls,value:s.value[0]};})()};
+      const granted=[...genSpellsGranted(d,"feat")];
+      rec.sub={kind:"mi",list:{rolls:[r],value:list,die:span.die},
+        cans:genRollN(rng,T.can[list]||GEN_CLASS_SPELLS[list][0],2,granted),
+        sp:(()=>{const s=genRollN(rng,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,granted);return {rolls:s.rolls,value:s.value[0],die:s.die};})()};
     }
     return true;
   }
   if(id==="feature"){
     const K=GEN_CLASSES[genClsOf(d)];const o=K&&K.featureOpt&&K.featureOpt.options&&K.featureOpt.options.find(x=>x.value===rec.value);
     if(!o||!o.hooks||!o.hooks.tome)return false;
-    rec.sub=genRollN(rng,GEN_ALL_CANTRIPS,3,[]);return true;
+    rec.sub=genRollN(rng,GEN_ALL_CANTRIPS,3,[...genSpellsGranted(d,"feature")]);return true;
   }
   const t=genSpTable(d.sp,id.slice(3));if(!t)return false;
   const e=t.entries.find(x=>x.value===rec.value);if(!e||!e.sub)return false;
   if(e.sub.kind==="skill"){const owned=genOwnedSkillNames(d,false);
     rec.sub=genRollN(rng,e.sub.entries,1,[...owned]);rec.sub.value=rec.sub.value[0];
+  }else if(e.sub.kind==="cantrip"){
+    // D-018 for the species cantrip too: avoid names granted by class/feat sources.
+    const granted=genSpellsGranted(d,id),taken=new Set();
+    e.sub.entries.forEach((n,i)=>{if(granted.has(n))taken.add(i+1);});
+    const sr=genRollTable(rng,e.sub.die,e.sub.entries.length,taken.size<e.sub.entries.length?taken:null);
+    rec.sub={rolls:[sr],value:e.sub.entries[sr-1],die:e.sub.die};
   }else{const sr=genRollTable(rng,e.sub.die,e.sub.entries.length,null);
-    rec.sub={rolls:[sr],value:e.sub.entries[sr-1]};}
+    rec.sub={rolls:[sr],value:e.sub.entries[sr-1],die:e.sub.die};}
   return true;
+}
+// Every spell name the draft already grants through some OTHER source (D-018: cross-source dedupe).
+// excludeId names the step being rolled so its own current value doesn't block its reroll.
+function genSpellsGranted(d,excludeId){
+  const s=new Set();
+  const K=genCasterOf(d);
+  if(K&&K.caster)(K.caster.always||[]).forEach(n=>s.add(n));
+  if(excludeId!=="cantrips"&&d.steps.cantrips&&Array.isArray(d.steps.cantrips.value))d.steps.cantrips.value.forEach(n=>s.add(n));
+  if(excludeId!=="spells"&&d.steps.spells&&Array.isArray(d.steps.spells.value))d.steps.spells.value.forEach(n=>s.add(n));
+  const ft=d.steps.feat;
+  if(excludeId!=="feat"&&ft&&ft.sub&&ft.sub.kind==="mi"){
+    if(ft.sub.cans&&Array.isArray(ft.sub.cans.value))ft.sub.cans.value.forEach(n=>s.add(n));
+    if(ft.sub.sp&&ft.sub.sp.value)s.add(ft.sub.sp.value);
+  }
+  const fe=d.steps.feature; // Pact of the Tome cantrips
+  if(excludeId!=="feature"&&fe&&fe.sub&&Array.isArray(fe.sub.value))fe.sub.value.forEach(n=>s.add(n));
+  const leg=d.steps["sp:legacy"]; // Draconic Sorcery cantrip
+  if(excludeId!=="sp:legacy"&&leg&&leg.value==="sorcery"&&leg.sub&&typeof leg.sub.value==="string")s.add(leg.sub.value);
+  return s;
 }
 function genOwnedSkillNames(d,includeFeat){
   const s=new Set();
@@ -570,7 +637,7 @@ function genApplyPick(d,id,value){
   if(id==="gearPack"){if(!GEN_PACKS.includes(value))return false;d.steps.gearPack={rolls:[],pick:true,value};return true;}
   if(id==="sundries"){
     if(!Array.isArray(value)||value.length!==2)return false;
-    if(value.some((s,i)=>!GEN_SUNDRIES.includes(s)||value.indexOf(s)!==i))return false;
+    if(!GEN_SUNDRIES_A.includes(value[0])||!GEN_SUNDRIES_B.includes(value[1]))return false;
     d.steps.sundries={rolls:[],pick:true,value:[...value]};return true;}
   if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return false;
@@ -733,7 +800,7 @@ function validateGenPayload(raw){
     const gp=S.gearPack||{};if(!GEN_PACKS.includes(gp.value))return {ok:false,err:"gearPack"};
     out.gearPack={rolls:[],pick:!!gp.pick,value:gp.value};
     const su=S.sundries||{};
-    if(!distinctIn(su.value,2,GEN_SUNDRIES))return {ok:false,err:"sundries"};
+    if(!Array.isArray(su.value)||su.value.length!==2||!GEN_SUNDRIES_A.includes(su.value[0])||!GEN_SUNDRIES_B.includes(su.value[1]))return {ok:false,err:"sundries"};
     out.sundries={rolls:[],pick:!!su.pick,value:[...su.value]};
     // species tables
     for(const t of (GEN_SPECIES[sp].tables||[])){
@@ -772,8 +839,8 @@ function deriveGenChar(p){
   // AC from the kit recipe (+Defense style; Armor of Shadows upgrades an unarmored kit)
   const A=GEN_AC[kit.ac]||GEN_AC.none;
   let ac=10+mods.dex,acSrc=A.label||"Unarmored";
-  if(A.kind==="unarmored-con")ac=10+mods.dex+mods.con;
-  else if(A.kind==="unarmored-wis")ac=10+mods.dex+mods.wis;
+  if(A.kind==="unarmored-con")ac=10+mods.dex+mods.con+(A.shield?2:0);
+  else if(A.kind==="unarmored-wis")ac=10+mods.dex+mods.wis+(A.shield?2:0);
   else if(A.kind==="armor"){const dx=A.dexMax!=null?Math.min(mods.dex,A.dexMax):mods.dex;
     ac=A.base+dx+(A.shield?2:0)+(fh.acArmor||0);}
   else if(A.kind==="fixed")ac=A.base+(A.shield?2:0)+(fh.acArmor||0);
@@ -794,7 +861,6 @@ function deriveGenChar(p){
   const weapons=[];let mastLeft=K.masteries||0;
   kit.weapons.forEach(ref=>{
     const w=GEN_W[ref.w];if(!w)return;
-    const useMast=!ref.noMastery&&mastLeft>0&&w.mastery?w.mastery:(mastLeft<=0?"":w.mastery&&!ref.noMastery?w.mastery:"");
     const entry={...w,count:ref.count||1,mastery:""};
     if(!ref.noMastery&&(K.masteries||0)>0&&w.mastery&&mastLeft>0){entry.mastery=w.mastery;mastLeft--;}
     weapons.push(entry);
@@ -832,12 +898,13 @@ function deriveGenChar(p){
   if(featureOpt)traits.push({n:K.featureOpt.label+": "+featureOpt.label,t:featureOpt.t.replace(/^[^.]*\.\s*/,"")});
   if(p.steps.feature&&p.steps.feature.kind==="expertise")traits.push({n:"Expertise",t:"Double proficiency with "+p.steps.feature.value.join(" and ")+" (counted in the Skills line)."});
   if(fh.pactBlade)bonus.push({n:"Pact of the Blade",t:"The warlock conjures its bonded pact weapon in its hand; the weapon's attack and damage rolls use Charisma."});
+  // D-019: features fully expressed by a spellcasting entry don't repeat as traits — Draconic
+  // Sorcery and Magic Initiate live in the (merged) Spellcasting block, not the trait list.
   if(leg){if(leg.value==="craftiness"&&leg.sub)traits.push({n:"Kobold Legacy: Craftiness",t:"Proficient in "+leg.sub.value+" (counted in the Skills line)."});
-    if(leg.value==="defiance")traits.push({n:"Kobold Legacy: Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."});
-    if(sorcery)traits.push({n:"Kobold Legacy: Draconic Sorcery",t:"Knows "+sorcery.cantrip+" (spell attack "+(sorcery.atk>=0?"+":"")+sorcery.atk+", save DC "+sorcery.dc+", "+GEN_ABIL_LABEL[sorcery.abil]+")."});}
+    if(leg.value==="defiance")traits.push({n:"Kobold Legacy: Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."});}
   const wings=p.steps["sp:wings"]&&p.steps["sp:wings"].value===true;
   if(feat.act==="action")actions.push({n:feat.n,t:feat.t});
-  else{
+  else if(feat.sub!=="mi"){
     let ftxt=feat.t;
     if(feat.sub==="tools"&&p.steps.feat.sub)ftxt+=" Tools: "+p.steps.feat.sub.value.join(", ")+".";
     if(feat.sub==="instr"&&p.steps.feat.sub)ftxt+=" Instruments: "+p.steps.feat.sub.value.join(", ")+".";
@@ -913,23 +980,28 @@ function genToMonster(ch){
   const acts=ch.attacks.map(w=>({name:w.n,mode:"attack",kind:w.kind==="Melee or Ranged"?"Melee or Ranged":w.kind,
     ability:w.ability,atk:w.bonus,reach:w.reach,range:w.range,dice:w.dice,addMod:w.addMod!==false,
     dtype:w.dtype,extra:[w.note?"("+w.note+")":"",w.mastery?"Mastery: "+w.mastery+".":""].filter(Boolean).join(" ")}));
-  if(ch.caster){
-    ch.caster.cantrips.forEach(cn=>{const e=genCantripEntry(cn,ch.caster.dc,ch.caster.atk);if(e)acts.push(e);});
-    const groups=[];
-    if(ch.caster.cantrips.length)groups.push({freq:"Cantrips (at will)",spells:ch.caster.cantrips.join(", ")});
-    groups.push({freq:`Level 1 (${ch.caster.slots} slot${ch.caster.slots>1?"s":""}, ${ch.caster.short?"Short Rest":"Long Rest"})`,spells:ch.caster.prepared.join(", ")});
-    acts.push({name:"Spellcasting",mode:"spell",ability:ch.caster.abil,dc:ch.caster.dc,atk:ch.caster.atk,groups});
-  }
-  if(ch.sorcery){
-    const e=genCantripEntry(ch.sorcery.cantrip,ch.sorcery.dc,ch.sorcery.atk,ch.sorcery.cantrip+" (Draconic Sorcery)");
-    if(e){if(e.mode==="attack")e.name=ch.sorcery.cantrip+" (Draconic Sorcery)";acts.push(e);}
-    else acts.push({name:"Draconic Sorcery",mode:"spell",ability:ch.sorcery.abil,dc:ch.sorcery.dc,atk:ch.sorcery.atk,
-      groups:[{freq:"At will",spells:ch.sorcery.cantrip}]});
-  }
-  (ch.extraCasts||[]).forEach(x=>{
-    acts.push({name:x.label,mode:"spell",ability:x.abil,dc:x.dc,atk:x.atk,
-      groups:[{freq:"At will",spells:x.cantrips.join(", ")},{freq:"1/Long Rest (also castable with slots)",spells:x.spell}]});
-  });
+  // D-019: cast sources sharing the same spellcasting ability (same DC/attack by construction)
+  // collapse into ONE Spellcasting entry; only a genuinely different ability keeps its own block.
+  // Every damage cantrip gets its attack/save line with its own block's numbers.
+  {const casts=[];
+    if(ch.caster)casts.push({name:"Spellcasting",abil:ch.caster.abil,dc:ch.caster.dc,atk:ch.caster.atk,
+      cantrips:[...ch.caster.cantrips],
+      groups:[{freq:`Level 1 (${ch.caster.slots} slot${ch.caster.slots>1?"s":""}, ${ch.caster.short?"Short Rest":"Long Rest"})`,spells:ch.caster.prepared.join(", ")}]});
+    if(ch.sorcery)casts.push({name:"Draconic Sorcery",abil:ch.sorcery.abil,dc:ch.sorcery.dc,atk:ch.sorcery.atk,
+      cantrips:[ch.sorcery.cantrip],groups:[]});
+    (ch.extraCasts||[]).forEach(x=>casts.push({name:x.label,abil:x.abil,dc:x.dc,atk:x.atk,
+      cantrips:[...x.cantrips],groups:[{freq:`${x.label}, 1/Long Rest (also castable with slots)`,spells:x.spell}]}));
+    const merged=[];
+    casts.forEach(c=>{const m=merged.find(x=>x.abil===c.abil&&x.dc===c.dc&&x.atk===c.atk);
+      if(m){m.cantrips.push(...c.cantrips);m.groups.push(...c.groups);}else merged.push(c);});
+    merged.forEach(c=>c.cantrips.forEach(cn=>{const e=genCantripEntry(cn,c.dc,c.atk);if(e)acts.push(e);}));
+    merged.forEach(c=>{
+      const groups=[];
+      if(c.cantrips.length)groups.push({freq:"Cantrips (at will)",spells:c.cantrips.join(", ")});
+      groups.push(...c.groups.filter(g=>g.spells));
+      if(!groups.length)return;
+      acts.push({name:merged.length===1?"Spellcasting":c.name,mode:"spell",ability:c.abil,dc:c.dc,atk:c.atk,groups});
+    });}
   (ch.actions||[]).forEach(t=>acts.push({name:t.n,text:t.t}));
   m.actions=acts;
   m.bonus=ch.bonus.map(t=>({name:t.n,text:t.t}));
@@ -993,10 +1065,19 @@ function genRetirePC(a,pcId,opts){
 // ═══════════════════════════════════════════════════════════════════════════
 function genPcMetaHTML(ch,opts){
   const sgnf=n=>(n>=0?"+":"")+n;
+  const rollSpan=(n,b,abil)=>`<span class="roll-num" data-roll="1d20${b>=0?"+":""}${b}" data-rolltype="check" data-rolllabel="${esc(n)}" data-abil="${abil}">${sgnf(b)}</span>`;
   let h=`<hr class="rule thin"><div class="meta">`;
-  if(ch.skills.length)h+=`<p><span class="k">Skills</span> ${ch.skills.map(s=>`${esc(s.n)} ${sgnf(s.bonus)}`).join(", ")}</p>`;
+  // D-019: the Skills line carries a chevron opening the full 18-skill panel (proficient or not,
+  // every bonus rollable); Gear carries one opening the manual gear editor (owned cards only).
+  if(ch.skills.length)h+=`<p class="gk-metarow"><span class="k">Skills</span> <span class="gk-meta-b">${ch.skills.map(s=>`${esc(s.n)} ${sgnf(s.bonus)}`).join(", ")}</span><button class="gk-chev" data-gkchev="skills" title="All skills" aria-label="All skills">▾</button></p>`;
+  h+=`<div class="gk-allskills" hidden>${GEN_SKILLS.map(([n,abil])=>{
+    const prof=ch.skills.find(s=>s.n===n);
+    const b=prof?prof.bonus:ch.mods[abil];
+    return `<span class="gk-ask${prof?" gk-ask-p":""}">${esc(n)} ${rollSpan(n,b,abil)}</span>`;
+  }).join("")}</div>`;
   if(ch.tools&&ch.tools.length)h+=`<p><span class="k">Tools</span> ${ch.tools.map(esc).join(", ")}</p>`;
-  if(ch.gear)h+=`<p><span class="k">Gear</span> ${esc(ch.gear)}</p>`;
+  if(ch.gear)h+=`<p class="gk-metarow"><span class="k">Gear</span> <span class="gk-meta-b" id="gkGearLine">${esc(ch.gear)}</span>${opts&&opts.gearEdit?`<button class="gk-chev" data-gkchev="gear" title="Edit gear" aria-label="Edit gear">▾</button>`:""}</p>`;
+  if(opts&&opts.gearEdit)h+=`<div class="gk-gearedit" hidden></div>`;
   h+=`<p><span class="k">Senses</span> Darkvision ${ch.darkvision} ft., Passive Perception ${ch.pp}</p>`;
   h+=`<p><span class="k">Languages</span> ${ch.langs.map(esc).join(", ")}</p>`;
   h+=`<p><span class="k">Level</span> 1 ${esc(ch.cls)} (PB +2)${opts&&opts.pn?` · Player: ${esc(opts.pn)}`:""}</p></div>`;
@@ -1008,7 +1089,12 @@ function genResTrackerHTML(ch,used,interactive){
   return `<div class="gk-res">${ch.resources.map(r=>{
     const u=Math.max(0,Math.min(r.max,Number(used[r.k])||0));
     const pips=Array.from({length:r.max},(x,i)=>`<button class="gk-pip${i<u?" gk-spent":""}"${interactive?` data-gkpip="${esc(r.k)}" data-i="${i}"`:" disabled"} aria-label="${esc(r.label)} use ${i+1}"></button>`).join("");
-    return `<div class="gk-res-row"><span class="gk-res-l">${esc(r.label)}</span><span class="gk-pips">${pips}</span>${interactive?`<button class="gk-res-per" data-gkreset="${esc(r.k)}" title="Reset (${esc(r.per)})">${esc(r.per)}</button>`:`<span class="gk-res-per gk-res-per-s">${esc(r.per)}</span>`}</div>`;
+    // D-020: a resource may recharge partially on a Short Rest (sr uses) and fully on its `per`
+    // rest — such rows carry both reset affordances.
+    const sr=r.sr?(interactive
+      ?`<button class="gk-res-per gk-res-sr" data-gksr="${esc(r.k)}" data-n="${r.sr}" title="Short Rest: regain ${r.sr}">SR +${r.sr}</button>`
+      :`<span class="gk-res-per gk-res-per-s">SR +${r.sr}</span>`):"";
+    return `<div class="gk-res-row"><span class="gk-res-l">${esc(r.label)}</span><span class="gk-pips">${pips}</span>${sr}${interactive?`<button class="gk-res-per" data-gkreset="${esc(r.k)}" title="Reset (${esc(r.per)})">${esc(r.per)}</button>`:`<span class="gk-res-per gk-res-per-s">${esc(r.per)}</span>`}</div>`;
   }).join("")}</div>`;
 }
 function genCardHTML(ch,opts){
@@ -1029,6 +1115,9 @@ function genCardHTML(ch,opts){
 // Mount + post-process: the colour/link/rollable pass runs with M swapped so DCs, damage, spell
 // names, and condition names light up exactly like a bestiary statblock.
 function genMountCard(host,ch,opts,handlers){
+  opts=opts||{};handlers=handlers||{};
+  if(handlers.onGear){opts={...opts,gearEdit:true};
+    if(handlers.gearGet){const g=handlers.gearGet();if(g!=null)ch={...ch,gear:g};}}
   host.innerHTML=genCardHTML(ch,opts);
   const cardEl=host.querySelector(".gk-card");
   if(cardEl&&typeof colorizeStatblock==="function"){
@@ -1036,9 +1125,58 @@ function genMountCard(host,ch,opts,handlers){
     try{M=genToMonster(ch);colorizeStatblock(cardEl);}catch(e){/* colour pass is cosmetic */}
     finally{M=prevM;}
   }
-  bindGenCard(host,handlers||{});
+  bindGenCard(host,handlers);
+}
+// The gear editor (D-019): remove/add items by hand — used or lost gear stays edited on THIS
+// character (an overlay owned by the card's holder; the wire payload never carries it).
+function gkBuildGearEditor(root,h){
+  const box=root.querySelector(".gk-gearedit");if(!box||!h.gearGet)return;
+  const items=String(h.gearGet()||"").split(",").map(s=>s.trim()).filter(Boolean);
+  box.innerHTML=items.map((it,i)=>`<span class="gk-gitem">${esc(it)}<button class="gk-gx" data-gkgx="${i}" aria-label="Remove ${esc(it)}">✕</button></span>`).join("")
+    +`<span class="gk-gadd"><input type="text" class="popinput gk-gin" maxlength="60" placeholder="Add an item"><button class="btn ghost sm gk-gbtn" style="width:auto">Add</button></span>`
+    +(h.gearDirty&&h.gearDirty()?`<button class="gk-linklike gk-greset">Back to the rolled gear</button>`:"");
+  const commit=str=>{
+    if(h.onGear)h.onGear(str);
+    const line=root.querySelector("#gkGearLine");
+    if(line)line.textContent=h.gearGet()||"";
+    gkBuildGearEditor(root,h);
+  };
+  box.querySelectorAll("[data-gkgx]").forEach(x=>x.addEventListener("click",()=>{
+    const arr=items.slice();arr.splice(Number(x.dataset.gkgx),1);commit(arr.join(", "));}));
+  const add=()=>{const inp=box.querySelector(".gk-gin");
+    const v=String(inp.value||"").replace(/[<>]/g,"").trim().slice(0,60);
+    if(!v)return;commit(items.concat([v]).join(", "));};
+  box.querySelector(".gk-gbtn").addEventListener("click",add);
+  box.querySelector(".gk-gin").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add();}});
+  const rst=box.querySelector(".gk-greset");
+  if(rst)rst.addEventListener("click",()=>commit(null));
 }
 function bindGenCard(root,h){
+  // D-019: the card is rollable wherever it's mounted — same delegation the statblock preview
+  // uses, bound on the card's own host (the modal is outside #statblock's listener).
+  root.addEventListener("click",e=>{
+    if(typeof clickRollOn!=="function"||!clickRollOn())return;
+    const t=e.target.closest("[data-roll]");
+    if(t&&e.altKey){e.preventDefault();openRollMenu(t);return;}
+    const nm=e.target.closest(".roll-atkname[data-roll]");if(nm){rollAttackSequence(nm);return;}
+    const rt=e.target.closest(".roll-rchtag[data-roll]");if(rt){quickRoll(rt);return;}
+    const rn=e.target.closest(".roll-rchname[data-roll]");if(rn){rollRechargeSequence(rn);return;}
+    if(t)quickRoll(t);
+  });
+  root.addEventListener("contextmenu",e=>{
+    const t=e.target.closest("[data-roll]");
+    if(!t||typeof clickRollOn!=="function"||!clickRollOn())return;
+    e.preventDefault();openRollMenu(t);
+  });
+  root.querySelectorAll("[data-gkchev]").forEach(b=>b.addEventListener("click",()=>{
+    const kind=b.dataset.gkchev;
+    const panel=root.querySelector(kind==="skills"?".gk-allskills":".gk-gearedit");
+    if(!panel)return;
+    const open=panel.hasAttribute("hidden");
+    if(open)panel.removeAttribute("hidden");else panel.setAttribute("hidden","");
+    b.classList.toggle("gk-chev-open",open);
+    if(kind==="gear"&&open)gkBuildGearEditor(root,h);
+  }));
   root.querySelectorAll("[data-gkpip]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.gkpip,i=Number(b.dataset.i);
     const row=b.parentElement,cur=row.querySelectorAll(".gk-spent").length;
@@ -1050,6 +1188,14 @@ function bindGenCard(root,h){
     const row=root.querySelector(`[data-gkpip="${k}"]`);
     if(row)[...row.parentElement.children].forEach(p=>p.classList.remove("gk-spent"));
     if(h.onRes)h.onRes(k,0);}));
+  // Short-Rest partial recharge (D-020): clear `n` spent pips, keep the rest spent.
+  root.querySelectorAll("[data-gksr]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.gksr,n=Number(b.dataset.n)||1;
+    const pip=root.querySelector(`[data-gkpip="${k}"]`);if(!pip)return;
+    const row=pip.parentElement,cur=row.querySelectorAll(".gk-spent").length;
+    const next=Math.max(0,cur-n);
+    [...row.children].forEach((p,j)=>p.classList.toggle("gk-spent",j<next));
+    if(h.onRes)h.onRes(k,next);}));
 }
 function openGenCard(a,payload,o){
   o=o||{};
@@ -1057,10 +1203,21 @@ function openGenCard(a,payload,o){
   const ch=deriveGenChar(v.clean);
   const pc=o.pcId?rosterById(o.pcId):null;
   if(pc)o={...o,res:(pc.gen&&pc.gen.res)||{},pips:"live"};
+  // D-021: the statblock modal is the generated member's home surface — notes live at its bottom.
   openModalRaw(`<div id="gkCardHost"></div>
-    <div class="mrow">${o.pcId?`<button class="btn ghost sm" id="gkDied" style="width:auto">Mark dead</button>`:""}<button class="btn ghost sm" id="gkClose" style="width:auto">Close</button></div>`);
-  genMountCard($("#gkCardHost"),ch,o,{onRes:pc?(k,used)=>{pc.gen.res=pc.gen.res||{};pc.gen.res[k]=used;saveRoster();}:null});
+    ${pc?`<label class="f gk-noterow">Notes<textarea id="gkNotes" placeholder="Anything worth remembering about ${esc(ch.name)}">${esc(pc.notes||"")}</textarea></label>`:""}
+    <div class="mrow">${o.pcId?`<button class="btn ghost sm" id="gkDied" style="width:auto">Mark dead</button><button class="btn ghost sm" id="gkPage" style="width:auto">Full page</button>`:""}<button class="btn ghost sm" id="gkClose" style="width:auto">Close</button></div>`);
+  const rolledGear=ch.gear;
+  genMountCard($("#gkCardHost"),ch,o,{
+    onRes:pc?(k,used)=>{pc.gen.res=pc.gen.res||{};pc.gen.res[k]=used;saveRoster();}:null,
+    gearGet:pc?()=>(pc.gen&&pc.gen.gear!=null?pc.gen.gear:rolledGear):null,
+    gearDirty:pc?()=>!!(pc.gen&&pc.gen.gear!=null):null,
+    onGear:pc?s=>{if(s==null)delete pc.gen.gear;else pc.gen.gear=String(s).slice(0,400);saveRoster();}:null});
+  const notes=$("#gkNotes");
+  if(notes&&pc)notes.addEventListener("change",()=>{pc.notes=String(notes.value||"").slice(0,2000);saveRoster();});
   $("#gkClose").addEventListener("click",closeModal);
+  const page=$("#gkPage");
+  if(page&&pc)page.addEventListener("click",()=>{closeModal();openCharacterDetail(pc.id,a?a.id:null);});
   const died=$("#gkDied");
   if(died)died.addEventListener("click",()=>{
     confirmModal(`Mark ${ch.name} as dead? The card moves to the fallen list.`,()=>{
@@ -1071,24 +1228,46 @@ function openGenCard(a,payload,o){
 // THE RITUAL — one step at a time; the option table shows before the roll; any result is clickable
 // to override (D-011). Identity is typed. A "Roll the rest" fast-path fills everything but the name.
 // ═══════════════════════════════════════════════════════════════════════════
-let _genR=null; // {mode, pn, editing, draft, done}
+let _genR=null; // {mode, pn, editing, draft, done, more:{}, info:{}}
+// Font Awesome gear (free solid) — the crew-settings button in the roster header (D-021).
+const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
+// D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
 function genStepLabel(d,id){
-  if(id==="stats")return "Ability scores, in order ("+d.set.stat+")";
-  if(id==="cls")return d.set.mode==="chaos"?"Class (d12)":"Class (d6 over the three best fits)";
-  if(id==="asi")return "Background ability scores (+2 / +1)";
-  if(id==="feat")return "Origin feat (d10)";
-  if(id==="skills"){const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
-    return `Class skills (${K.skills.n} rolls, ${genDieLabel(K.skills.from.length)})`;}
-  if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];return K&&K.featureOpt?(K.featureOpt.kind==="expertise"?"Expertise (2 of the rolled skills)":K.featureOpt.label):"Class feature";}
-  if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];return "Equipment kit ("+(K?K.kits.length:0)+" options)";}
-  if(id==="cantrips")return `Cantrips (${genCantripCount(d)} rolls, ${genDieLabel((genTablesOf(d).can[genClsOf(d)]||[]).length)})`;
-  if(id==="spells"){const K=GEN_CLASSES[genClsOf(d)];
-    return `Prepared spells (${K.caster.prepared} rolls, ${genDieLabel((genTablesOf(d).l1[genClsOf(d)]||[]).length)})`;}
-  if(id==="gearPack")return "Pack (d6)";
-  if(id==="sundries")return "Sundries (2 rolls, d20)";
-  if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?t.label+" (d"+t.die+")":id;}
+  if(id==="stats")return "Ability scores";
+  if(id==="cls")return "Class";
+  if(id==="asi")return "Background ability scores";
+  if(id==="feat")return "Origin feat";
+  if(id==="skills")return "Class skills";
+  if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];return K&&K.featureOpt?(K.featureOpt.kind==="expertise"?"Expertise":K.featureOpt.label):"Class feature";}
+  if(id==="equip")return "Equipment kit";
+  if(id==="cantrips")return "Cantrips";
+  if(id==="spells")return "Prepared spells";
+  if(id==="gearPack")return "Pack";
+  if(id==="sundries")return "Sundries";
+  if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?t.label:id;}
   if(id==="name")return "Identity";
   return id;
+}
+function genStepInfo(d,id){
+  if(id==="stats")return d.set.stat==="4d6"?"Six rolls of 4d6, lowest die dropped, in order STR to CHA. Any landed score can be edited by hand.":"Six rolls of 3d6, in order STR to CHA. Any landed score can be edited by hand.";
+  if(id==="cls")return d.set.mode==="chaos"?"d12 over all twelve classes.":"d6 over the three classes that best fit the rolled scores; the rest are pickable below them.";
+  if(id==="asi")return "+2 and +1 to two different abilities. The class default is preselected; apply it or change it.";
+  if(id==="feat")return "d10 over the ten origin feats. Feats with internal choices roll those too.";
+  if(id==="skills"){const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
+    return `${K.skills.n} rolls on ${genDieLabel(K.skills.from.length)} over the class skill list, duplicates rerolled.`;}
+  if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];
+    if(K&&K.featureOpt&&K.featureOpt.kind==="expertise")return "Two of the rolled skills, duplicates rerolled.";
+    if(K&&K.featureOpt)return `${genDieLabel(K.featureOpt.options.length)} over the ${K.featureOpt.options.length} options.`;
+    return "";}
+  if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];return `${genDieLabel(K?K.kits.length:0)} over the class kit table. Every item is within the class's training.`;}
+  if(id==="cantrips")return `${genCantripCount(d)} rolls on ${genDieLabel((genTablesOf(d).can[genClsOf(d)]||[]).length)} over the class cantrip table; at least one damage cantrip always lands.`;
+  if(id==="spells"){const K=GEN_CLASSES[genClsOf(d)];
+    return `${K.caster.prepared} rolls on ${genDieLabel((genTablesOf(d).l1[genClsOf(d)]||[]).length)} over the class level-1 table. Spells already granted by a feat or species are rerolled.`;}
+  if(id==="gearPack")return "d6 over the six equipment packs.";
+  if(id==="sundries")return "Two d20 rolls, one on each sundries list.";
+  if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?`d${t.die} on the ${t.label} table.`:"";}
+  if(id==="name")return "Typed, never rolled. The name is required; quirk and trinket are optional.";
+  return "";
 }
 // The option table for a step, when one exists: [{span, label, value, hit}]
 function genStepTable(d,id){
@@ -1103,7 +1282,7 @@ function genStepTable(d,id){
     const top3=(s&&s.top3)||genClassShortlist(scores,d.counts);
     const span=genSpanFor(3);
     return {die:span.die,rows:top3.map((c,i)=>({span:span.spans[i][0]+"-"+span.spans[i][1],label:c,value:c,hit:s&&s.value===c})),
-      pickAll:GEN_CLASS_LIST};
+      moreRows:GEN_CLASS_LIST.filter(c=>!top3.includes(c)).map(c=>({span:"·",label:c,value:c,hit:s&&s.value===c}))};
   }
   if(id==="feat")return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,hit:s&&s.value===f.n}))};
   if(id==="skills"&&K)return mk(K.skills.from);
@@ -1121,7 +1300,9 @@ function genStepTable(d,id){
     const list=(genTablesOf(d).l1[cls]||[]).filter(x=>!(K2.caster.always||[]).includes(x));
     return mk(list);}
   if(id==="gearPack")return {die:6,rows:GEN_PACKS.map((p,i)=>({span:String(i+1),label:p,value:p,hit:s&&s.value===p}))};
-  if(id==="sundries")return mk(GEN_SUNDRIES);
+  if(id==="sundries")return {pair:[
+    {title:"First roll (d20)",die:20,rows:GEN_SUNDRIES_A.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[0]===v}))},
+    {title:"Second roll (d20)",die:20,rows:GEN_SUNDRIES_B.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[1]===v}))}]};
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
     return {die:t.die,rows:t.entries.map(e=>({span:e.lo===e.hi?String(e.lo):e.lo+"-"+e.hi,label:e.label,value:e.value,hit:s&&s.value===e.value}))};}
   return null;
@@ -1131,10 +1312,19 @@ function genDiceChips(s){
   if(!s.rolls||!s.rolls.length)return "";
   return `<span class="gk-dchips">${s.rolls.map(r=>Array.isArray(r)?r.join("·"):r).join(" | ")}</span>`;
 }
-function genStatDice(dice,method){
-  let cut=-1;
-  if(method==="4d6"){let min=7;dice.forEach((v,i)=>{if(v<min){min=v;cut=i;}});}
-  return dice.map((v,i)=>i===cut?`<s>${v}</s>`:String(v)).join("·");
+// Hand a ritual roll's raw faces to the app's 3D dice (D-015). Values are already decided by the
+// engine; the 3D layer replays them, so what settles on the felt is always what the step recorded.
+function genFire3D(label,groups,msg,total){
+  if(typeof rollDice3D!=="function")return;
+  const parts=groups.filter(g=>g&&Array.isArray(g.rolls)&&g.rolls.length&&g.die)
+    .map(g=>`${g.rolls.length}d${g.die}${g.k||""}:[${g.rolls.join(",")}]`).join(" ");
+  if(!parts)return;
+  try{rollDice3D({parts,label:label||"Roll",msg:msg||"",total});}catch(e){/* the ritual never depends on the dice layer */}
+}
+function genSubGroups(sub){
+  if(!sub)return [];
+  if(sub.kind==="mi")return [sub.list,sub.cans,sub.sp].filter(Boolean);
+  return [sub];
 }
 function genStepValueHTML(d,id){
   const s=d.steps[id];if(!s||s.value==null)return "";
@@ -1164,22 +1354,27 @@ function genStepValueHTML(d,id){
     return `<b data-gkedit="name">${esc(String(s.value))}</b>${extras?` <span class="gk-dim">notes: ${extras}/2</span>`:""}`;}
   return `<b data-gkedit="${id}">${esc(String(s.value))}</b> ${genDiceChips(s)}`;
 }
-function genSel(id,opts,cur,labels){
-  return `<select id="${id}" class="gk-sel">${opts.map((o,i)=>`<option value="${esc(String(o))}"${String(o)===String(cur)?" selected":""}>${esc(labels?labels[i]:String(o))}</option>`).join("")}</select>`;
+// D-017: ritual dropdown rows carry their table number (pass `numbered`) so physical dice can
+// drive any pick; settings dropdowns stay plain.
+function genSel(id,opts,cur,labels,numbered){
+  return `<select id="${id}" class="gk-sel">${opts.map((o,i)=>`<option value="${esc(String(o))}"${String(o)===String(cur)?" selected":""}>${numbered?`${i+1} · `:""}${esc(labels?labels[i]:String(o))}</option>`).join("")}</select>`;
 }
 function genEditorHTML(d,id){
   const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,s=d.steps[id];
-  const nSel=(list,n,cur,idp)=>Array.from({length:n},(x,i)=>genSel(idp+i,list,cur&&cur[i]||list[i]));
+  const nSel=(list,n,cur,idp)=>Array.from({length:n},(x,i)=>genSel(idp+i,list,cur&&cur[i]||list[i],null,true));
   if(id==="stats")return GEN_ABILS.map((a,i)=>`<label class="gk-si">${a.toUpperCase()}<input type="number" min="3" max="20" id="gkSt_${a}" value="${s&&s.value&&s.value[i]!=null?s.value[i]:10}"></label>`).join("")+`<button class="btn primary sm gk-apply" data-gkapply="stats">Set scores</button>`;
   if(id==="asi"){const cur=s?s.value:[K?K.prim:"str",K?K.sec:"con"];
-    return genSel("gkAsi2",GEN_ABILS,cur[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()))+genSel("gkAsi1",GEN_ABILS,cur[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()))+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
+    return `<span class="gk-dim">Class default: +2 ${(K?K.prim:"str").toUpperCase()} / +1 ${(K?K.sec:"con").toUpperCase()}.</span>`
+      +genSel("gkAsi2",GEN_ABILS,cur[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()),true)+genSel("gkAsi1",GEN_ABILS,cur[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
   if(id==="skills"&&K)return nSel(K.skills.from,K.skills.n,s&&s.value,"gkSk_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="skills">Apply</button>`;
   if(id==="feature"&&K&&K.featureOpt&&K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];
     return nSel(own,Math.min(2,own.length),s&&s.value,"gkEx_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="feature">Apply</button>`;}
   if(id==="cantrips"&&cls)return nSel(genTablesOf(d).can[cls]||[],genCantripCount(d),s&&s.value,"gkCn_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="cantrips">Apply</button>`;
   if(id==="spells"&&cls&&K){const list=(genTablesOf(d).l1[cls]||[]).filter(x=>!(K.caster.always||[]).includes(x));
     return nSel(list,K.caster.prepared,s&&s.value,"gkSp_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="spells">Apply</button>`;}
-  if(id==="sundries")return nSel(GEN_SUNDRIES,2,s&&s.value,"gkSu_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="sundries">Apply</button>`;
+  if(id==="sundries")return genSel("gkSu_0",GEN_SUNDRIES_A,s&&s.value&&s.value[0]||GEN_SUNDRIES_A[0],null,true)
+    +genSel("gkSu_1",GEN_SUNDRIES_B,s&&s.value&&s.value[1]||GEN_SUNDRIES_B[0],null,true)
+    +`<button class="btn primary sm gk-apply" data-gkapply="sundries">Apply</button>`;
   if(id==="name"){
     const v=k=>d.steps[k]&&d.steps[k].value?esc(d.steps[k].value):"";
     return `<input type="text" id="gkNm" class="popinput gk-nm" maxlength="28" placeholder="Name (required)" value="${s?esc(s.value):""}">
@@ -1193,58 +1388,74 @@ function genSubEditorHTML(d,id){
   const s=d.steps[id];if(!s)return "";
   const roll=`<button class="btn ghost sm" data-gkrollsub="${id}">${D20_ICON}<span>Roll</span></button>`;
   if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===s.value);if(!f||!f.sub)return "";
-    if(f.sub==="mi")return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,"")}<button class="btn primary sm" data-gksubapply="feat">Choose list, roll spells</button></div>`;
+    if(f.sub==="mi")return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,"",null,true)}<button class="btn primary sm" data-gksubapply="feat">Choose list, roll spells</button></div>`;
     const list=f.sub==="skills"?GEN_SKILL_NAMES:f.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
     const lbl=f.sub==="skills"?"three skills":f.sub==="tools"?"three artisan tools ("+genDieLabel(list.length)+")":"three instruments (d10)";
-    return `<div class="gk-subrow"><span class="gk-dim">${esc(s.value)}: ${lbl}.</span>${roll}${[0,1,2].map(i=>genSel("gkFs_"+i,list,list[i])).join("")}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
-  if(id==="feature")return `<div class="gk-subrow"><span class="gk-dim">Pact of the Tome: three cantrips, any list (${genDieLabel(GEN_ALL_CANTRIPS.length)}).</span>${roll}${[0,1,2].map(i=>genSel("gkTm_"+i,GEN_ALL_CANTRIPS,GEN_ALL_CANTRIPS[i])).join("")}<button class="btn primary sm" data-gksubapply="feature">Choose</button></div>`;
+    return `<div class="gk-subrow"><span class="gk-dim">${esc(s.value)}: ${lbl}.</span>${roll}${[0,1,2].map(i=>genSel("gkFs_"+i,list,list[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
+  if(id==="feature")return `<div class="gk-subrow"><span class="gk-dim">Pact of the Tome: three cantrips, any list (${genDieLabel(GEN_ALL_CANTRIPS.length)}).</span>${roll}${[0,1,2].map(i=>genSel("gkTm_"+i,GEN_ALL_CANTRIPS,GEN_ALL_CANTRIPS[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="feature">Choose</button></div>`;
   const t=genSpTable(d.sp,id.slice(3)),e=t&&t.entries.find(x=>x.value===s.value);
   if(!e||!e.sub)return "";
-  return `<div class="gk-subrow"><span class="gk-dim">${esc(e.sub.label)} (${genDieLabel(e.sub.entries.length)}).</span>${roll}${genSel("gkSub_"+id.slice(3),e.sub.entries,"")}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;
+  return `<div class="gk-subrow"><span class="gk-dim">${esc(e.sub.label)} (${genDieLabel(e.sub.entries.length)}).</span>${roll}${genSel("gkSub_"+id.slice(3),e.sub.entries,"",null,true)}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;
 }
+// D-015: the six abilities render as the statblock-style grid — one editable score per ability,
+// no printed dice strings (the 3D roll is the theater). Cells are editable once all six landed.
 function genStatsRowsHTML(d){
   const s=d.steps.stats,n=s&&!s.pick?s.rolls.length:0;
-  return `<div class="gk-stat6">${GEN_ABILS.map((a,i)=>{
+  const complete=!!s&&(s.pick||n===6);
+  return `<div class="gk-ab6">${GEN_ABILS.map((a,i)=>{
     const rolled=s&&s.value&&s.value[i]!=null&&(s.pick||i<n);
-    const next=!s||(!s.pick&&n===i);
-    return `<div class="gk-st${rolled?" gk-st-done":""}${next?" gk-st-next":""}">
-      <span class="gk-st-k">${a.toUpperCase()}</span>
-      ${rolled?`<span class="gk-st-v" data-gkedit="stats">${s.value[i]}</span>${!s.pick?`<span class="gk-dice">${genStatDice(s.rolls[i],d.set.stat)}</span>`:`<span class="gk-picked">chosen</span>`}`
-        :next?`<button class="btn primary sm gk-roll1" data-gkroll="stats">${D20_ICON}<span>Roll</span></button>`
-        :`<span class="gk-dim">·</span>`}
+    const next=s?(!s.pick&&n===i):i===0; // one walking Roll button, STR first
+    return `<div class="gk-ab${next?" gk-ab-next":""}">
+      <span class="gk-ab-k">${a.toUpperCase()}</span>
+      ${rolled?`<input class="gk-ab-in" type="number" min="3" max="20" data-gkstat="${i}" value="${s.value[i]}"${complete?"":" disabled"} aria-label="${GEN_ABIL_LABEL[a]} score">`
+        :next?`<button class="btn primary sm gk-ab-roll" data-gkroll="stats" aria-label="Roll ${GEN_ABIL_LABEL[a]}">${D20_ICON}<span>Roll</span></button>`
+        :`<span class="gk-ab-dot">·</span>`}
     </div>`;}).join("")}</div>`;
 }
 function genTableHTML(d,id,tbl){
+  if(tbl.pair)return tbl.pair.map(p=>`<div class="gk-tbl-h">${esc(p.title)}</div>`+genTableHTML(d,id,p)).join("");
   const long=tbl.rows.length>12;
+  const row=r=>`<button class="gk-tr${r.hit?" gk-hit":""}" data-gkopt="${esc(String(r.value))}" data-gkstep="${id}">
+      <span class="gk-td">${esc(r.span)}</span><span class="gk-tl">${esc(r.label)}${r.sub?` <span class="gk-dim">${esc(r.sub)}</span>`:""}</span></button>`;
+  // D-016: the class table shows all twelve — the rollable three span-marked, the other nine
+  // collapsed behind an expander (pickable once revealed).
+  let more="";
+  if(tbl.moreRows&&tbl.moreRows.length){
+    more=`<button class="gk-tr gk-more" data-gkmore="${id}"><span class="gk-td">·</span><span class="gk-tl">${tbl.moreOpen?"Fewer options":`+ ${tbl.moreRows.length} more (pick only)`}</span></button>`
+      +(tbl.moreOpen?tbl.moreRows.map(row).join(""):"");
+  }
   return `<div class="gk-tbl${long?" gk-tbl-long":""}">
-    ${tbl.rows.map(r=>`<button class="gk-tr${r.hit?" gk-hit":""}" data-gkopt="${esc(String(r.value))}" data-gkstep="${id}">
-      <span class="gk-td">${esc(r.span)}</span><span class="gk-tl">${esc(r.label)}${r.sub?` <span class="gk-dim">${esc(r.sub)}</span>`:""}</span></button>`).join("")}
+    ${tbl.rows.map(row).join("")}${more}
     ${tbl.note?`<div class="gk-tbl-note">${esc(tbl.note)}</div>`:""}
   </div>`;
 }
 function renderGenRitual(){
   const R=_genR;if(!R)return;
   const d=R.draft,host=$("#gkR");if(!host)return;
-  // The ASI step has no dice — it self-resolves to the class default the moment it goes active
-  // (still clickable to override, D-011).
-  let order=genStepOrder(d);
-  if(order.find(id=>!genStepDone(d,id))==="asi"){genRollStep(d,"asi");order=genStepOrder(d);}
+  const order=genStepOrder(d);
   const firstOpen=order.find(id=>!genStepDone(d,id));
   const complete=!firstOpen;
   const rows=order.map(id=>{
     const s=d.steps[id],done=genStepDone(d,id),active=id===firstOpen;
     const state=done?"done":(active?"active":"idle");
     const needsSub=s&&s.value!=null&&!done&&id!=="stats";
-    const editing=R.editing===id||(id==="name"&&active);
+    // D-017: the ASI step is explicit — when it goes active its editor opens on the class default
+    // and waits for Apply (no self-resolving steps). Identity behaves the same.
+    const editing=R.editing===id||((id==="name"||id==="asi")&&active&&!done);
     const isMulti=["skills","cantrips","spells","sundries"].includes(id)||(id==="feature"&&s&&s.kind==="expertise");
     const rollable=id!=="name"&&id!=="asi"&&!(id==="stats"&&s&&s.pick);
-    const tbl=(active&&!done&&id!=="stats")||editing?genStepTable(d,id):null;
+    const tbl=(active&&!done&&id!=="stats"&&id!=="asi")||(editing&&id!=="asi"&&id!=="name")?genStepTable(d,id):null;
+    if(tbl&&!tbl.pair)tbl.moreOpen=!!R.more[id];
     const wholeRoll=id!=="stats"&&rollable&&(active||done)&&!needsSub;
+    const info=genStepInfo(d,id);
     return `<div class="gk-step gk-${state}" data-step="${id}">
-      <div class="gk-step-h"><span class="gk-step-l">${esc(genStepLabel(d,id))}</span>
-        <span class="gk-step-acts">${wholeRoll?`<button class="btn ${done?"ghost":"primary"} sm gk-roll" data-gkroll="${id}">${D20_ICON}<span>${done?"Reroll":"Roll"}</span></button>`:""}</span></div>
+      <div class="gk-step-h"><span class="gk-step-l">${esc(genStepLabel(d,id))}${info?`<button class="gk-q" data-gkq="${id}" aria-label="How this step works">?</button>`:""}</span>
+        <span class="gk-step-acts">${wholeRoll?(done
+          ?`<button class="gk-roll-ico" data-gkroll="${id}" title="Reroll" aria-label="Reroll">${D20_ICON}</button>`
+          :`<button class="btn primary sm gk-roll" data-gkroll="${id}">${D20_ICON}<span>Roll</span></button>`):""}</span></div>
+      ${R.info[id]&&info?`<div class="gk-info">${esc(info)}</div>`:""}
       ${id==="stats"?genStatsRowsHTML(d):""}
-      ${done||s&&s.value!=null?`<div class="gk-step-v">${genStepValueHTML(d,id)}</div>`:""}
+      ${id!=="stats"&&(done||s&&s.value!=null)?`<div class="gk-step-v">${genStepValueHTML(d,id)}</div>`:""}
       ${tbl&&!(isMulti&&editing)?genTableHTML(d,id,tbl):""}
       ${needsSub?genSubEditorHTML(d,id):""}
       ${editing&&id!=="stats"?`<div class="gk-editor${id==="name"?" gk-ed-id":""}">${genEditorHTML(d,id)}</div>`:""}
@@ -1254,7 +1465,7 @@ function renderGenRitual(){
   host.innerHTML=`<div class="gk-steps">${rows}</div>
     <div class="mrow gk-foot">
       <button class="btn ghost sm" id="gkCancel" style="width:auto">Cancel</button>
-      ${complete?"":`<button class="btn ghost sm" id="gkAll" style="width:auto">${D20_ICON}<span>Roll the rest</span></button>`}
+      ${complete?"":`<button class="btn ghost sm gk-allbtn" id="gkAll" style="width:auto">${D20_ICON}<span>Roll the rest</span></button>`}
       ${complete?`<button class="btn primary sm" id="gkFinish" style="width:auto">View the card</button>`:""}
     </div>`;
   bindGenRitual();
@@ -1262,7 +1473,43 @@ function renderGenRitual(){
 function bindGenRitual(){
   const R=_genR,d=R.draft,host=$("#gkR");
   host.querySelectorAll("[data-gkroll]").forEach(b=>b.addEventListener("click",()=>{
-    genRollStep(d,b.dataset.gkroll);R.editing=null;renderGenRitual();}));
+    const id=b.dataset.gkroll;
+    if(id==="stats"){
+      const st=genRollStep(d,"stats");
+      if(st&&!st.pick&&st.rolls.length){
+        const i=st.rolls.length-1,dice=st.rolls[i],a=GEN_ABILS[i];
+        genFire3D(GEN_ABIL_LABEL[a],[{rolls:dice,die:6,k:d.set.stat==="4d6"?"kh3":""}],
+          `${a.toUpperCase()}: ${st.value[i]}`,st.value[i]);
+      }
+    }else{
+      genRollStep(d,id);
+      const rec=d.steps[id];
+      if(rec&&!rec.pick){
+        const groups=[{rolls:rec.rolls,die:rec.die}].concat(genSubGroups(rec.sub));
+        const face=rec.rolls&&rec.rolls.length===1?rec.rolls[0]:undefined;
+        genFire3D(genStepLabel(d,id),groups,`${genStepLabel(d,id)}: ${rec.rolls.join(" · ")}`,face);
+      }
+    }
+    R.editing=null;renderGenRitual();}));
+  // D-017: a completed section is one big click target — tapping anywhere on it reopens the step
+  // for edits; taps on its own controls keep their meaning.
+  host.querySelectorAll(".gk-step.gk-done").forEach(sec=>sec.addEventListener("click",e=>{
+    if(e.target.closest("button,input,select,a,[data-gkopt],[data-gkedit],[data-gkq]"))return;
+    const id=sec.dataset.step;
+    if(R.editing!==id){R.editing=id;renderGenRitual();}}));
+  host.querySelectorAll("[data-gkq]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();const id=b.dataset.gkq;R.info[id]=!R.info[id];renderGenRitual();}));
+  host.querySelectorAll("[data-gkmore]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();const id=b.dataset.gkmore;R.more[id]=!R.more[id];renderGenRitual();}));
+  // Manual score edits (D-015): once all six landed, typing over any score converts the step to a
+  // chosen array (the override) and cascades through the usual pick path.
+  host.querySelectorAll(".gk-ab-in").forEach(inp=>{
+    inp.addEventListener("click",e=>e.stopPropagation());
+    inp.addEventListener("change",()=>{
+      const s=d.steps.stats;if(!s||!Array.isArray(s.value)||s.value.length!==6)return;
+      const vals=s.value.slice();vals[Number(inp.dataset.gkstat)]=inp.value;
+      if(genApplyPick(d,"stats",vals)){R.editing=null;renderGenRitual();}
+      else toast("Scores run 3 to 20.");});});
   host.querySelectorAll("[data-gkopt]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gkstep;let v=b.dataset.gkopt;
     if(id==="equip")v=Number(v);
@@ -1274,7 +1521,12 @@ function bindGenRitual(){
   host.querySelectorAll("[data-gkedit]").forEach(el=>el.addEventListener("click",()=>{
     R.editing=R.editing===el.dataset.gkedit?null:el.dataset.gkedit;renderGenRitual();}));
   host.querySelectorAll("[data-gkrollsub]").forEach(b=>b.addEventListener("click",()=>{
-    genRollSub(d,b.dataset.gkrollsub);renderGenRitual();}));
+    const id=b.dataset.gkrollsub;
+    if(genRollSub(d,id)){
+      const rec=d.steps[id];
+      if(rec&&rec.sub)genFire3D(genStepLabel(d,id),genSubGroups(rec.sub),"");
+    }
+    renderGenRitual();}));
   host.querySelectorAll("[data-gksubapply]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gksubapply;
     if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===d.steps.feat.value);
@@ -1339,7 +1591,7 @@ function bindGenRitual(){
 }
 function openGenRitual(ctx){
   const set=ctx.set;
-  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,
+  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},info:{},
     draft:genNewDraft({sp:ctx.sp,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
@@ -1356,74 +1608,88 @@ function openGenRitualDM(a){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// THE CREW PANEL (adventure detail, D-002) — settings, the link, members, the fallen.
+// CREW IN THE ROSTER (D-021) — no separate section. The party-roster header carries a settings
+// button (openCrewSettings modal: config + the player link); the roster's primary action rolls a
+// character; generated members are ordinary party rows that open the statblock modal. All that
+// remains here is the fallen list under the roster.
 // ═══════════════════════════════════════════════════════════════════════════
 function renderCrewPanel(a){
   const box=$("#crewWrap");if(!box)return;
   if(!a.crew){box.innerHTML="";crewStopPoll();return;}
   crewEnsurePoll(a);
-  const sp=GEN_SPECIES[a.crew.sp],living=genLivingPCs(a),fallen=a.crew.fallen||[];
-  const spOpts=Object.keys(GEN_SPECIES);
-  const chips=living.map(pc=>{
-    const cls=(pc.gen.payload.steps.cls||{}).value||"?";
-    return `<button class="gk-chip" data-gkcard="${pc.id}" title="Open the card">${esc(pc.name)} <span class="gk-dim">${esc(cls)}</span>${pc.gen.pn?` <span class="gk-pn">${esc(pc.gen.pn)}</span>`:""}</button>`;
-  }).join("");
+  const fallen=a.crew.fallen||[];
+  if(!fallen.length){box.innerHTML="";return;}
   const fallenRows=fallen.map((f,i)=>`<div class="gk-fallen-row">
       <span class="gk-fallen-n">${esc(f.name)}${f.cls?` <span class="gk-dim">${esc(f.cls)}</span>`:""}${f.pn?` <span class="gk-pn">${esc(f.pn)}</span>`:""}</span>
       ${f.payload?`<button class="gk-linklike" data-gkfallen="${i}">card</button>`:""}
     </div>`).join("");
-  box.innerHTML=`<div class="section-label"><span>Crew${living.length?` <span class="pc-count2">${living.length}</span>`:""}</span></div>
-    <div class="gk-panel">
-      <div class="gk-cfg">
-        <label class="gk-f"><span>Species</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>
-        <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
-        <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
-        <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
-      </div>
-      <div class="gk-share">
-        ${a.crew.shareId
-          ?`<span class="gk-share-on">Player link active</span><button class="btn ghost sm" id="crewCopy" style="width:auto">Copy link</button><button class="btn ghost sm" id="crewQR" style="width:auto">QR</button><button class="btn ghost sm" id="crewStop" style="width:auto">Stop</button>`
-          :`<button class="btn ghost sm" id="crewShare" style="width:auto">Create the player link</button><span class="gk-dim">Players roll their own kobolds from their phones.</span>`}
-      </div>
-      <div class="gk-members">
-        <button class="btn primary sm" id="crewRoll" style="width:auto">Roll a ${esc(sp.label.toLowerCase())}</button>
-        ${chips||`<span class="gk-dim">No crew yet.</span>`}
-      </div>
-      ${fallen.length?`<div class="gk-fallen"><div class="gk-fallen-h">Caduti · ${fallen.length}</div>${fallenRows}</div>`:""}
-    </div>`;
-  bindCrewPanel(a);
+  box.innerHTML=`<div class="gk-fallen"><div class="gk-fallen-h">Caduti · ${fallen.length}</div>${fallenRows}</div>`;
+  box.querySelectorAll("[data-gkfallen]").forEach(b=>b.addEventListener("click",()=>{
+    const f=a.crew.fallen[Number(b.dataset.gkfallen)];if(!f||!f.payload)return;
+    openGenCard(a,f.payload,{dead:true,pn:f.pn||""});}));
 }
-function bindCrewPanel(a){
-  const box=$("#crewWrap");
+// The crew settings modal (D-021): species, scores, class mode, background ASI, the player link.
+function openCrewSettings(a){
+  if(!a.crew)return;
+  const sp=GEN_SPECIES[a.crew.sp],spOpts=Object.keys(GEN_SPECIES);
+  openModalRaw(`<h3>Crew generator</h3>
+    <div class="gk-cfg gk-cfg-modal">
+      <label class="gk-f"><span>Species</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>
+      <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
+      <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
+      <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
+    </div>
+    <div class="gk-share">
+      ${a.crew.shareId
+        ?`<span class="gk-share-on">Player link active</span><button class="btn ghost sm" id="crewCopy" style="width:auto">Copy link</button><button class="btn ghost sm" id="crewQR" style="width:auto">QR</button><button class="btn ghost sm" id="crewStop" style="width:auto">Stop</button>`
+        :`<button class="btn ghost sm" id="crewShare" style="width:auto">Create the player link</button><span class="gk-dim">Players roll their own ${esc(sp.label.toLowerCase())}s from their phones.</span>`}
+    </div>
+    <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
   const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
   sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
   sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
   sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
   sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
-  const roll=$("#crewRoll");if(roll)roll.addEventListener("click",()=>openGenRitualDM(a));
-  box.querySelectorAll("[data-gkcard]").forEach(b=>b.addEventListener("click",()=>{
-    const pc=rosterById(b.dataset.gkcard);if(!pc||!pc.gen)return;
-    openGenCard(a,pc.gen.payload,{pcId:pc.id,pn:pc.gen.pn||""});}));
-  box.querySelectorAll("[data-gkfallen]").forEach(b=>b.addEventListener("click",()=>{
-    const f=a.crew.fallen[Number(b.dataset.gkfallen)];if(!f||!f.payload)return;
-    openGenCard(a,f.payload,{dead:true,pn:f.pn||""});}));
-  const share=$("#crewShare");if(share)share.addEventListener("click",()=>crewMintShare(a));
+  $("#crewCfgClose").addEventListener("click",()=>{closeModal();preserveScroll(".adv-detail-body",renderAdvDetail);});
+  const share=$("#crewShare");if(share)share.addEventListener("click",async()=>{await crewMintShare(a);openCrewSettings(a);});
   const copy=$("#crewCopy");if(copy)copy.addEventListener("click",()=>{navigator.clipboard.writeText(genCrewUrl(a.crew.shareId)).then(()=>toast("Link copied."),()=>toast("Copy failed. Use the QR instead."));});
   const qr=$("#crewQR");if(qr)qr.addEventListener("click",()=>openShareQR(genCrewUrl(a.crew.shareId)));
   const stop=$("#crewStop");if(stop)stop.addEventListener("click",()=>confirmModal("Stop the player link? Phones lose access until you create a new one.",async()=>{
-    const id=a.crew.shareId;a.crew.shareId="";saveAdv();renderCrewPanel(a);await jbinDeletePublic(id);}));
+    const id=a.crew.shareId;a.crew.shareId="";saveAdv();openCrewSettings(a);await jbinDeletePublic(id);}));
 }
 // Config under /cfg (never clobbers the phones' /crew subtree). Carries the resolved spell tables
 // so phones roll over the same lists the DM's library produces (D-012).
 function crewShareCfg(a){return {name:advDName(a),sp:a.crew.sp,set:{...a.crew.set},tables:genSpellTables()};}
+// Reference texts under /refs (D-019): trimmed spell/condition entries for every name the
+// generator can reach, so player cards get the same tap-for-text popovers the DM has. Written by
+// the DM at mint + config pushes; phones read it once at boot and SANITIZE it at ingestion (the
+// share is world-writable, so refs are untrusted data like everything else on it).
+function crewShareRefs(a){
+  const t=genSpellTables();
+  const names=new Set(GEN_ALL_CANTRIPS);
+  Object.keys(GEN_CLASS_SPELLS).forEach(cls=>{
+    (t.can[cls]||[]).forEach(n=>names.add(n));(t.l1[cls]||[]).forEach(n=>names.add(n));
+    const K=GEN_CLASSES[cls];if(K.caster&&K.caster.always)K.caster.always.forEach(n=>names.add(n));});
+  (GEN_SPECIES[a.crew.sp].tables||[]).forEach(tb=>tb.entries.forEach(e=>{
+    if(e.sub&&e.sub.kind==="cantrip")e.sub.entries.forEach(n=>names.add(n));}));
+  const cap=(s,n)=>String(s==null?"":s).slice(0,n);
+  const spells=[...names].map(n=>typeof findSpell==="function"?findSpell(n):null).filter(Boolean)
+    .map(s=>({name:cap(s.name,60),level:Number(s.level)||0,school:cap(s.school,24),
+      castingTime:cap(s.castingTime,60),range:cap(s.range,60),components:cap(s.components,80),
+      duration:cap(s.duration,60),text:cap(s.text,1400),_source:cap(s._source||s.source,12)}));
+  const conds=(typeof enConditions==="function"?enConditions():[])
+    .map(c=>({name:cap(c.name,40),category:cap(c.category,24),text:cap(c.text,1400),_source:cap(c._source,12)}));
+  return {spells,conds};
+}
 async function crewMintShare(a){
-  const id=await jbinSetPublic(null,{v:1,kind:"crew",cfg:crewShareCfg(a)});
+  const id=await jbinSetPublic(null,{v:1,kind:"crew",cfg:crewShareCfg(a),refs:crewShareRefs(a)});
   if(!id){toast("Cloud unreachable. Try again in a moment.");return;}
   a.crew.shareId=id;saveAdv();renderCrewPanel(a);
 }
 async function crewPushConfig(a){
   if(!a.crew||!a.crew.shareId)return;
   await jbinFetch(`${FB_BASE}/shares/${a.crew.shareId}/cfg.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(crewShareCfg(a))});
+  await jbinFetch(`${FB_BASE}/shares/${a.crew.shareId}/refs.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(crewShareRefs(a))});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1434,6 +1700,21 @@ function crewPid(){let p=null;try{p=localStorage.getItem("mf_crewpid");}catch(e)
   if(!p){p=randToken();try{localStorage.setItem("mf_crewpid",p);}catch(e){}}return p;}
 function crewMsg(title,body){
   $("#crewRoot").innerHTML=`<div class="crew-msg"><h2>${esc(title)}</h2><p>${esc(body)}</p></div>`;
+}
+// Sanitize cloud refs at ingestion (the crew share is world-writable): whitelisted keys only,
+// angle brackets stripped, lengths capped. Anything else is dropped.
+function crewCleanRefs(raw){
+  if(!raw||typeof raw!=="object")return null;
+  const clean=(v,n)=>String(v==null?"":v).replace(/[<>]/g,"").slice(0,n);
+  const sp=Array.isArray(raw.spells)?raw.spells.filter(s=>s&&s.name).slice(0,400).map(s=>({
+    name:clean(s.name,60),level:Math.max(0,Math.min(9,Math.round(Number(s.level))||0)),
+    school:clean(s.school,24),castingTime:clean(s.castingTime,60),range:clean(s.range,60),
+    components:clean(s.components,80),duration:clean(s.duration,60),text:clean(s.text,1400),
+    _source:clean(s._source,12)})):[];
+  const cd=Array.isArray(raw.conds)?raw.conds.filter(c=>c&&c.name).slice(0,60).map(c=>({
+    name:clean(c.name,40),category:clean(c.category,24),text:clean(c.text,1400),
+    _source:clean(c._source,12)})):[];
+  return {spells:sp,conds:cd};
 }
 async function initCrewMode(id){
   CREW_MODE=true;
@@ -1447,15 +1728,28 @@ async function initCrewMode(id){
   const node=await jbinReadBin(_crew.id);
   if(!node||node.kind!=="crew"||!node.cfg){crewMsg("This crew link is not active","Ask your DM for a fresh link, or check the connection and reload.");return;}
   _crew.node=node;
+  // D-019: seed the reference stores from the share's sanitized refs so the card's spell and
+  // condition links pop the same texts the DM sees. Crew mode never persists these.
+  const refs=crewCleanRefs(node.refs);
+  if(refs){state.spells=refs.spells;state.conditions=refs.conds;}
   renderCrewScreen();
-  const refresh=async()=>{const n=await jbinReadBin(_crew.id);
-    if(n&&n.kind==="crew"&&n.cfg){_crew.node=n;if(!document.querySelector("#gkR"))renderCrewScreen();}};
+  // The poll reads only the light /crew subtree (mates + payloads); cfg is re-read on
+  // focus/visibility, and refs only at boot — they are the heavy part of the node.
+  const refresh=async()=>{
+    const c=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew.json`);
+    if(c&&c.ok){try{_crew.node.crew=(await c.json())||{};}catch(e){}
+      if(!document.querySelector("#gkR"))renderCrewScreen();}};
+  const refreshCfg=async()=>{
+    const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/cfg.json`);
+    if(r&&r.ok){try{const cfg=await r.json();if(cfg)_crew.node.cfg=cfg;}catch(e){}}};
   setInterval(refresh,12000);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh();refreshCfg();}});
 }
 function crewMyRec(){const c=_crew.node&&_crew.node.crew;return (c&&c[_crew.pid])||null;}
 function crewResGet(payloadId){try{return JSON.parse(localStorage.getItem("mf_crewres:"+payloadId)||"{}");}catch(e){return {};}}
 function crewResSet(payloadId,k,used){try{const o=crewResGet(payloadId);o[k]=used;localStorage.setItem("mf_crewres:"+payloadId,JSON.stringify(o));}catch(e){}}
+function crewGearGet(payloadId){try{return localStorage.getItem("mf_crewgear:"+payloadId);}catch(e){return null;}}
+function crewGearSet(payloadId,s){try{if(s==null)localStorage.removeItem("mf_crewgear:"+payloadId);else localStorage.setItem("mf_crewgear:"+payloadId,String(s).slice(0,400));}catch(e){}}
 function renderCrewScreen(){
   const root=$("#crewRoot");if(!root||!_crew.node)return;
   const cfg=_crew.node.cfg,sp=GEN_SPECIES[cfg.sp]?cfg.sp:"kobold";
@@ -1492,12 +1786,14 @@ function renderCrewScreen(){
   bindCrewScreen(sp,cfg,my);
 }
 function bindCrewScreen(sp,cfg,my){
-  const root=$("#crewRoot");
   if(my&&my.cur){const v=validateGenPayload(my.cur);
     if(v.ok){const ch=deriveGenChar(v.clean);
       const host=$("#crewCard");
       if(host)genMountCard(host,ch,{pn:_crew.pn,res:crewResGet(v.clean.id),pips:"live"},
-        {onRes:(k,used)=>crewResSet(v.clean.id,k,used)});}}
+        {onRes:(k,used)=>crewResSet(v.clean.id,k,used),
+         gearGet:()=>{const g=crewGearGet(v.clean.id);return g!=null?g:ch.gear;},
+         gearDirty:()=>crewGearGet(v.clean.id)!=null,
+         onGear:s=>crewGearSet(v.clean.id,s)});}}
   const join=$("#crewJoin");
   if(join)join.addEventListener("click",()=>{
     const v=String($("#crewPn").value||"").replace(/[<>]/g,"").trim().slice(0,24);

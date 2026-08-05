@@ -193,13 +193,26 @@ function renderParty(a){
       <span class="pc-chips">${allChips}</span>
       <button class="pc-x" data-pcremove="${rid}" aria-label="Remove from this adventure" title="Remove from this adventure">✕</button>
     </div>`;}).join("");
+  // D-021: on a crew-enabled adventure the primary roster action rolls a character; adding a
+  // regular one moves behind the split caret (same pattern as the encounter FAB).
+  const addRow=a.crew
+    ?`<div class="fab-split menu-wrap pc-rollsplit"><button class="btn primary sm" id="rollPC" style="width:auto">＋ Roll a ${esc(((GEN_SPECIES[a.crew.sp]||{}).label||"character").toLowerCase())}</button><button class="kebab split-caret" data-menu="pcadd" title="More roster actions" aria-label="More roster actions">▾</button>
+        <div class="menu" id="menu-pcadd"><button id="addPC">＋ Add a regular character</button></div></div>`
+    :`<button class="addbtn" id="addPC" style="flex:1">＋ Add character</button>`;
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}
-    <div class="pc-addrow"><button class="addbtn" id="addPC" style="flex:1">＋ Add character</button>
+    <div class="pc-addrow">${addRow}
       <div class="pc-roster"><input class="pc-roster-in" id="rosterIn" placeholder="Roster…" autocomplete="off"><div class="pc-roster-dd" hidden></div></div>
     </div>`;
   $("#addPC").addEventListener("click",()=>addPartyMember(a));
+  {const rp=$("#rollPC");if(rp)rp.addEventListener("click",()=>openGenRitualDM(a));}
   bindRosterCombo(a,box);
-  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{if(e.target.closest(".pc-chip,.pc-dchip,[data-pcremove],[data-pclvl]"))return;openCharacterDetail(row.dataset.pcopen,a.id);}));
+  // Generated members open their statblock modal by default (D-021); the full page stays one tap
+  // away inside it. Everyone else keeps the roster detail page.
+  box.querySelectorAll(".pc-row").forEach(row=>row.addEventListener("click",e=>{
+    if(e.target.closest(".pc-chip,.pc-dchip,[data-pcremove],[data-pclvl]"))return;
+    const c=rosterById(row.dataset.pcopen);
+    if(c&&c.gen&&c.gen.payload&&typeof openGenCard==="function"){openGenCard(a,c.gen.payload,{pcId:c.id,pn:c.gen.pn||""});return;}
+    openCharacterDetail(row.dataset.pcopen,a.id);}));
   box.querySelectorAll("[data-pclvl]").forEach(el=>{el.addEventListener("click",e=>e.stopPropagation());
     el.addEventListener("change",e=>{e.stopPropagation();const c=rosterById(el.dataset.pclvl);if(!c)return;let f=(c.fields||[]).find(x=>x.k==="level");if(!f){f={k:"level",v:""};c.fields.unshift(f);}f.v=el.value;saveRoster();renderAdvDetail();});});
   box.querySelectorAll("[data-pcchip]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();const[rid,k]=el.dataset.pcchip.split(":");openPCFieldEdit(rid,k,el);}));
