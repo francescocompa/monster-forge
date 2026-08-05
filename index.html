@@ -334,6 +334,6 @@
 <script src="vendor/qrcode.min.js"></script>
 <!-- three.min.js + cannon.min.js are NOT loaded here (B250): dice3d.js injects them lazily on first roll
      intent (d3dLoadLibs), keeping ~724KB of physics/render libs off the boot critical path. -->
-<script>var _cb=Date.now();["data.js","parsers.js","core.js","forge.js","engine.js","bestiary.js","adventures.js","roster.js","combat.js","dice3d.js","seed.js","app.js"].forEach(function(s){document.write('<script src="'+s+'?cb='+_cb+'"><\/script>');});</script>
+<script>var _cb=Date.now();["data.js","parsers.js","core.js","forge.js","engine.js","bestiary.js","adventures.js","roster.js","gen.js","combat.js","dice3d.js","seed.js","app.js"].forEach(function(s){document.write('<script src="'+s+'?cb='+_cb+'"><\/script>');});</script>
 </body>
 </html>

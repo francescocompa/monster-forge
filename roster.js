@@ -98,7 +98,10 @@ function normalizeRosterPC(p){p=p||{};return {id:p.id||uid(),name:p.name||"",not
       else if(k==="senses"&&f.v&&typeof f.v==="object"&&!Array.isArray(f.v))v=f.v.dv||"";
       else v=f.v??"";
       return {k,label,v,hide:!!f.hide,main:!!(f.main||f.atk||f.dc||f.spell),prof:!!f.prof,atkV:f.atkV??"",dcV:f.dcV??""};
-    })};}
+    }),
+  // Generator provenance (crew PCs, D-002/D-007): the payload the character re-derives from. Must
+  // survive normalization or every reload strips the crew card's source of truth.
+  ...(p.gen?{gen:p.gen}:{})};}
 function charFieldVal(c,key){const f=c&&(c.fields||[]).find(x=>x.k===key);return f?f.v:undefined;}
 function fieldDef(f){return f.k&&PC_FIELD[f.k]?PC_FIELD[f.k]:null;}
 function fieldLabel(f){const d=fieldDef(f);if(d)return d.label;const pp=PC_PRESETS.find(p=>p.k===f.k);if(pp)return pp.label;return (f.k&&PC_LEGACY[f.k])||f.label||"Field";}

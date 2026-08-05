@@ -4,6 +4,103 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 280 — Crew generator v2: Francesco's thirteen notes + the depth interview (D-011…D-014)
+Full revision of B279 on written review notes; gen.js rewritten (1550 lines), payloads bumped to v:2.
+- **No AI tells:** every emoji replaced (D20 icon or plain text), all copy rewritten matter-of-fact;
+  the kobold "flagged substitution" line removed everywhere; the drafted Italian flavor tables
+  (already shelved) left to git history — identity is name + optional quirk/trinket, typed
+  (**last words removed** per the notes).
+- **The ritual, rebuilt (D-011):** every step shows its OPTION TABLE before the dice land (rows are
+  tappable as choices; the landed row highlights); any result is clickable to change — write over it
+  or pick another option, with class changes cascading to dependents. Ability scores roll ONE AT A
+  TIME in order, each with its raw dice on show (lowest struck on 4d6). All spans are EQUAL WEIGHT
+  (three options = 1-2 / 3-4 / 5-6; the plausible-class d6 lost its old top-heavy mapping).
+- **Level-1 choices now roll (interview):** per-class **equipment kits** (drafted PHB-legal, more
+  for martials — Fighter 6, casters 3 — D-013); **feature options** (Divine Order d4, Primal Order
+  d4, Fighting Style d10 = all ten, Eldritch Invocation d10/5 = the five level-1-legal ones incl.
+  Pact of the Tome's three rolled any-list cantrips, Rogue Expertise 2 of the rolled skills);
+  **spells** — known cantrips and prepared level-1 spells roll from the install's UPLOADED spell
+  library intersected with the shipped per-class XPHB index (`GEN_CLASS_SPELLS`; index alone as the
+  fallback and always the validation domain; the resolved tables ride the crew share cfg so phones
+  roll the same lists — D-012); **gear** — a rolled pack (d6) plus two sundries off a drafted d20
+  (D-014). Rangers/Druids keep their always-prepared spells on top.
+- **Origin feats, comprehensive:** fuller texts for all ten; feats with internal choices roll them —
+  Magic Initiate rolls its LIST (d6 equal thirds: Cleric/Druid/Wizard) then two cantrips and one
+  level-1 spell from that list's tables (+ its own free-cast tracker row); Crafter rolls three
+  artisan tools (d8, the Fast Crafting eight); Musician three instruments (d10); Skilled three
+  skills (unchanged).
+- **The card is now literally the app's statblock:** `genToMonster()` emits REAL Forge entries —
+  weapons and attack cantrips as `mode:"attack"` (attackText math), Spellcasting as `mode:"spell"`
+  with dc/atk overrides and character-style slot groups ("Level 1 (2 slots, Long Rest)"), and the
+  render swaps the global `M` to the generated monster for its synchronous duration so the composer,
+  the colour pass (`colorizeStatblock`), spell/condition reflinks, and click-to-roll all behave
+  exactly as on a bestiary statblock. Raw stat dice appear only in the ritual. The resource
+  tracker's recharge label ("Long Rest") is now a button that resets that row's pips.
+- **Panel tidied:** labeled setting fields (Species / Scores / Class / Background ASI), the player
+  link, members, and the Caduti list as separate grouped rows.
+- **Floors rebuilt:** 102 tests — equal-weight spans, kit-table integrity, per-score rolling, a
+  160-seed legality batch (attack math incl. Archery, cantrip/prepared counts incl. Thaumaturge/
+  Magician/Tome, expertise, gear composition, slots), spell-table resolution + cfg constraint,
+  Magic Initiate chain validation, hostile-payload boundary (off-list spells, stale `last` fields
+  dropped), statblock conversion (real attack/spell modes), the DOM ritual end-to-end (six stat
+  clicks, table-first class step, result-click override cascade), pip spend/reset, the phone flow,
+  and DM replace/dedup. Review artifact round 3 (same URL) carries the kit and gear tables for
+  Francesco's pending content review.
+
+## Batch 279 — The crew generator (gen.js): random level-1 PCs, adventure-tied, player phones roll them
+Side-quest feature for a comedic one-shot (kobold pirates die; each death rolls the next PC), built
+off-roadmap in one session from a revived artifact-era handoff. All decisions in `DECISIONS.md`
+(D-001…D-010 — that file is NEW: the feature-level decision log; phase decisions stay in ROADMAP/TASKS).
+- **New shared-scope file `gen.js`** (13 files now; loader/check/lint/harness/eslint sync points all
+  updated). A species-blind engine over data packs (D-001): `GEN_SPECIES` (v1: Kobold, 2014 MPMM as a
+  flagged substitution — Draconic Cry, Legacy d6 with Craftiness-skill/d20-sorcerer-cantrip sub-tables,
+  Wings d20), `GEN_CLASSES` (all 12 XPHB classes as fixed iconic level-1 packages: saves, skills lists,
+  AC calc, weapon lines w/ masteries, Bonus-Action features, spell kits, resource declarations, gear),
+  `GEN_FEATS` (the ten origin feats, d10 = the complete legal set, with derivation hooks).
+- **Pick-or-roll ritual (D-004):** every step is a visible die roll over a real table — stats in order
+  (3d6 default / 4d6-drop-lowest), class (Plausible = d6 over the array's computed top-3 with a
+  crew-stack penalty; Chaos = flat d12), background ASI +2/+1 (class default, overridable), origin
+  feat d10, class skills (dN reroll dupes), species tables with sub-rolls — each overridable via
+  "choose…", plus a one-tap "Roll everything". Identity (name required; quirk/trinket/last words
+  optional) is TYPED, never rolled — the drafted Italian flavor tables were shelved at the session
+  checkpoint and stay dormant in the pack data (D-009).
+- **The card is a real statblock (D-010):** `genToMonster()` converts the derived character into a
+  monster-shaped object (from `blankMonster()`) rendered by the app's own composer — features sorted
+  into Traits / Actions / Bonus Actions, weapon + damage-cantrip action lines, an MM25-style
+  Spellcasting action, the PC meta line where CR would sit. Raw stat dice show ONLY in the ritual.
+  A pip **resource tracker** (Rage, Draconic Cry, slots, Luck…, declared in the packs) sits under
+  living cards; spent state persists on the roster PC (`pc.gen.res`) DM-side, per-device on phones.
+- **Adventure-tied crew (D-002):** the adventure kebab gains "Enable the crew generator"; the panel
+  (under the party roster) carries species/settings (3d6|4d6 · Plausible|Chaos · ASI on|off — pushed
+  to the share config live), the crew link (mint/copy/QR/stop), a DM-side roll button, living-crew
+  chips (click → card, with ☠ Mark dead), and the **Caduti archive** (deaths counted, last words
+  revealed, cards re-derivable forever from archived payloads).
+- **Generated kobolds are REAL party PCs:** `genToRosterPC()` emits the normal roster shape (class
+  chip, abilities with save-prof flags + caster main flag, skills preset with expertise) so the
+  combat tracker treats them like any PC; `normalizeRosterPC` now carries the `gen` provenance
+  through. Death removes PC from roster+party into `a.crew.fallen` (payload archived).
+- **Crew mode (D-003):** `index.html?crew=<id>` boots a standalone phone screen (same isolation
+  stance as player mode — the DM library never loads): claim a name once, roll through the same
+  ritual, get the statblock card + tracker; "è caduto — roll the next one" marks the death and rolls
+  the replacement. Share node = `{v,kind:"crew",cfg,crew:{<pid>:{pn,deaths,cur}}}`; each device PUTs
+  only its own `crew/<pid>` subtree (schema round-tripped against the real RTDB).
+- **Trust boundary (D-007, the one deliberate deviation from the old handoff):** the wire carries
+  ONLY roll results and picks plus two capped free-text fields (player name, identity fields) —
+  never derived stats. The DM app re-derives every character locally through
+  `validateGenPayload` → `deriveGenChar`; hostile payloads (fake classes, out-of-range dice, dupe
+  skills, markup in strings) are rejected or rebuilt clean. DM polls the node every 12s while the
+  panel is open; one living PC per device slot — a re-rolled payload retires its predecessor into
+  the archive (with its last words as the toast).
+- **Floors:** `test/gen.test.js` (pack schema + locked dice + a 240-seed legality batch: HP ≥ 1,
+  attack = mod+PB, DC = 8+PB+mod, ASI legality, determinism, all 12 classes reachable; hostile-payload
+  boundary; resources + statblock conversion; roster bridge; craftiness reroll guard) and
+  `test/crew-flow.test.js` (DOM end-to-end: enable → ritual → save → card → death → archive; the
+  full phone flow with a patched transport asserting the payload-only wire; DM replace/dedup
+  semantics). Baseline now **97 tests**. Live-browser eyeballing was BLOCKED this session (the
+  preview pane refused all navigation) — components were verified headless and via captured-HTML
+  artifact; visual pass on localhost:8753 still owed.
+- Cut to backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, more species packs.
+
 ## Batch 278 — T2.4: concentration (the link, the prompt, the cascade)
 - **The effect→source link:** a condition instance added with a known caster carries `concBy` (the
   caster's combat-instance id). The add-effect popover reveals a **"concentration by" picker** for any

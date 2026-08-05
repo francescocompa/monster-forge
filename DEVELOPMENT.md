@@ -1,11 +1,11 @@
 # Development
 
-Monster Forge is a **no-build static site**: `index.html` + `styles.css` + twelve JS files, served as-is
+Monster Forge is a **no-build static site**: `index.html` + `styles.css` + thirteen JS files, served as-is
 (GitHub Pages). The shared scripts are loaded as classic `<script>` tags and **share one global lexical
 scope** — a function defined in `data.js` is callable from `app.js` with no imports. Keep it that way;
 there is no bundler. The ordered list (`data.js` first, `app.js` last) lives in `package.json`'s `check`
 script and index.html's loader — those, plus `test/harness.js` and `eslint.config.js`, are the four sync
-points that must stay matched when a file is added.
+points that must stay matched when a file is added (`gen.js`, the crew PC generator, was the 13th — B279).
 
 ## Tooling (dev-only — the shipped site stays no-build)
 
@@ -86,6 +86,11 @@ That means the rules ARE the security boundary. They must stay scoped to exactly
 - `shares/<random-id>` — ephemeral combat-share snapshots + the player write-back channel (open by design;
   players must write to it). Player-supplied data from here is untrusted — sanitize at ingestion
   (`_pmSafeRoll` and friends in `combat.js`) and never render it unescaped (see `esc()` in `core.js`).
+  **Crew shares (B279) live here too:** `{v, kind:"crew", cfg, crew:{<pid>:{pn, deaths, cur}}}` — each
+  player device PUTs only its own `crew/<pid>` subtree, and `cur` is a generator PAYLOAD (roll results +
+  picks + two capped free-text fields), never a derived statblock. The DM app re-derives locally through
+  `validateGenPayload` → `deriveGenChar` (gen.js); anything that fails the closed-domain validator is
+  dropped. Keep it that way: the payload-only wire IS the crew feature's trust boundary (D-007).
 
 **Do NOT leave the console's default "test mode" rule in place** — it grants root read/write and expires
 after 30 days, after which one `GET /installs.json` would dump every install. Paste the scoped rules above
@@ -186,6 +191,35 @@ kit-invisible misses close without new regressions (`npm run benchmark`).
 **Schema rules:** atoms are facts, not renderings — copy lives in the chip renderer, not the data.
 No new atom kinds without a consumer. The payload is optional everywhere: an effect with no `mech`
 degrades to today's behavior (text popover, manual tracking), so T2.2 can land incrementally.
+
+## The crew PC generator (gen.js, B279–280 · decisions D-001…D-014 in DECISIONS.md)
+
+A species-blind random level-1 PC generator for one-shots ("death → next kobold in seconds"),
+adventure-tied: enable it from the adventure kebab, hand players the crew link (`?crew=<id>`), and
+generated PCs land in that adventure's party; the dead archive into `a.crew.fallen` (the Caduti).
+Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
+
+- **A species = one data object** in `GEN_SPECIES`; a class = one package in `GEN_CLASSES` carrying
+  equipment KITS (drafted PHB-legal loadouts, more for martials — D-013), feature-option tables
+  (Divine/Primal Order, Fighting Styles, Invocations, Expertise), spell counts, statblock-section
+  entries (`traits`/`bonus`), and resource declarations. Weapon/armor atoms live in `GEN_W`/`GEN_AC`.
+- **Every step is pick-or-roll with the table on show** (D-004/D-011): the option table renders
+  before the dice land (rows tappable as choices), every span is EQUAL WEIGHT (`genSpanFor`), scores
+  roll one ability at a time with raw dice kept, and any result is clickable to override (class
+  changes cascade via `genClsCascade`). Identity (name + optional quirk/trinket) is typed.
+- **Spells roll from the install's own library** (D-012): `genSpellTables()` intersects the shipped
+  per-class XPHB index (`GEN_CLASS_SPELLS`, also the validation domain) with `enSpells()`, falling
+  back to the index when uploads run thin; the resolved tables ride the crew share `cfg` so phones
+  roll the same lists. Gear adds a rolled pack + two sundries (D-014).
+- **The card renders through the app's real composer** (D-010): `genToMonster()` emits Forge-native
+  entries (`mode:"attack"`, `mode:"spell"` with dc/atk overrides and character-style slot groups);
+  `genMountCard` swaps the global `M` to the generated monster for the synchronous render + the
+  `colorizeStatblock` pass, then restores it — highlights, reflinks, and click-to-roll behave like
+  any bestiary statblock. The pip tracker below persists on `pc.gen.res` (per-device on phones);
+  the recharge label resets its row.
+- **Payloads, never statblocks, on the wire** (D-007) — see the crew-share note in the security
+  section above. `test/gen.test.js` + `test/crew-flow.test.js` are the floors (102 tests).
+- Backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, further species packs.
 
 ## Conventions
 

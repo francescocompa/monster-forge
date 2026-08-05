@@ -172,6 +172,7 @@ function renderAdvDetail(){
       <button id="advPin">${a.pinned?"Unpin":"Pin to top"}</button>
       <button id="advDuplicate">Duplicate adventure</button>
       <button id="advArchive">${a.archived?"Unarchive":"Archive"} adventure</button>
+      <button id="advCrewTog">${a.crew?"Disable the crew generator":"Enable the crew generator"}</button>
       <div class="sep"></div>
       <button class="danger" id="delAdv">Delete adventure</button>
     </div></div></div>
@@ -179,6 +180,7 @@ function renderAdvDetail(){
     ${a.notesOn?`<label class="f advnotes">Adventure notes<textarea id="advNotes" placeholder="Premise, hooks, party goals, open threads…">${esc(a.notes||"")}</textarea></label>`:""}
     <div class="section-label" id="partyHead"><span>Party roster${a.party.length?` <span class="pc-count2">${a.party.length}</span>`:""}</span><button class="lvlup-btn" id="partyLvlUp" title="Level up the party">${ARROW_TREND_UP}<span class="lvlup-txt">Level Up</span></button></div>
     <div id="partyWrap"></div>
+    <div id="crewWrap"></div>
     </div>
     <div class="section-label">Scenes <span class="sl-acts"><div class="ctrl-icons" id="encCtrlIcons"></div></span></div>
     <div class="ctrl-chips" id="encChips"></div>
@@ -205,6 +207,13 @@ function renderAdvDetail(){
   $("#advPin").addEventListener("click",()=>{a.pinned=!a.pinned;saveAdv();renderAdvList();});
   $("#advDuplicate").addEventListener("click",()=>{const c=normalizeAdv(JSON.parse(JSON.stringify(a)));c.id=uid();c.name=advDName(a)+" (copy)";c.encounters=c.encounters.map(e=>Object.assign({},e,{id:uid()}));state.adv.splice(state.adv.indexOf(a)+1,0,c);state.selAdv=c.id;saveAdv();renderAdvList();});
   $("#advArchive").addEventListener("click",()=>{a.archived=!a.archived;saveAdv();renderAdvList();});
+  // Crew generator opt-in (D-002): the adventure is the unit that owns a crew. Disabling clears
+  // settings + the fallen archive (confirmed); living crew members stay in the party as normal PCs.
+  $("#advCrewTog").addEventListener("click",()=>{
+    if(a.crew){confirmModal("Disable the crew generator? Its settings and the fallen archive are cleared. Living crew members stay in the party.",()=>{
+      const sid=a.crew.shareId;a.crew=null;saveAdv();renderAdvDetail();if(sid)jbinDeletePublic(sid);});}
+    else{a.crew={sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]};saveAdv();renderAdvDetail();}
+  });
   $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
   {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}
   $("#addEnc").addEventListener("click",()=>{const e=blankEncounter();a.encounters.push(e);a._focusEnc=e.id;saveAdv();renderEncList(a);revealFocusedEnc();});
@@ -214,7 +223,7 @@ function renderAdvDetail(){
   $("#encClearAll").addEventListener("click",()=>{if(!a.encounters.length)return;confirmModal(`Delete all ${a.encounters.length} encounter${a.encounters.length>1?"s":""} and clear every scene? This cannot be undone.`,()=>{a.encounters=[];a.scenes=[];saveAdv();renderAdvDetail();});});
   bindCtrlIcons($("#encCtrlIcons"),encCtrl,ENC_DESC,()=>renderEncList(a));
   {const lu=$("#partyLvlUp");if(lu)lu.addEventListener("click",()=>levelUpParty(a));}
-  renderParty(a);renderEncList(a);
+  renderParty(a);renderCrewPanel(a);renderEncList(a);
 }
 // Whether a notes field is added to a newly-created item, per Settings (B65).
 function notesDefault(kind){return !!(state.settings&&state.settings.notes&&state.settings.notes[kind]);}

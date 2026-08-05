@@ -332,6 +332,16 @@ function normalizeMonster(m){
 }
 function normalizeAdv(a){
   a.archived=!!a.archived;a.notes=a.notes||"";a.levels=a.levels||[];a.color=a.color||"";
+  // Crew (the PC generator, D-002): null until the adventure opts in. Shape: {sp:<species id>,
+  // set:{stat,mode,asi}, shareId:""|<crew share id>, fallen:[{payload,pn,at}…] (the Caduti archive)}.
+  if(a.crew&&typeof a.crew==="object"){
+    a.crew.sp=a.crew.sp||"kobold";
+    a.crew.set={stat:a.crew.set&&a.crew.set.stat==="4d6"?"4d6":"3d6",
+                mode:a.crew.set&&a.crew.set.mode==="chaos"?"chaos":"plausible",
+                asi:!(a.crew.set&&a.crew.set.asi===false)};
+    a.crew.shareId=typeof a.crew.shareId==="string"?a.crew.shareId:"";
+    a.crew.fallen=Array.isArray(a.crew.fallen)?a.crew.fallen:[];
+  }else a.crew=null;
   a.notesOn=a.notesOn!==false; // notes field shown unless explicitly removed (B65)
   a.pinned=!!a.pinned; // pinned adventures float to the top of the column (B78)
   // Party = an ordered list of shared-roster ids (B136). Old shapes (B80 local objects / B134 {id,sharedId})

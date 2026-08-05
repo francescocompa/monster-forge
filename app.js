@@ -358,6 +358,10 @@ function wrapStepper(input,step,min){
   // DM app — skip loading the DM's library/adventures entirely.
   {const shareBin=new URLSearchParams(location.search).get("share");
    if(shareBin){await initPlayerMode(shareBin);hideBootLoader();return;}}
+  // Crew mode (D-003): index.html?crew=<id> boots the player-side PC generator — a standalone
+  // screen; the DM's library/adventures never load (same isolation stance as player mode).
+  {const crewId=new URLSearchParams(location.search).get("crew");
+   if(crewId){await initCrewMode(crewId);hideBootLoader();return;}}
   await loadRefLibs();
   await loadAll();
   if(typeof maybeApplySeed==="function")maybeApplySeed(); // dev-only local sandbox data (seed.js)

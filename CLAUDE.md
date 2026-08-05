@@ -18,7 +18,8 @@
   Update `CHANGELOG.md` (newest batch first) each batch; don't copy its history here.
 
 Long-range plan = `ROADMAP.md` (phases + decision log + non-goals); execution =
-`TASKS.md` (T-ids, model@effort, 🔶 decision gates — honor them before building past them).
+`TASKS.md` (T-ids, model@effort, 🔶 decision gates — honor them before building past them);
+feature-level decisions = `DECISIONS.md` (D-ids, append-only — check before re-proposing anything).
 
 ## Working here
 
