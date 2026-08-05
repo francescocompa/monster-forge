@@ -212,3 +212,8 @@ Raw note: "the wings section should have other buffs and boons ... (one could be
 Chosen: one d20 roll — 1-12 nothing, 13-19 one boon each (ascending: grasping tail, Draconic Resistance w/ rolled chromatic type, Grovel Cower and Beg, Medium size + Powerful Build, Dragon Fear 1/LR, Dragon's Breath w/ rolled type, Pack Tactics at 19), natural 20 = functional wings. Extra-sorcerer-cantrip was offered and NOT picked — out. Old wings payload values (true/false) stay valid.
 Enforced by: gen.js kobold species pack + deriveGenChar boon handling; tests.
 Affects: gen.js, tests.
+
+> **D-028 amended 2026-08-05 (B284, user note):** Dragon Fear is a BONUS ACTION against ONE
+> creature (not an action against a group); Grasping Tail additionally manipulates objects as a
+> Bonus Action (hadozee dexterous-feet model) beside its Grapple. Table shape and the rest of the
+> pool unchanged.
