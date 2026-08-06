@@ -1058,7 +1058,7 @@ function combatPanelInnerHTML(it,isTurn){
     ?`<button class="pcs-edit ca-name-edit" data-monedit="${esc(it.srcId)}" title="Open this creature in the Forge">${PEN_ICON} Edit in Forge</button>`
     :it.kind==="pc"?`<button class="pcs-edit ca-name-edit" data-pcedit="${esc(it.srcId)}" title="Edit character">${PEN_ICON} Edit</button>`:"";
   const sb=m
-    ?`<div class="sb ca-sb" data-sbmon="${it.srcId}"></div>`
+    ?`<div class="sb ca-sb" data-sbmon="${esc(it.srcId)}"></div>`
     :it.kind==="pc"?pcSheetHTML(it)
     :`<div class="ca-soon">${it.kind==="event"?"":"Quick combatant: no statblock."}</div>`;
   const note=it.comment
@@ -1894,6 +1894,9 @@ function renderCombat(){
   // restart (the not-started screen's own button, or Adventures' Resume-dropdown "Reset & restart").
   if(!cb&&e.status!=="completed"&&(e.combatants.some(c=>c.type!=="event")||a.party.length)){startCombat(a,e);if(!e.archived)e.status="active";cb=e.combat;}
   if(cb&&syncCombatOrder(a,e))saveAdv(); // pick up combatants added to the source encounter (CT7b)
+  // B286: keep the crew poll alive while the fight is on screen — the players' HP reports arrive
+  // through it, and it otherwise only runs while the adventure panel is open.
+  if(!PLAYER_MODE&&!CREW_MODE&&a.crew&&a.crew.shareId&&typeof crewEnsurePoll==="function")crewEnsurePoll(a);
   if(cb)migrateCombat(cb); // T2.3 — normalize legacy condition instances + default the prompt queue
   const cur=cb?cb.order[cb.turnIndex]:null;
   // Attribute statblock / chip rolls to the combatant whose panel is shown — the peeked selection if any,
@@ -2033,10 +2036,15 @@ function bindCombatTracker(body,a,e,cb){
   // click-to-roll with rolls tagged to the combatant via combatRollSrc (CT4).
   const sbHost=body.querySelector(".ca-sb");
   if(sbHost){const m=monById(sbHost.dataset.sbmon);
-    if(m){withM(m,()=>{const pb=pbForCR(m.cr);
+    // This is the LAST thing the binding pass does, so a failure here used to leave an empty card
+    // and no other symptom — the panel looked bound because it was. Both ways it can fail now say so.
+    if(!m)sbHost.innerHTML=`<div class="ca-soon">This creature is no longer in your library (id ${esc(sbHost.dataset.sbmon||"—")}). Re-add it from the bestiary.</div>`;
+    else try{withM(m,()=>{const pb=pbForCR(m.cr);
         sbHost.innerHTML=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xpOf(m))+sbEntriesHTML(m);
         linkSpellFeatures(sbHost);if(ruleFinder)ruleFindRoot(sbHost);else colorizeStatblock(sbHost);});
-      bindCombatStatblockRolls(sbHost);}}
+      bindCombatStatblockRolls(sbHost);}
+    catch(err){console.error("statblock render failed for",m&&m.name,err);
+      sbHost.innerHTML=`<div class="ca-soon">This statblock could not be rendered (${esc(String(err&&err.message||err))}). Open ${esc(m.name||"it")} in the Forge to see what's in it.</div>`;}}
 }
 // Click-to-roll on the active-combatant statblock — mirrors the #statblock handlers (engine.js); the
 // roll source is set view-wide via combatRollSrc so quick rolls AND popover rolls tag the combatant.

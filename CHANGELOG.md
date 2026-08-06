@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 286 — Players track their own HP and notes on the crew card (D-029)
+Francesco's request alongside the combat-statblock bug report.
+- **HP row on the crew phone card** (`genHpTrackerHTML`, under the card beside the resource
+  tracker): −/+ steps, a tap-to-type popover for exact current + temporary HP, and "full".
+  Damage comes off temporary HP first; current clamps to 0…max; the row goes amber under a third
+  and red at 0. Repainted in place (a full card re-render per tap would re-run the composer).
+- **Notes box** under the card, mirroring the DM modal's — per device (`mf_crewnote:<payloadId>`),
+  debounced on input. The 12s crew poll no longer rebuilds the screen while the box has focus.
+- **HP reports to the DM, notes never do (D-029).** The phone PUTs `{cur,tmp,at}` to its own
+  `crew/<pid>/hp` leaf (debounced, nothing else clobbered); the DM poll runs it through
+  `crewCleanHp` (two clamped numbers + a stamp, anything else dropped) and `crewApplyHp`, which
+  updates the roster PC and any live combat instance. Idempotent by stamp, so a repeated or stale
+  report never lands on top of the DM's own edit. The DM's copy of the row (statblock modal) is
+  read-only.
+- The crew poll now also runs while the **Combat** view is open (it only ran from the adventure
+  panel — exactly the wrong place for HP arriving mid-fight), and repaints the tracker on a change.
+- Floors: two new crew-flow tests (phone HP leaf + notes-stay-local; DM clamp/apply/idempotence).
+  **113 tests green**, verified live on a mobile viewport.
+
 ## Batch 285 — Two critical Forge fixes: chassis-save overwrite + entry paragraph rendering
 Francesco's two bug reports (real creations were lost to the first).
 - **Chassis load no longer overwrites the last-saved monster.** `applyChassis` used to keep the

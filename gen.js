@@ -1266,6 +1266,27 @@ function genResTrackerHTML(ch,used,interactive){
     return `<div class="gk-res-row"><span class="gk-res-l">${esc(r.label)}</span><span class="gk-pips">${pips}</span>${sr}${interactive?`<button class="gk-res-per" data-gkreset="${esc(r.k)}" title="Reset (${esc(r.per)})">${esc(r.per)}</button>`:`<span class="gk-res-per gk-res-per-s">${esc(r.per)}</span>`}</div>`;
   }).join("")}</div>`;
 }
+// B286: the character's own hit points, tracked on the card. Interactive on the player's phone
+// (the crew card); the DM's copy of the same row is read-only — their tracker still owns combat HP,
+// the phone only REPORTS (D-029). Damage eats temporary HP first, per the rules.
+function genHpClamp(v,max,dflt){const n=Math.round(Number(v));return Number.isFinite(n)?Math.max(0,Math.min(max,n)):dflt;}
+function genHpTmpClamp(v){const n=Math.round(Number(v));return Number.isFinite(n)?Math.max(0,Math.min(999,n)):0;}
+function genHpState(hp,max){return {cur:genHpClamp(hp&&hp.cur,max,max),tmp:genHpTmpClamp(hp&&hp.tmp)};}
+function genHpValHTML(s,max){
+  return `<b>${s.cur}</b><span class="gk-hp-max">/${max}</span>${s.tmp?`<span class="gk-hp-tmp">+${s.tmp}</span>`:""}`;
+}
+function genHpTrackerHTML(ch,hp,interactive){
+  const max=Math.max(0,Math.round(Number(ch.hp)||0));
+  const s=genHpState(hp,max);
+  const step=(d,l)=>`<button class="gk-hp-step" data-gkhp="${d}" aria-label="${l}">${d>0?"+":"−"}</button>`;
+  return `<div class="gk-hp${s.cur<=0?" gk-hp-out":(max&&s.cur<=Math.ceil(max/3)?" gk-hp-low":"")}" data-max="${max}">
+    <span class="gk-res-l">Hit points</span>
+    ${interactive?step(-1,"Lose a hit point"):""}
+    <button class="gk-hp-v"${interactive?` data-gkhpedit title="Type exact values"`:" disabled"}>${genHpValHTML(s,max)}</button>
+    ${interactive?step(1,"Regain a hit point"):""}
+    ${interactive?`<button class="gk-res-per" data-gkhpfull title="Back to full">full</button>`:`<span class="gk-res-per gk-res-per-s">reported</span>`}
+  </div>`;
+}
 function genCardHTML(ch,opts){
   opts=opts||{};
   const m=genToMonster(ch);
@@ -1287,6 +1308,7 @@ function genCardHTML(ch,opts){
     finally{M=prevF;}
   }
   return `<div class="sb gk-card${opts.dead?" gk-dead":""}">${core}${flavor}</div>`
+    +(opts.dead||!opts.hp?"":genHpTrackerHTML(ch,opts.hp,!!opts.hpEdit))
     +(opts.dead||opts.pips==="off"?"":genResTrackerHTML(ch,opts.res,opts.pips==="live"))
     +fam;
 }
@@ -1415,13 +1437,42 @@ function bindGenCard(root,h){
     const next=Math.max(0,cur-n);
     [...row.children].forEach((p,j)=>p.classList.toggle("gk-spent",j<next));
     if(h.onRes)h.onRes(k,next);}));
+  // B286: HP row. Repainted in place (a full card re-render on every tap would re-run the
+  // composer + colourizer); the handler owns persistence and the cloud report.
+  {const box=root.querySelector(".gk-hp");
+  if(box&&h.onHp&&h.hpGet){
+    const max=Math.max(0,Math.round(Number(box.dataset.max)||0));
+    const paint=s=>{const v=box.querySelector(".gk-hp-v");if(v)v.innerHTML=genHpValHTML(s,max);
+      box.classList.toggle("gk-hp-out",s.cur<=0);
+      box.classList.toggle("gk-hp-low",s.cur>0&&!!max&&s.cur<=Math.ceil(max/3));};
+    const commit=s=>{const n=genHpState(s,max);paint(n);h.onHp(n);};
+    const now=()=>genHpState(h.hpGet(),max);
+    box.querySelectorAll("[data-gkhp]").forEach(b=>b.addEventListener("click",()=>{
+      const d=Number(b.dataset.gkhp)||0,s=now();
+      // Damage comes off temporary hit points first; healing never touches them.
+      if(d<0&&s.tmp>0)commit({cur:s.cur,tmp:s.tmp-1});else commit({cur:s.cur+d,tmp:s.tmp});}));
+    const full=box.querySelector("[data-gkhpfull]");
+    if(full)full.addEventListener("click",()=>commit({cur:max,tmp:0}));
+    const edit=box.querySelector("[data-gkhpedit]");
+    if(edit)edit.addEventListener("click",e=>{e.stopPropagation();const s=now();
+      const p=showPopover(edit,`<div class="gk-hppop">
+        <label class="f">Current<input type="number" class="popinput" id="gkHpCur" value="${s.cur}" min="0" max="${max}" inputmode="numeric"></label>
+        <label class="f">Temporary<input type="number" class="popinput" id="gkHpTmp" value="${s.tmp}" min="0" inputmode="numeric"></label>
+        <div class="mrow"><button class="btn primary sm" id="gkHpOk" style="width:auto">Apply</button></div></div>`);
+      const cin=p.querySelector("#gkHpCur"),tin=p.querySelector("#gkHpTmp");
+      const apply=()=>{commit({cur:cin.value,tmp:tin.value});closePopover();};
+      p.querySelector("#gkHpOk").addEventListener("click",apply);
+      p.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();apply();}}));
+      setTimeout(()=>{try{cin.focus();cin.select();}catch(err){}},30);});
+  }}
 }
 function openGenCard(a,payload,o){
   o=o||{};
   const v=validateGenPayload(payload);if(!v.ok){toast("This card can't be rebuilt from its data.");return;}
   const ch=deriveGenChar(v.clean);
   const pc=o.pcId?rosterById(o.pcId):null;
-  if(pc)o={...o,res:(pc.gen&&pc.gen.res)||{},pips:"live"};
+  // The HP row appears only once the player's phone has reported some (D-029: read-only here).
+  if(pc)o={...o,res:(pc.gen&&pc.gen.res)||{},pips:"live",hp:(pc.gen&&pc.gen.hp)||null};
   // D-021: the statblock modal is the generated member's home surface — notes live at its bottom.
   openModalRaw(`<div id="gkCardHost"></div>
     ${pc?`<label class="f gk-noterow">Notes<textarea id="gkNotes" placeholder="Anything worth remembering about ${esc(ch.name)}">${esc(pc.notes||"")}</textarea></label>`:""}
@@ -2064,7 +2115,8 @@ async function initCrewMode(id){
   const refresh=async()=>{
     const c=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew.json`);
     if(c&&c.ok){try{_crew.node.crew=(await c.json())||{};}catch(e){}
-      if(!document.querySelector("#gkR"))renderCrewScreen();}};
+      // Don't rebuild under the player's caret (the notes box) or mid-ritual.
+      if(!document.querySelector("#gkR")&&!crewTyping())renderCrewScreen();}};
   const refreshCfg=async()=>{
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/cfg.json`);
     if(r&&r.ok){try{const cfg=await r.json();if(cfg)_crew.node.cfg=cfg;}catch(e){}}};
@@ -2072,10 +2124,27 @@ async function initCrewMode(id){
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh();refreshCfg();}});
 }
 function crewMyRec(){const c=_crew.node&&_crew.node.crew;return (c&&c[_crew.pid])||null;}
+function crewTyping(){const a=document.activeElement;return !!(a&&a.id==="crewNotes");}
 function crewResGet(payloadId){try{return JSON.parse(localStorage.getItem("mf_crewres:"+payloadId)||"{}");}catch(e){return {};}}
 function crewResSet(payloadId,k,used){try{const o=crewResGet(payloadId);o[k]=used;localStorage.setItem("mf_crewres:"+payloadId,JSON.stringify(o));}catch(e){}}
 function crewGearGet(payloadId){try{return localStorage.getItem("mf_crewgear:"+payloadId);}catch(e){return null;}}
 function crewGearSet(payloadId,s){try{if(s==null)localStorage.removeItem("mf_crewgear:"+payloadId);else localStorage.setItem("mf_crewgear:"+payloadId,String(s).slice(0,400));}catch(e){}}
+// B286 / D-029 — HP is per-device like the pips, and ALSO reported to the DM (two clamped numbers
+// plus a stamp, written to this device's own `crew/<pid>/hp` leaf so nothing else is clobbered).
+// Notes stay on the phone: free text never goes on the wire.
+function crewHpGet(payloadId){try{const o=JSON.parse(localStorage.getItem("mf_crewhp:"+payloadId)||"null");return (o&&typeof o==="object")?o:null;}catch(e){return null;}}
+function crewHpSet(payloadId,s){try{localStorage.setItem("mf_crewhp:"+payloadId,JSON.stringify({cur:s.cur,tmp:s.tmp}));}catch(e){}}
+function crewNoteGet(payloadId){try{return localStorage.getItem("mf_crewnote:"+payloadId)||"";}catch(e){return "";}}
+function crewNoteSet(payloadId,s){try{localStorage.setItem("mf_crewnote:"+payloadId,String(s||"").slice(0,2000));}catch(e){}}
+let _crewHpT=null;
+function crewPushHp(s){
+  if(!_crew||!_crew.id||!_crew.pid)return;
+  if(_crewHpT)clearTimeout(_crewHpT);
+  _crewHpT=setTimeout(()=>{_crewHpT=null;
+    jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}/hp.json`,
+      {method:"PUT",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({cur:s.cur,tmp:s.tmp,at:Date.now()})});},700);
+}
 function renderCrewScreen(){
   const root=$("#crewRoot");if(!root||!_crew.node)return;
   const cfg=_crew.node.cfg,sp=GEN_SPECIES[cfg.sp]?cfg.sp:"kobold";
@@ -2097,6 +2166,7 @@ function renderCrewScreen(){
     const v=validateGenPayload(my.cur);
     if(v.ok){const ch=deriveGenChar(v.clean);
       main=`<div id="crewCard"></div>
+        <label class="f gk-noterow">Notes<textarea id="crewNotes" maxlength="2000" placeholder="Anything worth remembering about ${esc(ch.name)}">${esc(crewNoteGet(v.clean.id))}</textarea></label>
         <button class="btn ghost crew-die" id="crewDied">Mark ${esc(ch.name)} dead and roll the next one</button>`;
     }else main=`<p class="gk-dim">Your character data can't be read. Roll a fresh one.</p><button class="btn primary" id="crewRollBtn">Roll your ${esc(GEN_SPECIES[sp].label.toLowerCase())}</button>`;
   }else{
@@ -2115,11 +2185,18 @@ function bindCrewScreen(sp,cfg,my){
   if(my&&my.cur){const v=validateGenPayload(my.cur);
     if(v.ok){const ch=deriveGenChar(v.clean);
       const host=$("#crewCard");
-      if(host)genMountCard(host,ch,{pn:_crew.pn,res:crewResGet(v.clean.id),pips:"live"},
+      if(host)genMountCard(host,ch,{pn:_crew.pn,res:crewResGet(v.clean.id),pips:"live",
+          hp:crewHpGet(v.clean.id)||{cur:ch.hp,tmp:0},hpEdit:true},
         {onRes:(k,used)=>crewResSet(v.clean.id,k,used),
+         hpGet:()=>crewHpGet(v.clean.id)||{cur:ch.hp,tmp:0},
+         onHp:s=>{crewHpSet(v.clean.id,s);crewPushHp(s);},
          gearGet:()=>{const g=crewGearGet(v.clean.id);return g!=null?g:ch.gear;},
          gearDirty:()=>crewGearGet(v.clean.id)!=null,
-         onGear:s=>crewGearSet(v.clean.id,s)});}}
+         onGear:s=>crewGearSet(v.clean.id,s)});
+      const nt=$("#crewNotes");
+      if(nt){let t=null;const save=()=>crewNoteSet(v.clean.id,nt.value);
+        nt.addEventListener("input",()=>{if(t)clearTimeout(t);t=setTimeout(save,400);});
+        nt.addEventListener("change",save);}}}
   const join=$("#crewJoin");
   if(join)join.addEventListener("click",()=>{
     const v=String($("#crewPn").value||"").replace(/[<>]/g,"").trim().slice(0,24);
@@ -2152,6 +2229,37 @@ function crewOpenRitual(sp,cfg,isReplacement){
   }});
 }
 
+// B286 / D-029 — the phone's HP report, read back DM-side. The share is world-writable, so this is
+// hostile input like everything else under /crew: two numbers and a stamp, clamped, nothing else.
+function crewCleanHp(raw,max){
+  if(!raw||typeof raw!=="object")return null;
+  const cur=Number(raw.cur);if(!Number.isFinite(cur))return null;
+  const cap=Number.isFinite(Number(max))&&Number(max)>0?Math.round(Number(max)):9999;
+  const tmp=Number(raw.tmp),at=Number(raw.at);
+  return {cur:Math.max(0,Math.min(Math.round(cur),cap)),
+    tmp:Math.max(0,Math.min(Number.isFinite(tmp)?Math.round(tmp):0,999)),
+    at:Number.isFinite(at)?at:0};
+}
+// Apply a crew member's reported HP to their roster PC + any live combat instance. The stamp makes
+// it idempotent: a report already applied never re-lands on top of the DM's own later edit.
+function crewApplyHp(a,pid,rec){
+  if(!rec||!rec.hp)return false;
+  const pc=state.roster.find(r=>r.gen&&r.gen.pid===pid&&(a.party||[]).includes(r.id));
+  if(!pc)return false;
+  const max=Number(charFieldVal(pc,"hp"));
+  const hp=crewCleanHp(rec.hp,max);
+  if(!hp)return false;
+  const prev=pc.gen.hp;
+  if(prev&&Number(pc.gen.hpAt||0)>=hp.at&&prev.cur===hp.cur&&prev.tmp===hp.tmp)return false;
+  if(Number(pc.gen.hpAt||0)>hp.at)return false;
+  pc.gen.hp={cur:hp.cur,tmp:hp.tmp};pc.gen.hpAt=hp.at;
+  (a.encounters||[]).forEach(e=>{
+    const cb=e.combat;if(!cb||!cb.order)return;
+    cb.order.forEach(it=>{if(it.kind==="pc"&&it.srcId===pc.id){
+      it.hpCur=it.hpMax!=null?Math.min(hp.cur,it.hpMax):hp.cur;it.hpTemp=hp.tmp;}});
+  });
+  return true;
+}
 // ── DM-side crew sync: poll the share node while the adventure's panel is live ──
 let _crewPoll=null;
 function crewEnsurePoll(a){
@@ -2164,13 +2272,18 @@ function crewEnsurePoll(a){
     if(!adv||!adv.crew||!adv.crew.shareId){crewStopPoll();return;}
     const node=await jbinReadBin(adv.crew.shareId);
     if(!node||!node.crew)return;
-    let changed=false;
+    let changed=false,hpChanged=false;
     for(const [pid,rec] of Object.entries(node.crew)){
       if(!rec||!rec.cur)continue;
+      const key="p:"+String(pid).slice(0,24);
       const pn=String(rec.pn||"").replace(/[<>]/g,"").slice(0,24);
-      if(genIngestPayload(adv,rec.cur,pn,"p:"+String(pid).slice(0,24)))changed=true;
+      if(genIngestPayload(adv,rec.cur,pn,key))changed=true;
+      if(crewApplyHp(adv,key,rec)){changed=true;hpChanged=true;}
     }
+    if(changed){saveRoster();saveAdv();}
     if(changed&&state.selAdv===advId&&$("#crewWrap"))preserveScroll(".adv-detail-body",renderAdvDetail);
+    // Reported HP only matters if the DM is looking at the fight — repaint the tracker too (B286).
+    if(hpChanged&&_curView==="combat"&&typeof renderCombat==="function")renderCombat();
   };
   _crewPoll={advId,timer:setInterval(tick,12000)};
   tick();

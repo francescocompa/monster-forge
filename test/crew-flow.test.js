@@ -240,6 +240,90 @@ test("crew mode (phone): claim → ritual → payload-only PUT to own subtree �
   assert.equal(r.name2, "Braciola");
 });
 
+// B286 / D-029: the phone tracks its own HP (reported to the DM as two clamped numbers) and keeps
+// notes strictly on the device — free text never reaches the wire.
+test("crew mode (phone): HP row reports to its own hp leaf, notes stay local", async () => {
+  const r = await evA(`(async()=>{
+    const puts=[];
+    jbinFetch=async(url,opts)=>{puts.push({url,body:opts&&opts.body?JSON.parse(opts.body):null});return {ok:true};};
+    const d=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    genRollAll(d,(s=>{let x=s;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};})(9101));
+    genApplyPick(d,"name","Ossobuco");
+    const payload=genCompletePayload(d);
+    CREW_MODE=true;_crew={id:"tshare2",pid:"pidB",pn:"Ada",node:{v:1,kind:"crew",
+      cfg:{name:"Kobold Cannon",sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true}},
+      crew:{pidB:{pn:"Ada",deaths:0,cur:payload}}}};
+    let root=document.getElementById("crewRoot");
+    if(!root){root=document.createElement("div");root.id="crewRoot";document.body.appendChild(root);}
+    try{localStorage.removeItem("mf_crewhp:"+payload.id);localStorage.removeItem("mf_crewnote:"+payload.id);}catch(e){}
+    renderCrewScreen();
+    const box=document.querySelector("#crewRoot .gk-hp");
+    if(!box)return {fail:"no HP row on the crew card"};
+    const max=Number(box.dataset.max);
+    const start=box.querySelector(".gk-hp-v b").textContent;
+    box.querySelector('[data-gkhp="-1"]').click();
+    const afterHit=box.querySelector(".gk-hp-v b").textContent;
+    const stored=JSON.parse(localStorage.getItem("mf_crewhp:"+payload.id)||"null");
+    box.querySelector("[data-gkhpfull]").click();
+    const afterFull=box.querySelector(".gk-hp-v b").textContent;
+    const notes=document.getElementById("crewNotes");
+    if(notes){notes.value="knows the sewer route";notes.dispatchEvent(new window.Event("change"));}
+    await new Promise(res=>setTimeout(res,900));
+    const hpPut=puts.filter(p=>/\\/hp\\.json$/.test(p.url));
+    return {max,start:Number(start),afterHit:Number(afterHit),afterFull:Number(afterFull),
+      stored,note:localStorage.getItem("mf_crewnote:"+payload.id),
+      hpPutN:hpPut.length,hpUrl:hpPut.length?hpPut[hpPut.length-1].url:"",
+      hpKeys:hpPut.length?Object.keys(hpPut[hpPut.length-1].body).sort():[],
+      noteOnWire:puts.some(p=>JSON.stringify(p.body||"").indexOf("sewer route")>=0)};})()`);
+  assert.equal(r.fail, undefined);
+  assert.equal(r.start, r.max, "an untracked character starts at full HP");
+  assert.equal(r.afterHit, r.max - 1);
+  assert.deepEqual(r.stored, { cur: r.max - 1, tmp: 0 }, "HP persists per device like the pips");
+  assert.equal(r.afterFull, r.max, "full resets the row");
+  assert.ok(/shares\/tshare2\/crew\/pidB\/hp\.json$/.test(r.hpUrl), "own hp leaf only: " + r.hpUrl);
+  assert.deepEqual(r.hpKeys, ["at", "cur", "tmp"], "two numbers and a stamp, nothing else");
+  assert.equal(r.hpPutN, 1, "the report is debounced into one write");
+  assert.equal(r.note, "knows the sewer route");
+  assert.equal(r.noteOnWire, false, "notes never leave the phone (D-029)");
+});
+
+test("DM side: a reported HP is clamped, applied to the live combat instance, and idempotent", () => {
+  const r = ev(`(()=>{
+    const a=normalizeAdv({id:"gk-hp-adv",name:"HP sync",encounters:[]});
+    state.adv.unshift(a);
+    a.crew={sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]};
+    const d=genNewDraft({sp:"kobold",set:a.crew.set,counts:{}});
+    genRollAll(d,(s=>{let x=s;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};})(9202));
+    genApplyPick(d,"name","Trippa");
+    const pc=genIngestPayload(a,genCompletePayload(d),"Ada","p:devH");
+    const max=Number(charFieldVal(pc,"hp"));
+    a.encounters.push({id:"e1",name:"Fight",combatants:[],combat:{round:1,turnIndex:0,prompts:[],
+      order:[{id:"i1",kind:"pc",srcId:pc.id,name:pc.name,hpMax:max,hpCur:max,hpTemp:0,conditions:[]}]}});
+    const applied=crewApplyHp(a,"p:devH",{hp:{cur:3,tmp:5,at:1000}});
+    const inst=()=>a.encounters[0].combat.order[0];
+    const afterOne={cur:inst().hpCur,tmp:inst().hpTemp,pcHp:pc.gen.hp};
+    const again=crewApplyHp(a,"p:devH",{hp:{cur:3,tmp:5,at:1000}});
+    inst().hpCur=max; // the DM heals in their own tracker
+    const stale=crewApplyHp(a,"p:devH",{hp:{cur:1,tmp:0,at:500}});
+    const dmKept=inst().hpCur;
+    const hostile=crewApplyHp(a,"p:devH",{hp:{cur:99999,tmp:-4,at:2000}});
+    const clamped={cur:inst().hpCur,tmp:inst().hpTemp};
+    const junk=[crewApplyHp(a,"p:devH",{hp:{cur:"lots",at:3000}}),
+                crewApplyHp(a,"p:devH",{hp:"12"}),crewApplyHp(a,"p:devH",{})];
+    const out={applied,afterOne,again,stale,dmKept,hostile,clamped,junk,max};
+    state.adv=state.adv.filter(x=>x.id!=="gk-hp-adv");
+    state.roster=state.roster.filter(x=>!(x.gen&&x.gen.pid==="p:devH"));
+    return out;})()`);
+  assert.equal(r.applied, true);
+  assert.deepEqual(r.afterOne, { cur: 3, tmp: 5, pcHp: { cur: 3, tmp: 5 } });
+  assert.equal(r.again, false, "the same stamped report never re-lands");
+  assert.equal(r.stale, false, "an older report never overwrites a newer state");
+  assert.equal(r.dmKept, r.max, "the DM's own edit survives a stale report");
+  assert.equal(r.hostile, true);
+  assert.deepEqual(r.clamped, { cur: r.max, tmp: 0 }, "cur clamps to max, temp can't go negative");
+  assert.deepEqual(r.junk, [false, false, false], "non-numeric or shapeless reports are dropped");
+});
+
 test("DM ingest: same device slot replaces (predecessor falls), known payload ids are skipped", () => {
   const r = ev(`(()=>{
     const a=normalizeAdv({id:"gk-sync-adv",name:"Sync",encounters:[]});

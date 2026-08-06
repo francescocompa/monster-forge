@@ -217,3 +217,11 @@ Affects: gen.js, tests.
 > creature (not an action against a group); Grasping Tail additionally manipulates objects as a
 > Bonus Action (hadozee dexterous-feet model) beside its Grapple. Table shape and the rest of the
 > pool unchanged.
+
+### D-029 — Players track HP and keep notes on the crew card; HP reports, notes don't · 2026-08-06 · DECIDED
+Mechanism: AskUserQuestion, B286 scoping round
+Raw note: "let the players keep notes and edit HP also on their character pages"
+Chosen: the crew phone card (`?crew=<id>`) grows an HP row (−/+, tap-to-type current + temporary, "full"; damage eats temporary HP first) and a Notes box. HP is per-device like the pips AND reported to the DM — a `{cur,tmp,at}` leaf written to the device's own `crew/<pid>/hp`, clamped at ingestion, applied to the roster PC and any live combat instance, idempotent by stamp so a stale report never overwrites a DM edit. Notes stay in localStorage: player free text never goes on the wire. The DM's copy of the row (statblock modal) is READ-ONLY — their tracker still owns combat HP.
+Rejected: notes on the wire too (a new hostile free-text surface for no table gain); everything per-device (the DM's tracker would keep lying); the player-mode share sheet as the surface (the crew card is where his players actually live — that surface stays as it is).
+Enforced by: gen.js (genHpTrackerHTML/crewPushHp/crewCleanHp/crewApplyHp), combat.js (crew poll kept alive while the fight is on screen), test/crew-flow.test.js.
+Affects: gen.js, combat.js, styles.css, tests.

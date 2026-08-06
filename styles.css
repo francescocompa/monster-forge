@@ -2511,6 +2511,20 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-pip.gk-spent{background:var(--accent-soft);opacity:.45}
 .gk-pip:disabled{cursor:default}
 .gk-res-per{font-size:10px;color:var(--faint);flex:none}
+/* B286: HP row under the card — same frame as the resource tracker */
+.gk-hp{margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:8px}
+.gk-hp-step{width:28px;height:28px;flex:none;border:1px solid var(--line);border-radius:50%;background:none;color:var(--dim);font-size:15px;line-height:1;padding:0;cursor:pointer}
+.gk-hp-step:hover{border-color:var(--accent);color:var(--txt)}
+.gk-hp-v{background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);font-size:15px;padding:2px 8px;cursor:pointer;flex:none;min-width:74px}
+.gk-hp-v[data-gkhpedit]:hover{border-color:var(--line)}
+.gk-hp-v:disabled{cursor:default}
+.gk-hp-max{color:var(--faint);font-size:12px}
+.gk-hp-tmp{color:var(--ok);font-size:12px;margin-left:5px}
+.gk-hp-low .gk-hp-v b{color:var(--amber)}
+.gk-hp-out{border-color:rgba(224,133,133,.45)}
+.gk-hp-out .gk-hp-v b{color:#e08585}
+.gk-hppop{display:flex;flex-direction:column;gap:8px;min-width:170px}
+.gk-hppop .popinput{width:100%}
 /* identity editor rows stack full-width */
 .gk-ed-id{flex-direction:column;align-items:stretch}
 .gk-ed-id .popinput{width:100%}
