@@ -2044,7 +2044,11 @@ function bindCombatTracker(body,a,e,cb){
         linkSpellFeatures(sbHost);if(ruleFinder)ruleFindRoot(sbHost);else colorizeStatblock(sbHost);});
       bindCombatStatblockRolls(sbHost);}
     catch(err){console.error("statblock render failed for",m&&m.name,err);
-      sbHost.innerHTML=`<div class="ca-soon">This statblock could not be rendered (${esc(String(err&&err.message||err))}). Open ${esc(m.name||"it")} in the Forge to see what's in it.</div>`;}}
+      // The message carries the throwing frame: a render bug here is data-shaped, and the file:line
+      // is the whole diagnosis. Keep it — it turned a blank card into a one-round-trip fix once.
+      const frame=String((err&&err.stack||"").split("\n")[1]||"").trim()
+        .replace(/^at\s+/,"").replace(/https?:\/\/[^/]+\//,"").replace(/\?cb=\d+/,"");
+      sbHost.innerHTML=`<div class="ca-soon">Statblock render failed: ${esc(String(err&&err.message||err))}<br>at ${esc(frame||"unknown")}<br>Creature: ${esc(m.name||"—")} (id ${esc(m.id||"—")})</div>`;}}
 }
 // Click-to-roll on the active-combatant statblock — mirrors the #statblock handlers (engine.js); the
 // roll source is set view-wide via combatRollSrc so quick rolls AND popover rolls tag the combatant.
