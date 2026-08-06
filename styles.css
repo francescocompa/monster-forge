@@ -2140,7 +2140,7 @@ body.player-mode .cd-savetpl,body.player-mode .cd-gx[data-cdmenu]{display:none!i
 
 /* ref-card body formatted text */
 .refcard-body b{color:var(--txt)}
-.refcard-body .blk-item::before{content:"• ";color:var(--faint)}
+.blk-item::before{content:"• ";color:var(--faint)}
 
 /* Forge: Condition Immunities chip field */
 /* Single fixed-height row: chips never wrap and never grow the field — instead the row scrolls

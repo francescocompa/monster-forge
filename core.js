@@ -652,7 +652,7 @@ function openChipMenu(anchor,kind,i){const e=arrFor(kind)[+i];if(!e||!e._src)ret
   const foot=src?`<div class="chip-pop-foot"><button class="btn ghost sm" data-chipload style="width:100%">Load ${esc(src.name)} as chassis →</button></div>`:"";
   const p=showPopover(anchor,`<div class="chip-pop">${prev}${foot}</div>`);
   const b=p.querySelector("[data-chipload]");if(b)b.addEventListener("click",()=>{closePopover();
-    if(forgeUnsaved())chassisConflictModal(src);else applyChassis(src,false,false);});}
+    if(forgeUnsaved())chassisConflictModal(src);else applyChassis(src);});}
 function nameField(kind,i,e,ph){
   const attrs=`data-k="${kind}" data-i="${i}" data-f="name" value="${esc(e.name||"")}" autocomplete="off" placeholder="${ph}"`;
   const chip=srcChip(kind,i,e);

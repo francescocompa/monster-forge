@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 285 — Two critical Forge fixes: chassis-save overwrite + entry paragraph rendering
+Francesco's two bug reports (real creations were lost to the first).
+- **Chassis load no longer overwrites the last-saved monster.** `applyChassis` used to keep the
+  current Forge draft's id when opened from the Forge — and Save upserts by id, so picking a
+  chassis right after saving a creature (Forge clean → no conflict modal) silently replaced that
+  creature on the next Save. A chassis load now ALWAYS mints a fresh id via `chassisToMonster`;
+  the conflict modal's choices are unchanged ("Replace" still discards edits, but the library
+  copy is never touched). The dead `mergeChassis` merge path (never reachable — every call site
+  passed `merge:false`) was removed with the `keepId`/`merge` params.
+- **Statblock entries keep their paragraph structure.** Entry bodies (traits/actions/bonus,
+  reaction responses, legendary/villain/lair intros, villain items, regional, notes) render
+  through `fmtBlock` instead of `fmtInline`, so `\n\n` paragraph breaks, `- ` bullet lists
+  (Kobold Inventor's invention menu), and `" | "` table runs finally survive into the preview —
+  the importer was already emitting them (`entriesToText`); only the render collapsed them.
+  Entry wrappers became `<div class="blk">` (a `<table>` legally can't live in a `<p>`; all CSS
+  and the colorize/roll post-passes select by class, verified). `fmtBlock` itself was fixed to
+  CLOSE its bullet spans (the old regex left every `<span class="blk-item">` open and later
+  bullets nested); the bullet `::before` rule is now global, not refcard-only.
+- Floors: `test/chassis-flow.test.js` (chassis id divergence + save-adds-not-overwrites) and
+  fmtBlock/sbEntriesHTML render assertions in units. **111 tests green**, both fixes verified
+  live in the pane (bullets colorized + rollable, d6 table renders).
+
 ## Batch 284 — Crew generator: pre-commit polish (stats entry, MI manual picks, boon fixes, sub editing)
 Francesco's last four notes before the v4 commit.
 - **Ability scores:** the stats step joins the header roll like every other step — "Roll all"

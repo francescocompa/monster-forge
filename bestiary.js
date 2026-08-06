@@ -211,7 +211,7 @@ function wireLibCards(body){
   body.querySelectorAll("[data-addtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openTagAdd(find(b.dataset.addtag),b);}));
   body.querySelectorAll("[data-roletag]").forEach(t=>t.addEventListener("click",e=>{e.stopPropagation();openRoleMenu(find(t.dataset.roletag),t);}));
   body.querySelectorAll("[data-rmtag]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const m=find(b.dataset.rmtag);m.tags=(m.tags||[]).filter(t=>t!==b.dataset.tagval);saveLib();renderLibrary();}));
-  body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(ch)applyChassis(ch,false,false);}));
+  body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(ch)applyChassis(ch);}));
   applyLibSelMarks(body);renderLibBatchBar();bindLibDrag(body);
 }
 // Bestiary multi-select (modifier-click) + batch status bar. Cmd/Ctrl-click toggles a card,
@@ -547,22 +547,6 @@ function monsterDirty(){const m=M;
 const SIG_SKIP=["id","status","tags","archived","chassis","_auto","_fromChassis","_fromSrc","_chassisSig","sort","_preset","_source","_srcCode","_book","_group","_legGroup","_savedAt"];
 function contentSig(m){const c=stripSrc(clone(m));SIG_SKIP.forEach(k=>delete c[k]);return JSON.stringify(c);}
 function originOf(m){return (m&&m._fromChassis&&m._chassisSig&&contentSig(m)===m._chassisSig)?{kind:"chassis",name:m._fromChassis,src:m._fromSrc||""}:{kind:"brew"};}
-function mergeChassis(ch){const m=M,out=clone(ch);out.id=m.id;out.chassis=false;out._auto={ac:false,hp:false};
-  if(m.name.trim())out.name=m.name;
-  ["type","subtype","align","acnote","hpf","gear","dmgnote","cimm"].forEach(k=>{if(m[k])out[k]=m[k];});
-  if(m.ac!=null)out.ac=m.ac;if(m.hp!=null)out.hp=m.hp;if(m.init!==""&&m.init!=null)out.init=m.init;
-  if((m.lang||"Common")!=="Common")out.lang=m.lang;if(m.cr!=="1")out.cr=m.cr;
-  if(ABILS.some(a=>m[a]!==10))ABILS.forEach(a=>out[a]=m[a]);
-  if(m.saves.length)out.saves=clone(m.saves);if(m.skills.length)out.skills=clone(m.skills);
-  if(Object.keys(m.dmg).length)out.dmg=clone(m.dmg);
-  ["traits","actions","bonus","reactions"].forEach(k=>{if(m[k].length)out[k]=clone(m[k]);});
-  if(m.legend.on)out.legend=clone(m.legend);if(m.villain.on)out.villain=clone(m.villain);
-  if(m.lair.on)out.lair=clone(m.lair);if(m.regional.on)out.regional=clone(m.regional);
-  if((m.notes||[]).some(n=>n.title||n.text))out.notes=clone(m.notes);
-  const sp=m.spd;if(sp.walk!==30||sp.climb||sp.fly||sp.swim||sp.burrow||sp.hover)out.spd=clone(sp);
-  const se=m.senses;if(se.darkvision||se.blindsight||se.tremorsense||se.truesight||se.other||se.blindBeyond)out.senses=clone(se);
-  if((m.shortName.word||"creature")!=="creature"||m.shortName.proper||m.shortName.plural)out.shortName=clone(m.shortName);
-  return out;}
 // A fresh home-brew monster derived from a chassis (origin tracking stamped, preset markers dropped).
 function chassisToMonster(ch,id){const b=clone(ch);b.id=id||uid();b.chassis=false;b._auto={ac:false,hp:false};
   b._fromChassis=ch.name;b._fromSrc=ch._srcCode||(ch._source?prettySource(ch._source):"")||"";
@@ -588,10 +572,10 @@ function chassisPreviewHTML(m){
     <div class="refcard-sub"><b>AC</b> ${m.ac??"—"} · <b>HP</b> ${m.hp??"—"} · <b>CR</b> ${m.cr} (${xpOf(m).toLocaleString()} XP) · <b>PB</b> ${sgn(pb)}</div>
     <div class="refcard-body"><div class="blk-item">${abil}</div>${sec("Traits",m.traits)}${sec("Actions",m.actions)}${sec("Bonus",m.bonus)}${sec("Reactions",m.reactions)}</div></div>`;
 }
-function applyChassis(ch,keepId,merge){
-  const base=merge?mergeChassis(ch):chassisToMonster(ch,(keepId&&M)?M.id:uid());
-  if(merge){delete base._preset;delete base._source;}
-  loadMonster(base);switchView("forge");toast("Loaded chassis. Edit & save.");
+// A chassis load ALWAYS mints a fresh id: Save upserts by id, so a chassis draft that inherited
+// the previous draft's id silently overwrote the last-saved monster on save (B285).
+function applyChassis(ch){
+  loadMonster(chassisToMonster(ch,uid()));switchView("forge");toast("Loaded chassis. Edit & save.");
 }
 // Add-from-chassis: build the bestiary entry from a chassis, save it, and drop it into the encounter
 // without a trip through the Forge.
@@ -637,7 +621,7 @@ function openChassis(fromForge,opts){
     body.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>{const ch=findChassis(b.dataset.pick);if(!ch)return;
       if(opts.onPick){opts.onPick(ch);return;}
       closeModal();
-      if(fromForge===true&&forgeUnsaved())chassisConflictModal(ch);else applyChassis(ch,fromForge===true,false);}));
+      if(fromForge===true&&forgeUnsaved())chassisConflictModal(ch);else applyChassis(ch);}));
   }
   bindCtrlIcons($("#chCtrlIcons"),ctrl,desc,draw);
   draw();
@@ -799,8 +783,8 @@ function chassisConflictModal(ch){
       <button class="btn ghost sm cc-choice cc-go" id="ccOverride">Replace<span class="sub">Discard current edits and load the chassis</span></button>
       <button class="btn ghost sm cc-choice cc-back" id="ccBack">Back<span class="sub">Keep editing, don't import</span></button>
     </div>`);
-  $("#ccSaveNew").addEventListener("click",()=>{if(!saveCurrentToBestiary())return;closeModal();toast("Saved to Bestiary.");applyChassis(ch,false,false);});
-  $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch,true,false);});
+  $("#ccSaveNew").addEventListener("click",()=>{if(!saveCurrentToBestiary())return;closeModal();toast("Saved to Bestiary.");applyChassis(ch);});
+  $("#ccOverride").addEventListener("click",()=>{closeModal();applyChassis(ch);});
   $("#ccBack").addEventListener("click",closeModal);
 }
 

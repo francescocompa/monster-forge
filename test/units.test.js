@@ -249,3 +249,23 @@ test("offensiveCR — DPR band anchors the CR, attack bonus nudges at the soften
   ]}`)})`);
   assert.equal(o.cr, "5"); assert.equal(o.step, 0); assert.equal(o.dpr, 36);
 });
+
+// B285 — statblock entry text keeps its structure: paragraph breaks, "- " bullets (closed spans),
+// " | " table runs, and inline bold/italic. fmtBlock is the single formatter behind all of it.
+test("fmtBlock — paragraphs, bullets, tables, inline marks", () => {
+  assert.equal(ev("fmtBlock('one\\n\\ntwo')"), "one<br><br>two");
+  assert.equal(
+    ev("fmtBlock('Pick one:\\n- Acid Vial\\n- Fire Cone')"),
+    'Pick one:<br><span class="blk-item">Acid Vial</span><br><span class="blk-item">Fire Cone</span>');
+  assert.ok(ev("fmtBlock('d6 | Effect\\n1 | Nothing')").startsWith('<table class="rc-table">'));
+  assert.equal(ev("fmtBlock('plain *i* and **b**')"), "plain <i>i</i> and <b>b</b>");
+});
+
+test("statblock entries render multi-paragraph action bodies with breaks and bullets", () => {
+  const html = ev(`(()=>{const m=normalizeMonster(blankMonster());m.name="Tester";
+    m.actions=[{mode:"text",name:"Weapon Invention",text:"[C] uses one invention:\\n- Acid. Ranged.\\n- Alchemist Fire. Ranged."}];
+    return sbEntriesHTML(m);})()`);
+  assert.ok(html.includes('<span class="blk-item">'), "bullets render as items");
+  assert.ok(/<div class="blk"/.test(html), "entry wrapper is a div (tables must be legal inside)");
+  assert.ok((html.match(/<br>/g) || []).length >= 2, "line breaks survive");
+});

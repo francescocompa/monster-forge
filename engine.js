@@ -40,7 +40,11 @@ function fmtBlock(t){
       out.push(`<table class="rc-table">`+rows.map((r,ri)=>"<tr>"+r.map(c=>{const tag=ri===0?"th":"td";return `<${tag}>${fmtInline(c)}</${tag}>`;}).join("")+"</tr>").join("")+`</table>`);
     }else{
       const buf=[];while(i<lines.length&&!isRow(lines[i])){buf.push(lines[i]);i++;}
-      out.push(esc(buf.join("\n")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*([^*]+?)\*/g,"<i>$1</i>").replace(/\n{2,}/g,"<br><br>").replace(/\n([-•])\s*/g,"<br><span class=\"blk-item\">").replace(/\n/g,"<br>"));
+      // Line-based so bullet spans CLOSE (the old regex left them open and every later bullet nested).
+      out.push(buf.join("\n").replace(/\n{3,}/g,"\n\n").split("\n").map(l=>{
+        const b=l.match(/^\s*[-•]\s*(.*)$/);const inner=fmtInline(b?b[1]:l);
+        return b?`<span class="blk-item">${inner}</span>`:inner;
+      }).join("<br>"));
     }
   }
   return out.join("");
@@ -248,12 +252,14 @@ function sbEntryBlockHTML(e){
   const spAttr=x=>x&&x._spells&&x._spells.length?` data-spells="${encodeURIComponent(JSON.stringify(x._spells))}"`:"";
   // Spellcasting: the MAIN line is colourised (DC / to-hit), but the spell-group lines are skipped
   // because their spell names are already linked via linkSpells.
-  if(e.mode==="spell"){const sp=spellLines(e);return `<p class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</p>`+sp.groups.map(g=>`<p class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</p>`).join("");}
+  if(e.mode==="spell"){const sp=spellLines(e);return `<div class="blk"><span class="nm">${esc(e.name||"Spellcasting")}.</span> ${fmtInline(applyRefs(sp.main))}</div>`+sp.groups.map(g=>`<div class="blk cc-skip" style="margin:2px 0 2px 14px"><b>${esc(g.label)}:</b> ${linkSpells(g.spells)}</div>`).join("");}
   const body=e.mode==="attack"?attackText(e):e.text;
   // Carry the attack's ability + damage type onto the name so a click can tint/annotate the roll.
   const ab=e.mode==="attack"&&e.ability?` data-abil="${esc(e.ability)}"`:"";
   const dt=e.mode==="attack"&&e.dtype?` data-dmgtype="${esc(e.dtype)}"`:"";
-  return `<p class="blk"${spAttr(e)}><span class="nm"${ab}${dt}>${esc(e.name)}.</span> ${fmtInline(applyRefs(body))}</p>`;
+  // fmtBlock (not fmtInline) so multi-paragraph bodies keep their breaks, "- " lists render as
+  // bullets, and " | " runs become tables — the wrapper is a div because a <table> ends a <p>.
+  return `<div class="blk"${spAttr(e)}><span class="nm"${ab}${dt}>${esc(e.name)}.</span> ${fmtBlock(applyRefs(body))}</div>`;
 }
 // All action/trait/legendary/villain/lair/regional/notes sections.
 function sbEntriesHTML(m){
@@ -263,12 +269,12 @@ function sbEntriesHTML(m){
   if(m.traits.some(e=>e.name||e.text))h+=`<div style="margin-top:8px">${sec(m.traits)}</div>`;
   if(m.actions.some(e=>e.name||e.text||e.mode==="spell"))h+=`<h3>Actions</h3>${sec(m.actions)}`;
   if(m.bonus.some(e=>e.name||e.text))h+=`<h3>Bonus Actions</h3>${sec(m.bonus)}`;
-  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<p class="blk"${spAttr(e)}><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtInline(applyRefs(e.response))}</p>`).join("");
-  if(m.legend.on&&m.legend.items.some(e=>e.name||e.text))h+=`<h3>Legendary Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.legend.intro))}</i></p>${sec(m.legend.items)}`;
-  if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><p class="blk"><i>${fmtInline(applyRefs(m.villain.intro))}</i></p>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtInline(applyRefs(e.text))}</div>`).join("");
-  if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<p class="blk"><i>${fmtInline(applyRefs(m.lair.intro))}</i></p>`;h+=sec(m.lair.items);}
-  if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><p class="blk">${fmtInline(applyRefs(m.regional.text))}</p>`;
-  (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtInline(applyRefs(n.text))}</div></div>`);
+  if(m.reactions.some(e=>e.name||e.response))h+=`<h3>Reactions</h3>`+m.reactions.filter(e=>e.name||e.response).map(e=>`<div class="blk"${spAttr(e)}><span class="nm">${esc(e.name)}.</span> ${e.trigger?`<i>Trigger:</i> ${fmtInline(applyRefs(e.trigger))} <i>Response:</i> `:""}${fmtBlock(applyRefs(e.response))}</div>`).join("");
+  if(m.legend.on&&m.legend.items.some(e=>e.name||e.text))h+=`<h3>Legendary Actions</h3><div class="blk"><i>${fmtBlock(applyRefs(m.legend.intro))}</i></div>${sec(m.legend.items)}`;
+  if(m.villain.on&&m.villain.items.some(e=>e.name||e.text))h+=`<h3>Villain Actions</h3><div class="blk"><i>${fmtBlock(applyRefs(m.villain.intro))}</i></div>`+[...m.villain.items].sort((a,b)=>(a.round||0)-(b.round||0)).filter(e=>e.name||e.text).map(e=>`<div class="va"><span class="rd">ACTION ${e.round||"?"}</span> <span class="nm">${esc(e.name)}.</span> ${fmtBlock(applyRefs(e.text))}</div>`).join("");
+  if(m.lair.on&&m.lair.items.some(e=>e.name||e.text)){h+=`<h3>Lair Actions</h3>`;if(m.lair.intro)h+=`<div class="blk"><i>${fmtBlock(applyRefs(m.lair.intro))}</i></div>`;h+=sec(m.lair.items);}
+  if(m.regional.on&&m.regional.text)h+=`<h3>Regional Effects</h3><div class="blk">${fmtBlock(applyRefs(m.regional.text))}</div>`;
+  (m.notes||[]).filter(n=>n.title||n.text).forEach(n=>h+=`<div class="sb-note">${n.title?`<div class="sb-note-h">${esc(n.title)}</div>`:""}<div class="sb-note-b">${fmtBlock(applyRefs(n.text))}</div></div>`);
   return h;
 }
 // Update the chrome around the statblock (legacy derived chips, CR-target tip, title, status), then
