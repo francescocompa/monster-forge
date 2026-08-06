@@ -269,3 +269,28 @@ test("statblock entries render multi-paragraph action bodies with breaks and bul
   assert.ok(/<div class="blk"/.test(html), "entry wrapper is a div (tables must be legal inside)");
   assert.ok((html.match(/<br>/g) || []).length >= 2, "line breaks survive");
 });
+
+// B287 — the combat panel renders LIBRARY records directly (no blankMonster template behind them),
+// so normalizeMonster is the only shape guarantee they get. A record that never carried `saves`
+// (hand-built import JSON; any creature with no save proficiencies) used to reach
+// `m.saves.includes(a)` in sbAbilityTableHTML and blank the whole statblock.
+test("normalizeMonster guarantees the array fields the renderers index unguarded", () => {
+  // Shapes are asserted INSIDE the realm — cross-realm arrays fail strict deepEqual on prototypes.
+  const o = ev(`(()=>{const m=normalizeMonster({id:"bare",name:"Swarm of Ravens",size:"Medium",
+    type:"Beast",ac:12,hp:24,cr:"1/4",str:6,dex:14,con:10,int:3,wis:12,cha:6});
+    return ["saves","mainAbils","skills","tools"]
+      .map(k=>k+":"+(Array.isArray(m[k])?m[k].length:typeof m[k])).join(" ");})()`);
+  assert.equal(o, "saves:0 mainAbils:0 skills:0 tools:0");
+});
+
+test("a bare library record renders through the full statblock composer", () => {
+  const o = ev(`(()=>{const m=normalizeMonster({id:"bare2",name:"Swarm of Ravens",size:"Medium",
+      type:"Beast",ac:12,hp:24,cr:"1/4",str:6,dex:14,con:10,int:3,wis:12,cha:6});
+    const prev=M;try{M=m;const pb=pbForCR(m.cr);
+      const h=sbHeaderHTML(m)+sbAbilityTableHTML(m,pb)+sbMetaHTML(m,pb,xpOf(m))+sbEntriesHTML(m);
+      return {ok:true,len:h.length,name:h.indexOf("Swarm of Ravens")>=0};}
+    catch(e){return {ok:false,err:e.message};}finally{M=prev;}})()`);
+  assert.equal(o.ok, true, "composer threw: " + o.err);
+  assert.equal(o.name, true);
+  assert.ok(o.len > 200);
+});

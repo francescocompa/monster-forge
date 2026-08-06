@@ -4,6 +4,19 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 287 — Fix: enemy statblocks blank in combat (a library record with no `saves`)
+Francesco's blocking bug, found from the B286 error message.
+- **Cause:** the combat panel renders LIBRARY records directly, so `normalizeMonster` is the only
+  shape guarantee they get — and it never defaulted `saves` / `mainAbils` / `skills`. A record that
+  never carried them (hand-built import JSON, an old export, any creature with no save
+  proficiencies) hit `m.saves.includes(a)` in `sbAbilityTableHTML` (engine.js), the composer threw,
+  and the card stayed empty. The Forge survived it only because its own load path fills the fields
+  from the blank template afterwards.
+- **Fix:** `normalizeMonster` guarantees all four array fields. One line, at the layer whose job is
+  exactly this; every surface that reads a library record is fixed at once, no re-import needed.
+- Floors: `normalizeMonster` shape assertion + a bare record driven through the full composer.
+  **115 tests green**, verified live (bare record → real combat panel → statblock renders).
+
 ## Batch 286 — Players track their own HP and notes on the crew card (D-029)
 Francesco's request alongside the combat-statblock bug report.
 - **HP row on the crew phone card** (`genHpTrackerHTML`, under the card beside the resource

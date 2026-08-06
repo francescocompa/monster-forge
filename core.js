@@ -327,7 +327,11 @@ function normalizeMonster(m){
   m.archived=!!m.archived;
   m.minion=!!m.minion;
   m.pinned=!!m.pinned; // pinned bestiary cards ignore filters (B78)
-  if(!Array.isArray(m.tools))m.tools=[];
+  // B287 — shape guarantee for the array fields the renderers index WITHOUT a guard. A record that
+  // never carried them (hand-built import JSON, an old export, a creature with no save proficiencies)
+  // used to reach `m.saves.includes(a)` in sbAbilityTableHTML and take the whole statblock down.
+  // Keep any new blankMonster() array in this list.
+  ["saves","mainAbils","skills","tools"].forEach(k=>{if(!Array.isArray(m[k]))m[k]=[];});
   return m;
 }
 function normalizeAdv(a){
