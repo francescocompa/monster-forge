@@ -196,7 +196,7 @@ function renderParty(a){
   // D-021: on a crew-enabled adventure the primary roster action rolls a character; adding a
   // regular one moves behind the split caret (same pattern as the encounter FAB).
   const addRow=a.crew
-    ?`<div class="fab-split menu-wrap pc-rollsplit"><button class="btn primary sm" id="rollPC" style="width:auto">＋ Roll a ${esc(((GEN_SPECIES[a.crew.sp]||{}).label||"character").toLowerCase())}</button><button class="kebab split-caret" data-menu="pcadd" title="More roster actions" aria-label="More roster actions">▾</button>
+    ?`<div class="fab-split menu-wrap pc-rollsplit"><button class="btn primary sm" id="rollPC" style="width:auto">＋ Roll a ${a.crew.spMode==="ritual"?"character":esc(((GEN_SPECIES[a.crew.sp]||{}).label||"character").toLowerCase())}</button><button class="kebab split-caret" data-menu="pcadd" title="More roster actions" aria-label="More roster actions">▾</button>
         <div class="menu" id="menu-pcadd"><button id="addPC">＋ Add a regular character</button></div></div>`
     :`<button class="addbtn" id="addPC" style="flex:1">＋ Add character</button>`;
   box.innerHTML=`${rows||`<div class="hint" style="margin:2px 0 6px">No player characters yet. Add them so they roll into the initiative order when you run a combat.</div>`}

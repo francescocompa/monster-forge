@@ -178,6 +178,10 @@ Chosen: the roster's primary roll button reads the crew's selected species ("Rol
 Enforced by: roster.js split button reading GEN_SPECIES[a.crew.sp].label; B282 purged the hardcoded strings.
 Affects: roster.js, gen.js, CHANGELOG B282.
 
+> **D-023 amended 2026-08-09 (D-031):** species-driven copy applies to LOCKED-species crews. When
+> the crew's species rides the ritual (D-031 ritual mode) the button reads "Roll a character" —
+> the user explicitly reversed the generic-copy rejection for that mode only.
+
 ### D-024 — Spell rolls: two tables per class, Damaging and All · 2026-08-05 · DECIDED
 Mechanism: AskUserQuestion, v4 feedback round 1
 Raw note: "divide the cantrips into three tables: all cantrips and damaging cantrips. By default, the first roll with spellcasting is on the damaging cantrips table and the rest on the all cantrips, but you should be able to choose the table. The same should be done for prepared spells."
@@ -217,6 +221,37 @@ Affects: gen.js, tests.
 > creature (not an action against a group); Grasping Tail additionally manipulates objects as a
 > Bonus Action (hadozee dexterous-feet model) beside its Grapple. Table shape and the rest of the
 > pool unchanged.
+
+### D-030 — Species generalization is hybrid: curated XPHB packs plus a races.json import path · 2026-08-09 · DECIDED
+Mechanism: AskUserQuestion, species-generalization interview round 1 (re-opens D-001's v1 scope at the user's initiative)
+Raw note: ". Let's update the kobold generator so that it allows for every species. If possible, it (and all other elements in the generator) should work with any content uploaded by the DM in monster forge." → picked "Hybrid (Recommended)"
+Options: A hybrid (curated 10 XPHB packs + races.json upload kind) / B curated packs only / C parse uploads only
+Chosen: A — hand-curated packs for the ten XPHB 2024 species (plus the existing 2014 MPMM Kobold) ship in gen.js at kobold-pack depth, AND a new "species" upload kind parses 5etools races.json so any uploaded species becomes rollable. Curated gives full ritual quality where it matters most; uploads give unlimited coverage. Rejected B — the generator would only ever know transcribed species. Rejected C — XPHB quality capped by parsing; a fresh install would have almost nothing to roll. D-001's engine architecture (species = one data object, no kobold literals) is what makes this feasible; its kobold-only CONTENT scope is superseded, its architecture stands.
+Enforced by: gen.js species packs + parser; pack-schema test extended over every shipped pack; parser floor over mirror-sourced fixtures.
+Affects: gen.js, parsers.js, app.js (upload kind), DEVELOPMENT.md, tests.
+
+### D-031 — Crew species mode: DM toggles locked-species vs species-as-ritual-step · 2026-08-09 · DECIDED
+Mechanism: AskUserQuestion, interview round 2 (user free-text over the offered options)
+Raw note: "Among the crew settings, the DM can choose whether to lock it to one specific species or have it as a part of the ritual"
+Options offered: A one species per crew (as today) / B species is a ritual step / C DM-picked shortlist
+Chosen: BOTH A and B behind a crew-settings toggle — locked mode keeps today's model (DM picks the species, species-driven button copy per D-023); ritual mode adds a species step to the ritual, rolled/picked over ALL ENABLED species (curated + uploaded, pool controlled by the existing per-source library enable toggles — no new shortlist surface, which covers C's use case for free).
+Button copy in ritual mode: **"Roll a character"** — the user consciously walked back D-023's rejection for this mode ("the mixed-mode context changes your mind" option picked). D-023 amended: species-driven copy WHEN LOCKED, "Roll a character" when species rides the ritual. Locked mode unchanged.
+Enforced by: gen.js crew settings + ritual step; roster.js button copy branch; wire cfg carries the mode + the species pack(s) in play.
+Affects: gen.js, roster.js, DECISIONS.md D-023 (amended in place below), tests.
+
+### D-032 — Parsed species: detect choices into pick-or-roll tables, degrade to prose, use as-is · 2026-08-09 · DECIDED
+Mechanism: AskUserQuestion, interview round 2
+Raw note: "Detect + tables (Recommended)" + "Use as-is. We'll test some species from 5etools to make sure they parse well"
+Chosen: the races.json parser extracts structured basics (size, speed, darkvision, languages) always; where the JSON structure marks a player choice (lineage/ancestry tables, skill choices) it synthesizes a real pick-or-roll table like the kobold Legacy table; anything it cannot structure lands as a VERBATIM PROSE TRAIT on the card — never wrong mechanics, just less structured. No pack editor: parsed species appear directly in the picker; quality is validated by testing real 5etools species together. Rejected: pick-only lists (breaks D-004 for uploaded species); prose-only (choices sit unresolved); the pack editor (a whole new surface pre-playtest).
+Enforced by: parser floor tests over mirror fixtures (basics exact, detected tables legal, undetected choices present as prose).
+Affects: parsers.js (or gen.js parse layer), tests.
+
+### D-033 — Feats read uploads via the D-012 index-intersect pattern; items and classes stay shipped · 2026-08-09 · DECIDED
+Mechanism: AskUserQuestion, interview round 3 (multi-select: only Feats picked)
+Raw note: picked "Feats (Recommended)" only
+Chosen: a feats.json upload kind; the origin-feat d10 becomes uploads ∩ a shipped index (the index doubles as fallback and validation domain, exactly D-012). Rejected items/equipment — kits are curated loadouts, not parseable from an item list; sundry-flavor gain doesn't pay for the parser. Rejected class features — class JSON is the most prose-heavy and choice-entangled content of all; the 12 shipped class packages stay the rules floor. Don't re-propose either without new evidence.
+Enforced by: app.js upload kind + gen.js feat table resolution; test mirrors the D-012 fallback floor.
+Affects: app.js, parsers.js, gen.js, tests.
 
 ### D-029 — Players track HP and keep notes on the crew card; HP reports, notes don't · 2026-08-06 · DECIDED
 Mechanism: AskUserQuestion, B286 scoping round

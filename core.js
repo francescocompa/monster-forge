@@ -340,6 +340,7 @@ function normalizeAdv(a){
   // set:{stat,mode,asi}, shareId:""|<crew share id>, fallen:[{payload,pn,at}…] (the Caduti archive)}.
   if(a.crew&&typeof a.crew==="object"){
     a.crew.sp=a.crew.sp||"kobold";
+    a.crew.spMode=a.crew.spMode==="ritual"?"ritual":"locked"; // D-031: locked species vs ritual step
     a.crew.set={stat:a.crew.set&&a.crew.set.stat==="4d6"?"4d6":"3d6",
                 mode:a.crew.set&&a.crew.set.mode==="chaos"?"chaos":"plausible",
                 asi:!(a.crew.set&&a.crew.set.asi===false)};

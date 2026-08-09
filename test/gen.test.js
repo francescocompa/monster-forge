@@ -40,6 +40,9 @@ test("equal-weight spans (D-011): 2→d4 halves, 3→d6 thirds, 5→d10 fifths; 
   const r = ev(`(()=>{
     const bad=[];
     for(const [id,p] of Object.entries(GEN_SPECIES))for(const t of (p.tables||[])){
+      if(t.kind==="skill"){ // plain-name tables (D-030): every entry must be a real skill
+        for(const e of t.entries)if(typeof e!=="string"||!GEN_SKILL_ABIL[e])bad.push(id+":"+t.id+":"+e);
+        continue;}
       let cover=0;for(const e of t.entries){if(e.lo>e.hi)bad.push(id+":"+t.id);cover+=e.hi-e.lo+1;}
       if(cover!==t.die)bad.push(id+":"+t.id+":cover");}
     return {s2:genSpanFor(2),s3:genSpanFor(3),s5:genSpanFor(5),s10:genSpanFor(10),bad};})()`);
@@ -127,7 +130,7 @@ test("seeded batch of 160 full rolls: complete, rules-legal, deterministic, all 
       // D-018: no spell name appears twice across sources on one character…
       const allSpells=[]
         .concat(ch.caster?ch.caster.cantrips:[]).concat(ch.caster?ch.caster.prepared:[])
-        .concat(ch.sorcery?[ch.sorcery.cantrip]:[])
+        .concat((ch.spCasts||[]).flatMap(x=>(x.cantrip?[x.cantrip]:[]).concat(x.spell?[x.spell]:[])))
         .concat((ch.extraCasts||[]).flatMap(x=>x.cantrips.concat([x.spell])));
       if(new Set(allSpells).size!==allSpells.length)out.bad.push(seed+":spelldupe:"+allSpells.join("|"));
       // …and a rolled full caster always knows at least one damage cantrip.
@@ -143,6 +146,104 @@ test("seeded batch of 160 full rolls: complete, rules-legal, deterministic, all 
   assert.deepEqual(r.bad, []);
   assert.equal(r.total, 160);
   assert.equal(Object.keys(r.classes).length, 12, "all 12 classes appear: " + JSON.stringify(r.classes));
+});
+
+test("species pack floor (D-030): every shipped pack rolls, validates, and derives legally", () => {
+  const r = ev(`(()=>{
+    const DTYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+    const out={bad:[],species:{}};
+    for(const spId of Object.keys(GEN_SPECIES)){
+      const sp=GEN_SPECIES[spId];
+      if(!sp.label||!sp.size||!sp.speed||!Array.isArray(sp.langs)||!sp.langs.length)out.bad.push(spId+":schema");
+      for(let seed=1;seed<=30;seed++){
+        const rng=${RNG}(seed*104729+spId.length*997);
+        const d=genNewDraft({sp:spId,set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+        genRollAll(d,rng);
+        genApplyPick(d,"name",sp.label+" "+seed);
+        if(!genIsComplete(d)){out.bad.push(spId+":"+seed+":incomplete");continue;}
+        const v=validateGenPayload(genCompletePayload(d));
+        if(!v.ok){out.bad.push(spId+":"+seed+":invalid:"+v.err);continue;}
+        const ch=deriveGenChar(v.clean);
+        out.species[spId]=(out.species[spId]||0)+1;
+        if(ch.hp<1)out.bad.push(spId+":"+seed+":hp");
+        if(!(ch.speed.walk>0))out.bad.push(spId+":"+seed+":speed");
+        for(const dt of (ch.resists||[]))if(!DTYPES.includes(dt))out.bad.push(spId+":"+seed+":resist:"+dt);
+        const names=ch.skills.map(s=>s.n);
+        if(new Set(names).size!==names.length)out.bad.push(spId+":"+seed+":dupskill");
+        for(const c of (ch.spCasts||[])){
+          if(c.dc!==10+ch.mods[c.abil]||c.atk!==2+ch.mods[c.abil])out.bad.push(spId+":"+seed+":castmath");
+        }
+        for(const res of ch.resources)if(!(res.max>=1)||!res.label)out.bad.push(spId+":"+seed+":res:"+res.k);
+        const all=[]
+          .concat(ch.caster?ch.caster.cantrips:[]).concat(ch.caster?ch.caster.prepared:[])
+          .concat((ch.spCasts||[]).flatMap(x=>(x.cantrip?[x.cantrip]:[]).concat(x.spell?[x.spell]:[])))
+          .concat((ch.extraCasts||[]).flatMap(x=>x.cantrips.concat([x.spell])));
+        if(new Set(all).size!==all.length)out.bad.push(spId+":"+seed+":spelldupe:"+all.join("|"));
+        // kind:"skill" tables land as proficiencies; extraFeat species carry two distinct feats
+        for(const t of (sp.tables||[]))if(t.kind==="skill"){
+          const val=v.clean.steps["sp:"+t.id].value;
+          if(!names.includes(val))out.bad.push(spId+":"+seed+":skilltable");
+        }
+        if(sp.extraFeat){
+          if(!v.clean.steps.feat2||v.clean.steps.feat2.value===v.clean.steps.feat.value)out.bad.push(spId+":"+seed+":feat2");
+          const f2=GEN_FEATS.find(f=>f.n===v.clean.steps.feat2.value);
+          if(f2&&f2.hp2&&ch.hp<GEN_CLASSES[ch.cls].hd+ch.mods.con+2)out.bad.push(spId+":"+seed+":toughhp");
+        }
+        // the card composes without throwing, and species resistances reach the dmg map
+        const m=genToMonster(ch);
+        for(const dt of (ch.resists||[]))if(m.dmg[dt]!=="res")out.bad.push(spId+":"+seed+":dmgline");
+      }
+    }
+    return out;})()`);
+  assert.deepEqual(r.bad, []);
+  assert.equal(Object.keys(r.species).length, Object.keys(ev("GEN_SPECIES")).length, "every pack derived");
+});
+
+test("species ritual mode (D-031): species step leads, species change cascades, locked crews reject other species", () => {
+  const r = ev(`(()=>{
+    const out={};
+    const rng=${RNG}(4242);
+    const d=genNewDraft({sp:"kobold",spMode:"ritual",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    out.firstStep=genStepOrder(d)[0];
+    out.noTablesYet=!genStepOrder(d).some(id=>id.startsWith("sp:"));
+    genRollAll(d,rng);
+    genApplyPick(d,"name","Ritual test");
+    out.rolledSp=d.sp;
+    out.spMatchesStep=d.steps.species&&d.steps.species.value===d.sp;
+    out.complete=genIsComplete(d);
+    const v=validateGenPayload(genCompletePayload(d));
+    out.valid=v.ok&&v.clean.sp===d.sp;
+    // switching species cascades: human adds feat2, moving away drops it and the old sp tables
+    out.pickHuman=genApplyPick(d,"species","human");
+    out.feat2Step=genStepOrder(d).includes("feat2");
+    out.oldTablesGone=!Object.keys(d.steps).some(k=>k.startsWith("sp:"));
+    genRollAll(d,rng);
+    out.humanComplete=genIsComplete(d)&&d.steps.feat2&&d.steps.feat2.value!==d.steps.feat.value;
+    out.pickKobold=genApplyPick(d,"species","kobold");
+    out.feat2Gone=!d.steps.feat2&&!genStepOrder(d).includes("feat2");
+    // locked-crew ingestion rejects a different species (D-031)
+    genRollAll(d,rng); // completes the kobold again
+    const p=genCompletePayload(d);
+    const a={id:"t",party:[],crew:{sp:"tiefling",spMode:"locked",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]}};
+    out.lockedRejects=genIngestPayload(a,p,"","")===null;
+    a.crew.spMode="ritual";
+    const pc=genIngestPayload(a,p,"","");
+    out.ritualAccepts=!!pc;
+    if(pc){state.roster=state.roster.filter(x=>x.id!==pc.id);} // leave no test data behind
+    return out;})()`);
+  assert.equal(r.firstStep, "species");
+  assert.equal(r.noTablesYet, true);
+  assert.equal(r.spMatchesStep, true);
+  assert.equal(r.complete, true);
+  assert.equal(r.valid, true);
+  assert.equal(r.pickHuman, true);
+  assert.equal(r.feat2Step, true);
+  assert.equal(r.oldTablesGone, true);
+  assert.equal(r.humanComplete, true);
+  assert.equal(r.pickKobold, true);
+  assert.equal(r.feat2Gone, true);
+  assert.equal(r.lockedRejects, true);
+  assert.equal(r.ritualAccepts, true);
 });
 
 test("plausible class maps the d6 equally: 1-2 first, 3-4 second, 5-6 third", () => {

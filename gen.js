@@ -63,7 +63,18 @@ const GEN_FAMILIARS={
 "Weasel":{"name":"Weasel","shortName":{"word":"creature","proper":false,"plural":false},"size":"Tiny","type":"Beast","align":"Unaligned","ac":13,"hp":1,"hpf":"1d4 - 1","spd":{"walk":30,"climb":30,"fly":0,"swim":0,"burrow":0,"hover":false},"str":3,"dex":16,"con":8,"int":2,"wis":12,"cha":3,"skills":[["Acrobatics","prof"],["Perception","prof"],["Stealth","prof"]],"senses":{"darkvision":60,"blindsight":0,"tremorsense":0,"truesight":0,"blindBeyond":false,"other":""},"lang":"Common","cr":"0","actions":[{"name":"Bite","text":"*Melee Attack Roll:* +5, reach 5 ft. *Hit:* 1 Piercing damage.","mode":"text"}]}
 };
 
-// ── Species packs (D-001) ─────────────────────────────────────────────────────
+// ── Species packs (D-001, generalized D-030) ─────────────────────────────────
+// A pack: {label, size, speed, darkvision, langs, traits, bonus, res, tables, resists?, casts?,
+//   hpPerLevel?, extraFeat?}. Table entries carry a declarative `fx` payload consumed generically
+// by deriveGenChar — no species names in the engine. fx fields (all optional):
+//   trait/bonus/action:{n,t} — statblock entries; t may template {DC:abil}, {MOD:abil}, {PB}
+//   skillSub:true   — the entry's sub value is a skill proficiency
+//   cast:{label,abil,cantrip?|spell?,freq?} — a species-granted cast; abil "mental" = best of
+//     Int/Wis/Cha; cantrip:"sub" reads the sub value (Draconic Sorcery)
+//   resist:"Fire"|"sub" — damage resistance (sub reads the sub value)
+//   size:"Medium" — size override · fly:30 — fly speed · res:{k,label,max,per,sr?} — a resource
+// A table may instead be kind:"skill": entries are plain skill names, the value is the chosen name
+// (Human Skillful, Elf Keen Senses). `extraFeat:true` adds a second origin-feat step (Human).
 const GEN_SPECIES={
   kobold:{
     label:"Kobold",
@@ -74,10 +85,13 @@ const GEN_SPECIES={
     tables:[
       {id:"legacy",label:"Kobold Legacy",die:6,entries:[
         {lo:1,hi:2,label:"Craftiness",value:"craftiness",
+          fx:{skillSub:true,trait:{n:"Kobold Legacy: Craftiness",t:"Proficient in {SUB} (counted in the Skills line)."}},
           sub:{id:"craftskill",label:"Craftiness skill",die:6,kind:"skill",
                entries:["Arcana","Investigation","Medicine","Sleight of Hand","Survival"]}},
-        {lo:3,hi:4,label:"Defiance",value:"defiance"},
+        {lo:3,hi:4,label:"Defiance",value:"defiance",
+          fx:{trait:{n:"Kobold Legacy: Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."}}},
         {lo:5,hi:6,label:"Draconic Sorcery",value:"sorcery",
+          fx:{cast:{label:"Draconic Sorcery",abil:"mental",cantrip:"sub"}},
           sub:{id:"cantrip",label:"Sorcerer cantrip",die:20,kind:"cantrip",
                entries:["Acid Splash","Blade Ward","Chill Touch","Dancing Lights","Elementalism",
                  "Fire Bolt","Friends","Light","Mage Hand","Mending","Message","Mind Sliver",
@@ -88,20 +102,182 @@ const GEN_SPECIES={
       // a natural 20 keeps the mythic wings. Old payloads (value true/false) stay valid.
       {id:"wings",label:"Draconic Boon",die:20,entries:[
         {lo:1,hi:12,label:"No boon",value:false},
-        {lo:13,hi:13,label:"Grasping tail",value:"tail"},
+        {lo:13,hi:13,label:"Grasping tail",value:"tail",
+          fx:{bonus:{n:"Grasping Tail",t:"As a Bonus Action, the character can use its tail to manipulate an object, open or close a door or container, or pick up or set down a Tiny object. The tail can also Grapple (escape DC {DC:str})."}}},
         {lo:14,hi:14,label:"Draconic Resistance",value:"resist",
+          fx:{resist:"sub",trait:{n:"Draconic Resistance",t:"Resistance to {SUB} damage."}},
           sub:{id:"boontype",label:"Draconic type",die:6,entries:["Acid","Cold","Fire","Lightning","Poison"]}},
-        {lo:15,hi:15,label:"Grovel, Cower, and Beg",value:"grovel"},
-        {lo:16,hi:16,label:"Medium size and Powerful Build",value:"build"},
-        {lo:17,hi:17,label:"Dragon Fear",value:"fear"},
+        {lo:15,hi:15,label:"Grovel, Cower, and Beg",value:"grovel",
+          fx:{action:{n:"Grovel, Cower, and Beg (1/Short Rest)",t:"The character throws a distracting fit. Until the start of its next turn, its allies have Advantage on attack rolls against enemies within 10 feet of it."},
+              res:{k:"grovel",label:"Grovel, Cower, and Beg",max:1,per:"Short Rest"}}},
+        {lo:16,hi:16,label:"Medium size and Powerful Build",value:"build",
+          fx:{size:"Medium",trait:{n:"Powerful Build",t:"Counts as one size larger for carrying capacity; Advantage on ability checks made to end the Grappled condition."}}},
+        {lo:17,hi:17,label:"Dragon Fear",value:"fear",
+          fx:{bonus:{n:"Dragon Fear (1/Long Rest)",t:"*Wisdom Saving Throw:* DC {DC:cha}, one creature within 10 feet. *Failure:* the target has the Frightened condition until the end of the character's next turn."},
+              res:{k:"fear",label:"Dragon Fear",max:1,per:"Long Rest"}}},
         {lo:18,hi:18,label:"Dragon's Breath",value:"breath",
+          fx:{action:{n:"Dragon's Breath (2/Long Rest)",t:"*Dexterity Saving Throw:* DC {DC:con}, each creature in a 15-foot Cone. *Failure:* 1d10 {SUB} damage. *Success:* Half damage."},
+              res:{k:"breath",label:"Dragon's Breath",max:2,per:"Long Rest"}},
           sub:{id:"boontype",label:"Breath type",die:6,entries:["Acid","Cold","Fire","Lightning","Poison"]}},
-        {lo:19,hi:19,label:"Pack Tactics",value:"packtactics"},
-        {lo:20,hi:20,label:"Functional wings: Fly Speed 30 ft.",value:true}
+        {lo:19,hi:19,label:"Pack Tactics",value:"packtactics",
+          fx:{trait:{n:"Pack Tactics",t:"Advantage on an attack roll if at least one of the character's allies is within 5 feet of the target and the ally doesn't have the Incapacitated condition."}}},
+        {lo:20,hi:20,label:"Functional wings: Fly Speed 30 ft.",value:true,fx:{fly:30}}
+      ]}
+    ]
+  },
+  // ── The ten XPHB 2024 species (D-030) — level-1 content only, transcribed from the mirror.
+  // Higher-level traits (Celestial Revelation, Draconic Flight, Large Form, lineage L3/L5 spells)
+  // are out of the generator's level-1 scope. PB-scaled uses are baked at 2 (L1-only by scope).
+  aasimar:{
+    label:"Aasimar",
+    size:"Medium",speed:30,darkvision:60,langs:["Common"],
+    resists:["Necrotic","Radiant"],
+    casts:[{label:"Light Bearer",abil:"cha",cantrip:"Light"}],
+    traits:[],
+    bonus:[],
+    actions:[{n:"Healing Hands (1/Long Rest)",t:"As a Magic action, the character touches a creature: it regains 2d4 Hit Points."}],
+    res:[{k:"heal",label:"Healing Hands",max:1,per:"Long Rest"}],
+    tables:[]
+  },
+  dragonborn:{
+    label:"Dragonborn",
+    size:"Medium",speed:30,darkvision:60,langs:["Common","Draconic"],
+    traits:[],
+    tables:[
+      {id:"ancestry",label:"Draconic Ancestry",die:10,entries:[
+        ["Black","Acid"],["Blue","Lightning"],["Brass","Fire"],["Bronze","Lightning"],["Copper","Acid"],
+        ["Gold","Fire"],["Green","Poison"],["Red","Fire"],["Silver","Cold"],["White","Cold"]
+      ].map(([drag,type],i)=>({lo:i+1,hi:i+1,label:drag+" ("+type+")",value:drag.toLowerCase(),
+        fx:{resist:type,
+            action:{n:"Breath Weapon (2/Long Rest)",t:"*Dexterity Saving Throw:* DC {DC:con}, each creature in a 15-foot Cone or a 30-foot Line 5 feet wide (chosen each use). *Failure:* 1d10 "+type+" damage. *Success:* Half damage. Taking the Attack action, the breath can replace one attack."},
+            res:{k:"breath",label:"Breath Weapon",max:2,per:"Long Rest"}}}))}
+    ]
+  },
+  dwarf:{
+    label:"Dwarf",
+    size:"Medium",speed:30,darkvision:120,langs:["Common","Dwarvish"],
+    resists:["Poison"],hpPerLevel:1,
+    traits:[
+      {n:"Dwarven Resilience",t:"Advantage on saving throws to avoid or end the Poisoned condition."},
+      {n:"Dwarven Toughness",t:"Hit Point maximum increases by 1 per level (already counted)."}],
+    bonus:[{n:"Stonecunning (2/Long Rest)",t:"As a Bonus Action, gain Tremorsense with a range of 60 feet for 10 minutes. The character must be on or touching a stone surface (natural or worked)."}],
+    res:[{k:"stone",label:"Stonecunning",max:2,per:"Long Rest"}],
+    tables:[]
+  },
+  elf:{
+    label:"Elf",
+    size:"Medium",speed:30,darkvision:60,langs:["Common","Elvish"],
+    traits:[
+      {n:"Fey Ancestry",t:"Advantage on saving throws to avoid or end the Charmed condition."},
+      {n:"Trance",t:"The character doesn't need sleep and magic can't put it to sleep; a Long Rest completes in 4 hours of trancelike meditation."}],
+    tables:[
+      {id:"keensenses",label:"Keen Senses",kind:"skill",entries:["Insight","Perception","Survival"]},
+      {id:"lineage",label:"Elven Lineage",die:6,entries:[
+        {lo:1,hi:2,label:"Drow",value:"drow",
+          fx:{darkvision:120,cast:{label:"Drow Lineage",abil:"mental",cantrip:"Dancing Lights"},
+              trait:{n:"Elven Lineage: Drow",t:"Darkvision range is 120 feet (already counted)."}}},
+        {lo:3,hi:4,label:"High Elf",value:"high",
+          fx:{cast:{label:"High Elf Lineage",abil:"mental",cantrip:"Prestidigitation"},
+              trait:{n:"Elven Lineage: High Elf",t:"After a Long Rest, the Prestidigitation cantrip can be swapped for another Wizard cantrip."}}},
+        {lo:5,hi:6,label:"Wood Elf",value:"wood",
+          fx:{speed:35,cast:{label:"Wood Elf Lineage",abil:"mental",cantrip:"Druidcraft"},
+              trait:{n:"Elven Lineage: Wood Elf",t:"Speed is 35 feet (already counted)."}}}
+      ]}
+    ]
+  },
+  gnome:{
+    label:"Gnome",
+    size:"Small",speed:30,darkvision:60,langs:["Common","Gnomish"],
+    traits:[{n:"Gnomish Cunning",t:"Advantage on Intelligence, Wisdom, and Charisma saving throws."}],
+    tables:[
+      {id:"lineage",label:"Gnomish Lineage",die:6,entries:[
+        {lo:1,hi:3,label:"Forest Gnome",value:"forest",
+          fx:{cast:{label:"Forest Gnome",abil:"mental",cantrip:"Minor Illusion",spell:"Speak with Animals",freq:"2/Long Rest (also castable with slots)"},
+              res:{k:"speakan",label:"Speak with Animals",max:2,per:"Long Rest"}}},
+        {lo:4,hi:6,label:"Rock Gnome",value:"rock",
+          fx:{cast:[{label:"Rock Gnome",abil:"mental",cantrip:"Mending"},{label:"Rock Gnome",abil:"mental",cantrip:"Prestidigitation"}],
+              trait:{n:"Gnomish Lineage: Rock Gnome",t:"Spending 10 minutes casting Prestidigitation creates a Tiny clockwork device (AC 5, 1 HP) that produces one chosen Prestidigitation effect when activated with a touch as a Bonus Action. It works for 8 hours; up to 3 can exist at once."}}}
+      ]}
+    ]
+  },
+  goliath:{
+    label:"Goliath",
+    size:"Medium",speed:35,darkvision:0,langs:["Common","Giant"],
+    traits:[{n:"Powerful Build",t:"Advantage on ability checks made to end the Grappled condition; counts as one size larger for carrying capacity."}],
+    tables:[
+      {id:"ancestry",label:"Giant Ancestry",die:6,entries:[
+        {lo:1,hi:1,label:"Cloud's Jaunt",value:"cloud",
+          fx:{bonus:{n:"Cloud's Jaunt (2/Long Rest)",t:"As a Bonus Action, the character magically teleports up to 30 feet to an unoccupied space it can see."},
+              res:{k:"giant",label:"Cloud's Jaunt",max:2,per:"Long Rest"}}},
+        {lo:2,hi:2,label:"Fire's Burn",value:"fire",
+          fx:{trait:{n:"Fire's Burn (2/Long Rest)",t:"On hitting a target with an attack roll and dealing damage, deal an extra 1d10 Fire damage to it."},
+              res:{k:"giant",label:"Fire's Burn",max:2,per:"Long Rest"}}},
+        {lo:3,hi:3,label:"Frost's Chill",value:"frost",
+          fx:{trait:{n:"Frost's Chill (2/Long Rest)",t:"On hitting a target with an attack roll and dealing damage, deal an extra 1d6 Cold damage and reduce its Speed by 10 feet until the start of the character's next turn."},
+              res:{k:"giant",label:"Frost's Chill",max:2,per:"Long Rest"}}},
+        {lo:4,hi:4,label:"Hill's Tumble",value:"hill",
+          fx:{trait:{n:"Hill's Tumble (2/Long Rest)",t:"On hitting a Large or smaller creature with an attack roll and dealing damage, give it the Prone condition."},
+              res:{k:"giant",label:"Hill's Tumble",max:2,per:"Long Rest"}}},
+        {lo:5,hi:5,label:"Stone's Endurance",value:"stone",
+          fx:{trait:{n:"Stone's Endurance (2/Long Rest)",t:"On taking damage, use a Reaction to roll 1d12, add the Constitution modifier ({MOD:con}), and reduce the damage by the total."},
+              res:{k:"giant",label:"Stone's Endurance",max:2,per:"Long Rest"}}},
+        {lo:6,hi:6,label:"Storm's Thunder",value:"storm",
+          fx:{trait:{n:"Storm's Thunder (2/Long Rest)",t:"On taking damage from a creature within 60 feet, use a Reaction to deal 1d8 Thunder damage to that creature."},
+              res:{k:"giant",label:"Storm's Thunder",max:2,per:"Long Rest"}}}
+      ]}
+    ]
+  },
+  halfling:{
+    label:"Halfling",
+    size:"Small",speed:30,darkvision:0,langs:["Common","Halfling"],
+    traits:[
+      {n:"Brave",t:"Advantage on saving throws to avoid or end the Frightened condition."},
+      {n:"Halfling Nimbleness",t:"Can move through the space of any creature a size larger, but can't stop there."},
+      {n:"Luck",t:"On rolling a 1 on the d20 of a D20 Test, reroll the die; the new roll stands."},
+      {n:"Naturally Stealthy",t:"Can take the Hide action even when obscured only by a creature at least one size larger."}],
+    tables:[]
+  },
+  human:{
+    label:"Human",
+    size:"Medium",speed:30,darkvision:0,langs:["Common"],extraFeat:true,
+    traits:[{n:"Resourceful",t:"Gains Heroic Inspiration on finishing a Long Rest."}],
+    tables:[{id:"skillful",label:"Skillful",kind:"skill",entries:[...GEN_SKILL_NAMES]}]
+  },
+  orc:{
+    label:"Orc",
+    size:"Medium",speed:30,darkvision:120,langs:["Common","Orc"],
+    traits:[{n:"Relentless Endurance (1/Long Rest)",t:"On being reduced to 0 Hit Points but not killed outright, drop to 1 Hit Point instead."}],
+    bonus:[{n:"Adrenaline Rush (2/Short Rest)",t:"Take the Dash action as a Bonus Action, gaining 2 Temporary Hit Points."}],
+    res:[{k:"rush",label:"Adrenaline Rush",max:2,per:"Short Rest"},
+         {k:"relentless",label:"Relentless Endurance",max:1,per:"Long Rest"}],
+    tables:[]
+  },
+  tiefling:{
+    label:"Tiefling",
+    size:"Medium",speed:30,darkvision:60,langs:["Common","Infernal"],
+    casts:[{label:"Otherworldly Presence",abil:"mental",cantrip:"Thaumaturgy"}],
+    traits:[],
+    tables:[
+      {id:"legacy",label:"Fiendish Legacy",die:6,entries:[
+        {lo:1,hi:2,label:"Abyssal",value:"abyssal",
+          fx:{resist:"Poison",cast:{label:"Abyssal Legacy",abil:"mental",cantrip:"Poison Spray"}}},
+        {lo:3,hi:4,label:"Chthonic",value:"chthonic",
+          fx:{resist:"Necrotic",cast:{label:"Chthonic Legacy",abil:"mental",cantrip:"Chill Touch"}}},
+        {lo:5,hi:6,label:"Infernal",value:"infernal",
+          fx:{resist:"Fire",cast:{label:"Infernal Legacy",abil:"mental",cantrip:"Fire Bolt"}}}
       ]}
     ]
   }
 };
+// fx text templating: {DC:abil} = 8+PB+mod, {MOD:abil} = the signed mod, {PB}, {SUB} = the entry's
+// resolved sub value. Pure string work — the vocabulary stays data, copy stays in the pack.
+function genFxText(t,mods,pb,subVal){
+  return String(t)
+    .replace(/\{DC:(\w+)\}/g,(x,a)=>String(8+pb+(mods[a]||0)))
+    .replace(/\{MOD:(\w+)\}/g,(x,a)=>{const m=mods[a]||0;return (m>=0?"+":"")+m;})
+    .replace(/\{PB\}/g,String(pb))
+    .replace(/\{SUB\}/g,subVal!=null?String(subVal):"");
+}
 
 // ── The class spell index (D-012) — XPHB lists per caster, cantrips + level 1 ─
 // Roll tables are the intersection of these lists with the install's uploaded spell library
@@ -425,10 +601,32 @@ function genSpellTables(){
 }
 function genNewDraft(cfg){
   const sp=GEN_SPECIES[cfg.sp]?cfg.sp:"kobold";
-  return {v:2,sp,set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
+  return {v:2,sp,spRitual:cfg.spMode==="ritual", // D-031: species rides the ritual when the crew says so
+          set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
                       asi:!(cfg.set&&cfg.set.asi===false)},
           counts:cfg.counts||{},tables:cfg.tables||null,steps:{}};
+}
+// The rollable species pool (D-031). Curated packs ship in-code; uploaded packs join here (B289).
+function genSpeciesPool(){return Object.keys(GEN_SPECIES);}
+// Species change cascade: the old species' table steps die with it; feat2 follows extraFeat; the
+// new pack's FIXED casts reopen colliding spell steps exactly like a landed fx.cast (genSpDedupe).
+function genSpeciesSet(d,v){
+  if(d.sp===v)return;
+  d.sp=v;
+  Object.keys(d.steps).forEach(k=>{if(k.startsWith("sp:"))delete d.steps[k];});
+  if(!GEN_SPECIES[v].extraFeat)delete d.steps.feat2;
+  const names=new Set();
+  (GEN_SPECIES[v].casts||[]).forEach(c=>{if(c.cantrip)names.add(c.cantrip);if(c.spell)names.add(c.spell);});
+  if(!names.size)return;
+  ["cantrips","spells"].forEach(sid=>{const s=d.steps[sid];
+    if(s&&Array.isArray(s.value)&&s.value.some(n=>names.has(n)))delete d.steps[sid];});
+  ["feat","feat2"].forEach(fid=>{const f=d.steps[fid];
+    if(f&&f.sub&&f.sub.kind==="mi"){
+      const vals=[...(f.sub.cans&&f.sub.cans.value||[]),f.sub.sp&&f.sub.sp.value].filter(Boolean);
+      if(vals.some(n=>names.has(n)))f.sub=null;}});
+  const fe=d.steps.feature;
+  if(fe&&fe.sub&&Array.isArray(fe.sub.value)&&fe.sub.value.some(n=>names.has(n)))fe.sub=null;
 }
 function genTablesOf(d){return d.tables||{can:Object.fromEntries(Object.keys(GEN_CLASS_SPELLS).map(c=>[c,GEN_CLASS_SPELLS[c][0]])),
                                           l1:Object.fromEntries(Object.keys(GEN_CLASS_SPELLS).map(c=>[c,GEN_CLASS_SPELLS[c][1]]))};}
@@ -443,9 +641,15 @@ function genCantripCount(d){
   return n;
 }
 function genStepOrder(d){
-  const ids=["stats","cls"];
+  const ids=[];
+  if(d.spRitual)ids.push("species"); // D-031: the ritual opens with the species roll
+  ids.push("stats","cls");
   if(d.set.asi)ids.push("asi");
-  ids.push("feat","skills");
+  ids.push("feat");
+  // Species-dependent steps hold back until the ritual species lands.
+  const spReady=!d.spRitual||(d.steps.species&&d.steps.species.value!=null);
+  if(spReady&&GEN_SPECIES[d.sp].extraFeat)ids.push("feat2"); // Human Versatile: a second origin feat
+  ids.push("skills");
   const cls=genClsOf(d);
   if(cls){
     if(GEN_CLASSES[cls].featureOpt)ids.push("feature");
@@ -455,7 +659,7 @@ function genStepOrder(d){
     if(genFamiliarKind(d))ids.push("familiar"); // D-025: appears once chain/Find Familiar resolves
   }
   ids.push("gearPack","sundries");
-  (GEN_SPECIES[d.sp].tables||[]).forEach(t=>ids.push("sp:"+t.id));
+  if(spReady)(GEN_SPECIES[d.sp].tables||[]).forEach(t=>ids.push("sp:"+t.id));
   return ids.concat(["name"]);
 }
 function genSpTable(sp,id){return (GEN_SPECIES[sp].tables||[]).find(t=>t.id===id)||null;}
@@ -479,8 +683,8 @@ function genFamiliarKind(d){
   const K=genCasterOf(d),knows=new Set();
   if(K&&K.caster)(K.caster.always||[]).forEach(n=>knows.add(n));
   if(d.steps.spells&&Array.isArray(d.steps.spells.value))d.steps.spells.value.forEach(n=>knows.add(n));
-  const ft=d.steps.feat;
-  if(ft&&ft.sub&&ft.sub.kind==="mi"&&ft.sub.sp&&ft.sub.sp.value)knows.add(ft.sub.sp.value);
+  ["feat","feat2"].forEach(fid=>{const ft=d.steps[fid];
+    if(ft&&ft.sub&&ft.sub.kind==="mi"&&ft.sub.sp&&ft.sub.sp.value)knows.add(ft.sub.sp.value);});
   return knows.has("Find Familiar")?"beast":null;
 }
 function genClassShortlist(scores,counts){
@@ -553,6 +757,14 @@ function genRollStep(d,id,rng){
     if(st.rolls.length<6)st.partial=true;else delete st.partial;
     return st;
   }
+  if(id==="species"){
+    const pool=genSpeciesPool(),span=genSpanFor(pool.length);
+    const r=genRollTable(rng,span.die,span.reroll?pool.length:span.die,null);
+    const v=pool[span.reroll?r-1:genSpanHit(span,r)];
+    d.steps.species={rolls:[r],value:v,die:span.die};
+    genSpeciesSet(d,v);
+    return d.steps.species;
+  }
   if(id==="cls"){
     const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=d.steps.stats&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
     if(d.set.mode==="chaos"){const r=genRollDie(rng,12);d.steps.cls={rolls:[r],value:GEN_CLASS_LIST[r-1],die:12};}
@@ -561,10 +773,13 @@ function genRollStep(d,id,rng){
     genClsCascade(d);
   }else if(id==="asi"){
     d.steps.asi={rolls:[],value:[K?K.prim:"str",K?K.sec:"con"]};
-  }else if(id==="feat"){
-    const r=genRollDie(rng,10);const f=GEN_FEATS[r-1];
-    d.steps.feat={rolls:[r],value:f.n,die:10};
-    if(f.sub)genRollSub(d,"feat",rng);
+  }else if(id==="feat"||id==="feat2"){
+    // feat2 (extraFeat species): the second origin feat rerolls the first one's name.
+    const other=id==="feat2"?(d.steps.feat&&d.steps.feat.value):(d.steps.feat2&&d.steps.feat2.value);
+    const taken=new Set();GEN_FEATS.forEach((f,i)=>{if(f.n===other)taken.add(i+1);});
+    const r=genRollTable(rng,10,10,taken.size?taken:null);const f=GEN_FEATS[r-1];
+    d.steps[id]={rolls:[r],value:f.n,die:10};
+    if(f.sub)genRollSub(d,id,rng);
   }else if(id==="skills"){
     if(!K)return null;
     d.steps.skills=genRollN(rng,K.skills.from,K.skills.n,[]);
@@ -617,17 +832,48 @@ function genRollStep(d,id,rng){
     d.steps.sundries={rolls:[rA,rB],value:[GEN_SUNDRIES_A[rA-1],GEN_SUNDRIES_B[rB-1]],die:20};
   }else if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
-    const r=genRollDie(rng,t.die);const e=t.entries.find(x=>r>=x.lo&&r<=x.hi);
-    const rec={rolls:[r],value:e.value,die:t.die};
-    d.steps[id]=rec;
-    if(e.sub)genRollSub(d,id,rng);
+    if(t.kind==="skill"){
+      // Plain-name skill table (Human Skillful, Elf Keen Senses) — dodge already-owned skills.
+      const owned=genOwnedSkillNames(d,true),taken=new Set();
+      t.entries.forEach((n,i)=>{if(owned.has(n))taken.add(i+1);});
+      const die=t.die||genDieFor(t.entries.length);
+      const r=genRollTable(rng,die,t.entries.length,taken.size<t.entries.length?taken:null);
+      d.steps[id]={rolls:[r],value:t.entries[r-1],die};
+    }else{
+      const r=genRollDie(rng,t.die);const e=t.entries.find(x=>r>=x.lo&&r<=x.hi);
+      const rec={rolls:[r],value:e.value,die:t.die};
+      d.steps[id]=rec;
+      if(e.sub)genRollSub(d,id,rng);
+      genSpDedupe(d,id);
+    }
   }
   return d.steps[id];
+}
+// D-018 across step order (D-030): species tables resolve AFTER the class spell steps, so a
+// landed entry granting FIXED casts (lineage cantrips, legacy cantrips) can collide with names
+// already rolled. Colliding steps/subs reopen — genRollAll rerolls them with the grant now known.
+function genSpDedupe(d,id){
+  const t=genSpTable(d.sp,id.slice(3));if(!t||t.kind)return;
+  const rec=d.steps[id];if(!rec||rec.value==null)return;
+  const e=t.entries.find(x=>x.value===rec.value);if(!e||!e.fx||!e.fx.cast)return;
+  const names=new Set();
+  [].concat(e.fx.cast).forEach(c=>{if(c.cantrip&&c.cantrip!=="sub")names.add(c.cantrip);if(c.spell)names.add(c.spell);});
+  if(!names.size)return;
+  ["cantrips","spells"].forEach(sid=>{
+    const s=d.steps[sid];
+    if(s&&Array.isArray(s.value)&&s.value.some(n=>names.has(n)))delete d.steps[sid];
+  });
+  ["feat","feat2"].forEach(fid=>{const f=d.steps[fid];
+    if(f&&f.sub&&f.sub.kind==="mi"){
+      const vals=[...(f.sub.cans&&f.sub.cans.value||[]),f.sub.sp&&f.sub.sp.value].filter(Boolean);
+      if(vals.some(n=>names.has(n)))f.sub=null;}});
+  const fe=d.steps.feature; // Pact of the Tome cantrips
+  if(fe&&fe.sub&&Array.isArray(fe.sub.value)&&fe.sub.value.some(n=>names.has(n)))fe.sub=null;
 }
 // Roll only a step's pending sub-chain (feat subs, species subs, tome cantrips).
 function genRollSub(d,id,rng){
   rng=rng||Math.random;const rec=d.steps[id];if(!rec)return false;
-  if(id==="feat"){
+  if(id==="feat"||id==="feat2"){
     const f=GEN_FEATS.find(x=>x.n===rec.value);if(!f||!f.sub)return false;
     if(f.sub==="skills"){const owned=genOwnedSkillNames(d,true);rec.sub=genRollN(rng,GEN_SKILL_NAMES,3,[...owned]);rec.sub.kind="skills";}
     else if(f.sub==="tools")rec.sub={...genRollN(rng,GEN_TOOLS8,3,[]),kind:"tools"};
@@ -635,7 +881,7 @@ function genRollSub(d,id,rng){
     else if(f.sub==="mi"){
       const span=genSpanFor(3),r=genRollDie(rng,span.die);
       const list=GEN_MI_LISTS[genSpanHit(span,r)],T=genTablesOf(d);
-      const granted=[...genSpellsGranted(d,"feat")];
+      const granted=[...genSpellsGranted(d,id)];
       rec.sub={kind:"mi",list:{rolls:[r],value:list,die:span.die},
         cans:genRollN(rng,T.can[list]||GEN_CLASS_SPELLS[list][0],2,granted),
         sp:(()=>{const s=genRollN(rng,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,granted);return {rolls:s.rolls,value:s.value[0],die:s.die};})()};
@@ -669,24 +915,40 @@ function genSpellsGranted(d,excludeId){
   if(K&&K.caster)(K.caster.always||[]).forEach(n=>s.add(n));
   if(excludeId!=="cantrips"&&d.steps.cantrips&&Array.isArray(d.steps.cantrips.value))d.steps.cantrips.value.forEach(n=>s.add(n));
   if(excludeId!=="spells"&&d.steps.spells&&Array.isArray(d.steps.spells.value))d.steps.spells.value.forEach(n=>s.add(n));
-  const ft=d.steps.feat;
-  if(excludeId!=="feat"&&ft&&ft.sub&&ft.sub.kind==="mi"){
-    if(ft.sub.cans&&Array.isArray(ft.sub.cans.value))ft.sub.cans.value.forEach(n=>s.add(n));
-    if(ft.sub.sp&&ft.sub.sp.value)s.add(ft.sub.sp.value);
-  }
+  ["feat","feat2"].forEach(fid=>{
+    const ft=d.steps[fid];
+    if(excludeId!==fid&&ft&&ft.sub&&ft.sub.kind==="mi"){
+      if(ft.sub.cans&&Array.isArray(ft.sub.cans.value))ft.sub.cans.value.forEach(n=>s.add(n));
+      if(ft.sub.sp&&ft.sub.sp.value)s.add(ft.sub.sp.value);
+    }});
   const fe=d.steps.feature; // Pact of the Tome cantrips
   if(excludeId!=="feature"&&fe&&fe.sub&&Array.isArray(fe.sub.value))fe.sub.value.forEach(n=>s.add(n));
-  const leg=d.steps["sp:legacy"]; // Draconic Sorcery cantrip
-  if(excludeId!=="sp:legacy"&&leg&&leg.value==="sorcery"&&leg.sub&&typeof leg.sub.value==="string")s.add(leg.sub.value);
+  // Species-granted cantrips (fx.cast — Draconic Sorcery, lineage cantrips, pack-level grants).
+  (GEN_SPECIES[d.sp].casts||[]).forEach(c=>{if(c.cantrip)s.add(c.cantrip);if(c.spell)s.add(c.spell);});
+  (GEN_SPECIES[d.sp].tables||[]).forEach(t=>{
+    const key="sp:"+t.id;if(excludeId===key||t.kind)return;
+    const rec=d.steps[key];if(!rec||rec.value==null)return;
+    const e=t.entries.find(x=>x.value===rec.value);if(!e||!e.fx||!e.fx.cast)return;
+    [].concat(e.fx.cast).forEach(c=>{
+      if(c.cantrip==="sub"){if(rec.sub&&typeof rec.sub.value==="string")s.add(rec.sub.value);}
+      else if(c.cantrip)s.add(c.cantrip);
+      if(c.spell)s.add(c.spell);
+    });
+  });
   return s;
 }
 function genOwnedSkillNames(d,includeFeat){
   const s=new Set();
   (d.steps.skills&&d.steps.skills.value||[]).forEach(n=>s.add(n));
-  if(includeFeat!==false){const f=d.steps.feat;
-    if(f&&f.sub&&f.sub.kind==="skills"&&Array.isArray(f.sub.value))f.sub.value.forEach(n=>s.add(n));}
-  const leg=d.steps["sp:legacy"];
-  if(leg&&leg.sub&&typeof leg.sub.value==="string"&&GEN_SKILL_ABIL[leg.sub.value])s.add(leg.sub.value);
+  if(includeFeat!==false)["feat","feat2"].forEach(id=>{const f=d.steps[id];
+    if(f&&f.sub&&f.sub.kind==="skills"&&Array.isArray(f.sub.value))f.sub.value.forEach(n=>s.add(n));});
+  // Species-granted skills: kind:"skill" table values + skillSub sub values, any pack.
+  (GEN_SPECIES[d.sp].tables||[]).forEach(t=>{
+    const rec=d.steps["sp:"+t.id];if(!rec||rec.value==null)return;
+    if(t.kind==="skill"){if(typeof rec.value==="string")s.add(rec.value);return;}
+    const e=t.entries.find(x=>x.value===rec.value);
+    if(e&&e.fx&&e.fx.skillSub&&rec.sub&&typeof rec.sub.value==="string")s.add(rec.sub.value);
+  });
   return s;
 }
 // Explicit pick for a step (D-004/D-011: any result is overridable). Values are validated against
@@ -698,15 +960,21 @@ function genApplyPick(d,id,value){
     const v=value.map(x=>Math.max(3,Math.min(20,Math.round(Number(x)||10))));
     d.steps.stats={rolls:[],pick:true,value:v};return true;
   }
+  if(id==="species"){
+    if(!GEN_SPECIES[value])return false;
+    d.steps.species={rolls:[],pick:true,value};
+    genSpeciesSet(d,value);return true;}
   if(id==="cls"){if(!GEN_CLASSES[value])return false;d.steps.cls={rolls:[],pick:true,value};genClsCascade(d);return true;}
   if(id==="asi"){
     if(!Array.isArray(value)||value.length!==2||!GEN_ABILS.includes(value[0])||!GEN_ABILS.includes(value[1])||value[0]===value[1])return false;
     d.steps.asi={rolls:[],pick:true,value:[value[0],value[1]]};return true;}
-  if(id==="feat"){
+  if(id==="feat"||id==="feat2"){
     const f=GEN_FEATS.find(x=>x.n===value);if(!f)return false;
+    const other=id==="feat2"?(d.steps.feat&&d.steps.feat.value):(d.steps.feat2&&d.steps.feat2.value);
+    if(f.n===other)return false; // the two origin feats stay distinct
     const rec={rolls:[],pick:true,value:f.n};
     if(f.sub)rec.sub=null; // resolve via genRollSub or genApplySubPick
-    d.steps.feat=rec;return true;}
+    d.steps[id]=rec;return true;}
   if(id==="skills"){
     if(!K)return false;
     if(!Array.isArray(value)||value.length!==K.skills.n)return false;
@@ -753,10 +1021,15 @@ function genApplyPick(d,id,value){
     d.steps.familiar={rolls:[],pick:true,value,kind};return true;}
   if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return false;
+    if(t.kind==="skill"){
+      if(!t.entries.includes(value))return false;
+      d.steps[id]={rolls:[],pick:true,value};return true;}
     const e=t.entries.find(x=>x.value===value||x.label===value||String(x.value)===String(value));if(!e)return false;
     const rec={rolls:[],pick:true,value:e.value};
     if(e.sub)rec.sub=null;
-    d.steps[id]=rec;return true;}
+    d.steps[id]=rec;
+    genSpDedupe(d,id);
+    return true;}
   if(id==="name"){
     const v=String(value||"").replace(/[<>]/g,"").trim().slice(0,28);if(!v)return false;
     d.steps.name={rolls:[],pick:true,value:v};return true;}
@@ -768,7 +1041,7 @@ function genApplyPick(d,id,value){
 }
 function genApplySubPick(d,id,value){
   const rec=d.steps[id];if(!rec)return false;
-  if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===rec.value);if(!f||!f.sub)return false;
+  if(id==="feat"||id==="feat2"){const f=GEN_FEATS.find(x=>x.n===rec.value);if(!f||!f.sub)return false;
     if(f.sub==="skills"||f.sub==="tools"||f.sub==="instr"){
       const list=f.sub==="skills"?GEN_SKILL_NAMES:f.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
       if(!Array.isArray(value)||value.length!==3||value.some((s,i)=>!list.includes(s)||value.indexOf(s)!==i))return false;
@@ -792,7 +1065,7 @@ function genApplySubPick(d,id,value){
 function genStepDone(d,id){
   const s=d.steps[id];if(!s||s.value==null)return false;
   if(id==="stats")return s.pick||(Array.isArray(s.rolls)&&s.rolls.length===6);
-  if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===s.value);
+  if(id==="feat"||id==="feat2"){const f=GEN_FEATS.find(x=>x.n===s.value);
     if(f&&f.sub){if(!s.sub)return false;
       if(f.sub==="mi")return !!(s.sub.list&&s.sub.cans&&Array.isArray(s.sub.cans.value)&&s.sub.cans.value.length===2&&s.sub.sp&&s.sub.sp.value);
       return Array.isArray(s.sub.value)&&s.sub.value.length===3;}}
@@ -859,22 +1132,31 @@ function validateGenPayload(raw){
     if(set.asi){const as=S.asi||{};const v=Array.isArray(as.value)?as.value:null;
       if(!v||v.length!==2||!GEN_ABILS.includes(v[0])||!GEN_ABILS.includes(v[1])||v[0]===v[1])return {ok:false,err:"asi"};
       out.asi={rolls:[],pick:!!as.pick,value:[v[0],v[1]]};}
-    // feat (+sub)
-    const ft=S.feat||{};const F=GEN_FEATS.find(x=>x.n===ft.value);if(!F)return {ok:false,err:"feat"};
-    out.feat={rolls:Array.isArray(ft.rolls)?ft.rolls.slice(0,1).map(x=>intIn(x,1,10)||1):[],pick:!!ft.pick,value:F.n};
-    if(F.sub){const sub=ft.sub||{};
-      if(F.sub==="mi"){
-        const list=sub.list&&sub.list.value;
-        if(!GEN_MI_LISTS.includes(list))return {ok:false,err:"featsub"};
-        const cans=sub.cans&&sub.cans.value,spv=sub.sp&&sub.sp.value;
-        if(!distinctIn(cans,2,GEN_CLASS_SPELLS[list][0]))return {ok:false,err:"featsub"};
-        if(!GEN_CLASS_SPELLS[list][1].includes(spv))return {ok:false,err:"featsub"};
-        out.feat.sub={kind:"mi",list:{rolls:[],value:list},cans:{rolls:[],value:[...cans]},sp:{rolls:[],value:spv}};
-      }else{
-        const list=F.sub==="skills"?GEN_SKILL_NAMES:F.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
-        if(!distinctIn(sub.value,3,list))return {ok:false,err:"featsub"};
-        out.feat.sub={kind:F.sub==="skills"?"skills":F.sub,rolls:[],value:[...sub.value]};
-      }}
+    // feat (+sub) — cleanFeat serves both origin-feat steps (feat2 = extraFeat species, D-030)
+    const cleanFeat=ft=>{
+      const F=GEN_FEATS.find(x=>x.n===ft.value);if(!F)return null;
+      const o={rolls:Array.isArray(ft.rolls)?ft.rolls.slice(0,1).map(x=>intIn(x,1,10)||1):[],pick:!!ft.pick,value:F.n};
+      if(F.sub){const sub=ft.sub||{};
+        if(F.sub==="mi"){
+          const list=sub.list&&sub.list.value;
+          if(!GEN_MI_LISTS.includes(list))return null;
+          const cans=sub.cans&&sub.cans.value,spv=sub.sp&&sub.sp.value;
+          if(!distinctIn(cans,2,GEN_CLASS_SPELLS[list][0]))return null;
+          if(!GEN_CLASS_SPELLS[list][1].includes(spv))return null;
+          o.sub={kind:"mi",list:{rolls:[],value:list},cans:{rolls:[],value:[...cans]},sp:{rolls:[],value:spv}};
+        }else{
+          const list=F.sub==="skills"?GEN_SKILL_NAMES:F.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
+          if(!distinctIn(sub.value,3,list))return null;
+          o.sub={kind:F.sub==="skills"?"skills":F.sub,rolls:[],value:[...sub.value]};
+        }}
+      return o;};
+    const outFeat=cleanFeat(S.feat||{});if(!outFeat)return {ok:false,err:"feat"};
+    out.feat=outFeat;
+    if(GEN_SPECIES[sp].extraFeat){
+      const f2=cleanFeat(S.feat2||{});
+      if(!f2||f2.value===out.feat.value)return {ok:false,err:"feat2"};
+      out.feat2=f2;
+    }
     // skills
     const sk=S.skills||{};
     if(!distinctIn(sk.value,K.skills.n,K.skills.from))return {ok:false,err:"skills"};
@@ -921,7 +1203,7 @@ function validateGenPayload(raw){
     // a form that doesn't match the payload's own sources is dropped, not trusted.
     if(S.familiar&&S.familiar.value!=null){
       const knows=new Set([...(K.caster&&K.caster.always||[]),...(out.spells?out.spells.value:[])]);
-      if(out.feat.sub&&out.feat.sub.kind==="mi"&&out.feat.sub.sp)knows.add(out.feat.sub.sp.value);
+      [out.feat,out.feat2].forEach(f=>{if(f&&f.sub&&f.sub.kind==="mi"&&f.sub.sp)knows.add(f.sub.sp.value);});
       const kind=(out.feature&&out.feature.value==="Pact of the Chain")?"chain":(knows.has("Find Familiar")?"beast":null);
       const fv=S.familiar.value;
       if(kind&&(kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS).includes(fv))
@@ -936,6 +1218,9 @@ function validateGenPayload(raw){
     // species tables
     for(const t of (GEN_SPECIES[sp].tables||[])){
       const key="sp:"+t.id,rec=S[key]||{};
+      if(t.kind==="skill"){
+        if(!t.entries.includes(rec.value))return {ok:false,err:key};
+        out[key]={rolls:[],pick:!!rec.pick,value:rec.value};continue;}
       const e=t.entries.find(x=>x.value===rec.value);if(!e)return {ok:false,err:key};
       const o={rolls:Array.isArray(rec.rolls)?rec.rolls.slice(0,1).map(x=>intIn(x,1,t.die)||e.lo):[],pick:!!rec.pick,value:e.value};
       if(e.sub){const sub=rec.sub||{};if(!e.sub.entries.includes(sub.value))return {ok:false,err:key+".sub"};
@@ -961,12 +1246,41 @@ function deriveGenChar(p){
   if(p.set.asi&&p.steps.asi){const v=p.steps.asi.value;
     scores[v[0]]=Math.min(20,scores[v[0]]+2);scores[v[1]]=Math.min(20,scores[v[1]]+1);}
   const mods={};GEN_ABILS.forEach(a=>{mods[a]=mod(scores[a]);});
+  // Generic species-table effects (D-030): one walk over the pack's tables builds everything they
+  // grant — the engine never names a species. Pack-level fixed resists/casts merge in.
+  const bestMental=()=>["int","wis","cha"].sort((a,b)=>mods[b]-mods[a])[0];
+  const mkCast=c=>{const ab=c.abil==="mental"?bestMental():c.abil;
+    return {label:c.label,abil:ab,dc:8+pb+mods[ab],atk:pb+mods[ab],
+      cantrip:c.cantrip||null,spell:c.spell||null,freq:c.freq||null};};
+  const fxAcc={skills:[],casts:(sp.casts||[]).map(mkCast),resists:[...(sp.resists||[])],
+    traits:[],bonus:[],actions:[],res:[],size:null,fly:0};
+  (sp.tables||[]).forEach(t=>{
+    const rec=p.steps["sp:"+t.id];if(!rec||rec.value==null)return;
+    if(t.kind==="skill"){if(typeof rec.value==="string")fxAcc.skills.push(rec.value);return;}
+    const e=t.entries.find(x=>x.value===rec.value);if(!e||!e.fx)return;
+    const subVal=rec.sub?rec.sub.value:null,fx=e.fx;
+    if(fx.skillSub&&typeof subVal==="string")fxAcc.skills.push(subVal);
+    if(fx.trait)fxAcc.traits.push({n:fx.trait.n,t:genFxText(fx.trait.t,mods,pb,subVal)});
+    if(fx.bonus)fxAcc.bonus.push({n:fx.bonus.n,t:genFxText(fx.bonus.t,mods,pb,subVal)});
+    if(fx.action)fxAcc.actions.push({n:fx.action.n,t:genFxText(fx.action.t,mods,pb,subVal)});
+    if(fx.res)fxAcc.res.push({...fx.res});
+    if(fx.resist){const r=fx.resist==="sub"?subVal:fx.resist;if(r&&!fxAcc.resists.includes(r))fxAcc.resists.push(r);}
+    if(fx.size)fxAcc.size=fx.size;
+    if(fx.fly)fxAcc.fly=Math.max(fxAcc.fly,fx.fly);
+    if(fx.speed)fxAcc.speed=Math.max(fxAcc.speed||0,fx.speed);         // Wood Elf
+    if(fx.darkvision)fxAcc.dark=Math.max(fxAcc.dark||0,fx.darkvision); // Drow
+    if(fx.cast)[].concat(fx.cast).forEach(c=>fxAcc.casts.push(mkCast(c.cantrip==="sub"?{...c,cantrip:subVal}:c)));
+  });
   const feat=GEN_FEATS.find(f=>f.n===p.steps.feat.value);
+  // extraFeat (Human Versatile): a second origin feat rides step "feat2"; every feat consumer
+  // below loops featRecs so both apply identically.
+  const feat2=sp.extraFeat&&p.steps.feat2?(GEN_FEATS.find(f=>f.n===p.steps.feat2.value)||null):null;
+  const featRecs=[[p.steps.feat,feat]].concat(feat2?[[p.steps.feat2,feat2]]:[]);
   const featureVal=p.steps.feature?p.steps.feature.value:null;
   const featureOpt=K.featureOpt&&!K.featureOpt.kind?(K.featureOpt.options.find(o=>o.value===featureVal)||null):null;
   const fh=(featureOpt&&featureOpt.hooks)||{};
   const kit=K.kits[p.steps.equip?p.steps.equip.value:0];
-  const hp=Math.max(1,K.hd+mods.con+(feat.hp2?2:0));
+  const hp=Math.max(1,K.hd+mods.con+featRecs.reduce((n,[,f])=>n+(f.hp2?2:0),0)+(sp.hpPerLevel||0));
   // AC from the kit recipe (+Defense style; Armor of Shadows upgrades an unarmored kit).
   // Str-gated armor falls back to its lighter counterpart when the requirement is unmet;
   // the gear string swaps with it so the card and the armor agree.
@@ -984,9 +1298,8 @@ function deriveGenChar(p){
   // skills / expertise
   const profSkills=new Map();
   p.steps.skills.value.forEach(s=>profSkills.set(s,1));
-  if(feat.sub==="skills"&&p.steps.feat.sub)p.steps.feat.sub.value.forEach(s=>profSkills.set(s,1));
-  const leg=p.steps["sp:legacy"];
-  if(leg&&leg.value==="craftiness"&&leg.sub)profSkills.set(leg.sub.value,1);
+  featRecs.forEach(([rec,f])=>{if(f.sub==="skills"&&rec.sub)rec.sub.value.forEach(s=>profSkills.set(s,1));});
+  fxAcc.skills.forEach(s=>profSkills.set(s,1));
   if(p.steps.feature&&p.steps.feature.kind==="expertise")p.steps.feature.value.forEach(s=>profSkills.set(s,2));
   const skills=[...profSkills.entries()].map(([n,e])=>({n,abil:GEN_SKILL_ABIL[n],bonus:mods[GEN_SKILL_ABIL[n]]+pb*e,exp:e===2}))
     .sort((a,b)=>a.n<b.n?-1:1);
@@ -1025,71 +1338,66 @@ function deriveGenChar(p){
       slots:K.caster.slots,short:!!K.caster.short};}
   if(p.steps.feature&&p.steps.feature.sub&&caster)caster.cantrips=[...caster.cantrips,...p.steps.feature.sub.value]; // Pact of the Tome
   const extraCasts=[];
-  if(feat.sub==="mi"&&p.steps.feat.sub){
+  featRecs.forEach(([rec,f])=>{
+    if(f.sub!=="mi"||!rec.sub)return;
     // 2024 Magic Initiate: the ability is the chooser's pick of Int/Wis/Cha — default to the best.
-    const s=p.steps.feat.sub,ab=["int","wis","cha"].sort((a,b)=>mods[b]-mods[a])[0],km=mods[ab];
+    const s=rec.sub,ab=bestMental(),km=mods[ab];
     extraCasts.push({label:"Magic Initiate ("+s.list.value+")",abil:ab,dc:8+pb+km,atk:pb+km,
-      cantrips:[...s.cans.value],spell:s.sp.value});}
-  let sorcery=null;
-  if(leg&&leg.value==="sorcery"&&leg.sub){
-    const best=["int","wis","cha"].sort((a,b)=>mods[b]-mods[a])[0];
-    sorcery={cantrip:leg.sub.value,abil:best,dc:8+pb+mods[best],atk:pb+mods[best]};}
+      cantrips:[...s.cans.value],spell:s.sp.value});});
+  // Species-granted casts (Draconic Sorcery, lineage cantrips, pack-level grants) — generic.
+  // A name the class already grants (always-prepared: Druid's Speak with Animals) is a fixed-vs-
+  // fixed collision no reroll can clear — the card lists it once, under the class entry; the
+  // species' free-cast resource still rides (the uses are real either way).
+  const classKnown=new Set([...(caster?caster.cantrips:[]),...(caster?caster.prepared:[])]);
+  const spCasts=fxAcc.casts.map(c=>({...c,
+      cantrip:c.cantrip&&!classKnown.has(c.cantrip)?c.cantrip:null,
+      spell:c.spell&&!classKnown.has(c.spell)?c.spell:null}))
+    .filter(c=>c.cantrip||c.spell);
   // statblock sections
   const traits=sp.traits.map(t=>({...t})).concat((K.traits||[]).map(t=>({...t})));
   const bonus=(sp.bonus||[]).map(t=>({...t})).concat((K.bonus||[]).map(t=>({...t})));
-  const actions=[];
+  const actions=(sp.actions||[]).map(t=>({...t}));
   if(featureOpt)traits.push({n:K.featureOpt.label+": "+featureOpt.label,t:featureOpt.t.replace(/^[^.]*\.\s*/,"")});
   if(p.steps.feature&&p.steps.feature.kind==="expertise")traits.push({n:"Expertise",t:"Double proficiency with "+p.steps.feature.value.join(" and ")+" (counted in the Skills line)."});
   if(fh.pactBlade)bonus.push({n:"Pact of the Blade",t:"The kit's melee weapon is the bonded pact weapon: its attack and damage rolls use Charisma, and it can be conjured to hand as a Bonus Action."});
-  // D-019: features fully expressed by a spellcasting entry don't repeat as traits — Draconic
-  // Sorcery and Magic Initiate live in the (merged) Spellcasting block, not the trait list.
-  if(leg){const legLabel=((sp.tables||[]).find(t=>t.id==="legacy")||{}).label||"Legacy";
-    if(leg.value==="craftiness"&&leg.sub)traits.push({n:legLabel+": Craftiness",t:"Proficient in "+leg.sub.value+" (counted in the Skills line)."});
-    if(leg.value==="defiance")traits.push({n:legLabel+": Defiance",t:"Advantage on saving throws to avoid or end the Frightened condition."});}
-  // D-028: the boon roll — one trait/action per value; false (no boon) and true (wings) are the
-  // legacy payload values and stay valid.
-  const boonRec=p.steps["sp:wings"],boon=boonRec?boonRec.value:false;
-  const boonType=boonRec&&boonRec.sub?boonRec.sub.value:null;
-  const wings=boon===true;
-  let resist=null,sizeOv=null;const boonRes=[];
-  if(boon==="tail")bonus.push({n:"Grasping Tail",t:"As a Bonus Action, the character can use its tail to manipulate an object, open or close a door or container, or pick up or set down a Tiny object. The tail can also Grapple (escape DC "+(8+pb+mods.str)+")."});
-  if(boon==="resist"&&boonType){resist=boonType;traits.push({n:"Draconic Resistance",t:"Resistance to "+boonType+" damage."});}
-  if(boon==="grovel"){actions.push({n:"Grovel, Cower, and Beg (1/Short Rest)",t:"The character throws a distracting fit. Until the start of its next turn, its allies have Advantage on attack rolls against enemies within 10 feet of it."});
-    boonRes.push({k:"grovel",label:"Grovel, Cower, and Beg",max:1,per:"Short Rest"});}
-  if(boon==="build"){sizeOv="Medium";traits.push({n:"Powerful Build",t:"Counts as one size larger for carrying capacity; Advantage on ability checks made to end the Grappled condition."});}
-  if(boon==="fear"){bonus.push({n:"Dragon Fear (1/Long Rest)",t:`*Wisdom Saving Throw:* DC ${8+pb+mods.cha}, one creature within 10 feet. *Failure:* the target has the Frightened condition until the end of the character's next turn.`});
-    boonRes.push({k:"fear",label:"Dragon Fear",max:1,per:"Long Rest"});}
-  if(boon==="breath"&&boonType){actions.push({n:"Dragon's Breath (2/Long Rest)",t:`*Dexterity Saving Throw:* DC ${8+pb+mods.con}, each creature in a 15-foot Cone. *Failure:* 1d10 ${boonType} damage. *Success:* Half damage.`});
-    boonRes.push({k:"breath",label:"Dragon's Breath",max:2,per:"Long Rest"});}
-  if(boon==="packtactics")traits.push({n:"Pack Tactics",t:"Advantage on an attack roll if at least one of the character's allies is within 5 feet of the target and the ally doesn't have the Incapacitated condition."});
-  if(feat.act==="action")actions.push({n:feat.n,t:feat.t});
-  else if(feat.sub!=="mi"){
-    let ftxt=feat.t;
-    if(feat.sub==="tools"&&p.steps.feat.sub)ftxt+=" Tools: "+p.steps.feat.sub.value.join(", ")+".";
-    if(feat.sub==="instr"&&p.steps.feat.sub)ftxt+=" Instruments: "+p.steps.feat.sub.value.join(", ")+".";
-    traits.push({n:"Feat: "+feat.n,t:ftxt});
-  }
+  // D-019 note stands: features fully expressed by a spellcasting entry (fx.cast, Magic Initiate)
+  // live in the merged Spellcasting block, not the trait list — fx authors traits separately.
+  // D-030: the species tables' grants land here through the fx accumulator; D-028's old payload
+  // values (false / true for wings) stay valid because the entries kept their values.
+  fxAcc.traits.forEach(t=>traits.push(t));
+  fxAcc.bonus.forEach(t=>bonus.push(t));
+  fxAcc.actions.forEach(t=>actions.push(t));
+  const wings=fxAcc.fly>0;
+  const resists=fxAcc.resists,sizeOv=fxAcc.size;
+  featRecs.forEach(([rec,f])=>{
+    if(f.act==="action")actions.push({n:f.n,t:f.t});
+    else if(f.sub!=="mi"){
+      let ftxt=f.t;
+      if(f.sub==="tools"&&rec.sub)ftxt+=" Tools: "+rec.sub.value.join(", ")+".";
+      if(f.sub==="instr"&&rec.sub)ftxt+=" Instruments: "+rec.sub.value.join(", ")+".";
+      traits.push({n:"Feat: "+f.n,t:ftxt});
+    }});
   // resources
   const resources=[];
   (sp.res||[]).forEach(r=>resources.push({...r}));
   (K.res||[]).forEach(r=>resources.push({...r,max:r.max==="chaMin1"?Math.max(1,mods.cha):r.max}));
   if(caster&&caster.slots)resources.push({k:"slots",label:"Spell Slots (Level 1)",max:caster.slots,per:caster.short?"Short Rest":"Long Rest"});
-  if(feat.res)resources.push({...feat.res});
-  boonRes.forEach(r=>resources.push(r));
+  featRecs.forEach(([,f])=>{if(f.res)resources.push({...f.res});});
+  fxAcc.res.forEach(r=>resources.push({...r}));
   // gear line: kit + rolled pack + rolled sundries (armor swapped if the Str gate demoted it)
   const kitGear=gearSwap?kit.gear.replace(gearSwap[0],gearSwap[1]):kit.gear;
   const gear=[kitGear,p.steps.gearPack.value].concat(p.steps.sundries.value).join(", ");
   const tools=[...(K.tools||[])];
-  if(feat.sub==="tools"&&p.steps.feat.sub)tools.push(...p.steps.feat.sub.value);
+  featRecs.forEach(([rec,f])=>{if(f.sub==="tools"&&rec.sub)tools.push(...rec.sub.value);});
   const langs=[...sp.langs,...(K.langs||[])];
   const familiar=p.steps.familiar&&GEN_FAMILIARS[p.steps.familiar.value]?p.steps.familiar.value:null;
-  return {name:p.steps.name.value,species:sp.label,cls,size:sizeOv||sp.size,level:1,pb,resist,familiar,
+  return {name:p.steps.name.value,species:sp.label,cls,size:sizeOv||sp.size,level:1,pb,resists,familiar,
     scores,mods,hp,hd:"1d"+K.hd,ac,acSrc,gear,tools,kitName:kit.n,
-    speed:{walk:sp.speed,fly:wings?30:0},
-    init:mods.dex+(feat.initPB?pb:0),
-    darkvision:sp.darkvision,langs,saves,skills,pp,
+    speed:{walk:fxAcc.speed||sp.speed,fly:wings?fxAcc.fly:0},
+    init:mods.dex+(featRecs.some(([,f])=>f.initPB)?pb:0),
+    darkvision:Math.max(sp.darkvision||0,fxAcc.dark||0),langs,saves,skills,pp,
     traits,bonus,actions,resources,
-    feat:{n:feat.n,t:feat.t},attacks,caster,extraCasts,sorcery,
+    feat:{n:feat.n,t:feat.t},attacks,caster,extraCasts,spCasts,
     flavor:{quirk:p.steps.quirk?p.steps.quirk.value:"",trinket:p.steps.trinket?p.steps.trinket.value:""},
     statRolls:p.steps.stats.pick?null:p.steps.stats.rolls,statPick:!!p.steps.stats.pick,
     statMethod:p.set.stat};
@@ -1129,7 +1437,7 @@ function genToMonster(ch){
   m.ac=ch.ac;m.acnote=ch.acSrc&&ch.acSrc!=="Unarmored"?ch.acSrc:"";
   m.hp=ch.hp;m.hpf=`${ch.hd}${ch.mods.con?(ch.mods.con>0?" + ":" − ")+Math.abs(ch.mods.con):""}`;
   m.spd.walk=ch.speed.walk;m.spd.fly=ch.speed.fly||0;
-  if(ch.resist)m.dmg[ch.resist]="res"; // Draconic Resistance boon → the real resistance line
+  (ch.resists||[]).forEach(r=>{m.dmg[r]="res";}); // species/boon resistances → the real resistance line
   m.init=String(ch.init);
   GEN_ABILS.forEach(a=>{m[a]=ch.scores[a];});
   m.saves=ch.saves.map(s=>s.abil);
@@ -1150,8 +1458,9 @@ function genToMonster(ch){
     if(ch.caster)casts.push({name:"Spellcasting",abil:ch.caster.abil,dc:ch.caster.dc,atk:ch.caster.atk,
       cantrips:[...ch.caster.cantrips],
       groups:[{freq:`Level 1 (${ch.caster.slots} slot${ch.caster.slots>1?"s":""}, ${ch.caster.short?"Short Rest":"Long Rest"})`,spells:ch.caster.prepared.join(", ")}]});
-    if(ch.sorcery)casts.push({name:"Draconic Sorcery",abil:ch.sorcery.abil,dc:ch.sorcery.dc,atk:ch.sorcery.atk,
-      cantrips:[ch.sorcery.cantrip],groups:[]});
+    (ch.spCasts||[]).forEach(x=>casts.push({name:x.label,abil:x.abil,dc:x.dc,atk:x.atk,
+      cantrips:x.cantrip?[x.cantrip]:[],
+      groups:x.spell?[{freq:x.freq||"1/Long Rest",spells:x.spell}]:[]}));
     (ch.extraCasts||[]).forEach(x=>casts.push({name:x.label,abil:x.abil,dc:x.dc,atk:x.atk,
       cantrips:[...x.cantrips],groups:[{freq:`${x.label}, 1/Long Rest (also castable with slots)`,spells:x.spell}]}));
     const merged=[];
@@ -1180,7 +1489,7 @@ function genToRosterPC(ch,payload,playerName){
     {k:"level",v:"1"},{k:"class",v:[ch.cls]},
     {k:"player",v:playerName||""},
     {k:"speed",v:ch.speed.fly?ch.speed.walk+" ft., Fly "+ch.speed.fly+" ft.":ch.speed.walk+" ft."},
-    {k:"senses",v:"Darkvision "+ch.darkvision+" ft."},
+    {k:"senses",v:ch.darkvision?"Darkvision "+ch.darkvision+" ft.":""},
     {k:"init",v:String(ch.init),hide:true}
   ];
   GEN_ABILS.forEach(a=>{
@@ -1199,6 +1508,8 @@ function genCrewCounts(a){const c={};genLivingPCs(a).forEach(pc=>{const v=pc.gen
 function genCrewUrl(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"index.html?crew="+encodeURIComponent(id);}
 function genIngestPayload(a,rawPayload,pn,pid){
   const v=validateGenPayload(rawPayload);if(!v.ok)return null;
+  // D-031: a locked-species crew accepts only its own species; ritual mode takes any shipped pack.
+  if(a.crew&&a.crew.spMode!=="ritual"&&v.clean.sp!==a.crew.sp)return null;
   if(state.roster.some(r=>r.id===v.clean.id)||(a.crew.fallen||[]).some(f=>f.payload&&f.payload.id===v.clean.id))return null;
   const ch=deriveGenChar(v.clean),pc=genToRosterPC(ch,v.clean,pn||"");
   if(pid){pc.gen.pid=pid;
@@ -1247,7 +1558,8 @@ function genPcMetaHTML(ch,opts){
   if(ch.tools&&ch.tools.length)h+=`<p><span class="k">Tools</span> ${ch.tools.map(esc).join(", ")}</p>`;
   if(ch.gear)h+=`<p class="gk-metarow"><span class="k">Gear</span> <span class="gk-meta-b" id="gkGearLine">${genGearLineHTML(ch.gear)}</span>${opts&&opts.gearEdit?`<button class="gk-chev" data-gkchev="gear" title="Edit gear" aria-label="Edit gear">▾</button>`:""}</p>`;
   if(opts&&opts.gearEdit)h+=`<div class="gk-gearedit" hidden></div>`;
-  h+=`<p><span class="k">Senses</span> Darkvision ${ch.darkvision} ft., Passive Perception ${ch.pp}</p>`;
+  if(ch.resists&&ch.resists.length)h+=`<p><span class="k">Resistances</span> ${ch.resists.map(esc).join(", ")}</p>`;
+  h+=`<p><span class="k">Senses</span> ${ch.darkvision?`Darkvision ${ch.darkvision} ft., `:""}Passive Perception ${ch.pp}</p>`;
   h+=`<p><span class="k">Languages</span> ${ch.langs.map(esc).join(", ")}</p>`;
   h+=`<p><span class="k">Level</span> 1 ${esc(ch.cls)} (PB +2)${opts&&opts.pn?` · Player: ${esc(opts.pn)}`:""}</p></div>`;
   return h;
@@ -1503,10 +1815,12 @@ let _genR=null; // {mode, pn, editing, draft, done, more:{}}
 const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
 // D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
 function genStepLabel(d,id){
+  if(id==="species")return "Species";
   if(id==="stats")return "Ability scores";
   if(id==="cls")return "Class";
   if(id==="asi")return "Background ability scores";
   if(id==="feat")return "Origin feat";
+  if(id==="feat2")return "Second origin feat";
   if(id==="skills")return "Class skills";
   if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];return K&&K.featureOpt?(K.featureOpt.kind==="expertise"?"Expertise":K.featureOpt.label):"Class feature";}
   if(id==="equip")return "Equipment kit";
@@ -1520,10 +1834,12 @@ function genStepLabel(d,id){
   return id;
 }
 function genStepInfo(d,id){
+  if(id==="species")return `${genDieLabel(genSpeciesPool().length)} over the available species. Rerolling replaces the species and its rolled traits.`;
   if(id==="stats")return d.set.stat==="4d6"?"Six rolls of 4d6, lowest die dropped, in order STR to CHA. Any landed score can be edited by hand.":"Six rolls of 3d6, in order STR to CHA. Any landed score can be edited by hand.";
   if(id==="cls")return d.set.mode==="chaos"?"d12 over all twelve classes.":"d6 over the three classes that best fit the rolled scores; the rest are pickable below them.";
   if(id==="asi")return "+2 and +1 to two different abilities. The class default is preselected; apply it or change it.";
   if(id==="feat")return "d10 over the ten origin feats. Feats with internal choices roll those too.";
+  if(id==="feat2")return "The species grants a second origin feat: d10 over the ten, the first feat rerolled.";
   if(id==="skills"){const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
     return `${K.skills.n} rolls on ${genDieLabel(K.skills.from.length)} over the class skill list, duplicates rerolled.`;}
   if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];
@@ -1540,7 +1856,9 @@ function genStepInfo(d,id){
       :"Find Familiar is known: "+genDieLabel(GEN_FAMILIAR_BEASTS.length)+" over the beast forms; the familiar's statblock joins the card.";}
   if(id==="gearPack")return "d6 over the six equipment packs.";
   if(id==="sundries")return "Two d20 rolls, one on each sundries list.";
-  if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?`d${t.die} on the ${t.label} table.`:"";}
+  if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return "";
+    if(t.kind==="skill")return `${genDieLabel(t.entries.length)} over the listed skills; skills already owned reroll.`;
+    return `d${t.die} on the ${t.label} table.`;}
   if(id==="name")return "Typed, never rolled. The name is required; quirk and trinket are optional.";
   return "";
 }
@@ -1559,7 +1877,10 @@ function genStepTable(d,id){
     return {die:span.die,rows:top3.map((c,i)=>({span:span.spans[i][0]+"-"+span.spans[i][1],label:c,value:c,hit:s&&s.value===c})),
       moreRows:GEN_CLASS_LIST.filter(c=>!top3.includes(c)).map(c=>({span:"·",label:c,value:c,hit:s&&s.value===c}))};
   }
-  if(id==="feat")return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,hit:s&&s.value===f.n}))};
+  if(id==="species"){const pool=genSpeciesPool(),span=genSpanFor(pool.length);
+    return {die:span.die,note:span.reroll?"reroll over "+pool.length:"",
+      rows:pool.map((v,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v}))};}
+  if(id==="feat"||id==="feat2")return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,hit:s&&s.value===f.n}))};
   if(id==="skills"&&K)return mk(K.skills.from);
   if(id==="feature"&&K&&K.featureOpt){
     if(K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];return own.length?mk(own):null;}
@@ -1589,6 +1910,9 @@ function genStepTable(d,id){
     {title:"First roll (d20)",die:20,rows:GEN_SUNDRIES_A.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[0]===v}))},
     {title:"Second roll (d20)",die:20,rows:GEN_SUNDRIES_B.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[1]===v}))}]};
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
+    if(t.kind==="skill"){const die=t.die||genDieFor(t.entries.length);
+      return {die,note:die>t.entries.length?"reroll over "+t.entries.length:"",
+        rows:t.entries.map((n,i)=>({span:String(i+1),label:n,value:n,hit:s&&s.value===n}))};}
     return {die:t.die,rows:t.entries.map(e=>({span:e.lo===e.hi?String(e.lo):e.lo+"-"+e.hi,label:e.label,value:e.value,hit:s&&s.value===e.value}))};}
   return null;
 }
@@ -1613,6 +1937,8 @@ function genSubGroups(sub){
 }
 function genStepValueHTML(d,id){
   const s=d.steps[id];if(!s||s.value==null)return "";
+  if(id==="species"){const spp=GEN_SPECIES[s.value];
+    return `<b data-gkedit="species">${esc(spp?spp.label:String(s.value))}</b> ${genDiceChips(s)}`;}
   if(id==="asi")return `<b data-gkedit="asi">+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}</b> <span class="gk-dim">${s.pick?"chosen":"class default"}</span>`;
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const k=K&&K.kits[s.value];
     return `<b data-gkedit="equip">${esc(k?k.n:String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc(k?k.gear:"")}</span>`;}
@@ -1621,13 +1947,13 @@ function genStepValueHTML(d,id){
     let h=`<b data-gkedit="feature">${esc(o?o.label:String(s.value))}</b> ${genDiceChips(s)}`;
     if(o&&o.hooks&&o.hooks.tome)h+=s.sub&&s.sub.value?(" → "+s.sub.value.map(x=>`<span class="gk-chip2" data-gksubedit="feature" title="Change">${esc(x)}</span>`).join(" ")):` <span class="gk-warn">three cantrips pending</span>`;
     return h;}
-  if(id==="feat"){let h=`<b data-gkedit="feat">${esc(String(s.value))}</b> ${genDiceChips(s)}`;
+  if(id==="feat"||id==="feat2"){let h=`<b data-gkedit="${id}">${esc(String(s.value))}</b> ${genDiceChips(s)}`;
     const sub=s.sub;
     if(sub){
-      if(sub.kind==="mi"&&sub.list)h+=` → <span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(sub.list.value)}</span> `+
-        (sub.cans&&sub.cans.value?sub.cans.value.map(x=>`<span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(x)}</span>`).join(" "):"")+
-        (sub.sp&&sub.sp.value?` <span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(sub.sp.value)}</span>`:"");
-      else if(Array.isArray(sub.value))h+=" → "+sub.value.map(x=>`<span class="gk-chip2" data-gksubedit="feat" title="Change">${esc(x)}</span>`).join(" ");
+      if(sub.kind==="mi"&&sub.list)h+=` → <span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(sub.list.value)}</span> `+
+        (sub.cans&&sub.cans.value?sub.cans.value.map(x=>`<span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(x)}</span>`).join(" "):"")+
+        (sub.sp&&sub.sp.value?` <span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(sub.sp.value)}</span>`:"");
+      else if(Array.isArray(sub.value))h+=" → "+sub.value.map(x=>`<span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(x)}</span>`).join(" ");
     }else if(GEN_FEATS.find(x=>x.n===s.value&&x.sub))h+=` <span class="gk-warn">extra rolls pending</span>`;
     return h;}
   if(Array.isArray(s.value))return s.value.map(x=>`<span class="gk-chip2" data-gkedit="${id}">${esc(String(x))}</span>`).join(" ")+" "+genDiceChips(s);
@@ -1672,17 +1998,17 @@ function genEditorHTML(d,id){
 function genSubEditorHTML(d,id){
   const s=d.steps[id];if(!s)return "";
   const roll=`<button class="btn ghost sm" data-gkrollsub="${id}">${D20_ICON}<span>Roll</span></button>`;
-  if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===s.value);if(!f||!f.sub)return "";
+  if(id==="feat"||id==="feat2"){const f=GEN_FEATS.find(x=>x.n===s.value);if(!f||!f.sub)return "";
     if(f.sub==="mi"){
       // v4 follow-up: the spells are manually pickable too — list select drives the spell selects,
       // "Roll from it" keeps the pick-list-roll-spells flow, Choose applies the four selects as-is.
       const curList=_genR.miList||(s.sub&&s.sub.list&&s.sub.list.value)||"Cleric";
       const can=GEN_CLASS_SPELLS[curList][0],l1=GEN_CLASS_SPELLS[curList][1];
       const curC=(s.sub&&s.sub.cans&&s.sub.cans.value)||[],curS=s.sub&&s.sub.sp&&s.sub.sp.value;
-      return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,curList,null,true)}<button class="btn ghost sm" data-gkmiroll="1" style="width:auto">Roll from it</button>${genSel("gkMiC_0",can,can.includes(curC[0])?curC[0]:can[0],null,true)}${genSel("gkMiC_1",can,can.includes(curC[1])?curC[1]:can[1],null,true)}${genSel("gkMiS",l1,l1.includes(curS)?curS:l1[0],null,true)}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
+      return `<div class="gk-subrow"><span class="gk-dim">Magic Initiate: list (d6, 1-2 / 3-4 / 5-6), two cantrips, one spell.</span>${roll}${genSel("gkMiL",GEN_MI_LISTS,curList,null,true)}<button class="btn ghost sm" data-gkmiroll="1" style="width:auto">Roll from it</button>${genSel("gkMiC_0",can,can.includes(curC[0])?curC[0]:can[0],null,true)}${genSel("gkMiC_1",can,can.includes(curC[1])?curC[1]:can[1],null,true)}${genSel("gkMiS",l1,l1.includes(curS)?curS:l1[0],null,true)}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;}
     const list=f.sub==="skills"?GEN_SKILL_NAMES:f.sub==="tools"?GEN_TOOLS8:GEN_INSTR10;
     const lbl=f.sub==="skills"?"three skills":f.sub==="tools"?"three artisan tools ("+genDieLabel(list.length)+")":"three instruments (d10)";
-    return `<div class="gk-subrow"><span class="gk-dim">${esc(s.value)}: ${lbl}.</span>${roll}${[0,1,2].map(i=>genSel("gkFs_"+i,list,list[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="feat">Choose</button></div>`;}
+    return `<div class="gk-subrow"><span class="gk-dim">${esc(s.value)}: ${lbl}.</span>${roll}${[0,1,2].map(i=>genSel("gkFs_"+i,list,list[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;}
   if(id==="feature")return `<div class="gk-subrow"><span class="gk-dim">Pact of the Tome: three cantrips, any list (${genDieLabel(GEN_ALL_CANTRIPS.length)}).</span>${roll}${[0,1,2].map(i=>genSel("gkTm_"+i,GEN_ALL_CANTRIPS,GEN_ALL_CANTRIPS[i],null,true)).join("")}<button class="btn primary sm" data-gksubapply="feature">Choose</button></div>`;
   const t=genSpTable(d.sp,id.slice(3)),e=t&&t.entries.find(x=>x.value===s.value);
   if(!e||!e.sub)return "";
@@ -1858,11 +2184,13 @@ function bindGenRitual(){
   {const miL=host.querySelector("#gkMiL");
    if(miL)miL.addEventListener("change",()=>{R.miList=miL.value;renderGenRitual();});}
   host.querySelectorAll("[data-gkmiroll]").forEach(b=>b.addEventListener("click",()=>{
+    // The mi editor belongs to whichever feat step carries Magic Initiate right now.
+    const fid=["feat","feat2"].find(x=>d.steps[x]&&d.steps[x].value==="Magic Initiate")||"feat";
     const list=$("#gkMiL").value,T=genTablesOf(d);
-    const granted=[...genSpellsGranted(d,"feat")];
+    const granted=[...genSpellsGranted(d,fid)];
     const cans=genRollN(Math.random,T.can[list]||GEN_CLASS_SPELLS[list][0],2,granted);
     const sp=genRollN(Math.random,T.l1[list]||GEN_CLASS_SPELLS[list][1],1,granted);
-    d.steps.feat.sub={kind:"mi",list:{rolls:[],pick:true,value:list},cans,sp:{rolls:sp.rolls,value:sp.value[0]}};
+    d.steps[fid].sub={kind:"mi",list:{rolls:[],pick:true,value:list},cans,sp:{rolls:sp.rolls,value:sp.value[0]}};
     genFire3D("Magic Initiate",[cans,{rolls:sp.rolls,die:sp.die}],"");
     R.miList=null;renderGenRitual();}));
   // v4 follow-up: any auto-rolled sub element is editable on click — the chip clears the sub and
@@ -1880,17 +2208,17 @@ function bindGenRitual(){
     renderGenRitual();}));
   host.querySelectorAll("[data-gksubapply]").forEach(b=>b.addEventListener("click",()=>{
     const id=b.dataset.gksubapply;
-    if(id==="feat"){const f=GEN_FEATS.find(x=>x.n===d.steps.feat.value);
+    if(id==="feat"||id==="feat2"){const f=GEN_FEATS.find(x=>x.n===d.steps[id].value);
       if(f.sub==="mi"){
         // Manual pick of all four (v4 follow-up); "Roll from it" handles the rolled path.
         const v={list:$("#gkMiL").value,cans:[$("#gkMiC_0").value,$("#gkMiC_1").value],sp:$("#gkMiS").value};
         if(v.cans[0]===v.cans[1]){toast("Two different cantrips needed.");return;}
-        if(!genApplySubPick(d,"feat",v)){toast("Those picks don't fit that list.");return;}
+        if(!genApplySubPick(d,id,v)){toast("Those picks don't fit that list.");return;}
         R.miList=null;renderGenRitual();return;
       }
       const v=[0,1,2].map(i=>$("#gkFs_"+i).value);
       if(new Set(v).size!==3){toast("Three different picks needed.");return;}
-      if(!genApplySubPick(d,"feat",v)){toast("Those picks don't fit here.");return;}
+      if(!genApplySubPick(d,id,v)){toast("Those picks don't fit here.");return;}
       renderGenRitual();return;}
     if(id==="feature"){const v=[0,1,2].map(i=>$("#gkTm_"+i).value);
       if(new Set(v).size!==3){toast("Three different cantrips needed.");return;}
@@ -1939,17 +2267,17 @@ function bindGenRitual(){
   const cancel=$("#gkCancel");if(cancel)cancel.addEventListener("click",()=>{_genR=null;closeModal();});
 }
 function openGenRitual(ctx){
-  const set=ctx.set;
+  const set=ctx.set,ritual=ctx.spMode==="ritual";
   _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},
-    draft:genNewDraft({sp:ctx.sp,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
-  openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
+    draft:genNewDraft({sp:ctx.sp,spMode:ctx.spMode,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
+  openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${ritual?"character":esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
     <div id="gkR"></div>`);
   const m=$("#modal");if(m)m.classList.add("gk-host");
   renderGenRitual();
 }
 function openGenRitualDM(a){
-  openGenRitual({sp:a.crew.sp,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
+  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
     const pc=genIngestPayload(a,payload,"",null);
     _genR=null;closeModal();
     if(pc){toast(esc(pc.name)+" joins the crew.",2200,true);preserveScroll(".adv-detail-body",renderAdvDetail);}
@@ -1981,21 +2309,26 @@ function renderCrewPanel(a){
 // background ASI. The player link lives in its own share dialog now.
 function openCrewSettings(a){
   if(!a.crew)return;
-  const sp=GEN_SPECIES[a.crew.sp],spOpts=Object.keys(GEN_SPECIES);
-  openModalRaw(`<h3>Crew generator</h3>
+  const draw=()=>{
+    const sp=GEN_SPECIES[a.crew.sp],spOpts=Object.keys(GEN_SPECIES),ritual=a.crew.spMode==="ritual";
+    openModalRaw(`<h3>Crew generator</h3>
     <div class="gk-cfg gk-cfg-modal">
-      <label class="gk-f"><span>Species</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>
+      <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["locked","ritual"],ritual?"ritual":"locked",["One species for the crew","Rolled in the ritual"])}</label>
+      ${ritual?"":`<label class="gk-f"><span>Which</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>`}
       <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
     </div>
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
-  const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
-  sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
-  sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
-  sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
-  sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
-  $("#crewCfgClose").addEventListener("click",()=>{closeModal();preserveScroll(".adv-detail-body",renderAdvDetail);});
+    const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
+    sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
+    sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
+    sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
+    sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
+    sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
+    $("#crewCfgClose").addEventListener("click",()=>{closeModal();preserveScroll(".adv-detail-body",renderAdvDetail);});
+  };
+  draw();
 }
 // The crew share dialog (v4 round): mirrors the combat share modal — primer + create when off,
 // live link with Copy/QR and a low-key stop when on.
@@ -2036,7 +2369,7 @@ function openCrewShareDialog(a){
 }
 // Config under /cfg (never clobbers the phones' /crew subtree). Carries the resolved spell tables
 // so phones roll over the same lists the DM's library produces (D-012).
-function crewShareCfg(a){return {name:advDName(a),sp:a.crew.sp,set:{...a.crew.set},tables:genSpellTables()};}
+function crewShareCfg(a){return {name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",set:{...a.crew.set},tables:genSpellTables()};}
 // Reference texts under /refs (D-019): trimmed spell/condition entries for every name the
 // generator can reach, so player cards get the same tap-for-text popovers the DM has. Written by
 // the DM at mint + config pushes; phones read it once at boot and SANITIZE it at ingestion (the
@@ -2168,14 +2501,14 @@ function renderCrewScreen(){
       main=`<div id="crewCard"></div>
         <label class="f gk-noterow">Notes<textarea id="crewNotes" maxlength="2000" placeholder="Anything worth remembering about ${esc(ch.name)}">${esc(crewNoteGet(v.clean.id))}</textarea></label>
         <button class="btn ghost crew-die" id="crewDied">Mark ${esc(ch.name)} dead and roll the next one</button>`;
-    }else main=`<p class="gk-dim">Your character data can't be read. Roll a fresh one.</p><button class="btn primary" id="crewRollBtn">Roll your ${esc(GEN_SPECIES[sp].label.toLowerCase())}</button>`;
+    }else main=`<p class="gk-dim">Your character data can't be read. Roll a fresh one.</p><button class="btn primary" id="crewRollBtn">Roll your ${esc(crewRollNoun(cfg,sp))}</button>`;
   }else{
-    main=`<div class="crew-claim"><p>No ${esc(GEN_SPECIES[sp].label.toLowerCase())} yet, ${esc(_crew.pn)}.</p>
-      <button class="btn primary" id="crewRollBtn">Roll your ${esc(GEN_SPECIES[sp].label.toLowerCase())}</button></div>`;
+    main=`<div class="crew-claim"><p>No ${esc(crewRollNoun(cfg,sp))} yet, ${esc(_crew.pn)}.</p>
+      <button class="btn primary" id="crewRollBtn">Roll your ${esc(crewRollNoun(cfg,sp))}</button></div>`;
   }
   root.innerHTML=`<div class="crew-wrap">
     <div class="crew-head"><div class="crew-title">${esc(cfg.name||"The crew")}</div>
-      <div class="crew-subtitle">${esc(GEN_SPECIES[sp].label)} crew${deathsTotal?` · fallen so far: ${deathsTotal}`:""}${_crew.pn?` · you: <b>${esc(_crew.pn)}</b> <button class="gk-linklike" id="crewRename">change</button>`:""}</div></div>
+      <div class="crew-subtitle">${cfg.spMode==="ritual"?"Crew":esc(GEN_SPECIES[sp].label)+" crew"}${deathsTotal?` · fallen so far: ${deathsTotal}`:""}${_crew.pn?` · you: <b>${esc(_crew.pn)}</b> <button class="gk-linklike" id="crewRename">change</button>`:""}</div></div>
     ${main}
     ${crewRows?`<div class="crew-mates"><div class="crew-mates-h">The rest of the crew</div>${crewRows}</div>`:""}
   </div>`;
@@ -2208,8 +2541,11 @@ function bindCrewScreen(sp,cfg,my){
   const roll=$("#crewRollBtn");
   if(roll)roll.addEventListener("click",()=>crewOpenRitual(sp,cfg,false));
   const died=$("#crewDied");
-  if(died)died.addEventListener("click",()=>confirmModal(`Rolling a new ${esc(GEN_SPECIES[sp].label.toLowerCase())} marks this one as dead for the whole crew. Continue?`,()=>crewOpenRitual(sp,cfg,true)));
+  if(died)died.addEventListener("click",()=>confirmModal(`Rolling a new ${esc(crewRollNoun(cfg,sp))} marks this one as dead for the whole crew. Continue?`,()=>crewOpenRitual(sp,cfg,true)));
 }
+// D-031/D-023 (as amended): species-driven copy when the crew is locked to one, plain "character"
+// when the species rides the ritual.
+function crewRollNoun(cfg,sp){return cfg&&cfg.spMode==="ritual"?"character":GEN_SPECIES[sp].label.toLowerCase();}
 function crewCounts(){
   const c={};Object.values(_crew.node.crew||{}).forEach(r=>{
     const cls=r&&r.cur&&r.cur.steps&&r.cur.steps.cls?r.cur.steps.cls.value:null;
@@ -2217,7 +2553,7 @@ function crewCounts(){
   return c;
 }
 function crewOpenRitual(sp,cfg,isReplacement){
-  openGenRitual({sp,set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
+  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
     const prev=crewMyRec();
     const rec={pn:_crew.pn,deaths:(prev&&Number(prev.deaths)||0)+(isReplacement&&prev&&prev.cur?1:0),cur:payload};
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}.json`,

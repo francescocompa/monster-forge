@@ -4,6 +4,41 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 288 — Crew generator: every species (D-030/D-031, supersedes D-001's kobold-only scope)
+The generalization interview (4 AskUserQuestion rounds → D-030…D-033, D-023 amended) landed hybrid:
+curated XPHB packs now, a races.json import path next (B289), feats-from-uploads after (B290).
+- **fx vocabulary (B288a):** species-table entries now carry a declarative `fx` payload
+  (trait/bonus/action with `{DC:abil}`/`{MOD:abil}`/`{PB}`/`{SUB}` templating, skillSub, cast
+  incl. "mental" = best of Int/Wis/Cha, resist, size/fly/speed/darkvision overrides, resource
+  declarations) consumed by ONE generic walk in `deriveGenChar` — the kobold-specific blocks
+  (`sp:legacy`/`sp:wings` hardcoding) are gone; the kobold pack is rewritten in the vocabulary with
+  identical ids and payload values (D-028 back-compat holds). `sorcery` → generic `spCasts` list;
+  single `resist` → `resists` array; pack-level `casts`/`resists`/`actions`/`hpPerLevel`/`extraFeat`.
+  New engine kinds: `kind:"skill"` tables (plain-name skill choice, owned-skill reroll) and the
+  `feat2` step (a second origin feat, first feat rerolled — every feat consumer loops both).
+- **Ten XPHB packs (B288b):** Aasimar, Dragonborn (ancestry d10 → resist + Breath Weapon + uses),
+  Dwarf (+1 HP/level), Elf (Keen Senses skill table + Lineage d6: Drow/High/Wood), Gnome (Lineage
+  d6: Forest/Rock), Goliath (Giant Ancestry d6), Halfling, Human (Skillful d20 skill table +
+  Versatile = feat2), Orc, Tiefling (Fiendish Legacy d6) — level-1 content only, transcribed from
+  the 5etools mirror, PB-scaled uses baked at 2.
+- **Cross-source dedupe grew two arms:** `genSpDedupe` — a landed species entry granting FIXED
+  casts reopens colliding class spell steps / mi / tome subs (species tables resolve after the
+  spell steps, so the reroll runs backwards); derivation-level drop for fixed-vs-fixed collisions
+  (Forest Gnome Druid both grant Speak with Animals — the card lists it once, the free-cast
+  resource stays).
+- **Species modes (B288c, D-031):** crew settings gained the toggle — "One species for the crew"
+  (today's model, species-driven button copy per D-023) vs "Rolled in the ritual" (a Species step
+  LEADS the ritual, equal-weight over all shipped packs; species change cascades: old sp: steps
+  die, feat2 follows extraFeat, fixed-cast collisions reopen). Button copy in ritual mode is
+  "Roll a character" (D-023 amended by the user's explicit walk-back). Wire cfg carries `spMode`;
+  locked-mode ingestion REJECTS payloads of any other species; phones read the mode for their
+  copy. Crew-card meta now prints a Resistances line and drops "Darkvision 0 ft." (senses field
+  empty for the three no-darkvision species).
+- Floors: species pack floor (11 packs × 30 seeds — legality, cast math, dedupe, skill tables,
+  feat2, dmg-line round trip), ritual-mode floor (step order, cascade, locked-crew rejection),
+  kind-table integrity. **117 tests green**, live-verified (ritual with species step, dragonborn +
+  tiefling cards, settings modal, roster button).
+
 ## Batch 287 — Fix: enemy statblocks blank in combat (a library record with no `saves`)
 Francesco's blocking bug, found from the B286 error message.
 - **Cause:** the combat panel renders LIBRARY records directly, so `normalizeMonster` is the only
