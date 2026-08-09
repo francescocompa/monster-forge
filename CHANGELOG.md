@@ -16,6 +16,12 @@ Francesco's blocking bug, found from the B286 error message.
   exactly this; every surface that reads a library record is fixed at once, no re-import needed.
 - Floors: `normalizeMonster` shape assertion + a bare record driven through the full composer.
   **115 tests green**, verified live (bare record → real combat panel → statblock renders).
+- The combat statblock's failure message now carries the **throwing frame** (`file:line`) plus the
+  creature name and id. A render failure here is always data-shaped, so the frame IS the diagnosis:
+  it turned this bug from "blank card, no symptom" into a one-round-trip fix.
+- **Deploy note:** the Pages build for this batch ERRORED (the publisher hang from B285's tail) and
+  the fix sat undeployed through two "still broken" reports. `gh api -X POST .../pages/builds` built
+  it in 50 s. See [[github-pages-deploy-gotchas]] — including the marker mistake that hid it.
 
 ## Batch 286 — Players track their own HP and notes on the crew card (D-029)
 Francesco's request alongside the combat-statblock bug report.
