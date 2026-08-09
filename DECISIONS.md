@@ -253,6 +253,30 @@ Chosen: a feats.json upload kind; the origin-feat d10 becomes uploads ∩ a ship
 Enforced by: app.js upload kind + gen.js feat table resolution; test mirrors the D-012 fallback floor.
 Affects: app.js, parsers.js, gen.js, tests.
 
+### D-034 — Ritual steps group by macro category; species resolves with everything it decides · 2026-08-09 · DECIDED
+Mechanism: Francesco's call (written note on the B288-B290 build)
+Raw note: "after selecting species, resolve all elements related to species. In general, group micro choices by their macro category so they resolve together."
+Chosen: `genStepOrder` groups steps by the category that owns them — Species (the species step + ALL its tables, which now lead the ritual instead of trailing at the end), Ability scores, Class (+ the background ASI that depends on it), Origin feats (feat, feat2), Class training (skills, feature), Magic (cantrips, spells, familiar), Gear (kit + pack + sundries, previously split across the ritual), Identity. Dependencies still order the steps INSIDE a group (the class default needs the scores; gated kits need the feature; the familiar needs the spells).
+Consequence handled: species tables now resolve BEFORE the class steps, so the class skill roll must dodge species-granted skills (`genRollStep("skills")` passes `genOwnedSkillNames`) — previously the species table did the dodging because it went last. The backwards dedupe (`genSpDedupe`) stays for the re-pick path.
+Enforced by: `test/gen.test.js` step-grouping floor (leading species group locked/ritual, contiguous gear group, 40-seed no-duplicate-skill sweep); `test/crew-flow.test.js` walks the species group first.
+Affects: gen.js, tests.
+Open: whether the ritual should also show a VISIBLE macro-category header per group (a core-surface visual change — Francesco's convention is mockup + AskUserQuestion, not invented in passing).
+
+### D-035 — Species boons are an optional extra behind a crew setting · 2026-08-09 · DECIDED
+Mechanism: Francesco's call (written note)
+Raw note: "the kobold 'boon' and in general the boon option should be a toggle in the settings, possibly customizable (we'll table this for later)"
+Chosen: a species table may be flagged `boon:true` — an optional extra on top of the species' actual rules, not part of it. Crew settings gains "Species boons: Rolled / Off" (default Rolled = today's behavior); off drops boon tables from the ritual, the payload and the derivation. Validation treats boon tables as OPTIONAL both ways, so a phone on a stale cfg is never rejected over one absent extra and old payloads stay valid; core species tables (lineages, ancestries, legacies, Kobold Legacy) stay mandatory. The kobold Draconic Boon table (D-028) is the only flagged table today; the parser flags none (it can't tell).
+Enforced by: gen.js (`genSpTablesOf`, draft `boons`, optional-boon validation), core.js normalizeAdv default, crew share cfg `boons`; `test/gen.test.js` boons-toggle floor.
+Affects: gen.js, core.js, tests.
+OPEN (tabled by Francesco): making the boon table itself CUSTOMIZABLE — DM-edited entries, or per-boon enable. Not designed; ask before building.
+
+### D-036 — The background ASI defaults to the assignment that buys modifiers · 2026-08-09 · DECIDED
+Mechanism: Francesco's call (written note)
+Raw note: "the BG ability scores should be assigned in a way to tries to make the scores even (a +1 in CON with a 14 CON gives you nothing, while a +1 in DEX with 13 DEX gives you a +1 mod to that score)"
+Chosen: `genAsiDefault(d)` — the +2 stays on the class primary (it crosses exactly one modifier step at any parity, so it can't be wasted); the +1 goes to the best ODD-scored ability among the class secondary, Constitution and Dexterity (in that preference order), falling back to the class secondary when nothing is odd. Suggestion only — the ASI step stays explicit and fully overridable (D-017), and the label now reads "Suggested" rather than "class default".
+Enforced by: gen.js `genAsiDefault` (consumed by the roll, the editor hint and the step info text); `test/gen.test.js` ASI-default floor over odd/even fixtures.
+Affects: gen.js, tests.
+
 ### D-029 — Players track HP and keep notes on the crew card; HP reports, notes don't · 2026-08-06 · DECIDED
 Mechanism: AskUserQuestion, B286 scoping round
 Raw note: "let the players keep notes and edit HP also on their character pages"

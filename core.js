@@ -348,6 +348,7 @@ function normalizeAdv(a){
   if(a.crew&&typeof a.crew==="object"){
     a.crew.sp=a.crew.sp||"kobold";
     a.crew.spMode=a.crew.spMode==="ritual"?"ritual":"locked"; // D-031: locked species vs ritual step
+    a.crew.boons=a.crew.boons!==false;                        // D-035: optional species boon tables
     a.crew.set={stat:a.crew.set&&a.crew.set.stat==="4d6"?"4d6":"3d6",
                 mode:a.crew.set&&a.crew.set.mode==="chaos"?"chaos":"plausible",
                 asi:!(a.crew.set&&a.crew.set.asi===false)};

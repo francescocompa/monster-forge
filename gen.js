@@ -100,7 +100,7 @@ const GEN_SPECIES={
       ]},
       // D-028: the boon table — most rolls land nothing, 13-19 one boon each (ascending power),
       // a natural 20 keeps the mythic wings. Old payloads (value true/false) stay valid.
-      {id:"wings",label:"Draconic Boon",die:20,entries:[
+      {id:"wings",label:"Draconic Boon",die:20,boon:true,entries:[
         {lo:1,hi:12,label:"No boon",value:false},
         {lo:13,hi:13,label:"Grasping tail",value:"tail",
           fx:{bonus:{n:"Grasping Tail",t:"As a Bonus Action, the character can use its tail to manipulate an object, open or close a door or container, or pick up or set down a Tiny object. The tail can also Grapple (escape DC {DC:str})."}}},
@@ -620,6 +620,7 @@ function genSpellTables(){
 function genNewDraft(cfg){
   const sp=GEN_SPECIES[cfg.sp]?cfg.sp:"kobold";
   return {v:2,sp,spRitual:cfg.spMode==="ritual", // D-031: species rides the ritual when the crew says so
+          boons:cfg.boons!==false,               // D-035: optional species boon tables, crew setting
           set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
                       asi:!(cfg.set&&cfg.set.asi===false)},
@@ -658,26 +659,36 @@ function genCantripCount(d){
     if(o&&o.hooks&&o.hooks.extraCantrip)n+=1;}
   return n;
 }
+// The species pack's live tables — boon tables (optional extras, D-035) drop out when the crew
+// has them switched off.
+function genSpTablesOf(d){
+  const t=(GEN_SPECIES[d.sp]&&GEN_SPECIES[d.sp].tables)||[];
+  return d.boons===false?t.filter(x=>!x.boon):t;
+}
+// D-034: steps run grouped by macro category, so every micro choice a category owns resolves
+// with it — species and everything the species decides, then scores, class, origin feats, class
+// training, magic, gear, identity. (Dependencies still constrain the order inside the groups:
+// the class default needs the scores, gated kits need the feature, the familiar needs the spells.)
 function genStepOrder(d){
   const ids=[];
+  // Species-dependent steps hold back until the ritual species lands.
+  const spReady=!d.spRitual||(d.steps.species&&d.steps.species.value!=null);
   if(d.spRitual)ids.push("species"); // D-031: the ritual opens with the species roll
+  if(spReady)genSpTablesOf(d).forEach(t=>ids.push("sp:"+t.id)); // …and resolves its tables with it
   ids.push("stats","cls");
   if(d.set.asi)ids.push("asi");
   ids.push("feat");
-  // Species-dependent steps hold back until the ritual species lands.
-  const spReady=!d.spRitual||(d.steps.species&&d.steps.species.value!=null);
   if(spReady&&GEN_SPECIES[d.sp].extraFeat)ids.push("feat2"); // Human Versatile: a second origin feat
   ids.push("skills");
   const cls=genClsOf(d);
   if(cls){
     if(GEN_CLASSES[cls].featureOpt)ids.push("feature");
-    ids.push("equip");
     if(genCantripCount(d)>0)ids.push("cantrips");
     if(GEN_CLASSES[cls].caster)ids.push("spells");
     if(genFamiliarKind(d))ids.push("familiar"); // D-025: appears once chain/Find Familiar resolves
+    ids.push("equip"); // gear group: the kit sits with the pack and the sundries
   }
   ids.push("gearPack","sundries");
-  if(spReady)(GEN_SPECIES[d.sp].tables||[]).forEach(t=>ids.push("sp:"+t.id));
   return ids.concat(["name"]);
 }
 function genSpTable(sp,id){return (GEN_SPECIES[sp].tables||[]).find(t=>t.id===id)||null;}
@@ -704,6 +715,20 @@ function genFamiliarKind(d){
   ["feat","feat2"].forEach(fid=>{const ft=d.steps[fid];
     if(ft&&ft.sub&&ft.sub.kind==="mi"&&ft.sub.sp&&ft.sub.sp.value)knows.add(ft.sub.sp.value);});
   return knows.has("Find Familiar")?"beast":null;
+}
+// D-036: the background ASI defaults to the assignment that actually buys modifiers. The +2 always
+// crosses exactly one modifier step whatever the score's parity, so it stays on the class primary;
+// the +1 only buys a step on an ODD score (13→14 is +1 to the modifier, 14→15 is nothing), so it
+// goes to the best ODD-scored ability the class cares about — secondary first, then the universally
+// useful Constitution and Dexterity — and falls back to the secondary when nothing is odd.
+function genAsiDefault(d){
+  const K=GEN_CLASSES[genClsOf(d)];
+  const plus2=K?K.prim:"str",sec=K?K.sec:"con";
+  const score={};GEN_ABILS.forEach((a,i)=>{
+    score[a]=d.steps.stats&&d.steps.stats.value&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
+  const pool=[sec,"con","dex"].filter((a,i,arr)=>a!==plus2&&arr.indexOf(a)===i);
+  const odd=pool.filter(a=>score[a]%2===1);
+  return [plus2,(odd.length?odd:pool)[0]||GEN_ABILS.find(a=>a!==plus2)];
 }
 function genClassShortlist(scores,counts){
   const mod=s=>Math.floor((s-10)/2);
@@ -790,7 +815,7 @@ function genRollStep(d,id,rng){
       d.steps.cls={rolls:[r],top3,value:top3[genSpanHit(span,r)],die:span.die};}
     genClsCascade(d);
   }else if(id==="asi"){
-    d.steps.asi={rolls:[],value:[K?K.prim:"str",K?K.sec:"con"]};
+    d.steps.asi={rolls:[],value:genAsiDefault(d)};
   }else if(id==="feat"||id==="feat2"){
     // feat2 (extraFeat species): the second origin feat rerolls the first one's name.
     const other=id==="feat2"?(d.steps.feat&&d.steps.feat.value):(d.steps.feat2&&d.steps.feat2.value);
@@ -800,7 +825,8 @@ function genRollStep(d,id,rng){
     if(f.sub)genRollSub(d,id,rng);
   }else if(id==="skills"){
     if(!K)return null;
-    d.steps.skills=genRollN(rng,K.skills.from,K.skills.n,[]);
+    // Species tables resolve first now (D-034), so class skills must dodge what they granted.
+    d.steps.skills=genRollN(rng,K.skills.from,K.skills.n,[...genOwnedSkillNames(d,true)]);
   }else if(id==="feature"){
     if(!K||!K.featureOpt)return null;
     if(K.featureOpt.kind==="expertise"){
@@ -1233,13 +1259,15 @@ function validateGenPayload(raw){
     const su=S.sundries||{};
     if(!Array.isArray(su.value)||su.value.length!==2||!GEN_SUNDRIES_A.includes(su.value[0])||!GEN_SUNDRIES_B.includes(su.value[1]))return {ok:false,err:"sundries"};
     out.sundries={rolls:[],pick:!!su.pick,value:[...su.value]};
-    // species tables
+    // species tables — a BOON table (D-035) is optional: the crew may have boons off, and a phone
+    // on a stale cfg must not have its whole character rejected over one absent extra.
     for(const t of (GEN_SPECIES[sp].tables||[])){
       const key="sp:"+t.id,rec=S[key]||{};
       if(t.kind==="skill"){
-        if(!t.entries.includes(rec.value))return {ok:false,err:key};
+        if(!t.entries.includes(rec.value)){if(t.boon)continue;return {ok:false,err:key};}
         out[key]={rolls:[],pick:!!rec.pick,value:rec.value};continue;}
-      const e=t.entries.find(x=>x.value===rec.value);if(!e)return {ok:false,err:key};
+      const e=t.entries.find(x=>x.value===rec.value);
+      if(!e){if(t.boon)continue;return {ok:false,err:key};}
       const o={rolls:Array.isArray(rec.rolls)?rec.rolls.slice(0,1).map(x=>intIn(x,1,t.die)||e.lo):[],pick:!!rec.pick,value:e.value};
       if(e.sub){const sub=rec.sub||{};if(!e.sub.entries.includes(sub.value))return {ok:false,err:key+".sub"};
         o.sub={rolls:[],pick:!!sub.pick,value:sub.value};}
@@ -1855,7 +1883,7 @@ function genStepInfo(d,id){
   if(id==="species")return `${genDieLabel(genSpeciesPool().length)} over the available species. Rerolling replaces the species and its rolled traits.`;
   if(id==="stats")return d.set.stat==="4d6"?"Six rolls of 4d6, lowest die dropped, in order STR to CHA. Any landed score can be edited by hand.":"Six rolls of 3d6, in order STR to CHA. Any landed score can be edited by hand.";
   if(id==="cls")return d.set.mode==="chaos"?"d12 over all twelve classes.":"d6 over the three classes that best fit the rolled scores; the rest are pickable below them.";
-  if(id==="asi")return "+2 and +1 to two different abilities. The class default is preselected; apply it or change it.";
+  if(id==="asi")return "+2 and +1 to two different abilities. The +2 goes to the class's main ability; the +1 goes where it actually raises a modifier, which means an odd score. The suggestion is preselected; apply it or change it.";
   if(id==="feat")return "d10 over the ten origin feats. Feats with internal choices roll those too.";
   if(id==="feat2")return "The species grants a second origin feat: d10 over the ten, the first feat rerolled.";
   if(id==="skills"){const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
@@ -1957,7 +1985,7 @@ function genStepValueHTML(d,id){
   const s=d.steps[id];if(!s||s.value==null)return "";
   if(id==="species"){const spp=GEN_SPECIES[s.value];
     return `<b data-gkedit="species">${esc(spp?spp.label:String(s.value))}</b> ${genDiceChips(s)}`;}
-  if(id==="asi")return `<b data-gkedit="asi">+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}</b> <span class="gk-dim">${s.pick?"chosen":"class default"}</span>`;
+  if(id==="asi")return `<b data-gkedit="asi">+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}</b> <span class="gk-dim">${s.pick?"chosen":"suggested"}</span>`;
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const k=K&&K.kits[s.value];
     return `<b data-gkedit="equip">${esc(k?k.n:String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc(k?k.gear:"")}</span>`;}
   if(id==="feature"&&s.kind==="expertise")return s.value.map(x=>`<span class="gk-chip2" data-gkedit="feature">${esc(x)}</span>`).join(" ")+" "+genDiceChips(s);
@@ -1992,8 +2020,8 @@ function genEditorHTML(d,id){
   const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,s=d.steps[id];
   const nSel=(list,n,cur,idp)=>Array.from({length:n},(x,i)=>genSel(idp+i,list,cur&&cur[i]||list[i],null,true));
   if(id==="stats")return GEN_ABILS.map((a,i)=>`<label class="gk-si">${a.toUpperCase()}<input type="number" min="3" max="20" id="gkSt_${a}" value="${s&&s.value&&s.value[i]!=null?s.value[i]:10}"></label>`).join("")+`<button class="btn primary sm gk-apply" data-gkapply="stats">Set scores</button>`;
-  if(id==="asi"){const cur=s?s.value:[K?K.prim:"str",K?K.sec:"con"];
-    return `<span class="gk-dim">Class default: +2 ${(K?K.prim:"str").toUpperCase()} / +1 ${(K?K.sec:"con").toUpperCase()}.</span>`
+  if(id==="asi"){const dflt=genAsiDefault(d),cur=s?s.value:dflt;
+    return `<span class="gk-dim">Suggested: +2 ${dflt[0].toUpperCase()} / +1 ${dflt[1].toUpperCase()}.</span>`
       +genSel("gkAsi2",GEN_ABILS,cur[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()),true)+genSel("gkAsi1",GEN_ABILS,cur[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
   if(id==="skills"&&K)return nSel(K.skills.from,K.skills.n,s&&s.value,"gkSk_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="skills">Apply</button>`;
   if(id==="feature"&&K&&K.featureOpt&&K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];
@@ -2287,7 +2315,7 @@ function bindGenRitual(){
 function openGenRitual(ctx){
   const set=ctx.set,ritual=ctx.spMode==="ritual";
   _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},
-    draft:genNewDraft({sp:ctx.sp,spMode:ctx.spMode,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
+    draft:genNewDraft({sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${ritual?"character":esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
     <div id="gkR"></div>`);
@@ -2295,7 +2323,7 @@ function openGenRitual(ctx){
   renderGenRitual();
 }
 function openGenRitualDM(a){
-  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
+  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
     const pc=genIngestPayload(a,payload,"",null);
     _genR=null;closeModal();
     if(pc){toast(esc(pc.name)+" joins the crew.",2200,true);preserveScroll(".adv-detail-body",renderAdvDetail);}
@@ -2333,13 +2361,16 @@ function openCrewSettings(a){
     <div class="gk-cfg gk-cfg-modal">
       <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["locked","ritual"],ritual?"ritual":"locked",["One species for the crew","Rolled in the ritual"])}</label>
       ${ritual?"":`<label class="gk-f"><span>Which</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>`}
+      <label class="gk-f"><span>Species boons</span>${genSel("crewBoons",["on","off"],a.crew.boons?"on":"off",["Rolled","Off"])}</label>
       <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
     </div>
+    <p class="hint">Boons are the optional extras a species pack offers on top of its rules — the kobold's Draconic Boon table today.</p>
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
     const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
     sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
+    sel("#crewBoons",v=>{a.crew.boons=v==="on";});
     sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
     sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
     sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
@@ -2388,7 +2419,8 @@ function openCrewShareDialog(a){
 // Config under /cfg (never clobbers the phones' /crew subtree). Carries the resolved spell tables
 // so phones roll over the same lists the DM's library produces (D-012).
 function crewShareCfg(a){
-  const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",set:{...a.crew.set},tables:genSpellTables()};
+  const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",boons:a.crew.boons!==false,
+    set:{...a.crew.set},tables:genSpellTables()};
   // D-030: uploaded packs ride the cfg so phones can roll and derive them (curated packs ship
   // in-code). Phones SANITIZE these at ingestion like every other cloud-read field.
   const need=a.crew.spMode==="ritual"?genSpeciesPool():[a.crew.sp];
@@ -2669,7 +2701,7 @@ function crewCounts(){
   return c;
 }
 function crewOpenRitual(sp,cfg,isReplacement){
-  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
+  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
     const prev=crewMyRec();
     const rec={pn:_crew.pn,deaths:(prev&&Number(prev.deaths)||0)+(isReplacement&&prev&&prev.cur?1:0),cur:payload};
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}.json`,

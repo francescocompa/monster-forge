@@ -4,6 +4,28 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 291 — Ritual grouping, the boons toggle, a smarter ASI default (D-034/D-035/D-036)
+Francesco's three notes on the B288-B290 build.
+- **Steps group by macro category (D-034):** the species step and ALL its tables now LEAD the
+  ritual (they used to trail at the very end, a screen away from the species that owns them);
+  gear regrouped so the kit sits with the pack and the sundries; feats adjacent. Dependencies
+  still order steps inside a group. Consequence handled: species tables resolving first means the
+  CLASS skill roll now dodges species-granted skills (it rolled blind before, because the species
+  table used to go last and do the dodging) — 40-seed floor.
+- **Species boons are optional (D-035):** a table may carry `boon:true` — an extra on top of the
+  species' rules, not part of them. Crew settings gains "Species boons: Rolled / Off"; off drops
+  the table from the ritual, payload and derivation. Validation treats boon tables as optional in
+  BOTH directions, so a phone on a stale cfg is never rejected over one missing extra and old
+  payloads stay valid; core tables (lineages/ancestries/legacies/Kobold Legacy) stay required.
+  The kobold Draconic Boon is the only flagged table. Making boons customizable is TABLED (D-035).
+- **Background ASI default buys modifiers (D-036):** the +2 stays on the class primary (it crosses
+  a modifier step at any parity); the +1 goes to the best ODD-scored ability among the class
+  secondary, Con and Dex — 13→14 is worth a modifier, 14→15 is worth nothing — falling back to the
+  secondary when nothing is odd. Suggestion only; the step stays explicit and overridable, and the
+  label reads "Suggested" now, not "class default".
+- **124 tests green**, verified live (grouped order in both species modes, boons toggle in and out
+  of the ritual, `str/dex` suggested for a 15/13/14 barbarian), zero console errors.
+
 ## Batch 290 — Feat texts from uploads (D-033)
 The origin-feat d10 and its mechanical hooks stay shipped (the closed domain); a feats.json
 upload refreshes the TEXTS by name — the D-012 pattern applied to feats.

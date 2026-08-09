@@ -275,6 +275,92 @@ test("feat texts from uploads (D-033): a name-matched uploaded text wins, disabl
   assert.equal(r.cardText, "Custom Alert wording from the uploaded book.");
 });
 
+test("step grouping (D-034): species resolves with its tables, gear groups, class skills dodge species skills", () => {
+  const r = ev(`(()=>{
+    const out={};
+    // locked crew: the species tables lead, before the scores
+    const k=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    const kOrder=genStepOrder(k);
+    out.kobold=kOrder.slice(0,4);
+    // ritual crew: species step, then its tables, then the scores
+    const rr=genNewDraft({sp:"kobold",spMode:"ritual",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    genApplyPick(rr,"species","elf");
+    const rOrder=genStepOrder(rr);
+    out.ritual=rOrder.slice(0,4);
+    // gear group is contiguous once a class is known
+    genApplyPick(rr,"stats",[12,13,14,10,11,9]);
+    genApplyPick(rr,"cls","Fighter");
+    const g=genStepOrder(rr);
+    out.gear=[g.indexOf("equip"),g.indexOf("gearPack"),g.indexOf("sundries")];
+    // the elf's Keen Senses skill lands BEFORE the class skills, which must dodge it
+    out.dupes=[];
+    for(let seed=1;seed<=40;seed++){
+      const d=genNewDraft({sp:"elf",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+      genRollAll(d,${RNG}(seed*613+11));
+      const sp=d.steps["sp:keensenses"]&&d.steps["sp:keensenses"].value;
+      const cls=(d.steps.skills&&d.steps.skills.value)||[];
+      if(sp&&cls.includes(sp))out.dupes.push(seed+":"+sp);
+    }
+    return out;})()`);
+  assert.deepEqual(r.kobold, ["sp:legacy", "sp:wings", "stats", "cls"]);
+  assert.deepEqual(r.ritual, ["species", "sp:keensenses", "sp:lineage", "stats"]);
+  assert.deepEqual(r.gear, [r.gear[0], r.gear[0] + 1, r.gear[0] + 2], "kit, pack and sundries are contiguous");
+  assert.deepEqual(r.dupes, [], "a class skill roll never repeats a species-granted skill");
+});
+
+test("boons toggle (D-035): a boon table drops out of the ritual and stays optional on the wire", () => {
+  const r = ev(`(()=>{
+    const out={};
+    const off=genNewDraft({sp:"kobold",boons:false,set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    out.offOrder=genStepOrder(off).filter(id=>id.startsWith("sp:"));
+    genRollAll(off,${RNG}(808));genApplyPick(off,"name","No boon");
+    out.offComplete=genIsComplete(off);
+    const v=validateGenPayload(genCompletePayload(off));
+    out.offValid=v.ok;
+    out.offNoBoonStep=!v.clean.steps["sp:wings"];
+    if(v.ok){const ch=deriveGenChar(v.clean);
+      out.offNoBoonFx=(ch.resists||[]).length===0&&!ch.speed.fly;}
+    const on=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    out.onOrder=genStepOrder(on).filter(id=>id.startsWith("sp:"));
+    // a non-boon table stays mandatory: strip the legacy and the payload is rejected
+    const p=genCompletePayload(off);delete p.steps["sp:legacy"];
+    out.legacyStillRequired=validateGenPayload(p).err;
+    return out;})()`);
+  assert.deepEqual(r.offOrder, ["sp:legacy"], "the boon table leaves the ritual");
+  assert.equal(r.offComplete, true);
+  assert.equal(r.offValid, true, "a boon-less payload validates");
+  assert.equal(r.offNoBoonStep, true);
+  assert.equal(r.offNoBoonFx, true, "no boon effects derive");
+  assert.deepEqual(r.onOrder, ["sp:legacy", "sp:wings"]);
+  assert.equal(r.legacyStillRequired, "sp:legacy", "a core species table is still required");
+});
+
+test("background ASI default (D-036): the +1 lands on an odd score so it buys a modifier", () => {
+  const r = ev(`(()=>{
+    const mk=(cls,scores)=>{const d=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+      genApplyPick(d,"stats",scores);genApplyPick(d,"cls",cls);return genAsiDefault(d);};
+    return {
+      // Barbarian (str/con): con 14 buys nothing, dex 13 buys a modifier → the +1 goes to dex
+      barbOddDex:mk("Barbarian",[15,13,14,10,10,10]),
+      // con odd → the class secondary keeps it
+      barbOddCon:mk("Barbarian",[15,12,13,10,10,10]),
+      // nothing odd → the class default stands
+      barbAllEven:mk("Barbarian",[16,12,14,10,10,10]),
+      // Wizard (int/con): odd dex wins over an even con
+      wizardOddDex:mk("Wizard",[10,13,14,15,10,10]),
+      // the primary always takes the +2 whatever its parity (it buys a step either way)
+      wizardEvenInt:mk("Wizard",[10,14,13,16,10,10]),
+      // a class whose primary IS dex never doubles up on it
+      fighterDexPrim:mk("Fighter",[10,13,14,10,10,10]),
+    };})()`);
+  assert.deepEqual(r.barbOddDex, ["str", "dex"]);
+  assert.deepEqual(r.barbOddCon, ["str", "con"]);
+  assert.deepEqual(r.barbAllEven, ["str", "con"]);
+  assert.deepEqual(r.wizardOddDex, ["int", "dex"]);
+  assert.deepEqual(r.wizardEvenInt, ["int", "con"]);
+  assert.deepEqual(r.fighterDexPrim, ["dex", "con"]);
+});
+
 test("plausible class maps the d6 equally: 1-2 first, 3-4 second, 5-6 third", () => {
   const r = ev(`(()=>{
     const out=[];

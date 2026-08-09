@@ -59,6 +59,12 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
   const ritual = ev(`(()=>{
     document.getElementById("rollPC").click();
     if(!document.getElementById("gkR"))return {fail:"ritual modal missing"};
+    // D-034: the species group leads now — its tables resolve before the scores.
+    let sp=0,spGuard=0;
+    while(spGuard++<10&&document.querySelector('.gk-step.gk-active[data-step^="sp:"]')){
+      const b=document.querySelector('.gk-step.gk-active [data-gkroll]')||document.querySelector("#gkR [data-gkrollsub]");
+      if(!b)break;
+      b.click();sp++;}
     // The class step must show its option table BEFORE any class roll (D-011)
     let stats=0,guard=0;
     while(guard++<10&&document.querySelector('.gk-step.gk-active[data-step="stats"]')){
@@ -73,8 +79,9 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     document.getElementById("gkQk").value="Conta i gradini";
     document.querySelector('[data-gkapply="name"]').click();
     const fin=document.getElementById("gkFinish");
-    return {stats,clsRows,finish:!!fin};})()`);
+    return {sp,stats,clsRows,finish:!!fin};})()`);
   assert.equal(ritual.fail, undefined);
+  assert.ok(ritual.sp >= 1, "the species tables resolve before the scores (D-034)");
   assert.equal(ritual.stats, 6, "six individual ability rolls");
   assert.ok(ritual.clsRows >= 3, "class table shown before rolling (rows: " + ritual.clsRows + ")");
   assert.ok(ritual.finish, "all steps resolved");
