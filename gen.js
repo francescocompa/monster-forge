@@ -269,6 +269,14 @@ const GEN_SPECIES={
     ]
   }
 };
+// D-033: origin-feat TEXTS follow the install's uploaded feats.json when a name matches; the
+// shipped condensed text is the fallback, and the d10 + mechanical hooks stay shipped (the
+// closed domain) — the D-012 pattern applied to feats.
+function genFeatText(name,fallback){
+  if(typeof enFeats!=="function")return fallback;
+  const up=enFeats().find(f=>f.name.toLowerCase()===String(name).toLowerCase()&&f.text);
+  return up?up.text:fallback;
+}
 // D-030: uploaded species packs (races.json → parseRacesJSON → state.species) join the shipped
 // packs under their namespaced keys ("u_<file>_<name>" — never colliding with shipped ids).
 // Rebuilt on load, upload, and library toggles; shipped packs are never touched.
@@ -1380,9 +1388,9 @@ function deriveGenChar(p){
   const wings=fxAcc.fly>0;
   const resists=fxAcc.resists,sizeOv=fxAcc.size;
   featRecs.forEach(([rec,f])=>{
-    if(f.act==="action")actions.push({n:f.n,t:f.t});
+    if(f.act==="action")actions.push({n:f.n,t:genFeatText(f.n,f.t)});
     else if(f.sub!=="mi"){
-      let ftxt=f.t;
+      let ftxt=genFeatText(f.n,f.t); // D-033: uploaded feat texts win by name; shipped is the fallback
       if(f.sub==="tools"&&rec.sub)ftxt+=" Tools: "+rec.sub.value.join(", ")+".";
       if(f.sub==="instr"&&rec.sub)ftxt+=" Instruments: "+rec.sub.value.join(", ")+".";
       traits.push({n:"Feat: "+f.n,t:ftxt});

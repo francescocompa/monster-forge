@@ -594,6 +594,22 @@ function parseRacesJSON(json,fileName,booksMap){
   return out;
 }
 
+// feats.json → feat text records (D-033). The generator's origin-feat d10 and its mechanical
+// hooks stay shipped (the closed domain); uploads refresh the TEXTS by name — the D-012 pattern.
+function parseFeatsJSON(json,fileName,booksMap){
+  const out=[];
+  [].concat((json&&json.feat)||[]).forEach(f=>{if(!f||!f.name)return;
+    const rec={id:"ft_"+slug(fileName)+"_"+slug(f.name),name:String(f.name).slice(0,60),
+      category:String(f.category||"").slice(0,4),source:f.source||"",
+      text:entriesToText(f.entries||[]).slice(0,2400),
+      _source:fileName,_kind:"feat"};
+    annotateBook(rec,f.source,booksMap);out.push(rec);});
+  // de-dupe by name, preferring the newer X-prefixed source (XPHB over PHB) — same rule as conditions
+  const byName={},rank=s=>/^x/i.test(s||"")?2:1;
+  out.forEach(f=>{const k=f.name.toLowerCase(),ex=byName[k];if(!ex||rank(f.source)>rank(ex.source))byName[k]=f;});
+  return Object.values(byName);
+}
+
 // Identify an uploaded 5etools JSON by its top-level keys.
 function detectJsonKind(json){
   if(!json||typeof json!=="object")return null;
@@ -602,6 +618,7 @@ function detectJsonKind(json){
   if(json.monster)return "statblock";
   if(json.spell)return "spell";
   if(json.race)return "race";
+  if(json.feat)return "feat";
   if(json.condition||json.disease||json.status)return "condition";
   if(json.variantrule||json.action||json.sense||json.skill)return "rule";
   return null;

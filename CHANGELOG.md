@@ -4,6 +4,16 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 290 — Feat texts from uploads (D-033)
+The origin-feat d10 and its mechanical hooks stay shipped (the closed domain); a feats.json
+upload refreshes the TEXTS by name — the D-012 pattern applied to feats.
+- New "feat" upload kind (`parseFeatsJSON`, XPHB-over-PHB name dedupe like conditions),
+  `state.feats` persisted (`mf_feats`), library toggles + removal, `genFeatText(name,fallback)`
+  consulted at derivation so the card carries the uploaded book's wording; unmatched names and
+  disabled sources fall back to the shipped condensed texts. Items and class content stay shipped
+  (D-033 rejections — don't re-propose). Mirror sanity: 218 feats after dedupe, Alert/Tough land
+  their 2024 texts. **121 tests green.**
+
 ## Batch 289 — Species from uploads: the races.json import path (D-030/D-032)
 Any 5etools races.json the DM uploads now yields rollable species packs.
 - **Parser (`parseRacesJSON`, parsers.js):** basics land exactly (size/speed/darkvision/2014

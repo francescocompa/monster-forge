@@ -246,6 +246,35 @@ test("species ritual mode (D-031): species step leads, species change cascades, 
   assert.equal(r.ritualAccepts, true);
 });
 
+test("feat texts from uploads (D-033): a name-matched uploaded text wins, disable falls back to shipped", () => {
+  const r = ev(`(()=>{
+    const parsed=parseFeatsJSON({feat:[
+      {name:"Alert",source:"HB",category:"O",entries:["Custom Alert wording from the uploaded book."]},
+      {name:"Some Level 4 Feat",source:"HB",category:"G",entries:["Not an origin feat."]}
+    ]},"homebrew-feats.json",{});
+    const prev=state.feats;state.feats=parsed;
+    const out={parsed:parsed.length,up:genFeatText("Alert","shipped"),miss:genFeatText("Tough","shipped")};
+    setLibEnabled("feat","homebrew-feats.json",false);
+    out.disabled=genFeatText("Alert","shipped");
+    setLibEnabled("feat","homebrew-feats.json",true);
+    // the card actually carries the uploaded wording
+    const rng=${RNG}(31337);
+    const d=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    genRollAll(d,rng);
+    genApplyPick(d,"feat","Alert");
+    genApplyPick(d,"name","T");
+    const v=validateGenPayload(genCompletePayload(d));
+    const ch=v.ok?deriveGenChar(v.clean):null;
+    out.cardText=ch?(ch.traits.find(t=>t.n==="Feat: Alert")||{}).t:null;
+    state.feats=prev;
+    return out;})()`);
+  assert.equal(r.parsed, 2);
+  assert.equal(r.up, "Custom Alert wording from the uploaded book.");
+  assert.equal(r.miss, "shipped", "unmatched names keep the shipped text");
+  assert.equal(r.disabled, "shipped", "disabling the source falls back");
+  assert.equal(r.cardText, "Custom Alert wording from the uploaded book.");
+});
+
 test("plausible class maps the d6 equally: 1-2 first, 3-4 second, 5-6 third", () => {
   const r = ev(`(()=>{
     const out=[];

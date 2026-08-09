@@ -634,6 +634,7 @@ function removeLib(kind,name){
   else if(kind==="condition"){state.conditions=state.conditions.filter(x=>x._source!==name);saveConditions();}
   else if(kind==="rule"){state.rules=state.rules.filter(x=>x._source!==name);saveRules();}
   else if(kind==="species"){state.species=state.species.filter(x=>x._source!==name);saveSpecies();if(typeof genSyncSpecies==="function")genSyncSpecies();}
+  else if(kind==="feat"){state.feats=state.feats.filter(x=>x._source!==name);saveFeats();}
   else{state.presets=state.presets.filter(x=>x._source!==name);savePresets();}
   const i=state.disabledLibs.indexOf(libKey(kind,name));if(i>=0){state.disabledLibs.splice(i,1);saveDisabled();}
   presetSel.delete(libKey(kind,name));
