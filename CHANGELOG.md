@@ -4,6 +4,23 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 292 — Fix: the crew share button was invisible in the roster header
+Francesco's report. **Not a B288-B291 regression — broken since B283 (`d1ce89b`) when the share
+dialog was split out of crew settings and the header button was introduced.**
+- **Cause:** `SHARE_ICON` (combat.js) carries NO `width`/`height` on its `<svg>`, because its
+  original home `.ct-toolsbtn` gives it a fixed 28×26 `display:grid` box to fill. The roster
+  header's `.lvlup-btn` has no such box and no svg sizing rule, so the icon computed to **0×0**
+  and the button rendered as a 12px sliver of bare padding — present in the DOM, invisible on
+  screen. Its neighbours never showed the bug because `ARROW_TREND_UP` and `GEN_GEAR_ICON` both
+  carry explicit `width`/`height` attributes.
+- **Fix:** one scoped rule, `#crewShareBtn svg{width:13px;height:13px}`, sized to match the gear
+  it sits beside (button now 25×24, identical to it). Scoped by id on purpose: adding dimensions
+  to the shared `SHARE_ICON` constant would have resized the combat toolbar's icon (15×15 today)
+  as a side effect.
+- **Rule worth keeping:** an icon constant is only as portable as its intrinsic size. Reusing one
+  in a container that doesn't size its svg needs either explicit attributes or a local rule.
+- 124 tests green (CSS-only change), verified live in the roster header.
+
 ## Batch 291 — Ritual grouping, the boons toggle, a smarter ASI default (D-034/D-035/D-036)
 Francesco's three notes on the B288-B290 build.
 - **Steps group by macro category (D-034):** the species step and ALL its tables now LEAD the

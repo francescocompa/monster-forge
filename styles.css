@@ -2496,6 +2496,10 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-cfg-modal{margin-bottom:12px}
 .gk-cfg-modal .gk-f{min-width:130px}
 #partyHead .lvlup-btn{margin-left:0}
+/* SHARE_ICON carries no width/height (the combat toolbar sizes it through .ct-toolsbtn's fixed
+   grid box). In the roster header there is no such box, so the icon collapsed to 0x0 and the
+   button rendered as an invisible sliver of padding. Size it like the gear it sits beside. */
+#crewShareBtn svg{width:13px;height:13px}
 .gk-dead .topbar{background:linear-gradient(90deg,#5a2626,#2e1414)}
 .gk-dead-line{color:#e08585;font-weight:700;font-size:12px;letter-spacing:.06em}
 .gk-flavor{margin-top:10px;padding:8px 11px;border:1px dashed var(--line);border-radius:6px;background:rgba(217,169,65,.05);font-size:12px;display:flex;flex-direction:column;gap:3px}
