@@ -4,6 +4,29 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 289 — Species from uploads: the races.json import path (D-030/D-032)
+Any 5etools races.json the DM uploads now yields rollable species packs.
+- **Parser (`parseRacesJSON`, parsers.js):** basics land exactly (size/speed/darkvision/2014
+  languages); JSON-marked choices synthesize REAL pick-or-roll tables — lineage/legacy/ancestry
+  tables (level-1 column when leveled), "choose one" item lists (shared PB-uses → 2/rest at L1),
+  named-skill and any-skill choices (kind:"skill"); per-choice fx detection (resist, granted
+  cantrips/always-prepared spells with the named or mental ability, speed/darkvision increases);
+  plain traits carry uses detection and Bonus-Action sectioning; everything else degrades to
+  VERBATIM PROSE (D-032 — never wrong mechanics). Level-2+ traits are skipped (L1 scope).
+  extraFeat detection reads the RAW entry (richStrip's generic link rule eats {@filter Origin
+  feat|…} labels). Spans always tile the die (the sp: roller has no reroll-over).
+- **Plumbing:** new "race" upload kind (detectJsonKind/app.js), `state.species` persisted like
+  spells (`mf_species` IDB), per-source enable toggles + removal in the library manager,
+  `genSyncSpecies()` merges enabled uploads into GEN_SPECIES under namespaced `u_<file>_<name>`
+  keys (shipped packs never touched) on load/upload/toggle.
+- **Wire:** uploaded packs ride the crew share cfg (locked crew → its one pack; ritual → all
+  enabled); phones REBUILD each pack through `crewCleanSpeciesPack` — whitelisted fields, closed
+  vocabularies, capped counts/lengths, die-tiling check, shipped keys unshadowable — before
+  registering (the share is world-writable; D-007 stance).
+- Floors: `test/species-parser.test.js` (mirror-shaped fixtures: lineage table fx, list choices,
+  skill tables, extraFeat, level gating; end-to-end register→roll→validate→derive; hostile-pack
+  sanitizer). Real-mirror sanity: 157 species parse, all 10 XPHB roll clean. **120 tests green.**
+
 ## Batch 288 — Crew generator: every species (D-030/D-031, supersedes D-001's kobold-only scope)
 The generalization interview (4 AskUserQuestion rounds → D-030…D-033, D-023 amended) landed hybrid:
 curated XPHB packs now, a races.json import path next (B289), feats-from-uploads after (B290).

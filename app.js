@@ -119,6 +119,7 @@ function ingestLibraries(loaded){
       else if(kind==="spell"){const p=parseSpellsJSON(L.json,L.name,state.books);state.spells=state.spells.filter(x=>x._source!==L.name).concat(p);saveSpells();summary.push(`${L.name}: ${p.length.toLocaleString()} spells`);}
       else if(kind==="condition"){const p=parseConditionsJSON(L.json,L.name,state.books);state.conditions=state.conditions.filter(x=>x._source!==L.name).concat(p);saveConditions();summary.push(`${L.name}: ${p.length.toLocaleString()} conditions`);}
       else if(kind==="rule"){const p=parseRulesJSON(L.json,L.name,state.books);state.rules=state.rules.filter(x=>x._source!==L.name).concat(p);saveRules();summary.push(`${L.name}: ${p.length.toLocaleString()} rules`);}
+      else if(kind==="race"){const p=parseRacesJSON(L.json,L.name,state.books);state.species=state.species.filter(x=>x._source!==L.name).concat(p);saveSpecies();if(typeof genSyncSpecies==="function")genSyncSpecies();summary.push(`${L.name}: ${p.length.toLocaleString()} species`);}
       else{const res=parseBestiaryJSON(L.json,L.name,state.books,sessionBestiaryIndex,legIdx);state.presets=state.presets.filter(x=>x._source!==L.name).concat(res.monsters);savePresets();buildMonsterDatalists();summary.push(`${L.name}: ${res.monsters.length.toLocaleString()} statblocks${res.skipped?` (${res.skipped} skipped, base not loaded)`:""}`);}
     }catch(err){summary.push(`${L.name}: failed to parse`);}
   });

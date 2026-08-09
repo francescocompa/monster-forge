@@ -627,11 +627,13 @@ function openChassis(fromForge,opts){
   draw();
 }
 // Re-render the chassis/spell/condition pools after a library is toggled or removed.
-function refreshLibPools(){if(typeof buildMonsterDatalists==="function")buildMonsterDatalists();}
+function refreshLibPools(){if(typeof buildMonsterDatalists==="function")buildMonsterDatalists();
+  if(typeof genSyncSpecies==="function")genSyncSpecies();}
 function removeLib(kind,name){
   if(kind==="spell"){state.spells=state.spells.filter(x=>x._source!==name);saveSpells();}
   else if(kind==="condition"){state.conditions=state.conditions.filter(x=>x._source!==name);saveConditions();}
   else if(kind==="rule"){state.rules=state.rules.filter(x=>x._source!==name);saveRules();}
+  else if(kind==="species"){state.species=state.species.filter(x=>x._source!==name);saveSpecies();if(typeof genSyncSpecies==="function")genSyncSpecies();}
   else{state.presets=state.presets.filter(x=>x._source!==name);savePresets();}
   const i=state.disabledLibs.indexOf(libKey(kind,name));if(i>=0){state.disabledLibs.splice(i,1);saveDisabled();}
   presetSel.delete(libKey(kind,name));

@@ -208,6 +208,18 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   the split "Roll a ..." button (regular add behind the caret); generated members are ordinary
   party rows whose click opens the statblock modal (card + tracker + notes + a Full page escape);
   only the Caduti render below the roster.
+- **Every species (B288-B289, D-030/D-031/D-032):** the engine is fully species-blind — species
+  packs carry declarative `fx` payloads on their table entries (trait/bonus/action text with
+  `{DC:abil}`-style templating, skill/cast/resist grants, size/speed/fly/darkvision overrides,
+  resource declarations) consumed by ONE generic walk in `deriveGenChar`; `kind:"skill"` tables
+  and `extraFeat` (second origin feat) round out the vocabulary. Eleven packs ship in-code
+  (2014 kobold + the ten XPHB 2024 species); uploaded 5etools races.json files become packs via
+  `parseRacesJSON` (choices → synthesized tables, everything else → verbatim prose traits), stored
+  in `state.species`, merged into `GEN_SPECIES` by `genSyncSpecies()` under `u_*` keys per the
+  library enable toggles. Crew settings toggle (D-031): locked-to-one-species (species-driven
+  button copy, ingestion REJECTS other species) vs species-as-ritual-step ("Roll a character",
+  the Species roll leads the ritual over all enabled packs). Uploaded packs ride the share cfg;
+  phones rebuild them through `crewCleanSpeciesPack` (hostile-data stance) before registering.
 - **A species = one data object** in `GEN_SPECIES`; a class = one package in `GEN_CLASSES` carrying
   equipment KITS (drafted PHB-legal loadouts, Fighter 8 / most martials 6 / casters 4-5 — D-013 as
   expanded by D-022), feature-option tables (Divine/Primal Order, Fighting Styles, Invocations,

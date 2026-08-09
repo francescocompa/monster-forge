@@ -442,6 +442,158 @@ function parseRulesJSON(json,fileName,booksMap){
   out.forEach(c=>{const k=c.name.toLowerCase(),ex=byName[k];if(!ex||rank(c.source)>rank(ex.source))byName[k]=c;});
   return Object.values(byName);
 }
+// ── races.json → generator species packs (D-030/D-032) ───────────────────────────────────────────
+// Best-effort condensation: structured basics always land exactly; where the JSON marks a player
+// choice (lineage/legacy/ancestry tables, "choose one" lists, skill choices) a real pick-or-roll
+// table is synthesized; anything else degrades to a VERBATIM PROSE TRAIT — never wrong mechanics,
+// just less structured. Level-1 scope only: traits gated at character level 2+ are skipped.
+const RACE_SIZE={T:"Tiny",S:"Small",M:"Medium",L:"Large"};
+const RACE_DTYPES=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+const RACE_SKILLS=["Acrobatics","Animal Handling","Arcana","Athletics","Deception","History","Insight","Intimidation","Investigation","Medicine","Nature","Perception","Performance","Persuasion","Religion","Sleight of Hand","Stealth","Survival"];
+function raceDieFor(n){return [4,6,8,10,12,20].find(f=>f>=n)||100;}
+// Equal-as-possible spans that FULLY cover the die (the sp: roller has no reroll-over).
+function raceSpans(n){
+  const die=[4,6,8,10,12,20].find(f=>f%n===0&&f>=n)||raceDieFor(n);
+  const base=Math.floor(die/n),rem=die%n;let lo=1;
+  return {die,spans:Array.from({length:n},(x,i)=>{const w=base+(i<rem?1:0);const s=[lo,lo+w-1];lo+=w;return s;})};
+}
+// The spellcasting ability a trait names for its granted spells; "mental" = chooser's pick.
+function raceCastAbil(txt){
+  if(/Intelligence,\s*Wisdom,\s*or\s*Charisma/i.test(txt))return "mental";
+  const m=txt.match(/\b(Intelligence|Wisdom|Charisma)\b is your spellcasting ability/i);
+  return m?{intelligence:"int",wisdom:"wis",charisma:"cha"}[m[1].toLowerCase()]:"mental";
+}
+// Uses declaration from the standard phrasings; null when the trait is passive.
+function raceUses(name,txt){
+  const per=/Short(?:\s+Rest)?\s+or\s+(?:a\s+)?Long Rest/i.test(txt)?"Short Rest":"Long Rest";
+  if(/number of times equal to your Proficiency Bonus/i.test(txt))return {max:2,per}; // PB=2 at level 1
+  if(/(\bOnce you use this (?:trait|Bonus Action)\b|can't (?:use|do so) again until you finish)/i.test(txt))return {max:1,per};
+  const m=txt.match(/(\d+)\s*\/\s*(Long|Short) Rest/i);
+  if(m)return {max:Math.min(9,+m[1]||1),per:m[2].replace(/^s/,"S").replace(/^l/,"L")+" Rest"};
+  return null;
+}
+// Per-choice fx detection over the RAW (untstripped) level-1 benefit text.
+function raceChoiceFx(raw,label){
+  const fx={};
+  const res=raw.match(/Resistance[^.]*? to ([A-Z][a-z]+) damage/);
+  if(res&&RACE_DTYPES.includes(res[1]))fx.resist=res[1];
+  const casts=[];
+  const canRe=/\{@spell ([^}|]+)(?:\|[^}]*)?\} cantrips?/g;let cm;
+  const seen=new Set();
+  while((cm=canRe.exec(raw))){const n=cm[1].trim();if(!seen.has(n)){seen.add(n);casts.push({label,abil:"mental",cantrip:n});}}
+  // "know the X and Y cantrips" (Rock Gnome): names before the matched one
+  const multi=raw.match(/\{@spell ([^}|]+)(?:\|[^}]*)?\} and \{@spell ([^}|]+)(?:\|[^}]*)?\} cantrips/);
+  if(multi)[multi[1],multi[2]].map(s=>s.trim()).forEach(n=>{if(!seen.has(n)){seen.add(n);casts.push({label,abil:"mental",cantrip:n});}});
+  const alw=raw.match(/always have the \{@spell ([^}|]+)(?:\|[^}]*)?\} spell prepared/);
+  if(alw){const uses=raceUses(label,raw)||{max:1,per:"Long Rest"};
+    casts.push({label,abil:"mental",spell:alw[1].trim(),freq:uses.max+"/"+uses.per+" (also castable with slots)"});}
+  if(casts.length)fx.cast=casts.length===1?casts[0]:casts;
+  const spd=raw.match(/Speed[^.]{0,40}?increases to (\d+) feet/i);if(spd)fx.speed=+spd[1];
+  const dv=raw.match(/Darkvision[^.]{0,40}?increases to (\d+) feet/i);if(dv)fx.darkvision=+dv[1];
+  return fx;
+}
+function parseRacesJSON(json,fileName,booksMap){
+  const out=[];
+  [].concat((json&&json.race)||[]).forEach(r=>{
+    if(!r||!r.name)return;
+    try{
+      const key="u_"+slug(fileName)+"_"+slug(r.name);
+      const pack={key,label:String(r.name).slice(0,40),
+        size:RACE_SIZE[[].concat(r.size||["M"]).includes("M")?"M":[].concat(r.size||["M"])[0]]||"Medium",
+        speed:(typeof r.speed==="number"?r.speed:(r.speed&&r.speed.walk))||30,
+        darkvision:r.darkvision||0,langs:["Common"],
+        traits:[],bonus:[],actions:[],res:[],casts:[],resists:[],tables:[],
+        _source:fileName,_kind:"species",source:r.source||""};
+      // 2014 languages (2024 species carry none — languages moved off the species)
+      const lp=[].concat(r.languageProficiencies||[])[0];
+      if(lp)pack.langs=Object.keys(lp).filter(k=>lp[k]===true).map(k=>k==="anyStandard"?"one other language":k[0].toUpperCase()+k.slice(1)).slice(0,6);
+      if(!pack.langs.length)pack.langs=["Common"];
+      // 2014 fixed ability increases have no engine hook — surface as prose (D-032 degrade rule)
+      const ab=[].concat(r.ability||[])[0];
+      if(ab&&!ab.choose){const parts=Object.keys(ab).map(k=>"+"+ab[k]+" "+k.toUpperCase());
+        if(parts.length)pack.traits.push({n:"Ability Scores (2014 species)",t:"This species predates the 2024 background ASI: "+parts.join(", ")+" per its own rules. Apply by editing the scores if wanted."});}
+      (r.entries||[]).forEach(e=>{
+        if(!e||!e.name||e.type==="inset")return;
+        const rawStr=JSON.stringify(e.entries||[]);
+        const flat=entriesToText(e.entries||[]);
+        // level-gated traits are out of the generator's level-1 scope
+        if(/(When you reach|Starting at) character level ([2-9]|1\d)/i.test(flat.split(".")[0]+"."))return;
+        const nm=String(e.name).slice(0,80);
+        // extra origin feat (Human Versatile) — checked on the RAW entry: richStrip's generic
+        // link rule collapses {@filter Origin feat|feats|…} to its filter segment, not the label.
+        if(/Origin feat/i.test(rawStr)&&/of your choice/i.test(rawStr)){pack.extraFeat=true;return;}
+        // +HP per level (Dwarven Toughness)
+        if(/Hit Point maximum increases by 1/i.test(flat)){pack.hpPerLevel=1;
+          pack.traits.push({n:nm,t:"Hit Point maximum increases by 1 per level (already counted)."});return;}
+        // skill choice → kind:"skill" table
+        const skOr=flat.match(/proficiency in the ([A-Za-z' ]+), ([A-Za-z' ]+), or ([A-Za-z' ]+) skill/);
+        if(skOr){const opts=[skOr[1],skOr[2],skOr[3]].map(s=>s.trim()).filter(s=>RACE_SKILLS.includes(s));
+          if(opts.length>=2){pack.tables.push({id:slug(nm).slice(0,24)||"skill",label:nm,kind:"skill",entries:opts});return;}}
+        if(/proficiency in one skill of your choice/i.test(flat)){
+          pack.tables.push({id:slug(nm).slice(0,24)||"skill",label:nm,kind:"skill",entries:RACE_SKILLS.slice()});return;}
+        // choice table: a nested lineage/legacy/ancestry table (level-1 column when leveled)
+        const tbl=(e.entries||[]).find(x=>x&&x.type==="table"&&Array.isArray(x.rows)&&x.rows.length>=2);
+        const list=(e.entries||[]).find(x=>x&&x.type==="list"&&Array.isArray(x.items)&&x.items.length>=2&&x.items.every(it=>it&&it.name));
+        const isChoice=/\bChoose (a|one|the kind)\b/i.test(flat);
+        if(tbl&&isChoice){
+          const cols=(tbl.colLabels||[]).map(c=>richStrip(String(c)));
+          const l1col=cols.findIndex(c=>/Level 1/i.test(c));
+          const benefitCol=l1col>=0?l1col:1;
+          const rows=tbl.rows.slice(0,13);
+          const sp=raceSpans(rows.length);
+          pack.tables.push({id:slug(nm).slice(0,24)||"choice",label:nm,die:sp.die,
+            entries:rows.map((row,i)=>{
+              const cells=(row||[]).map(c=>typeof c==="string"?c:JSON.stringify(c));
+              const lbl=richStrip(cells[0]||"").slice(0,60)||("Option "+(i+1));
+              const rawBenefit=String(cells[benefitCol]||"");
+              const fx=raceChoiceFx(rawBenefit,nm+": "+lbl);
+              const prose=richStrip(rawBenefit).slice(0,600);
+              if(prose&&!(fx.cast&&!fx.resist&&prose.length<160))fx.trait={n:nm+": "+lbl,t:prose};
+              return {lo:sp.spans[i][0],hi:sp.spans[i][1],label:lbl,value:slug(lbl).slice(0,24)||String(i+1),fx};
+            })});
+          return;
+        }
+        if(list&&isChoice){
+          const items=list.items.slice(0,13);
+          const sp=raceSpans(items.length);
+          const shared=raceUses(nm,flat);
+          pack.tables.push({id:slug(nm).slice(0,24)||"choice",label:nm,die:sp.die,
+            entries:items.map((it,i)=>{
+              const lbl=richStrip(String(it.name)).slice(0,60);
+              const rawBenefit=JSON.stringify(it.entries||[]);
+              const fx=raceChoiceFx(rawBenefit,nm+": "+lbl);
+              const prose=entriesToText(it.entries||[]).slice(0,600);
+              if(prose)fx[/As a Bonus Action/i.test(prose)?"bonus":"trait"]={n:nm+": "+lbl+(shared?` (${shared.max}/${shared.per})`:""),t:prose};
+              if(shared)fx.res={k:slug(lbl).slice(0,16)||"use",label:nm+": "+lbl,max:shared.max,per:shared.per};
+              return {lo:sp.spans[i][0],hi:sp.spans[i][1],label:lbl,value:slug(lbl).slice(0,24)||String(i+1),fx};
+            })});
+          return;
+        }
+        // plain trait: fixed casts / resistances / uses, else verbatim prose
+        const fx=raceChoiceFx(rawStr,nm);
+        if(fx.cast){[].concat(fx.cast).forEach(c=>pack.casts.push({...c,abil:raceCastAbil(flat)}));
+          if(!/cantrip|spell/i.test(nm))pack.traits.push({n:nm,t:flat.slice(0,600)});
+          return;}
+        const resM=flat.match(/Resistance to ([A-Z][a-z]+) damage(?: and ([A-Z][a-z]+) damage)?/);
+        if(resM){[resM[1],resM[2]].filter(Boolean).forEach(dt=>{if(RACE_DTYPES.includes(dt)&&!pack.resists.includes(dt))pack.resists.push(dt);});
+          const rest=flat.replace(/[^.]*Resistance[^.]*\.\s*/,"").trim();
+          if(rest)pack.traits.push({n:nm,t:rest.slice(0,600)});
+          return;}
+        if(/^Darkvision$/i.test(nm))return; // structured field already carries it
+        const uses=raceUses(nm,flat);
+        const section=/As a (Bonus Action|Reaction)/i.test(flat)?"bonus":"traits";
+        const entry={n:nm+(uses?` (${uses.max}/${uses.per})`:""),t:flat.slice(0,600)};
+        (section==="bonus"?pack.bonus:pack.traits).push(entry);
+        if(uses)pack.res.push({k:slug(nm).slice(0,16)||"use",label:nm,max:uses.max,per:uses.per});
+      });
+      pack.traits=pack.traits.slice(0,12);pack.bonus=pack.bonus.slice(0,8);pack.tables=pack.tables.slice(0,3);
+      annotateBook(pack,r.source,booksMap);
+      out.push(pack);
+    }catch(err){/* one malformed race never sinks the file */}
+  });
+  return out;
+}
+
 // Identify an uploaded 5etools JSON by its top-level keys.
 function detectJsonKind(json){
   if(!json||typeof json!=="object")return null;
@@ -449,6 +601,7 @@ function detectJsonKind(json){
   if(json.legendaryGroup)return "legendaryGroup";
   if(json.monster)return "statblock";
   if(json.spell)return "spell";
+  if(json.race)return "race";
   if(json.condition||json.disease||json.status)return "condition";
   if(json.variantrule||json.action||json.sense||json.skill)return "rule";
   return null;

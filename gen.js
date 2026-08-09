@@ -269,6 +269,16 @@ const GEN_SPECIES={
     ]
   }
 };
+// D-030: uploaded species packs (races.json → parseRacesJSON → state.species) join the shipped
+// packs under their namespaced keys ("u_<file>_<name>" — never colliding with shipped ids).
+// Rebuilt on load, upload, and library toggles; shipped packs are never touched.
+const GEN_SPECIES_SHIPPED=new Set(Object.keys(GEN_SPECIES));
+function genSyncSpecies(){
+  Object.keys(GEN_SPECIES).forEach(k=>{if(!GEN_SPECIES_SHIPPED.has(k))delete GEN_SPECIES[k];});
+  (typeof enSpecies==="function"?enSpecies():[]).forEach(p=>{
+    if(p&&p.key&&!GEN_SPECIES_SHIPPED.has(p.key))GEN_SPECIES[p.key]=p;
+  });
+}
 // fx text templating: {DC:abil} = 8+PB+mod, {MOD:abil} = the signed mod, {PB}, {SUB} = the entry's
 // resolved sub value. Pure string work — the vocabulary stays data, copy stays in the pack.
 function genFxText(t,mods,pb,subVal){
@@ -2369,7 +2379,15 @@ function openCrewShareDialog(a){
 }
 // Config under /cfg (never clobbers the phones' /crew subtree). Carries the resolved spell tables
 // so phones roll over the same lists the DM's library produces (D-012).
-function crewShareCfg(a){return {name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",set:{...a.crew.set},tables:genSpellTables()};}
+function crewShareCfg(a){
+  const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",set:{...a.crew.set},tables:genSpellTables()};
+  // D-030: uploaded packs ride the cfg so phones can roll and derive them (curated packs ship
+  // in-code). Phones SANITIZE these at ingestion like every other cloud-read field.
+  const need=a.crew.spMode==="ritual"?genSpeciesPool():[a.crew.sp];
+  const up={};need.forEach(k=>{if(!GEN_SPECIES_SHIPPED.has(k)&&GEN_SPECIES[k])up[k]=GEN_SPECIES[k];});
+  if(Object.keys(up).length)cfg.species=up;
+  return cfg;
+}
 // Reference texts under /refs (D-019): trimmed spell/condition entries for every name the
 // generator can reach, so player cards get the same tap-for-text popovers the DM has. Written by
 // the DM at mint + config pushes; phones read it once at boot and SANITIZE it at ingestion (the
@@ -2426,6 +2444,95 @@ function crewCleanRefs(raw){
     _source:clean(c._source,12)})):[];
   return {spells:sp,conds:cd};
 }
+// D-030: uploaded species packs arrive on the cfg — world-writable share, so they are HOSTILE data.
+// Rebuild each pack strictly: whitelisted fields, closed vocabularies, capped lengths and counts.
+// Anything that doesn't fit is dropped (a pack that fails entirely just doesn't register).
+function crewCleanSpeciesPack(key,raw){
+  try{
+    if(!raw||typeof raw!=="object")return null;
+    const DT=["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"];
+    const str=(v,n)=>String(v==null?"":v).replace(/[<>]/g,"").slice(0,n);
+    const int=(v,lo,hi,dflt)=>{const n=Math.round(Number(v));return Number.isFinite(n)&&n>=lo&&n<=hi?n:dflt;};
+    const kSlug=str(key,48).replace(/[^a-z0-9_-]/gi,"");
+    if(!kSlug||!/^u_/.test(kSlug))return null; // uploaded namespace only — shipped keys can't be shadowed
+    const cast=c=>{if(!c||typeof c!=="object")return null;
+      const abil=["int","wis","cha","mental"].includes(c.abil)?c.abil:"mental";
+      const o={label:str(c.label,40)||"Species magic",abil};
+      if(c.cantrip)o.cantrip=c.cantrip==="sub"?"sub":str(c.cantrip,40);
+      if(c.spell)o.spell=str(c.spell,40);
+      if(c.freq)o.freq=str(c.freq,60);
+      return (o.cantrip||o.spell)?o:null;};
+    const resDecl=r=>{if(!r||typeof r!=="object")return null;
+      const per=r.per==="Short Rest"?"Short Rest":"Long Rest";
+      const max=int(r.max,1,9,null);if(max==null)return null;
+      return {k:str(r.k,16).replace(/[^a-z0-9-]/gi,"")||"use",label:str(r.label,48)||"Uses",max,per};};
+    const entryText=t=>t&&t.n?{n:str(t.n,80),t:str(t.t,700)}:null;
+    const fxClean=f=>{if(!f||typeof f!=="object")return undefined;
+      const o={};
+      ["trait","bonus","action"].forEach(k=>{const e=entryText(f[k]);if(e)o[k]=e;});
+      if(f.skillSub===true)o.skillSub=true;
+      if(f.cast){const cs=[].concat(f.cast).map(cast).filter(Boolean).slice(0,4);if(cs.length)o.cast=cs.length===1?cs[0]:cs;}
+      if(f.resist)o.resist=f.resist==="sub"?"sub":(DT.includes(f.resist)?f.resist:undefined);
+      if(o.resist===undefined)delete o.resist;
+      if(f.size&&["Tiny","Small","Medium","Large"].includes(f.size))o.size=f.size;
+      if(f.fly)o.fly=int(f.fly,5,90,0)||undefined;
+      if(f.speed)o.speed=int(f.speed,5,120,0)||undefined;
+      if(f.darkvision)o.darkvision=int(f.darkvision,10,300,0)||undefined;
+      const rd=resDecl(f.res);if(rd)o.res=rd;
+      return Object.keys(o).length?o:undefined;};
+    const pack={key:kSlug,label:str(raw.label,40)||"Species",
+      size:["Tiny","Small","Medium","Large"].includes(raw.size)?raw.size:"Medium",
+      speed:int(raw.speed,5,120,30),darkvision:int(raw.darkvision,0,300,0),
+      langs:(Array.isArray(raw.langs)?raw.langs:["Common"]).filter(l=>typeof l==="string").slice(0,6).map(l=>str(l,30)).filter(Boolean),
+      traits:(Array.isArray(raw.traits)?raw.traits:[]).map(entryText).filter(Boolean).slice(0,12),
+      bonus:(Array.isArray(raw.bonus)?raw.bonus:[]).map(entryText).filter(Boolean).slice(0,8),
+      actions:(Array.isArray(raw.actions)?raw.actions:[]).map(entryText).filter(Boolean).slice(0,6),
+      res:(Array.isArray(raw.res)?raw.res:[]).map(resDecl).filter(Boolean).slice(0,6),
+      casts:(Array.isArray(raw.casts)?raw.casts:[]).map(cast).filter(Boolean).slice(0,4),
+      resists:(Array.isArray(raw.resists)?raw.resists:[]).filter(x=>DT.includes(x)).slice(0,4),
+      tables:[]};
+    if(!pack.langs.length)pack.langs=["Common"];
+    if(raw.hpPerLevel)pack.hpPerLevel=int(raw.hpPerLevel,1,2,0)||undefined;
+    if(pack.hpPerLevel===undefined)delete pack.hpPerLevel;
+    if(raw.extraFeat===true)pack.extraFeat=true;
+    (Array.isArray(raw.tables)?raw.tables:[]).slice(0,3).forEach(t=>{
+      if(!t||typeof t!=="object")return;
+      const id=str(t.id,24).replace(/[^a-z0-9-]/gi,"");if(!id)return;
+      const label=str(t.label,40)||id;
+      if(t.kind==="skill"){
+        const entries=(Array.isArray(t.entries)?t.entries:[]).filter(n=>GEN_SKILL_ABIL[n]).slice(0,18);
+        if(entries.length>=2)pack.tables.push({id,label,kind:"skill",entries});
+        return;}
+      const die=int(t.die,2,100,null);if(!die)return;
+      const entries=[];let ok=true,expect=1;
+      (Array.isArray(t.entries)?t.entries:[]).slice(0,13).forEach(e=>{
+        if(!ok||!e||typeof e!=="object"){ok=false;return;}
+        const lo=int(e.lo,1,die,null),hi=int(e.hi,1,die,null);
+        if(lo==null||hi==null||lo!==expect||hi<lo){ok=false;return;}
+        expect=hi+1;
+        const val=typeof e.value==="boolean"?e.value:str(e.value,24).replace(/[^a-z0-9-]/gi,"");
+        const ent={lo,hi,label:str(e.label,60)||String(val),value:val};
+        const fx=fxClean(e.fx);if(fx)ent.fx=fx;
+        if(e.sub&&typeof e.sub==="object"){
+          const sEntries=(Array.isArray(e.sub.entries)?e.sub.entries:[]).map(x=>str(x,40)).filter(Boolean).slice(0,24);
+          const sKind=e.sub.kind==="skill"||e.sub.kind==="cantrip"?e.sub.kind:undefined;
+          if(sEntries.length>=2)ent.sub={id:str(e.sub.id,24)||"sub",label:str(e.sub.label,40)||"Choice",
+            die:int(e.sub.die,2,100,sEntries.length),entries:sEntries,...(sKind?{kind:sKind}:{})};
+        }
+        entries.push(ent);});
+      if(ok&&expect===die+1&&entries.length)pack.tables.push({id,label,die,entries});
+    });
+    return pack;
+  }catch(e){return null;}
+}
+// Register the cfg's sanitized uploaded packs on the phone realm (shipped packs never shadowed).
+function crewApplySpecies(cfg){
+  if(!cfg||!cfg.species||typeof cfg.species!=="object")return;
+  Object.keys(cfg.species).slice(0,40).forEach(k=>{
+    const p=crewCleanSpeciesPack(k,cfg.species[k]);
+    if(p&&!GEN_SPECIES_SHIPPED.has(p.key))GEN_SPECIES[p.key]=p;
+  });
+}
 async function initCrewMode(id){
   CREW_MODE=true;
   document.body.classList.add("crew-mode");
@@ -2438,6 +2545,7 @@ async function initCrewMode(id){
   const node=await jbinReadBin(_crew.id);
   if(!node||node.kind!=="crew"||!node.cfg){crewMsg("This crew link is not active","Ask your DM for a fresh link, or check the connection and reload.");return;}
   _crew.node=node;
+  crewApplySpecies(node.cfg); // D-030: uploaded species packs, sanitized, phone-side
   // D-019: seed the reference stores from the share's sanitized refs so the card's spell and
   // condition links pop the same texts the DM sees. Crew mode never persists these.
   const refs=crewCleanRefs(node.refs);
@@ -2452,7 +2560,7 @@ async function initCrewMode(id){
       if(!document.querySelector("#gkR")&&!crewTyping())renderCrewScreen();}};
   const refreshCfg=async()=>{
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/cfg.json`);
-    if(r&&r.ok){try{const cfg=await r.json();if(cfg)_crew.node.cfg=cfg;}catch(e){}}};
+    if(r&&r.ok){try{const cfg=await r.json();if(cfg){_crew.node.cfg=cfg;crewApplySpecies(cfg);}}catch(e){}}};
   setInterval(refresh,12000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh();refreshCfg();}});
 }

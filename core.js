@@ -4,7 +4,7 @@
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
 "use strict";
-let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],species:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
 // Player mode (B204): index.html?share=<bin> boots a locked-down, read-only-then-editable view of a shared
 // combat — reusing the real tracker. PLAYER_MODE gates persistence/DM-only paths so the DM app is untouched.
 let PLAYER_MODE=false,PLAYER_BIN=null;
@@ -36,7 +36,7 @@ function readForgeDraft(){try{const d=localStorage.getItem("mf_forgedraft");retu
 // and conditions/glossary terms. Stored in localStorage only (never JSONBin / never
 // the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
 // in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
-const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",RULE_KEY="mf_rules",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta";
+const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",RULE_KEY="mf_rules",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta",SPECIES_KEY="mf_species";
 // Quota-aware writes: a failed setItem (device storage full) flips _storageFailed so the
 // upload flow can surface a single consolidated alert instead of silently dropping data.
 let _storageFailed=false;
@@ -72,7 +72,10 @@ function loadLegGroups(){try{state.legendaryGroups=JSON.parse(localStorage.getIt
 function saveLegGroups(){_store(LEGGRP_KEY,state.legendaryGroups);}
 function loadRefMeta(){try{state.refMeta=JSON.parse(localStorage.getItem(REFMETA_KEY))||{};}catch(e){state.refMeta={};}}
 function saveRefMeta(){_store(REFMETA_KEY,state.refMeta);}
-async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions(),loadRules()]);reannotateBooks();reapplyLegGroups();}
+async function loadSpecies(){try{state.species=await _loadIdbList("species",SPECIES_KEY);}catch(e){state.species=[];}}
+function saveSpecies(){idbSet("species",state.species);}
+async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions(),loadRules(),loadSpecies()]);reannotateBooks();reapplyLegGroups();
+  if(typeof genSyncSpecies==="function")genSyncSpecies();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
 function reannotateBooks(persist){const ann=x=>{const b=state.books[x._srcCode];x._book=b?b.name:"";x._group=b?b.group:"";};
@@ -93,16 +96,17 @@ function setLibEnabled(kind,source,on){const k=libKey(kind,source),i=state.disab
 // reads through these so a toggled-off library disappears from the app but stays on disk.
 function enPresets(){return state.presets.filter(m=>isLibEnabled("statblock",m._source||""));}
 function enSpells(){return state.spells.filter(s=>isLibEnabled("spell",s._source||""));}
+function enSpecies(){return state.species.filter(s=>isLibEnabled("species",s._source||""));}
 function enConditions(){return state.conditions.filter(c=>isLibEnabled("condition",c._source||""));}
 function enRules(){return state.rules.filter(r=>isLibEnabled("rule",r._source||""));}
 // every uploaded library across kinds, for the manage modal
 function presetLibraries(){const map={};
   const add=(arr,kind)=>arr.forEach(x=>{const n=x._source||"Uploaded",key=kind+LIBSEP+n,e=map[key]=map[key]||{name:n,kind,count:0,books:{},groups:{}};
     e.count++;if(x._book)e.books[x._book]=(e.books[x._book]||0)+1;if(x._group)e.groups[x._group]=(e.groups[x._group]||0)+1;});
-  add(state.presets,"statblock");add(state.spells,"spell");add(state.conditions,"condition");add(state.rules,"rule");
+  add(state.presets,"statblock");add(state.spells,"spell");add(state.conditions,"condition");add(state.rules,"rule");add(state.species,"species");
   const dom=o=>Object.keys(o).sort((a,b)=>o[b]-o[a])[0]||"";
   return Object.values(map).map(e=>({name:e.name,kind:e.kind,count:e.count,book:dom(e.books),group:dom(e.groups),enabled:isLibEnabled(e.kind,e.name)}));}
-const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions",rule:"Rules"};
+const KIND_LABEL={statblock:"Statblocks",spell:"Spells",condition:"Conditions",rule:"Rules",species:"Species"};
 
 // ── Firebase Realtime Database cloud storage (B243 — replaces JSONBin) ────────
 // JSONBin used a single hardcoded MASTER key baked into public source for every install to share — which
