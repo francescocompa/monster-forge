@@ -69,6 +69,10 @@ function renderSettings(){
         <button class="btn ghost sm danger" id="setClearCache" style="width:auto">Clear local cache</button>
       </div>
       <div class="set-note">JSONBin is the cloud store; a local mirror keeps you working offline. Cloud data is never deleted by “Clear local cache”.</div>
+    </div>
+    <div class="set-card">
+      <div class="set-head">Credits</div>
+      <div class="set-note">The crew generator's trinket table comes from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at <a href="https://www.dndbeyond.com/srd" target="_blank" rel="noopener">dndbeyond.com/srd</a>. The SRD 5.2 is licensed under the <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener">Creative Commons Attribution 4.0 International License</a>. Quirks, the extra trinkets and the species name profiles are original to Monster Forge.</div>
     </div>`;
   const dirty=isDirty();
   $("#setSync").innerHTML=`<span class="sync-dot ${cloudReady?(dirty?"warn":"ok"):"bad"}"></span>${cloudReady?(dirty?"Connected · unsynced local edits":"Connected · all changes synced"):"Offline · saved on this device"}`;

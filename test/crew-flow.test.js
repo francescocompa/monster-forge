@@ -73,18 +73,28 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     const clsTable=document.querySelector('.gk-step.gk-active[data-step="cls"] .gk-tbl');
     const clsRows=clsTable?clsTable.querySelectorAll(".gk-tr").length:0;
     ${ROLL_THROUGH}
-    const nm=document.getElementById("gkNm");
-    if(!nm)return {fail:"identity editor did not open"};
-    nm.value="Sgrizzo";
-    document.getElementById("gkQk").value="Conta i gradini";
-    document.querySelector('[data-gkapply="name"]').click();
+    // D-041: the rolls end the ritual; identity lives on the closing summary screen.
+    const next=document.getElementById("gkNext");
+    if(!next)return {fail:"the finished ritual did not offer Next"};
+    next.click();
+    const sum=document.querySelector(".gk-sum");
+    const nm=document.getElementById("gkId_name");
+    if(!sum||!nm)return {fail:"summary screen did not open"};
+    // the DM's name is rolled on arrival, never typed
+    const dmRolled=nm.value.trim();
+    document.querySelector('[data-gkidroll="quirk"]').click();
+    const quirk=document.getElementById("gkId_quirk").value;
+    const nm2=document.getElementById("gkId_name");
+    nm2.value="Sgrizzo";nm2.dispatchEvent(new window.Event("change"));
     const fin=document.getElementById("gkFinish");
-    return {sp,stats,clsRows,finish:!!fin};})()`);
+    return {sp,stats,clsRows,finish:!!fin&&!fin.disabled,dmRolled,quirk};})()`);
   assert.equal(ritual.fail, undefined);
   assert.ok(ritual.sp >= 1, "the species tables resolve before the scores (D-034)");
   assert.equal(ritual.stats, 6, "six individual ability rolls");
   assert.ok(ritual.clsRows >= 3, "class table shown before rolling (rows: " + ritual.clsRows + ")");
-  assert.ok(ritual.finish, "all steps resolved");
+  assert.ok(ritual.finish, "all steps resolved and the card is reachable");
+  assert.ok(ritual.dmRolled, "the DM's name is rolled on arrival, never typed (D-041)");
+  assert.ok(ritual.quirk, "the quirk rolls on the summary (D-042)");
 
   const saved = ev(`(()=>{
     document.getElementById("gkFinish").click();
@@ -198,6 +208,44 @@ test("result override (D-011): clicking a rolled class result reopens the table;
   assert.equal(r.skillsCleared, true, "class override cascades to dependents");
 });
 
+test("G1 (D-039): a finished ritual swaps Roll the rest for Reroll, and Reroll rolls a whole new character", async () => {
+  const r = ev(`(()=>{
+    const a=normalizeAdv({id:"gk-again-adv",name:"Again",encounters:[]});
+    state.adv.unshift(a);state.selAdv=a.id;
+    a.crew={sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]};
+    openGenRitualDM(a);
+    const openAll=!!document.getElementById("gkAll"),openAgain=!!document.getElementById("gkAgain");
+    document.getElementById("gkAll").click();               // Roll the rest
+    const doneAll=!!document.getElementById("gkAll"),doneAgain=!!document.getElementById("gkAgain");
+    // reach the summary and name it, so we can prove the name does not survive the reroll
+    document.getElementById("gkNext").click();
+    const nm=document.getElementById("gkId_name");
+    nm.value="Sgrizzo";nm.dispatchEvent(new window.Event("change"));
+    const before=JSON.stringify(_genR.draft.steps),beforeName=_genR.draft.steps.name.value;
+    document.getElementById("gkAgain").click();             // Reroll, from the summary
+    const d=_genR.draft;
+    const out={openAll,openAgain,doneAll,doneAgain,before,beforeName,
+               backOnSteps:!!document.getElementById("gkNext")&&!document.querySelector(".gk-sum"),
+               after:JSON.stringify(d.steps),
+               afterName:d.steps.name?d.steps.name.value:null,
+               cls:!!(d.steps.cls&&d.steps.cls.value),stats:!!(d.steps.stats&&d.steps.stats.value),
+               sameCfg:d.sp==="kobold"&&d.set.stat==="3d6"&&d.set.asi===true};
+    _genR=null;closeModal();
+    state.adv=state.adv.filter(x=>x.id!=="gk-again-adv");state.selAdv=null;
+    return out;})()`);
+  assert.equal(r.openAll, true, "an unfinished ritual offers Roll the rest");
+  assert.equal(r.openAgain, false, "…and not Reroll");
+  assert.equal(r.doneAll, false, "a finished ritual drops Roll the rest");
+  assert.equal(r.doneAgain, true, "…and offers Reroll in its place");
+  assert.equal(r.beforeName, "Sgrizzo");
+  assert.notEqual(r.after, r.before, "Reroll rolls every step again");
+  assert.equal(r.afterName, null, "typed identity does not survive a reroll — a new body, not the old name");
+  assert.equal(r.backOnSteps, true, "a reroll from the summary lands back on the rolls");
+  assert.equal(r.cls, true, "the fresh draft is rolled through, not left empty");
+  assert.equal(r.stats, true);
+  assert.equal(r.sameCfg, true, "the reroll keeps the crew's own settings");
+});
+
 test("crew mode (phone): claim → ritual → payload-only PUT to own subtree → card → reroll counts the death", async () => {
   const r = await evA(`(async()=>{
     const puts=[];
@@ -213,8 +261,11 @@ test("crew mode (phone): claim → ritual → payload-only PUT to own subtree �
     if(!document.getElementById("crewRollBtn"))return {fail:"roll button missing after claim"};
     document.getElementById("crewRollBtn").click();
     ${ROLL_THROUGH}
-    document.getElementById("gkNm").value="Sgrizzo";
-    document.querySelector('[data-gkapply="name"]').click();
+    // the player's own flow: Next → summary → the name is REQUIRED here (D-041)
+    document.getElementById("gkNext").click();
+    const pnm=document.getElementById("gkId_name");
+    const gatedEmpty=document.getElementById("gkFinish").disabled&&!pnm.value;
+    pnm.value="Sgrizzo";pnm.dispatchEvent(new window.Event("change"));
     document.getElementById("gkFinish").click();
     document.getElementById("gkSave").click();
     await new Promise(res=>setTimeout(res,10));
@@ -225,13 +276,14 @@ test("crew mode (phone): claim → ritual → payload-only PUT to own subtree �
     document.getElementById("crewDied").click();
     document.getElementById("cYes").click();
     ${ROLL_THROUGH}
-    document.getElementById("gkNm").value="Braciola";
-    document.querySelector('[data-gkapply="name"]').click();
+    document.getElementById("gkNext").click();
+    const pnm2=document.getElementById("gkId_name");
+    pnm2.value="Braciola";pnm2.dispatchEvent(new window.Event("change"));
     document.getElementById("gkFinish").click();
     document.getElementById("gkSave").click();
     await new Promise(res=>setTimeout(res,10));
     const rec2=_crew.node.crew.pidA;
-    return {putUrl:put1.url,recKeys:Object.keys(put1.body).sort(),
+    return {putUrl:put1.url,recKeys:Object.keys(put1.body).sort(),gatedEmpty,
       curV:put1.body.cur&&put1.body.cur.v,
       noDerived:put1.body.cur&&put1.body.cur.hp===undefined&&put1.body.cur.ac===undefined,
       deaths0:rec1.deaths,deaths1:rec2.deaths,name2:rec2.cur.steps.name.value,cardUp,died};})()`);
@@ -245,6 +297,7 @@ test("crew mode (phone): claim → ritual → payload-only PUT to own subtree �
   assert.equal(r.deaths0, 0);
   assert.equal(r.deaths1, 1);
   assert.equal(r.name2, "Braciola");
+  assert.equal(r.gatedEmpty, true, "a player's card is gated on a name they type themselves (D-041)");
 });
 
 // B286 / D-029: the phone tracks its own HP (reported to the DM as two clamped numbers) and keeps

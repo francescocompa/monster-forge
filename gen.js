@@ -741,6 +741,7 @@ function genNewDraft(cfg){
   const sp=GEN_SPECIES[cfg.sp]?cfg.sp:"kobold";
   return {v:2,sp,spRitual:cfg.spMode==="ritual", // D-031: species rides the ritual when the crew says so
           boons:cfg.boons!==false,               // D-035: optional species boon tables, crew setting
+          boonOff:genCleanBoonOff(cfg.boonOff),   // D-043: and individual boons the crew switched off
           set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
                       asi:!(cfg.set&&cfg.set.asi===false),
@@ -787,6 +788,42 @@ function genSpTablesOf(d){
   const t=(GEN_SPECIES[d.sp]&&GEN_SPECIES[d.sp].tables)||[];
   return d.boons===false?t.filter(x=>!x.boon):t;
 }
+// The crew-settings list of individual boons (D-043). Only packs that actually ship a boon table
+// have anything here — today that is the kobold — so the list is absent for everyone else rather
+// than showing an empty box.
+function genBoonListHTML(a){
+  const keys=a.crew.spMode==="ritual"?Object.keys(GEN_SPECIES):[a.crew.sp];
+  const off=genCleanBoonOff(a.crew.boonOff);
+  const rows=keys.flatMap(k=>genBoonEntries(k).map(e=>({k,e})));
+  if(!rows.length)return "";
+  const seen=new Set();
+  return `<div class="gk-boonlist">${rows.filter(({e})=>{
+    const v=String(e.value);if(seen.has(v))return false;seen.add(v);return true;}).map(({k,e})=>{
+    const v=String(e.value);
+    return `<label class="gk-boonrow"><input type="checkbox" data-crewboon="${esc(v)}"${off.includes(v)?"":" checked"}>
+      <span>${esc(e.label)}</span>${keys.length>1?`<span class="gk-dim">${esc(GEN_SPECIES[k].label)}</span>`:""}</label>`;
+  }).join("")}</div>`;
+}
+// G4 (D-043): boons can also be switched off ONE AT A TIME. The crew keeps a list of the boon
+// values it has disabled; a disabled boon leaves the option table and, if the die lands on its
+// face, resolves to the table's own no-boon entry — the die stays honest, that result is just off
+// the menu. Tolerant by design (D-035): an unknown id in the list is simply ignored.
+function genBoonOff(d){return Array.isArray(d.boonOff)?d.boonOff:[];}
+// The list arrives from a world-writable share, so it is rebuilt rather than trusted (D-007).
+function genCleanBoonOff(v){
+  if(!Array.isArray(v))return [];
+  return [...new Set(v.filter(x=>typeof x==="string"||typeof x==="number").map(x=>String(x).slice(0,40)))].slice(0,40);
+}
+function genBoonEntries(sp){
+  const t=((GEN_SPECIES[sp]&&GEN_SPECIES[sp].tables)||[]).filter(x=>x.boon);
+  return t.flatMap(x=>x.entries.filter(e=>e.value!==false&&e.value!=null).map(e=>({...e,tid:x.id})));
+}
+function genBoonNone(t){const e=t.entries.find(x=>x.value===false);return e||t.entries[0];}
+// The entry a roll resolves to, once the crew's disabled boons are taken out.
+function genSpEntryFor(d,t,e){
+  if(!t.boon||!e||e.value===false)return e;
+  return genBoonOff(d).includes(String(e.value))?genBoonNone(t):e;
+}
 // D-034: steps run grouped by macro category, so every micro choice a category owns resolves
 // with it — species and everything the species decides, then scores, class, origin feats, class
 // training, magic, gear, identity. (Dependencies still constrain the order inside the groups:
@@ -811,7 +848,10 @@ function genStepOrder(d){
     ids.push("equip"); // gear group: the kit sits with the pack and the sundries
   }
   ids.push("gearPack","sundries");
-  return ids.concat(["name"]);
+  // Identity is NOT a step any more (D-041): the ritual ends on the rolls, and name/quirk/trinket
+  // are filled on the closing summary screen. genCompletePayload still requires the name, so the
+  // summary is what gates the card.
+  return ids;
 }
 function genSpTable(sp,id){return (GEN_SPECIES[sp].tables||[]).find(t=>t.id===id)||null;}
 // Hooks of the currently-resolved class feature option (invocation etc.); {} when none.
@@ -856,6 +896,199 @@ function genKitIdxFor(K,featVal){
 // packages hand over their leftover. Class-mandatory gear (spellbook, holy symbol, spellcasting
 // focus) is NOT counted: at 55 GP a wizard's own spellbook would eat the entire budget.
 // An unpriced item costs 0 — the safe direction, since it can never make a legal roll unaffordable.
+// ── Identity content (D-042) ────────────────────────────────────────────────────────────────
+// TRINKETS: the d100 table from the System Reference Document 5.2, used VERBATIM under CC-BY-4.0.
+// The licence requires attribution; it lives in README.md and in the app's settings credits line.
+// Do not drop either, and do not edit these hundred rows — an edited row is no longer the SRD's.
+// Transcribed from the SRD 5.2 text and cross-checked row-for-row against the local 5etools copy
+// of the same table (the 2024 wording differs from the 2014 printing in about a third of the rows).
+const GEN_TRINKETS=[
+  "A mummified goblin hand","A crystal that faintly glows in moonlight","A gold coin minted in an unknown land",
+  "A diary written in a language you don't know","A brass ring that never tarnishes","An old chess piece made from glass",
+  "A pair of knucklebone dice, each with a skull symbol on the side that would normally show six pips",
+  "A small idol depicting a nightmarish creature that gives you unsettling dreams when you sleep near it",
+  "A lock of someone's hair","The deed for a parcel of land in a realm unknown to you",
+  "A 1-ounce block made from an unknown material","A small cloth doll skewered with needles",
+  "A tooth from an unknown beast","An enormous scale, perhaps from a dragon","A bright-green feather",
+  "An old divination card bearing your likeness","A glass orb filled with moving smoke",
+  "A 1-pound egg with a bright-red shell","A pipe that blows bubbles",
+  "A glass jar containing a bit of flesh floating in pickling fluid",
+  "A gnome-crafted music box that plays a song you dimly remember from your childhood",
+  "A wooden statuette of a smug halfling","A brass orb etched with strange runes","A multicolored stone disk",
+  "A silver icon of a raven","A bag containing forty-seven teeth, one of which is rotten",
+  "A shard of obsidian that always feels warm to the touch","A dragon's talon strung on a leather necklace",
+  "A pair of old socks","A blank book whose pages refuse to hold ink, chalk, graphite, or any other marking",
+  "A silver badge that is a five-pointed star","A knife that belonged to a relative",
+  "A glass vial filled with nail clippings",
+  "A rectangular metal device with two tiny metal cups on one end that throws sparks when wet",
+  "A white, sequined glove sized for a human","A vest with one hundred tiny pockets","A weightless stone",
+  "A sketch of a goblin","An empty glass vial that smells of perfume",
+  "A gemstone that looks like a lump of coal when examined by anyone but you",
+  "A scrap of cloth from an old banner","A rank insignia from a lost legionnaire","A silver bell without a clapper",
+  "A mechanical canary inside a lamp","A miniature chest carved to look like it has numerous feet on the bottom",
+  "A dead sprite inside a clear glass bottle",
+  "A metal can that has no opening but sounds as if it is filled with liquid, sand, spiders, or broken glass (your choice)",
+  "A glass orb filled with water, in which swims a clockwork goldfish",
+  "A silver spoon with an M engraved on the handle","A whistle made from gold-colored wood",
+  "A dead scarab beetle the size of your hand","Two toy soldiers, one missing a head",
+  "A small box filled with different-sized buttons","A candle that can't be lit","A miniature cage with no door",
+  "An old key","An indecipherable treasure map","A hilt from a broken sword","A rabbit's foot","A glass eye",
+  "A cameo of a hideous person","A silver skull the size of a coin","An alabaster mask",
+  "A cone of sticky black incense that stinks","A nightcap that gives you pleasant dreams when you wear it",
+  "A single caltrop made from bone","A gold monocle frame without the lens",
+  "A 1-inch cube, each side a different color","A crystal doorknob","A packet filled with pink dust",
+  "A fragment of a beautiful song, written as musical notes on two pieces of parchment",
+  "A silver teardrop earring containing a real teardrop",
+  "An eggshell painted with scenes of misery in disturbing detail",
+  "A fan that, when unfolded, shows a sleepy cat","A set of bone pipes",
+  "A four-leaf clover pressed inside a book discussing manners and etiquette",
+  "A sheet of parchment upon which is drawn a mechanical contraption",
+  "An ornate scabbard that fits no blade you have found","An invitation to a party where a murder happened",
+  "A bronze pentacle with an etching of a rat's head in its center",
+  "A purple handkerchief embroidered with the name of an archmage",
+  "Half a floor plan for a temple, a castle, or another structure",
+  "A bit of folded cloth that, when unfolded, turns into a stylish cap",
+  "A receipt of deposit at a bank in a far-off city","A diary with seven missing pages",
+  "An empty silver snuffbox bearing the inscription \"dreams\" on its lid",
+  "An iron holy symbol devoted to an unknown god",
+  "A book about a legendary hero's rise and fall, with the last chapter missing","A vial of dragon blood",
+  "An ancient arrow of elven design","A needle that never bends","An ornate brooch of dwarven design",
+  "An empty wine bottle bearing a pretty label that says, \"The Wizard of Wines Winery, Red Dragon Crush, 331422-W\"",
+  "A mosaic tile with a multicolored, glazed surface","A petrified mouse",
+  "A black pirate flag adorned with a dragon's skull and crossbones",
+  "A tiny mechanical crab or spider that moves about when it's not being observed",
+  "A glass jar containing lard with a label that reads, \"Griffon Grease\"",
+  "A wooden box with a ceramic bottom that holds a living worm with a head on each end of its body",
+  "A metal urn containing the ashes of a hero"];
+// Our own extras (D-042), written for the crew's world: short lives, borrowed gear, previous owners.
+// Rolled from the same step behind the second tab — never merged into the SRD hundred.
+const GEN_TRINKETS_X=[
+  "A ration tin with the previous owner's name scratched out",
+  "A key that fits a door two dungeons back","A tooth on a string, drilled by hand",
+  "A cracked whistle that only dogs answer","A pouch of teeth that are not yours",
+  "A folded map of a room you have never entered","A cheap ring worn smooth by nervous hands",
+  "A finger bone marked with three notches","A helmet liner too big for your head",
+  "A letter of introduction addressed to nobody","A candle stub burned at both ends",
+  "A shard of mirror wrapped in cloth","A collar with the tag filed off",
+  "A wooden charm carved by someone who died first","A jar of grave dirt, labelled in a careful hand",
+  "A knucklebone die that has never rolled a one","A note promising one favor, signed with a claw mark",
+  "A boot worn through at the sole, kept for luck","A dented flask that still smells of something strong",
+  "A scrap of banner from a company that no longer exists"];
+// QUIRKS (D-042): a mix of original entries and well-worn table staples rewritten in our own words.
+// One short behaviour each, playable at the table, no mechanics.
+const GEN_QUIRKS=[
+  "Counts everything out loud, badly","Names every weapon it picks up",
+  "Refuses to walk through a door someone else opened","Repeats the last word anyone says",
+  "Keeps a tally of debts owed to it, on its arm","Sleeps standing up","Won't eat anything with a face",
+  "Eats anything with a face, first","Apologizes to doors before forcing them",
+  "Whistles when nervous, which is often","Collects buttons off the dead",
+  "Talks to its shadow when it thinks nobody is listening","Never sits with its back to a room",
+  "Salutes anyone taller","Believes it is invisible when it holds still",
+  "Insists on going last, out of manners","Insists on going first, out of pride",
+  "Cracks its knuckles before lying","Hums the same six notes constantly",
+  "Refuses to say its own name aloud","Rewords every order it is given, then follows it",
+  "Keeps score of who has saved whom","Won't touch gold with bare hands","Licks unfamiliar objects",
+  "Flinches at loud noises, then pretends it didn't","Sharpens a blade that is already sharp",
+  "Sleeps with one boot on","Argues with corpses","Bows before attacking",
+  "Keeps a running list of things that nearly killed it","Distrusts anything that floats",
+  "Always takes the smallest portion, loudly","Steals salt","Narrates its own actions in the third person",
+  "Refuses to cross running water without asking permission","Blames the nearest object when it trips",
+  "Keeps stones in its pockets to feel heavier","Wears a talisman it knows is fake",
+  "Tries to bargain with anything that talks","Won't be the one to open a chest",
+  "Insists on opening every chest","Whispers when discussing money",
+  "Draws maps that nobody else can read","Marks every room it has survived",
+  "Feeds the first bite of every meal to the floor","Speaks to animals as equals, and waits for answers",
+  "Snores loudly enough to be a tactical problem","Fusses over the party's gear before its own",
+  "Keeps its teeth extremely clean","Refuses to be thanked","Names the dead out loud each morning",
+  "Won't step on cracks, in dungeons or out","Trusts anyone who feeds it",
+  "Wears trophies from fights it lost","Practices its last words","Hoards candle stubs",
+  "Corrects other people's grammar mid-fight","Believes it is the reincarnation of something great",
+  "Rubs a lucky scar before every risk","Will not lie, but omits generously",
+  "Answers questions with questions","Keeps its hood up indoors","Sings while it works, badly and constantly",
+  "Cannot resist a bet","Counts the party every few minutes","Wraps its hands before a fight, ritually",
+  "Refuses to sleep in a bed","Divides all loot into equal piles, obsessively",
+  "Won't fight anything smaller than itself","Keeps its old shackle as a bracelet",
+  "Says grace over fallen enemies","Learns everyone's name and uses it constantly",
+  "Never learns a name, uses job titles instead","Tastes the air before entering a room",
+  "Keeps a pebble for each friend still living","Hates being touched on the shoulder",
+  "Volunteers for everything first, then regrets it","Talks about itself in the plural",
+  "Assumes every stranger is an old acquaintance","Won't part with a broken weapon",
+  "Insists the walls are listening","Puts its gear in the same order every night",
+  "Keeps a small mirror and checks it often","Refuses to be carried, ever",
+  "Bites its cloak when concentrating","Claims to be allergic to magic","Sneezes near gold",
+  "Buries what it cannot carry, and remembers where","Calls every big creature sir",
+  "Repeats instructions back word for word","Trades away useful things for shiny ones",
+  "Keeps a jar of dirt from each floor of a dungeon",
+  "Insists on carrying the light, then walks too fast","Freezes solid at the sight of a rat",
+  "Tells the same story every night, differently each time","Won't wear anything red","Only wears red",
+  "Adopts anything small that survives","Swears elaborate oaths over trivial things",
+  "Keeps a written will, updated weekly"];
+// NAMES (D-042): built, never copied. A pack carries a sound profile (`names`) and genRollName
+// assembles a name from it, so the pool is infinite and nothing is transcribed from a rulebook.
+// A species with no profile of its own (every uploaded pack) borrows this one.
+const GEN_NAME_FALLBACK={
+  pre:["Ar","Bel","Cor","Dain","El","Fen","Gar","Hal","Kel","Mar","Nor","Ral","Sel","Tor","Vel"],
+  mid:["a","e","i","o","u"],
+  suf:["n","r","th","l","s","k","dor","wen","mir","ric"]};
+// One profile per shipped pack. A pack may carry its own `names` instead (that wins); anything with
+// neither — every uploaded species — falls back above, so no species is ever left without names.
+const GEN_NAME_PROFILES={
+  kobold:{pre:["Snik","Krib","Vex","Grik","Taz","Yip","Rek","Skit","Nub","Zik","Chak","Durt","Gnash","Mek","Rax","Sput","Klik","Vorp"],
+          mid:["a","i","u","ka","ri"],suf:["k","x","tch","zz","rk","nak","rit","sk","p","nix"]},
+  aasimar:{pre:["Ari","Cael","Eli","Ith","Lum","Nara","Ori","Sera","Thae","Val"],
+           mid:["a","e","i","el"],suf:["ael","riel","thos","mira","dan","seth","lia","nor","vion"]},
+  dragonborn:{pre:["Arjh","Bhar","Dhaz","Ghesh","Kriv","Med","Nagh","Pand","Rhog","Sham","Thur","Zar"],
+              mid:["a","o","ra","ka"],suf:["ash","kar","rax","thar","ndra","zil","vash","kir","rios"]},
+  dwarf:{pre:["Bar","Dur","Grum","Thra","Har","Mor","Bal","Kaz","Vond","Ordn","Fal","Gim"],
+         mid:["a","o","u","ur"],suf:["din","rik","grim","bek","dur","nar","muth","kar","li","gar"]},
+  elf:{pre:["Ae","Ily","Thal","Ny","Sae","Elu","Cael","Ari","Fael","Miri","Sol","Va"],
+       mid:["la","ri","the","na","el"],suf:["nor","wen","riel","dris","thas","mir","lian","ath","ynn"]},
+  gnome:{pre:["Fizz","Bim","Wren","Nack","Zook","Pim","Dab","Griz","Quil","Snor"],
+         mid:["a","i","o","el"],suf:["wick","bles","dink","nap","tock","fizzle","bit","gle","zin"]},
+  goliath:{pre:["Kav","Thul","Gar","Ura","Bur","Nal","Ka","Vand","Orn","Zar"],
+           mid:["a","u","o","ak"],suf:["aka","thul","ruk","gan","mak","dor","nak","vok","tha"]},
+  halfling:{pre:["Bil","Mer","Rosc","Tan","Pip","Dob","Wil","Hild","Cor","Nim"],
+            mid:["a","o","er"],suf:["by","ric","ock","wise","bell","fin","dle","kin","row"]},
+  human:{pre:["Aldr","Ber","Cas","Dor","Elm","Gart","Hen","Ives","Jor","Kest","Lor","Mira","Ren","Sabe","Tor"],
+         mid:["a","e","i","o"],suf:["ic","na","ran","wyn","don","sel","ther","mund","va","lin"]},
+  orc:{pre:["Gru","Thok","Mur","Zag","Bruk","Kor","Ur","Sha","Vrak","Ghar"],
+       mid:["a","u","og"],suf:["mak","gash","thak","nar","zug","rok","dul","gar","ka"]},
+  tiefling:{pre:["Ak","Bael","Cim","Dam","Eis","Kal","Mor","Nem","Ronw","Zar"],
+            mid:["a","e","i","ae"],suf:["mon","zael","reth","ixis","thys","vane","noch","kar","ess"]}};
+function genNameProfile(sp){
+  const pack=GEN_SPECIES[sp];
+  const p=(pack&&pack.names)||GEN_NAME_PROFILES[sp]||GEN_NAME_FALLBACK;
+  return p&&Array.isArray(p.pre)&&p.pre.length&&Array.isArray(p.suf)&&p.suf.length?p:GEN_NAME_FALLBACK;
+}
+// A name is assembled, not drawn from a list — so it never runs out and nothing is transcribed.
+// The middle piece lands about half the time, which is what makes the same profile give both
+// "Snikk" and "Snikarit".
+function genRollName(sp,rng){
+  rng=rng||Math.random;
+  const p=genNameProfile(sp),pick=a=>a[Math.floor(rng()*a.length)%a.length];
+  const mid=Array.isArray(p.mid)&&p.mid.length&&rng()<0.45?pick(p.mid):"";
+  let n=(pick(p.pre)+mid+pick(p.suf)).replace(/(.)\1{2,}/g,"$1$1");
+  n=n.charAt(0).toUpperCase()+n.slice(1);
+  return n.slice(0,28);
+}
+// The trinket step rolls on one of two tables (D-042), chosen by a toggle that rides the DRAFT only
+// — never the wire, exactly like the D-024 spell tabs.
+function genTrinketTab(d){return d.trinketTab==="forge"?"forge":"srd";}
+function genIdList(d,id){
+  if(id==="quirk")return GEN_QUIRKS;
+  return genTrinketTab(d)==="forge"?GEN_TRINKETS_X:GEN_TRINKETS;
+}
+// Identity rolls (D-041/D-042). Name is generated; quirk and trinket roll a real die on a real
+// table. All three still land on the draft as ordinary picked values, so the wire is unchanged.
+function genRollIdentity(d,id,rng){
+  rng=rng||Math.random;
+  if(id==="name"){d.steps.name={rolls:[],pick:true,value:genRollName(d.sp,rng)};return d.steps.name;}
+  if(id!=="quirk"&&id!=="trinket")return null;
+  const list=genIdList(d,id),die=genDieFor(list.length);
+  const r=genRollTable(rng,die,list.length,null);
+  d.steps[id]={rolls:[r],value:list[r-1],die};
+  return d.steps[id];
+}
 function genGoldPlus(v){const n=Number(v);return Number.isFinite(n)&&n>0?Math.min(Math.round(n),100000):0;}
 function genGP(n){return Math.round(n*100)/100;}
 function genGoldOn(d){return !!(d.set&&d.set.gold);}
@@ -1136,7 +1369,8 @@ function genRollStep(d,id,rng){
       const r=genRollTable(rng,die,t.entries.length,taken.size<t.entries.length?taken:null);
       d.steps[id]={rolls:[r],value:t.entries[r-1],die};
     }else{
-      const r=genRollDie(rng,t.die);const e=t.entries.find(x=>r>=x.lo&&r<=x.hi);
+      const r=genRollDie(rng,t.die);
+      const e=genSpEntryFor(d,t,t.entries.find(x=>r>=x.lo&&r<=x.hi));
       const rec={rolls:[r],value:e.value,die:t.die};
       d.steps[id]=rec;
       if(e.sub)genRollSub(d,id,rng);
@@ -1323,6 +1557,7 @@ function genApplyPick(d,id,value){
       if(!t.entries.includes(value))return false;
       d.steps[id]={rolls:[],pick:true,value};return true;}
     const e=t.entries.find(x=>x.value===value||x.label===value||String(x.value)===String(value));if(!e)return false;
+    if(t.boon&&e.value!==false&&genBoonOff(d).includes(String(e.value)))return false; // D-043: switched off
     const rec={rolls:[],pick:true,value:e.value};
     if(e.sub)rec.sub=null;
     d.steps[id]=rec;
@@ -1387,7 +1622,7 @@ function genRollAll(d,rng){
   let guard=0;
   while(guard++<60){
     const order=genStepOrder(d); // the order grows as cls/feature resolve
-    const open=order.find(id=>id!=="name"&&!genStepDone(d,id));
+    const open=order.find(id=>!genStepDone(d,id));
     if(!open)break;
     if(open==="stats"&&d.steps.stats&&!d.steps.stats.pick){genRollStep(d,"stats",rng);continue;}
     if(d.steps[open]&&d.steps[open].value!=null&&!genStepDone(d,open)){genRollSub(d,open,rng);continue;}
@@ -1410,6 +1645,7 @@ function validateGenPayload(raw,cfg){
     if(!raw||raw.v!==2||typeof raw!=="object")return {ok:false,err:"shape"};
     const sp=GEN_SPECIES[raw.sp]?raw.sp:null;if(!sp)return {ok:false,err:"species"};
     const cfgGold=cfg?!!cfg.gold:!!(raw.set&&raw.set.gold);
+    const cfgBoonOff=genCleanBoonOff(cfg?cfg.boonOff:(raw.set&&raw.set.boonOff));
     const cfgGoldPlus=genGoldPlus(cfg?cfg.goldPlus:(raw.set&&raw.set.goldPlus));
     const set={stat:raw.set&&raw.set.stat==="4d6"?"4d6":"3d6",
                mode:raw.set&&raw.set.mode==="chaos"?"chaos":"plausible",
@@ -1535,8 +1771,11 @@ function validateGenPayload(raw,cfg){
       if(t.kind==="skill"){
         if(!t.entries.includes(rec.value)){if(t.boon)continue;return {ok:false,err:key};}
         out[key]={rolls:[],pick:!!rec.pick,value:rec.value};continue;}
-      const e=t.entries.find(x=>x.value===rec.value);
+      let e=t.entries.find(x=>x.value===rec.value);
       if(!e){if(t.boon)continue;return {ok:false,err:key};}
+      // G4 (D-043): the DM's disabled-boon list is the authority. A phone on a stale cfg does not
+      // get its character rejected over it — the boon is simply dropped to the no-boon entry.
+      if(t.boon&&cfgBoonOff.includes(String(e.value)))e=genBoonNone(t);
       const o={rolls:Array.isArray(rec.rolls)?rec.rolls.slice(0,1).map(x=>intIn(x,1,t.die)||e.lo):[],pick:!!rec.pick,value:e.value};
       if(e.sub){const sub=rec.sub||{};if(!e.sub.entries.includes(sub.value))return {ok:false,err:key+".sub"};
         o.sub={rolls:[],pick:!!sub.pick,value:sub.value};}
@@ -2133,9 +2372,10 @@ function openGenCard(a,payload,o){
 
 // ═══════════════════════════════════════════════════════════════════════════
 // THE RITUAL — one step at a time; the option table shows before the roll; any result is clickable
-// to override (D-011). Identity is typed. A "Roll the rest" fast-path fills everything but the name.
+// to override (D-011). Identity is typed. A "Roll the rest" fast-path fills everything but the name,
+// and on a finished ritual that same button becomes a full Reroll (G1, D-039).
 // ═══════════════════════════════════════════════════════════════════════════
-let _genR=null; // {mode, pn, editing, draft, done, more:{}}
+let _genR=null; // {mode, pn, editing, draft, ctx (the draft config, for Reroll), done, more:{}}
 // Font Awesome gear (free solid) — the crew-settings button in the roster header (D-021).
 const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
 // D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
@@ -2155,7 +2395,6 @@ function genStepLabel(d,id){
   if(id==="gearPack")return "Pack";
   if(id==="sundries")return "Sundries";
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));return t?t.label:id;}
-  if(id==="name")return "Identity";
   return id;
 }
 function genStepInfo(d,id){
@@ -2191,7 +2430,6 @@ function genStepInfo(d,id){
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return "";
     if(t.kind==="skill")return `${genDieLabel(t.entries.length)} over the listed skills; skills already owned reroll.`;
     return `d${t.die} on the ${t.label} table.`;}
-  if(id==="name")return "Typed, never rolled. The name is required; quirk and trinket are optional.";
   return "";
 }
 // The option table for a step, when one exists: [{span, label, value, hit}]
@@ -2251,7 +2489,9 @@ function genStepTable(d,id){
     if(t.kind==="skill"){const die=t.die||genDieFor(t.entries.length);
       return {die,note:die>t.entries.length?"reroll over "+t.entries.length:"",
         rows:t.entries.map((n,i)=>({span:String(i+1),label:n,value:n,hit:s&&s.value===n}))};}
-    return {die:t.die,rows:t.entries.map(e=>({span:e.lo===e.hi?String(e.lo):e.lo+"-"+e.hi,label:e.label,value:e.value,hit:s&&s.value===e.value}))};}
+    const off=t.boon?genBoonOff(d):[];
+    return {die:t.die,rows:t.entries.filter(e=>e.value===false||!off.includes(String(e.value)))
+      .map(e=>({span:e.lo===e.hi?String(e.lo):e.lo+"-"+e.hi,label:e.label,value:e.value,hit:s&&s.value===e.value}))};}
   return null;
 }
 function genDiceChips(s){
@@ -2299,8 +2539,6 @@ function genStepValueHTML(d,id){
     let h=`<b data-gkedit="${id}">${esc(e?e.label:String(s.value))}</b> ${genDiceChips(s)}`;
     if(e&&e.sub)h+=s.sub&&s.sub.value!=null?` → <span class="gk-chip2" data-gksubedit="${id}" title="Change">${esc(String(s.sub.value))}</span> ${genDiceChips(s.sub)}`:` <span class="gk-warn">${esc(e.sub.label)} pending</span>`;
     return h;}
-  if(id==="name"){const extras=["quirk","trinket"].filter(k=>d.steps[k]&&d.steps[k].value).length;
-    return `<b data-gkedit="name">${esc(String(s.value))}</b>${extras?` <span class="gk-dim">notes: ${extras}/2</span>`:""}`;}
   return `<b data-gkedit="${id}">${esc(String(s.value))}</b> ${genDiceChips(s)}`;
 }
 // D-017: ritual dropdown rows carry their table number (pass `numbered`) so physical dice can
@@ -2324,13 +2562,6 @@ function genEditorHTML(d,id){
   if(id==="sundries")return genSel("gkSu_0",GEN_SUNDRIES_A,s&&s.value&&s.value[0]||GEN_SUNDRIES_A[0],null,true)
     +genSel("gkSu_1",GEN_SUNDRIES_B,s&&s.value&&s.value[1]||GEN_SUNDRIES_B[0],null,true)
     +`<button class="btn primary sm gk-apply" data-gkapply="sundries">Apply</button>`;
-  if(id==="name"){
-    const v=k=>d.steps[k]&&d.steps[k].value?esc(d.steps[k].value):"";
-    return `<input type="text" id="gkNm" class="popinput gk-nm" maxlength="28" placeholder="Name (required)" value="${s?esc(s.value):""}">
-      <input type="text" id="gkQk" class="popinput gk-idf" maxlength="90" placeholder="Quirk (optional)" value="${v("quirk")}">
-      <input type="text" id="gkTk" class="popinput gk-idf" maxlength="90" placeholder="Trinket (optional)" value="${v("trinket")}">
-      <button class="btn primary sm gk-apply" data-gkapply="name">Done</button>`;
-  }
   return "";
 }
 function genSubEditorHTML(d,id){
@@ -2361,7 +2592,7 @@ function genStatsRowsHTML(d,editing){
   return `<div class="gk-ab6">${GEN_ABILS.map((a,i)=>{
     const rolled=s&&s.value&&s.value[i]!=null&&(s.pick||i<n);
     const next=s?(!s.pick&&n===i):i===0; // one walking Roll button, STR first
-    return `<div class="gk-ab${next?" gk-ab-next":""}">
+    return `<div class="gk-ab cc-ab-${a}${next?" gk-ab-next":""}">
       <span class="gk-ab-k">${a.toUpperCase()}</span>
       ${rolled?`<input class="gk-ab-in" type="number" min="3" max="20" data-gkstat="${i}" value="${s.value[i]}"${complete?"":" disabled"} aria-label="${GEN_ABIL_LABEL[a]} score">`
         :next?`<button class="btn primary sm gk-ab-roll" data-gkroll="stats" aria-label="Roll ${GEN_ABIL_LABEL[a]}">${D20_ICON}<span>Roll</span></button>`
@@ -2395,8 +2626,114 @@ function genTabStripHTML(d,id){
   return `<div class="gk-tabstrip">${tabs.map((t,i)=>`<span class="gk-tabslot"><span class="gk-dim">Roll ${i+1}</span>
     <button class="gk-tab${t==="dmg"?" gk-tab-on":""}" data-gktab="${id}:${i}:dmg">Damaging</button><button class="gk-tab${t==="all"?" gk-tab-on":""}" data-gktab="${id}:${i}:all">All</button></span>`).join("")}</div>`;
 }
+// ── The closing summary (D-041) ──────────────────────────────────────────────────────────────
+// Identity left the step list: the ritual ends on the rolls, then this screen recaps the headline
+// facts beside the three identity fields. Name, quirk and trinket each roll on their own (D-042).
+// The DM never types a name — theirs is rolled on arrival; a player's is required before the card.
+function genSummaryScores(d){
+  const base=(d.steps.stats&&d.steps.stats.value)||[];
+  const out=GEN_ABILS.map((a,i)=>({a,v:Number(base[i])||10}));
+  if(d.set.asi&&d.steps.asi&&Array.isArray(d.steps.asi.value)){
+    const [big,small]=d.steps.asi.value;
+    out.forEach(x=>{if(x.a===big)x.v=Math.min(20,x.v+2);if(x.a===small)x.v=Math.min(20,x.v+1);});
+  }
+  return out.map(x=>({...x,m:Math.floor((x.v-10)/2)}));
+}
+function genSummaryFactsHTML(d){
+  const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null;
+  const kit=K&&d.steps.equip?K.kits[d.steps.equip.value]:null;
+  const rows=[["Species",GEN_SPECIES[d.sp]?GEN_SPECIES[d.sp].label:d.sp],["Class",cls||""]];
+  return `<div class="gk-step gk-sum-facts">
+    <div class="gk-sum-rows">${rows.map(([k,v])=>`<div class="gk-sum-row">
+      <span class="gk-sum-k">${esc(k)}</span><span class="gk-sum-v">${esc(v)}</span></div>`).join("")}</div>
+    <div class="gk-ab6 gk-ab6-sum">${genSummaryScores(d).map(x=>`<div class="gk-ab cc-ab-${x.a}">
+      <span class="gk-ab-k">${x.a.toUpperCase()}</span><span class="gk-ab-s">${x.v}</span>
+      <span class="gk-ab-m">${sgn(x.m)}</span></div>`).join("")}</div>
+    ${kit?`<div class="gk-sum-gear"><b>${esc(kit.n)}</b> <span class="gk-dim">${esc(kit.gear)}</span></div>`:""}
+  </div>`;
+}
+function genIdFieldHTML(d,id,label,ph){
+  const v=d.steps[id]&&d.steps[id].value?String(d.steps[id].value):"";
+  return `<div class="gk-idrow">
+    <div class="gk-step-h"><span class="gk-step-l">${esc(label)}</span>
+      <span class="gk-step-acts"><button class="gk-roll-ico" data-gkidroll="${id}" title="Roll ${esc(label.toLowerCase())}" aria-label="Roll ${esc(label.toLowerCase())}">${D20_ICON}</button></span></div>
+    <input type="text" class="popinput gk-idf" id="gkId_${id}" maxlength="${id==="name"?28:90}"
+      placeholder="${esc(ph)}" value="${esc(v)}" aria-label="${esc(label)}"${v?` title="${esc(v)}"`:""}>
+  </div>`;
+}
+function renderGenSummary(){
+  const R=_genR;if(!R)return;
+  const d=R.draft,host=$("#gkR");if(!host)return;
+  // The DM's name is rolled, never typed (D-041) — roll it once, on arrival.
+  if(R.mode==="dm"&&!(d.steps.name&&d.steps.name.value))genRollIdentity(d,"name");
+  const named=!!(d.steps.name&&String(d.steps.name.value||"").trim());
+  const tab=genTrinketTab(d);
+  host.innerHTML=`<div class="gk-sum">
+      ${genSummaryFactsHTML(d)}
+      <div class="gk-step gk-active gk-sum-id">
+        ${genIdFieldHTML(d,"name","Name","Type or roll a name")}
+        ${genIdFieldHTML(d,"quirk","Quirk","Optional")}
+        ${genIdFieldHTML(d,"trinket","Trinket","Optional")}
+        <div class="gk-tabstrip gk-tabstrip-id">
+          <button class="gk-tab${tab==="srd"?" gk-tab-on":""}" data-gkidtab="srd">Classic</button>
+          <button class="gk-tab${tab==="forge"?" gk-tab-on":""}" data-gkidtab="forge">Ours</button>
+        </div>
+      </div>
+    </div>
+    <div class="mrow gk-foot">
+      <button class="btn ghost sm" id="gkBackSteps" style="width:auto">Back</button>
+      <button class="btn ghost sm gk-allbtn" id="gkAgain" style="width:auto">${D20_ICON}<span>Reroll</span></button>
+      <button class="btn primary sm" id="gkFinish" style="width:auto"${named?"":" disabled"}>View the card</button>
+    </div>`;
+  bindGenSummary();
+}
+function bindGenSummary(){
+  const R=_genR,d=R.draft,host=$("#gkR");
+  host.querySelectorAll("[data-gkidroll]").forEach(b=>b.addEventListener("click",()=>{
+    const id=b.dataset.gkidroll,rec=genRollIdentity(d,id);
+    if(rec&&rec.rolls&&rec.rolls.length)genFire3D(id==="quirk"?"Quirk":"Trinket",
+      [{rolls:rec.rolls,die:rec.die}],`${id==="quirk"?"Quirk":"Trinket"}: ${rec.value}`);
+    renderGenSummary();}));
+  host.querySelectorAll("[data-gkidtab]").forEach(b=>b.addEventListener("click",()=>{
+    d.trinketTab=b.dataset.gkidtab;
+    if(d.steps.trinket&&!d.steps.trinket.pick)genRollIdentity(d,"trinket"); // the shown table owns the value
+    renderGenSummary();}));
+  ["name","quirk","trinket"].forEach(id=>{
+    const inp=$("#gkId_"+id);if(!inp)return;
+    inp.addEventListener("change",()=>{genApplyPick(d,id,inp.value);renderGenSummary();});
+    if(id==="name")inp.addEventListener("input",()=>{
+      const fin=$("#gkFinish");if(fin)fin.disabled=!inp.value.trim();});});
+  const back=$("#gkBackSteps");if(back)back.addEventListener("click",()=>{R.phase="steps";renderGenRitual();});
+  bindGenAgain();
+  const fin=$("#gkFinish");if(fin)fin.addEventListener("click",()=>{
+    const nm=$("#gkId_name");if(nm&&nm.value.trim())genApplyPick(d,"name",nm.value);
+    genApplyPick(d,"quirk",($("#gkId_quirk")||{}).value||"");
+    genApplyPick(d,"trinket",($("#gkId_trinket")||{}).value||"");
+    genShowCard();});
+}
+// G1 (D-039): the same full reroll from both screens — a fresh draft on the same crew config.
+// Typed identity does NOT survive: the point of a reroll is a new body, not the old one's name.
+function bindGenAgain(){
+  const R=_genR,again=$("#gkAgain");if(!again)return;
+  again.addEventListener("click",()=>{
+    R.draft=genRollAll(genNewDraft(R.ctx));R.editing=null;R.more={};R.phase="steps";renderGenRitual();});
+}
+function genShowCard(){
+  const R=_genR,d=R.draft;
+  const p=genCompletePayload(d);if(!p){toast("Not finished yet.");return;}
+  const v=validateGenPayload(p);if(!v.ok){toast("Something is off with this roll ("+v.err+").");return;}
+  const ch=deriveGenChar(v.clean);
+  R.phase="card";
+  $("#gkR").innerHTML=`<div id="gkFinCard"></div>
+    <div class="mrow gk-foot"><button class="btn ghost sm" id="gkBack" style="width:auto">Back</button>
+    <button class="btn primary sm" id="gkSave" style="width:auto">${R.mode==="dm"?"Add to the crew":"Join the crew"}</button></div>`;
+  genMountCard($("#gkFinCard"),ch,{pn:R.pn||"",pips:"off"},{});
+  $("#gkBack").addEventListener("click",()=>{R.phase="summary";renderGenSummary();});
+  $("#gkSave").addEventListener("click",()=>{R.done(v.clean);});
+}
 function renderGenRitual(){
   const R=_genR;if(!R)return;
+  R.phase="steps";
   const d=R.draft,host=$("#gkR");if(!host)return;
   const order=genStepOrder(d);
   const firstOpen=order.find(id=>!genStepDone(d,id));
@@ -2407,10 +2744,10 @@ function renderGenRitual(){
     const needsSub=s&&s.value!=null&&!done&&id!=="stats";
     // D-017: the ASI step is explicit — when it goes active its editor opens on the class default
     // and waits for Apply (no self-resolving steps). Identity behaves the same.
-    const editing=R.editing===id||((id==="name"||id==="asi")&&active&&!done);
+    const editing=R.editing===id||(id==="asi"&&active&&!done);
     const isMulti=["skills","cantrips","spells","sundries"].includes(id)||(id==="feature"&&s&&s.kind==="expertise");
-    const rollable=id!=="name"&&id!=="asi"&&!(id==="stats"&&s&&s.pick);
-    const tbl=(active&&!done&&id!=="stats"&&id!=="asi")||(editing&&id!=="asi"&&id!=="name")?genStepTable(d,id):null;
+    const rollable=id!=="asi"&&!(id==="stats"&&s&&s.pick);
+    const tbl=(active&&!done&&id!=="stats"&&id!=="asi")||(editing&&id!=="asi")?genStepTable(d,id):null;
     if(tbl&&!tbl.pair)tbl.moreOpen=!!R.more[id];
     // v4 follow-up: stats join the header roll like every other step — it rolls all remaining
     // abilities at once (the walking per-cell button stays for the one-at-a-time ritual).
@@ -2426,15 +2763,15 @@ function renderGenRitual(){
       ${(id==="cantrips"||id==="spells")&&(tbl||editing)?genTabStripHTML(d,id):""}
       ${tbl&&!(isMulti&&editing)?genTableHTML(d,id,tbl):""}
       ${needsSub?genSubEditorHTML(d,id):""}
-      ${editing&&id!=="stats"?`<div class="gk-editor${id==="name"?" gk-ed-id":""}">${genEditorHTML(d,id)}</div>`:""}
+      ${editing&&id!=="stats"?`<div class="gk-editor">${genEditorHTML(d,id)}</div>`:""}
       ${editing&&id==="stats"?`<div class="gk-editor">${genEditorHTML(d,"stats")}</div>`:""}
     </div>`;
   }).join("");
   host.innerHTML=`<div class="gk-steps">${rows}</div>
     <div class="mrow gk-foot">
       <button class="btn ghost sm" id="gkCancel" style="width:auto">Cancel</button>
-      ${complete?"":`<button class="btn ghost sm gk-allbtn" id="gkAll" style="width:auto">${D20_ICON}<span>Roll the rest</span></button>`}
-      ${complete?`<button class="btn primary sm" id="gkFinish" style="width:auto">View the card</button>`:""}
+      <button class="btn ghost sm gk-allbtn" id="${complete?"gkAgain":"gkAll"}" style="width:auto">${D20_ICON}<span>${complete?"Reroll":"Roll the rest"}</span></button>
+      ${complete?`<button class="btn primary sm" id="gkNext" style="width:auto">Next</button>`:""}
     </div>`;
   bindGenRitual();
 }
@@ -2583,31 +2920,20 @@ function bindGenRitual(){
       if(new Set(v).size!==v.length){toast("No duplicate spells.");return;}ok=genApplyPick(d,"spells",v);}
     else if(id==="sundries"){const v=read(2,"gkSu_");
       if(new Set(v).size!==2){toast("Two different items needed.");return;}ok=genApplyPick(d,"sundries",v);}
-    else if(id==="name"){
-      ok=genApplyPick(d,"name",$("#gkNm").value);
-      if(!ok){toast("It needs a name.");return;}
-      genApplyPick(d,"quirk",$("#gkQk").value);
-      genApplyPick(d,"trinket",$("#gkTk").value);
-    }
     if(!ok){toast("That choice doesn't fit here.");return;}
     R.editing=null;renderGenRitual();}));
   const all=$("#gkAll");if(all)all.addEventListener("click",()=>{genRollAll(d);R.editing=null;renderGenRitual();});
-  const fin=$("#gkFinish");if(fin)fin.addEventListener("click",()=>{
-    const p=genCompletePayload(d);if(!p){toast("Not finished yet.");return;}
-    const v=validateGenPayload(p);if(!v.ok){toast("Something is off with this roll ("+v.err+").");return;}
-    const ch=deriveGenChar(v.clean);
-    $("#gkR").innerHTML=`<div id="gkFinCard"></div>
-      <div class="mrow"><button class="btn ghost sm" id="gkBack" style="width:auto">Back to the rolls</button>
-      <button class="btn primary sm" id="gkSave" style="width:auto">${R.mode==="dm"?"Add to the crew":"Join the crew"}</button></div>`;
-    genMountCard($("#gkFinCard"),ch,{pn:R.pn||"",pips:"off"},{});
-    $("#gkBack").addEventListener("click",renderGenRitual);
-    $("#gkSave").addEventListener("click",()=>{R.done(v.clean);});});
+  bindGenAgain();
+  // The rolls are done: identity is the next screen, not the last step (D-041).
+  const next=$("#gkNext");if(next)next.addEventListener("click",()=>{R.phase="summary";renderGenSummary();});
   const cancel=$("#gkCancel");if(cancel)cancel.addEventListener("click",()=>{_genR=null;closeModal();});
 }
 function openGenRitual(ctx){
   const set=ctx.set,ritual=ctx.spMode==="ritual";
-  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},
-    draft:genNewDraft({sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,set,counts:ctx.counts||{},tables:ctx.tables||null}),done:ctx.done};
+  // The draft config is kept so the G1 Reroll can mint a fresh draft on the same crew settings.
+  const dcfg={sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,boonOff:ctx.boonOff,set,counts:ctx.counts||{},tables:ctx.tables||null};
+  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},ctx:dcfg,
+    draft:genNewDraft(dcfg),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${ritual?"character":esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
     <div id="gkR"></div>`);
@@ -2615,7 +2941,7 @@ function openGenRitual(ctx){
   renderGenRitual();
 }
 function openGenRitualDM(a){
-  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
+  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,boonOff:a.crew.boonOff,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
     const pc=genIngestPayload(a,payload,"",null);
     _genR=null;closeModal();
     if(pc){toast(esc(pc.name)+" joins the crew.",2200,true);preserveScroll(".adv-detail-body",renderAdvDetail);}
@@ -2654,6 +2980,7 @@ function openCrewSettings(a){
       <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["locked","ritual"],ritual?"ritual":"locked",["One species for the crew","Rolled in the ritual"])}</label>
       ${ritual?"":`<label class="gk-f"><span>Which</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>`}
       <label class="gk-f"><span>Species boons</span>${genSel("crewBoons",["on","off"],a.crew.boons?"on":"off",["Rolled","Off"])}</label>
+      ${a.crew.boons?genBoonListHTML(a):""}
       <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
@@ -2667,7 +2994,11 @@ function openCrewSettings(a){
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
     const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
     sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
-    sel("#crewBoons",v=>{a.crew.boons=v==="on";});
+    sel("#crewBoons",v=>{a.crew.boons=v==="on";draw();}); // the per-boon list appears with it
+    $("#modal").querySelectorAll("[data-crewboon]").forEach(cb=>cb.addEventListener("change",()=>{
+      const v=cb.dataset.crewboon,off=genCleanBoonOff(a.crew.boonOff);
+      a.crew.boonOff=cb.checked?off.filter(x=>x!==v):[...off,v];
+      saveAdv();crewPushConfig(a);}));
     sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
     sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
     sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
@@ -2722,6 +3053,7 @@ function openCrewShareDialog(a){
 // so phones roll over the same lists the DM's library produces (D-012).
 function crewShareCfg(a){
   const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",boons:a.crew.boons!==false,
+    boonOff:genCleanBoonOff(a.crew.boonOff),
     set:{...a.crew.set},tables:genSpellTables()};
   // D-030: uploaded packs ride the cfg so phones can roll and derive them (curated packs ship
   // in-code). Phones SANITIZE these at ingestion like every other cloud-read field.
@@ -3003,7 +3335,7 @@ function crewCounts(){
   return c;
 }
 function crewOpenRitual(sp,cfg,isReplacement){
-  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
+  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,boonOff:genCleanBoonOff(cfg.boonOff),set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
     const prev=crewMyRec();
     const rec={pn:_crew.pn,deaths:(prev&&Number(prev.deaths)||0)+(isReplacement&&prev&&prev.cur?1:0),cur:payload};
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}.json`,

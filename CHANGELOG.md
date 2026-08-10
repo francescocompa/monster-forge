@@ -4,6 +4,45 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 297 — The G-slate: reroll, the closing summary screen, identity tables, per-boon toggles (D-041/042/043)
+Francesco's four follow-ups from B295, all four gates settled in-session before any of it was built.
+- **G1 — Reroll (D-039).** A finished ritual's ghost slot flips from "Roll the rest" to **Reroll**:
+  a fresh draft on the same crew config with every step rolled again. Typed identity does not
+  survive it (the judgment call the task left open — a reroll is a new body, not the old name).
+  The same button rides the summary screen, so "not this one" is answered where you have it.
+- **G2 — identity is a closing summary screen (D-041), after a mockup round.** Identity left the
+  step list: the ritual now ends on the rolls with a **Next**, and the summary puts the headline
+  facts (species, class, the ability line, the kit) beside the three identity fields. Francesco
+  picked the two-column arrangement and added four notes, all in: the command bar is **sticky** so
+  Reroll is reachable without scrolling (the steps scroll behind it, on both screens); the
+  generator's ability scores wear the **site's ability colours** (`cc-ab-*`, the same tokens the
+  Forge grid and statblock use); every identity field has its own **per-field reroll**; and the
+  copy reads Next / Back rather than "View the card" / "Back to the rolls".
+- **The DM never types a name (D-041).** His question, and it reshaped the gate: names are the
+  player's to give, so a DM-rolled character takes a rolled name on arrival and only the crew
+  (phone) flow requires one typed before the card.
+- **G3 — identity content, with its provenance decided first (D-042).** The sourcing sweep found
+  that the **d100 Trinkets table is in SRD 5.2 under CC-BY-4.0** — and it is the same beloved list
+  the PHB printed, so the classic table ships verbatim (attribution in README.md and a new Credits
+  card in the app's settings; the licence requires both to stay). Transcribed from the SRD text and
+  cross-checked row-for-row against two independent copies. Behind an **Ours** tab sit 20 of our
+  own, written for the crew's world. **Quirks are a d100** mixing original entries with rewritten
+  staples — no SRD has a quirk table, and the popular online lists carry no licence. **Names are
+  procedural**: each pack carries a small sound profile and a name is assembled from it, so nothing
+  is copied (the D&D name tables are Xanathar's), the pool never runs out, and an uploaded species
+  falls back to a neutral profile instead of having no names at all.
+- **G4 — boons switch off one at a time (D-043),** scoped by Francesco to the packs that actually
+  ship boons. A switched-off boon leaves the option table, cannot be picked, and never lands: a die
+  on its face resolves to the table's no-boon entry, so the d20 stays honest. The list rides the
+  share cfg and is rebuilt phone-side; on the wire the DM's cfg wins TOLERANTLY (D-035) — a stale
+  phone's disabled boon drops to no-boon rather than failing the whole character.
+- 132 tests green (new floors: G1's swap and reroll, the summary flow on both DM and phone paths,
+  the identity tables and a name for every shipped pack plus an uploaded one, and the D-043 boon
+  rules). Verified live end to end: sticky bar, coloured scores, summary, rolls, card, settings —
+  zero console errors.
+- Known taste item: the identity rolls are d100s, and the 3D engine renders a d100 as a boxy solid.
+  It rolls and reads correctly; whether it should fire the dice at all is Francesco's call.
+
 ## Batch 296 — The kit review pass: tags everywhere, armor variety, Dex fallbacks, background gold (D-040)
 Francesco's review notes on the B293–B295 kit table. Kits 92 → 109.
 - **Tags on every kit, half of them derived.** A kit declares its WEAPON-SHAPE tags (`onehand`,

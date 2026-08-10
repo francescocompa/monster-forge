@@ -257,6 +257,26 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   weapon too; no barbarian kit wears Heavy armor (Rage); no rogue kit carries a Strength weapon
   (Sneak Attack); and any class that can choose its armor spreads it across at least 3 recipes.
   The purse is class gold + the background's 50 GP (`GEN_BG_GP`) + the crew's extra.
+- **The ritual ends on the rolls; identity is a closing SUMMARY screen** (D-041, B297): two columns
+  — the headline facts (species, class, the ability line in the site's `cc-ab-*` colours, the kit)
+  beside the name/quirk/trinket fields, each with its own per-field reroll. The ritual's completed
+  primary reads **Next**, the summary's back reads **Back**, and the command bar is STICKY on both
+  (the content scrolls behind it) so G1's **Reroll** — a fresh draft on the same crew cfg, typed
+  identity cleared — is always reachable. **The DM never types a name:** a DM-rolled character
+  takes a rolled one on arrival; only the phone flow gates the card on a typed name.
+- **Identity content and its provenance** (D-042): `GEN_TRINKETS` is the SRD 5.2 d100 used VERBATIM
+  under CC-BY-4.0 — the attribution in `README.md` and the app's settings Credits card is required,
+  don't drop either, and don't edit those hundred rows. `GEN_TRINKETS_X` (ours) sits behind the
+  step's second tab, draft-only like the D-024 spell tabs. `GEN_QUIRKS` is a d100 of original and
+  rewritten entries. Names are PROCEDURAL — `genRollName` assembles one from the pack's sound
+  profile (`GEN_NAME_PROFILES`, or a pack's own `names`), so uploaded species get names too and
+  nothing is transcribed from a rulebook. Rolled identity lands on the draft as an ordinary picked
+  value, so the wire is unchanged.
+- **Boons are optional twice over** (D-035 whole-table, D-043 per-boon): crew settings lists the
+  individual boons a pack ships; a switched-off one leaves the option table and resolves to the
+  table's no-boon entry if the die lands on its face. `boonOff` rides the share cfg, is rebuilt
+  phone-side (`genCleanBoonOff`), and on the wire the DM's cfg wins tolerantly — a stale phone's
+  disabled boon drops to no-boon instead of failing the character.
 - **Every step is pick-or-roll with the table on show** (D-004/D-011/D-015/D-016/D-017): the option
   table renders before the dice land (rows tappable as choices), every span is EQUAL WEIGHT
   (`genSpanFor`); scores fill a statblock-style grid one ability at a time — one editable number
@@ -294,7 +314,7 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
 - **Payloads, never statblocks, on the wire** (D-007) — see the crew-share note in the security
   section above (incl. the B281 `/refs` popover texts and their phone-side sanitizer). The phone
   poll reads only `/crew`; cfg refreshes on focus, refs load once at boot.
-  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (102 tests).
+  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (132 tests).
 - Backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, further species packs.
   Parked by the user (2026-08-05): the phone-flow polish pass waits for the next real playtest.
 

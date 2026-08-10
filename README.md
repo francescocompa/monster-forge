@@ -79,3 +79,17 @@ preview and in every export:
 > Note: `app.js` contains an embedded JSONBin master key for the author's personal
 > bin. If you fork this, replace it with your own key (or swap out the storage
 > layer).
+
+## Licences and attribution
+
+The crew generator's trinket table is reproduced from the D&D System Reference
+Document 5.2 under the Creative Commons Attribution 4.0 International Licence:
+
+> This work includes material from the System Reference Document 5.2 ("SRD 5.2")
+> by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The
+> SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International
+> License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+Everything else in the generator's content tables (quirks, the extra trinkets,
+the species name profiles) is original to this project. The same notice appears
+in the app's own settings, since the licence follows the running copy too.

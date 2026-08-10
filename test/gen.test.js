@@ -902,3 +902,97 @@ test("v4: Chain Mail falls back to Chain Shirt under Str 13, gear line follows; 
   assert.equal(r.torchUp, "2 Torches");
   assert.equal(r.gone, null);
 });
+
+// D-042: the identity tables and the procedural name generator. The SRD hundred is content under a
+// licence — its size and its first/last rows are locked so an accidental edit shows up as a failure.
+test("D-042: identity tables are whole, and every species can name a character", () => {
+  const r = ev(`(()=>{
+    const rng=${RNG}(4242);
+    const names={};
+    Object.keys(GEN_SPECIES).forEach(k=>{
+      const set=new Set();
+      for(let i=0;i<40;i++)set.add(genRollName(k,rng));
+      names[k]={n:set.size,sample:[...set][0],
+                bad:[...set].filter(x=>!x||x.length<2||x.length>28||/[^A-Za-z']/.test(x)).length};});
+    // an uploaded pack has no profile of its own and must still produce names
+    GEN_SPECIES.u_test={label:"Test",size:"Medium",speed:30,langs:["Common"],traits:[],tables:[]};
+    const up=new Set();for(let i=0;i<20;i++)up.add(genRollName("u_test",rng));
+    delete GEN_SPECIES.u_test;
+    const d=genNewDraft({sp:"kobold",set:{},counts:{}});
+    genRollAll(d,rng);
+    const q=genRollIdentity(d,"quirk",rng),t=genRollIdentity(d,"trinket",rng);
+    d.trinketTab="forge";const t2=genRollIdentity(d,"trinket",rng);
+    const nm=genRollIdentity(d,"name",rng);
+    const p=genCompletePayload(d),v=validateGenPayload(p);
+    return {trinkets:GEN_TRINKETS.length,extras:GEN_TRINKETS_X.length,quirks:GEN_QUIRKS.length,
+      srdFirst:GEN_TRINKETS[0],srdLast:GEN_TRINKETS[99],
+      dupT:GEN_TRINKETS.filter((x,i)=>GEN_TRINKETS.indexOf(x)!==i).length,
+      dupQ:GEN_QUIRKS.filter((x,i)=>GEN_QUIRKS.indexOf(x)!==i).length,
+      names,upN:up.size,
+      qIn:GEN_QUIRKS.includes(q.value),qDie:q.die,tIn:GEN_TRINKETS.includes(t.value),tDie:t.die,
+      t2In:GEN_TRINKETS_X.includes(t2.value),
+      nmOk:!!nm.value,
+      wireOk:v.ok,wireQuirk:v.ok&&v.clean.steps.quirk.value===q.value};})()`);
+  assert.equal(r.trinkets, 100, "the SRD trinket table is a d100");
+  assert.equal(r.srdFirst, "A mummified goblin hand");
+  assert.equal(r.srdLast, "A metal urn containing the ashes of a hero");
+  assert.equal(r.dupT, 0);
+  assert.equal(r.quirks, 100, "quirks are a d100");
+  assert.equal(r.dupQ, 0);
+  assert.ok(r.extras >= 20, "our own trinket extras");
+  assert.equal(r.qDie, 100);
+  assert.equal(r.tDie, 100);
+  assert.equal(r.qIn, true, "a rolled quirk comes from the table");
+  assert.equal(r.tIn, true, "a rolled trinket comes from the SRD table by default");
+  assert.equal(r.t2In, true, "the Ours tab rolls the extras table");
+  assert.equal(r.nmOk, true);
+  assert.equal(r.wireOk, true, "rolled identity validates on the wire unchanged");
+  assert.equal(r.wireQuirk, true);
+  Object.keys(r.names).forEach(k => {
+    assert.equal(r.names[k].bad, 0, k + " produced a malformed name");
+    assert.ok(r.names[k].n >= 12, k + " names are too repetitive (" + r.names[k].n + "/40 distinct)");
+  });
+  assert.ok(r.upN >= 8, "an uploaded species falls back to the neutral profile");
+});
+
+// D-043 (G4): individual boons switch off. A disabled boon leaves the option table, a die landing
+// on its face resolves to no boon, and the DM's cfg outranks a stale phone's payload — tolerantly.
+test("D-043: a switched-off boon leaves the table, the roll, and the wire", () => {
+  const r = ev(`(()=>{
+    const rng=${RNG}(77);
+    const raw=genBoonEntries("kobold").map(e=>e.value);   // values are not all strings (wings is true)
+    const all=raw.map(String);
+    const off=[all[all.length-1]];                       // switch off the last one (the wings)
+    const d=genNewDraft({sp:"kobold",set:{},counts:{},boonOff:off});
+    const tbl=genStepTable(d,"sp:wings");
+    const shown=tbl.rows.map(x=>String(x.value));
+    // a pick of the disabled boon is refused; an allowed one still lands
+    const pickOff=genApplyPick(d,"sp:wings",off[0]);
+    const pickOn=genApplyPick(d,"sp:wings",raw[0]);
+    // every face of the die: the disabled boon can never be the landed value
+    let landedOff=0;
+    for(let i=0;i<300;i++){delete d.steps["sp:wings"];genRollStep(d,"sp:wings",rng);
+      if(String(d.steps["sp:wings"].value)===off[0])landedOff++;}
+    // the wire: a payload carrying the disabled boon is cleaned, not rejected (D-035 tolerance)
+    const d2=genNewDraft({sp:"kobold",set:{},counts:{}});
+    genRollAll(d2,rng);genApplyPick(d2,"name","T");
+    const p=genCompletePayload(d2);
+    p.steps["sp:wings"]={rolls:[20],value:raw[raw.length-1]};
+    const v=validateGenPayload(p,{boonOff:off});
+    const vNoCfg=validateGenPayload(p);
+    return {all:all.length,shownHasOff:shown.includes(off[0]),shownRest:shown.length,
+      pickOff,pickOn,landedOff,
+      wireOk:v.ok,wireValue:v.ok?String(v.clean.steps["sp:wings"].value):null,
+      looseOk:vNoCfg.ok,looseValue:vNoCfg.ok?String(vNoCfg.clean.steps["sp:wings"].value):null,
+      cleaned:genCleanBoonOff(["ok",{x:1},"ok",123,"z".repeat(80)])};})()`);
+  assert.ok(r.all >= 8, "the kobold ships a real boon list");
+  assert.equal(r.shownHasOff, false, "a switched-off boon is not on the option table");
+  assert.equal(r.pickOff, false, "…and cannot be picked");
+  assert.equal(r.pickOn, true, "an allowed boon still picks");
+  assert.equal(r.landedOff, 0, "…and never lands on a roll");
+  assert.equal(r.wireOk, true, "a stale phone's payload is not rejected over a boon");
+  assert.equal(r.wireValue, "false", "…the disabled boon is dropped to no boon");
+  assert.equal(r.looseOk, true);
+  assert.notEqual(r.looseValue, "false", "with no cfg the payload's own boon stands");
+  assert.deepEqual(r.cleaned, ["ok", "123", "z".repeat(40)], "the list is rebuilt, never trusted");
+});

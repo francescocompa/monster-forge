@@ -24,38 +24,33 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
 
 ---
 
-## Side quest — crew generator follow-ups (planned 2026-08-09, build NEXT SESSION)
+## Side quest — crew generator follow-ups · DONE 2026-08-10 (Batch 297)
 
-Francesco's notes on the B293–B295 build, scoped in-session; full context in DECISIONS D-039 (+
-D-035's tabled boons item, now scheduled). Off-roadmap like the rest of the crew arc — these
-pre-empt T2.5 for one session, then the roadmap resumes.
+Francesco's notes on the B293–B295 build; gates settled in-session (D-041 the summary surface,
+D-042 identity content sourcing, D-043 per-boon toggles). Off-roadmap like the rest of the crew arc.
 
-- [ ] **G1 — "Reroll" replaces "Roll the rest" on a finished ritual** · Sonnet @ medium · ~⅓
-  When every step is done, the footer button flips to a full reroll of the ritual (same crew cfg,
-  fresh draft). One judgment call to settle at build time: whether typed identity survives the
-  reroll (leaning: it clears — the ritual's point is a fresh body).
-  *Done when:* a completed ritual shows Reroll, it re-rolls every step, verified live.
-- [ ] **G2 — Identity becomes a closing summary screen** · Opus @ high (mockup round first) · ~1
-  Identity leaves the step list; after the last roll the modal advances to a summary of the
-  character's main facts (species, class, scores, style, kit, spells) with the name REQUIRED and
-  quirk/trinket optional, then View the card. **🔶 mockup + AskUserQuestion before building** —
-  core-surface visual change, per the standing convention.
-  *Done when:* ritual → summary (name gated) → card, on DM and phone flows, floors updated.
-- [ ] **G3 — Quirks & trinkets roll tables** · Opus @ high · ~1 (after G2's surface exists)
-  Big rollable tables (d100-scale) for quirk and trinket on the summary screen, manual entry
-  stays. **🔶 sourcing round first:** candidate established/beloved lists presented WITH license
-  status (SRD/CC content vs merely-popular lists that would need paraphrase) before any table is
-  authored — content enters the repo, so provenance is decided by Francesco, not assumed.
-  Partially supersedes the identity-is-typed-only stance (D-009/D-011) — logged in D-039.
-  *Done when:* both tables roll like any ritual table, ride the cfg for phones, floors updated.
-- [ ] **G4 — Boons customization (the D-035 tabled item)** · Opus @ high · ~1
-  **🔶 design round opens the session:** per-boon enable toggles vs DM-edited entries vs both;
-  what rides the share cfg; what stale-cfg phones do. Then build. D-035's optional-both-ways
-  validation stance is the floor to preserve.
-  *Done when:* the chosen surface ships, cfg round-trips, validation stays tolerant both ways.
+- [x] **G1 — "Reroll" replaces "Roll the rest" on a finished ritual** · done B297
+  The footer's ghost slot flips to a full Reroll once every step is done: a fresh draft on the same
+  crew config, every step rolled again. Typed identity does NOT survive (settled at build time, as
+  the task allowed). Reachable from the summary screen too.
+- [x] **G2 — Identity becomes a closing summary screen** · done B297 (mockup round → D-041)
+  Two columns (rolled facts left, typed fields right), headline facts only. Plus the four notes the
+  mockup round produced: the command bar is sticky, the scores wear the site's ability colours, the
+  identity fields each carry a per-field reroll, and the copy is Next / Back. **The DM never types
+  a name** — theirs is rolled on arrival; a player's is required before the card.
+- [x] **G3 — Quirks & trinkets roll tables** · done B297 (sourcing round → D-042)
+  The SRD 5.2 d100 trinkets (CC-BY-4.0, attributed in README + the app's Credits card) behind a
+  Classic tab, our own 20 behind Ours; a d100 of quirks, original plus reworked staples; and names
+  are PROCEDURAL per species (a sound profile per pack, neutral fallback for uploads) rather than
+  a copied list, since the D&D name tables are Xanathar's.
+- [x] **G4 — Boons customization (the D-035 tabled item)** · done B297 (scoped by Francesco → D-043)
+  Per-boon enable checkboxes in crew settings, scoped to packs that actually ship boons (the kobold
+  today). A switched-off boon leaves the option table and can never land on a roll; the DM's cfg
+  outranks a stale phone's payload, tolerantly (the boon drops to no-boon, the character stands).
 
-Standing from this arc: kit-content review is Francesco's (D-013 — table delivered 2026-08-09);
-push + deploy B288–B295 remains the first manual action.
+Standing from this arc: push + deploy remains the first manual action (B292–B297 are committed
+locally, nothing is live). Open taste items: leftover coin for cheap-kit casters (D-040), and
+whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---
 
