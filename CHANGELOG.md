@@ -4,6 +4,32 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 301 — G6 review: two dominated kits fixed, nine names re-cut (D-047 amended)
+Francesco's eight notes on the B300 list. Two were content, six were naming.
+- **The Barbarian's Berserker was strictly dominated** — 2 Handaxes + 2 Daggers, every item of which
+  the Executioner also carried, plus a greataxe. It is now the **throwing** barbarian: 2 Handaxes,
+  2 Light Hammers, 2 Daggers — six thrown weapons and two Nick masteries — and the Executioner drops
+  to 2 backup handaxes so the two kits stop overlapping. 18 gp against a 125 gp purse; nothing
+  filters out.
+- **The Monk leaned on darts and one kit had no answer to range at all.** Darts were the ranged
+  option in four of the eight kits, and Dancing adept (2 Scimitars) had none. Rough traveler takes a
+  Shortbow, Forge disciple a Light Crossbow, Dancing adept a Sling; Wandering ascetic and Reaper keep
+  their darts. Every monk kit now answers range, and no more than two do it the same way. No rules
+  change either way: darts are Simple Ranged, so they were never Monk weapons and never carried
+  Martial Arts.
+- **Nine names re-cut**: War priest → **Battle priest** (War Cleric is a subclass) · Pistolier →
+  **Gunslinger** · Venom tracker → **Thornclan tracker** (tribal, per his note) · Frugal conjurer →
+  **Frugal ritualist** (Conjurer is a wizard subclass).
+- **The pure casters now key off what the kit actually is**, which was the note that the caster names
+  described the character and not the loadout. Sorcerer: Wild talent → **Reckless prodigy** (the
+  spear kit, the one that closes), Untamed spark → **Wary spark** (the crossbow kit, the one that
+  doesn't) — which also splits the two that read as near-synonyms; Storm-touched → **Nimble
+  channeler** (darts and staff); Drifter → **Gutter mage** (the cheapest kit in the game). Warlock:
+  Bargain keeper → **Watchful supplicant** (the ranged kit).
+- **136 tests green**, verified live, zero console errors. The G6 floor still holds: no contents
+  lists, no name echoing more than one item off its own gear line, unique inside a class, sentence
+  case, count pinned at 109.
+
 ## Batch 300 — G6: the equipment kits are named for the characters they imply (D-047)
 A naming pass over the whole armory. The kits used to name their own contents ("Rapier and hand
 crossbow"), which the roll table already prints beside them, so the name was a wasted line.

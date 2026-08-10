@@ -428,9 +428,11 @@ const GEN_CLASSES={
     kits:[
       // Rage forbids Heavy armor, so the armored kits stop at Medium; taking any armor trades
       // Unarmored Defense away, which is the choice the kit is offering.
-      {n:"Executioner",ac:"unarmCon",tags:["twohand","thrown"],weapons:[{w:"greataxe"},{w:"handaxe",count:4},{w:"dagger",count:2}],gear:"Greataxe, 4 Handaxes, 2 Daggers"},
+      {n:"Executioner",ac:"unarmCon",tags:["twohand","thrown"],weapons:[{w:"greataxe"},{w:"handaxe",count:2},{w:"dagger",count:2}],gear:"Greataxe, 2 Handaxes, 2 Daggers"},
       {n:"Bonebreaker",ac:"unarmCon",tags:["twohand","thrown"],weapons:[{w:"maul"},{w:"javelin",count:4},{w:"sling"}],gear:"Maul, 4 Javelins, Sling, 20 Bullets"},
-      {n:"Berserker",ac:"unarmCon",tags:["dual","thrown"],weapons:[{w:"handaxe",count:2},{w:"dagger",count:2}],gear:"2 Handaxes, 2 Daggers"},
+      // the throwing barbarian: six thrown weapons and two Nick masteries, so it isn't the
+      // Executioner minus its greataxe (Francesco's B301 note — that kit was strictly dominated)
+      {n:"Berserker",ac:"unarmCon",tags:["dual","thrown"],weapons:[{w:"handaxe",count:2},{w:"lighthammer",count:2},{w:"dagger",count:2}],gear:"2 Handaxes, 2 Light Hammers, 2 Daggers"},
       {n:"Bloodletter",ac:"unarmCon",tags:["twohand"],weapons:[{w:"greatsword"},{w:"dagger",count:2}],gear:"Greatsword, 2 Daggers"},
       {n:"Hill raider",ac:"unarmCon",tags:["twohand","ranged"],weapons:[{w:"halberd"},{w:"shortbow"}],gear:"Halberd, Shortbow, 20 Arrows"},
       {n:"Clan defender",ac:"unarmConShield",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"javelin",count:3},{w:"dagger"}],gear:"Shield, Spear, 3 Javelins, Dagger"},
@@ -471,7 +473,7 @@ const GEN_CLASSES={
       {n:"Harvest priest",ac:"studdedShield",tags:["onehand","ranged"],weapons:[{w:"sickle"},{w:"dart",count:3}],gear:"Studded Leather, Shield, Sickle, 3 Darts, Holy Symbol (reliquary)"},
       // Protector variants: the order's Martial weapon and Heavy armor training is what unlocks
       // these four, and it's the only way a cleric reaches a martial weapon or heavy plate.
-      {n:"War priest",ac:"scaleShield",needs:"martialTrained",tags:["onehand","ranged"],weapons:[{w:"warhammer",noMastery:true},{w:"lightxbow",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Light Crossbow, 20 Bolts, Holy Symbol (amulet)"},
+      {n:"Battle priest",ac:"scaleShield",needs:"martialTrained",tags:["onehand","ranged"],weapons:[{w:"warhammer",noMastery:true},{w:"lightxbow",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Light Crossbow, 20 Bolts, Holy Symbol (amulet)"},
       {n:"Crusader",ac:"ringMailShield",needs:"martialTrained",tags:["onehand","thrown"],weapons:[{w:"morningstar",noMastery:true},{w:"lighthammer",count:2,noMastery:true},{w:"dagger",noMastery:true}],gear:"Ring Mail, Shield, Morningstar, 2 Light Hammers, Dagger, Holy Symbol (emblem)"},
       {n:"Templar",ac:"chainMail",needs:"martialTrained",tags:["onehand","ranged"],weapons:[{w:"battleaxe",noMastery:true},{w:"lightxbow",noMastery:true}],gear:"Chain Mail, Battleaxe, Light Crossbow, 20 Bolts, Holy Symbol (reliquary)"},
       {n:"Cathedral sentinel",ac:"chainMail",needs:"martialTrained",tags:["twohand"],weapons:[{w:"halberd",noMastery:true},{w:"dagger",noMastery:true}],gear:"Chain Mail, Halberd, Dagger, Holy Symbol (amulet)"}],
@@ -524,7 +526,7 @@ const GEN_CLASSES={
       {n:"Blooded noble",ac:"halfPlate",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Half Plate Armor, Rapier, 2 Daggers"},
       {n:"Juggernaut",ac:"plate",tags:["twohand"],weapons:[{w:"greatsword"},{w:"dagger"}],gear:"Plate Armor, Greatsword, Dagger"},
       {n:"Musketeer",ac:"studded",tags:["ranged","finesse"],weapons:[{w:"musket"},{w:"rapier"}],gear:"Studded Leather, Musket, 20 Bullets, Rapier"},
-      {n:"Pistolier",ac:"breastplate",tags:["ranged","onehand","finesse"],weapons:[{w:"pistol"},{w:"rapier"}],gear:"Breastplate, Pistol, 20 Bullets, Rapier"}],
+      {n:"Gunslinger",ac:"breastplate",tags:["ranged","onehand","finesse"],weapons:[{w:"pistol"},{w:"rapier"}],gear:"Breastplate, Pistol, 20 Bullets, Rapier"}],
     traits:[],
     bonus:[{n:"Second Wind (2 uses)",t:"The fighter regains 1d10 + 1 Hit Points. One use returns on a Short Rest, all of them on a Long Rest."}],
     res:[{k:"wind",label:"Second Wind",max:2,per:"Long Rest",sr:1}],
@@ -543,13 +545,15 @@ const GEN_CLASSES={
     skills:{from:["Acrobatics","Athletics","History","Insight","Religion","Stealth"],n:2},
     kits:[
       // Monks train in no armor at all, so the variety is entirely in the weapons: Simple ones
-      // plus the Light Martial melee that counts as a Monk weapon.
+      // plus the Light Martial melee that counts as a Monk weapon. Every kit answers range some
+      // way, and no more than two lean on darts (Francesco's B301 note — darts were the default
+      // answer in half the table, and the twin-scimitar kit had no ranged option at all).
       {n:"Pilgrim",ac:"unarmWis",tags:["onehand","thrown"],weapons:[{w:"unarmed"},{w:"spear"},{w:"dagger",count:5}],gear:"Spear, 5 Daggers"},
       {n:"Wandering ascetic",ac:"unarmWis",tags:["onehand","finesse","ranged"],weapons:[{w:"unarmed"},{w:"shortsword"},{w:"dart",count:6}],gear:"Shortsword, 6 Darts"},
       {n:"Mountain hermit",ac:"unarmWis",tags:["twohand","ranged"],weapons:[{w:"unarmed"},{w:"quarterstaff"},{w:"sling"}],gear:"Quarterstaff, Sling, 20 Bullets"},
-      {n:"Rough traveler",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"handaxe",count:2},{w:"dart",count:4}],gear:"2 Handaxes, 4 Darts"},
-      {n:"Forge disciple",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"lighthammer",count:2},{w:"quarterstaff"},{w:"dart",count:3}],gear:"2 Light Hammers, Quarterstaff, 3 Darts"},
-      {n:"Dancing adept",ac:"unarmWis",tags:["dual","finesse"],weapons:[{w:"unarmed"},{w:"scimitar",count:2}],gear:"2 Scimitars"},
+      {n:"Rough traveler",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"handaxe",count:2},{w:"shortbow"}],gear:"2 Handaxes, Shortbow, 20 Arrows"},
+      {n:"Forge disciple",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"lighthammer",count:2},{w:"quarterstaff"},{w:"lightxbow"}],gear:"2 Light Hammers, Quarterstaff, Light Crossbow, 20 Bolts"},
+      {n:"Dancing adept",ac:"unarmWis",tags:["dual","finesse","ranged"],weapons:[{w:"unarmed"},{w:"scimitar",count:2},{w:"sling"}],gear:"2 Scimitars, Sling, 20 Bullets"},
       {n:"Reaper",ac:"unarmWis",tags:["dual","ranged"],weapons:[{w:"unarmed"},{w:"sickle",count:2},{w:"dart",count:4}],gear:"2 Sickles, 4 Darts"},
       {n:"Village guardian",ac:"unarmWis",tags:["onehand","ranged"],weapons:[{w:"unarmed"},{w:"club"},{w:"shortbow"}],gear:"Club, Shortbow, 20 Arrows"}],
     traits:[{n:"Martial Arts (d6)",t:"Unarmed Strikes and Monk weapons (Simple Melee, plus Light Martial Melee) deal 1d6 and can use Dexterity."},
@@ -584,7 +588,7 @@ const GEN_CLASSES={
       {n:"Poacher",ac:"padded",tags:["ranged","thrown"],weapons:[{w:"shortbow"},{w:"handaxe",count:2}],gear:"Padded Armor, Shortbow, 20 Arrows, 2 Handaxes, Druidic Focus (yew wand)"},
       {n:"Tidewatcher",ac:"scale",tags:["onehand","thrown","finesse"],weapons:[{w:"trident"},{w:"dagger",count:2}],gear:"Scale Mail, Trident, Net, 2 Daggers, Druidic Focus (wooden staff)",gpExtra:1},
       // The blowgun's 1 damage is a utility line, so this kit carries a real martial sidearm.
-      {n:"Venom tracker",ac:"hide",tags:["ranged","onehand","finesse"],weapons:[{w:"blowgun"},{w:"rapier"}],gear:"Hide Armor, Blowgun, 50 Needles, Rapier, Druidic Focus (totem)",gpExtra:1}],
+      {n:"Thornclan tracker",ac:"hide",tags:["ranged","onehand","finesse"],weapons:[{w:"blowgun"},{w:"rapier"}],gear:"Hide Armor, Blowgun, 50 Needles, Rapier, Druidic Focus (totem)",gpExtra:1}],
     traits:[],
     bonus:[{n:"Favored Enemy (Hunter's Mark)",t:"Hunter's Mark is always prepared and castable twice per Long Rest without a spell slot."}],
     res:[{k:"fav",label:"Hunter's Mark (free)",max:2,per:"Long Rest"}],
@@ -612,11 +616,11 @@ const GEN_CLASSES={
     kits:[
       // One Arcane Focus per kit, named: XPHB offers crystal, orb, rod, staff and wand, and a
       // sorcerer's focus is the most personal thing it owns.
-      {n:"Wild talent",ac:"none",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
-      {n:"Untamed spark",ac:"none",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand)"},
+      {n:"Reckless prodigy",ac:"none",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
+      {n:"Wary spark",ac:"none",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand)"},
       {n:"Bloodline heir",ac:"none",tags:["twohand"],weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (staff)"},
-      {n:"Storm-touched",ac:"none",tags:["ranged"],weapons:[{w:"dart",count:4},{w:"quarterstaff"}],gear:"4 Darts, Quarterstaff, Arcane Focus (orb)"},
-      {n:"Drifter",ac:"none",tags:["ranged","onehand"],weapons:[{w:"sling"},{w:"sickle"},{w:"dagger"}],gear:"Sling, 20 Bullets, Sickle, Dagger, Arcane Focus (rod)"}],
+      {n:"Nimble channeler",ac:"none",tags:["ranged"],weapons:[{w:"dart",count:4},{w:"quarterstaff"}],gear:"4 Darts, Quarterstaff, Arcane Focus (orb)"},
+      {n:"Gutter mage",ac:"none",tags:["ranged","onehand"],weapons:[{w:"sling"},{w:"sickle"},{w:"dagger"}],gear:"Sling, 20 Bullets, Sickle, Dagger, Arcane Focus (rod)"}],
     traits:[],
     bonus:[{n:"Innate Sorcery (2/Long Rest)",t:"For 1 minute: the sorcerer's spell save DC increases by 1 and it has Advantage on Sorcerer spell attack rolls."}],
     res:[{k:"innate",label:"Innate Sorcery",max:2,per:"Long Rest"}],
@@ -625,7 +629,7 @@ const GEN_CLASSES={
     skills:{from:["Arcana","Deception","History","Intimidation","Investigation","Nature","Religion"],n:2},
     kits:[
       {n:"Coven initiate",ac:"leather",tags:["onehand","thrown"],weapons:[{w:"sickle"},{w:"dagger",count:2}],gear:"Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb)"},
-      {n:"Bargain keeper",ac:"padded",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Padded Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (rod)"},
+      {n:"Watchful supplicant",ac:"padded",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Padded Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (rod)"},
       {n:"Roadside occultist",ac:"leather",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"club"},{w:"dagger"}],gear:"Leather Armor, Spear, Club, Dagger, Arcane Focus (wand)"},
       {n:"Fiend's hand",ac:"studded",tags:["dual","finesse","ranged"],weapons:[{w:"dagger",count:2},{w:"dart",count:3}],gear:"Studded Leather, 2 Daggers, 3 Darts, Arcane Focus (crystal)"},
       // Blade-pact kits (v4 note): only on the table once Pact of the Blade is the invocation —
@@ -650,7 +654,7 @@ const GEN_CLASSES={
       {n:"Errant apprentice",ac:"none",tags:["ranged","finesse"],weapons:[{w:"dagger"},{w:"dart",count:3}],gear:"Dagger, 3 Darts, Arcane Focus (wand), Robe, Spellbook"},
       {n:"Traveling scholar",ac:"none",tags:["twohand","finesse"],weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (staff), Robe, Spellbook, Ink and Quill"},
       {n:"Practical mage",ac:"none",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (crystal), Spellbook"},
-      {n:"Frugal conjurer",ac:"none",tags:["ranged","finesse"],weapons:[{w:"sling"},{w:"dagger",count:2}],gear:"Sling, 20 Bullets, 2 Daggers, Component Pouch, Robe, Spellbook"}],
+      {n:"Frugal ritualist",ac:"none",tags:["ranged","finesse"],weapons:[{w:"sling"},{w:"dagger",count:2}],gear:"Sling, 20 Bullets, 2 Daggers, Component Pouch, Robe, Spellbook"}],
     traits:[{n:"Arcane Recovery (1/day)",t:"On a Short Rest, the wizard recovers one expended level-1 spell slot."},
             {n:"Ritual Adept",t:"The wizard can cast Ritual-tagged spells straight from its spellbook without preparing them."}],
     bonus:[],

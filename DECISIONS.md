@@ -412,3 +412,19 @@ Rejected, with reasons: **tactic voice** ("Hold the line", "Shoot from cover") �
 Known cost, accepted: archetype names carry no tactical hint, so a brand-new player reads the contents rather than the name to know what to do. The contents are right there, which is why this is cheap.
 Enforced by: gen.js (`GEN_CLASSES[*].kits[*].n` — display-only; every gate keys off the kit INDEX, `ac` and `tags`, never the name), a floor in `test/gen.test.js`.
 Affects: gen.js, tests, TASKS.md (G6), CHANGELOG.md.
+
+**AMENDED 2026-08-10 (B301, his review of the B300 list):** nine names re-cut and two kits fixed.
+**Names:** War priest → Battle priest and Frugal conjurer → Frugal ritualist (both collided with
+subclass names — War Cleric, Conjurer); Pistolier → Gunslinger; Venom tracker → Thornclan tracker
+(he asked for tribal). **The pure casters were named for the character rather than the loadout**,
+so they now key off what distinguishes the kit: Wild talent → Reckless prodigy (the spear kit that
+closes) and Untamed spark → Wary spark (the crossbow kit that doesn't) — which also separates the
+two he read as near-synonyms — plus Storm-touched → Nimble channeler and Drifter → Gutter mage
+(the cheapest kit in the game), and the Warlock's Bargain keeper → Watchful supplicant.
+**Content, not naming, but surfaced by reading the list beside the contents:** the Barbarian's
+Berserker was a strict subset of the Executioner, so it became the throwing kit (2 Handaxes,
+2 Light Hammers, 2 Daggers) and the Executioner dropped to 2 backup handaxes; and the Monk answered
+range with darts in four kits of eight while Dancing adept had no ranged option at all, so Rough
+traveler took a Shortbow, Forge disciple a Light Crossbow and Dancing adept a Sling. Rule worth
+keeping: **reading a naming list beside its contents is what exposes a dominated option** — the
+names were fine, the kits underneath them were not.
