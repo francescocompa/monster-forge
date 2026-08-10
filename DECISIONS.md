@@ -260,7 +260,7 @@ Chosen: `genStepOrder` groups steps by the category that owns them — Species (
 Consequence handled: species tables now resolve BEFORE the class steps, so the class skill roll must dodge species-granted skills (`genRollStep("skills")` passes `genOwnedSkillNames`) — previously the species table did the dodging because it went last. The backwards dedupe (`genSpDedupe`) stays for the re-pick path.
 Enforced by: `test/gen.test.js` step-grouping floor (leading species group locked/ritual, contiguous gear group, 40-seed no-duplicate-skill sweep); `test/crew-flow.test.js` walks the species group first.
 Affects: gen.js, tests.
-Open: whether the ritual should also show a VISIBLE macro-category header per group (a core-surface visual change — Francesco's convention is mockup + AskUserQuestion, not invented in passing).
+Open: whether the ritual should also show a VISIBLE macro-category header per group (a core-surface visual change — Francesco's convention is mockup + AskUserQuestion, not invented in passing). **Scheduled 2026-08-10 → TASKS G5**, which opens with that mockup round after his note "grouped boxes with same provenance should have more visually clear grouping".
 
 ### D-035 — Species boons are an optional extra behind a crew setting · 2026-08-09 · DECIDED
 Mechanism: Francesco's call (written note)
@@ -268,12 +268,12 @@ Raw note: "the kobold 'boon' and in general the boon option should be a toggle i
 Chosen: a species table may be flagged `boon:true` — an optional extra on top of the species' actual rules, not part of it. Crew settings gains "Species boons: Rolled / Off" (default Rolled = today's behavior); off drops boon tables from the ritual, the payload and the derivation. Validation treats boon tables as OPTIONAL both ways, so a phone on a stale cfg is never rejected over one absent extra and old payloads stay valid; core species tables (lineages, ancestries, legacies, Kobold Legacy) stay mandatory. The kobold Draconic Boon table (D-028) is the only flagged table today; the parser flags none (it can't tell).
 Enforced by: gen.js (`genSpTablesOf`, draft `boons`, optional-boon validation), core.js normalizeAdv default, crew share cfg `boons`; `test/gen.test.js` boons-toggle floor.
 Affects: gen.js, core.js, tests.
-OPEN (tabled by Francesco): making the boon table itself CUSTOMIZABLE — DM-edited entries, or per-boon enable. Not designed; ask before building. **Un-tabled 2026-08-09 → scheduled as TASKS G4 (D-039): the design round opens the next session.**
+~~OPEN (tabled by Francesco): making the boon table itself CUSTOMIZABLE — DM-edited entries, or per-boon enable.~~ **Half RESOLVED 2026-08-10 → D-043:** per-boon enable toggles shipped in B297, scoped by Francesco to the packs that ship boons. DM-EDITED boon text stays deferred (a new hostile free-text surface on the wire) — still ask before building.
 
 ### D-036 — The background ASI defaults to the assignment that buys modifiers · 2026-08-09 · DECIDED
 Mechanism: Francesco's call (written note)
 Raw note: "the BG ability scores should be assigned in a way to tries to make the scores even (a +1 in CON with a 14 CON gives you nothing, while a +1 in DEX with 13 DEX gives you a +1 mod to that score)"
-Chosen: `genAsiDefault(d)` — the +2 stays on the class primary (it crosses exactly one modifier step at any parity, so it can't be wasted); the +1 goes to the best ODD-scored ability among the class secondary, Constitution and Dexterity (in that preference order), falling back to the class secondary when nothing is odd. Suggestion only — the ASI step stays explicit and fully overridable (D-017), and the label now reads "Suggested" rather than "class default".
+Chosen: `genAsiDefault(d)` — the +2 stays on the class primary (it crosses exactly one modifier step at any parity, so it can't be wasted); ~~the +1 goes to the best ODD-scored ability among the class secondary, Constitution and Dexterity (in that preference order), falling back to the class secondary when nothing is odd~~ **AMENDED 2026-08-10 (D-044): the implementation took the FIRST odd in that fixed order rather than the best-scored one, and never looked past those three abilities — so with no odd score among them the +1 landed where it bought nothing. It now picks the highest odd score, widening to every other ability before it settles.** Suggestion only — the ASI step stays explicit and fully overridable (D-017), and the label now reads "Suggested" rather than "class default".
 Enforced by: gen.js `genAsiDefault` (consumed by the roll, the editor hint and the step info text); `test/gen.test.js` ASI-default floor over odd/even fixtures.
 Affects: gen.js, tests.
 
@@ -334,7 +334,7 @@ The name gate, resolved: THE DM NEVER TYPES A NAME. Names are the player's to gi
 Supersedes: D-039's G2 clause "the name REQUIRED" — required for players, rolled for the DM. Partially supersedes D-009/D-011's identity-is-typed-only stance (already flagged in D-039): name, quirk and trinket all become roll-or-type.
 Enforced by: gen.js (the summary screen + sticky `.gk-foot`, the name table, per-field rerolls); `test/crew-flow.test.js` (the DM flow reaches the card with no typing; the phone flow does not).
 Affects: gen.js, styles.css, tests, TASKS.md G2/G3, DEVELOPMENT.md (generator section).
-Open: the name table's own sourcing rides G3's sourcing round (names are content, same provenance question as quirks and trinkets), and per-species naming is part of that question.
+~~Open: the name table's own sourcing rides G3's sourcing round.~~ **Resolved 2026-08-10 → D-042:** names are PROCEDURAL per species (a sound profile per pack, neutral fallback for uploads), so there is no name table to source.
 
 ### D-042 — Identity content sourcing: SRD trinkets (CC-BY) plus our own, mixed-source quirks, procedural names · 2026-08-10 · DECIDED
 Mechanism: AskUserQuestion (G3 sourcing round, four calls) after a provenance sweep of the SRD 5.2.1, the local 5etools mirror and the open-licence 5e variants

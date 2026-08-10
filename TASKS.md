@@ -83,7 +83,7 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   5etools class.json can be condensed the way `parseRacesJSON` condenses races, and where the wire
   and the validator would have to change. Output is a recommendation with a scope, not code.
   *Done when:* the memo exists and he has picked a direction (including "no").
-- [ ] **G10 — The player's HP section, hit dice, and death saves** · Opus @ high · ~2
+- [ ] **G10 — The player's HP section, hit dice, and death saves** · Opus @ high · ~2 (absorbs T2.8's visual)
   "In the player view, rework the HP section: it should resemble more the combat hp design, and
   include hit dice (spend them to heal) and death saves." Plus a GLOBAL change he wants iterated
   together: **death saves become two icon counters — a skull for failures, something else for
@@ -163,6 +163,10 @@ and the phase code review with fixes applied (B273).
   Resource parsing from statblock text; recharge rolls itself at turn start. (P2.5)
 - [ ] **T2.8 — PC death saves** · Sonnet @ medium · ~1
   Extend the monster tracker to PC rows. Player-mode surface waits for Phase 7. (P2.6)
+  ⚠ **Overlaps G10** (Francesco, 2026-08-10): he wants death saves REDESIGNED everywhere as two
+  icon counters (skull = failures, a counterpart = successes, number inside, shown at 0 HP) —
+  combat tracker included. G10's design round settles the visual for BOTH surfaces; do that first,
+  then this task is the tracker half of it. Don't build two death-save designs.
 - [ ] **T2.9 — Damage-type hooks** · Sonnet @ high · ~1
   Auto resist/immune/vulnerable at damage entry; verify B241 coverage first. (P2.7)
 - [ ] **T2.10 — Roles read effects** · Opus @ high · ~1
