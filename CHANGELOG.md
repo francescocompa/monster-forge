@@ -4,6 +4,29 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 300 — G6: the equipment kits are named for the characters they imply (D-047)
+A naming pass over the whole armory. The kits used to name their own contents ("Rapier and hand
+crossbow"), which the roll table already prints beside them, so the name was a wasted line.
+- **104 of the 109 kits renamed** into archetype voice — a noun phrase for the character the loadout
+  implies, no leading article, sentence case like every other name in the app. Fighter's *Sword and
+  shield* is now **Line soldier**, the Protector-gated *Chain mail and halberd* is **Cathedral
+  sentinel**, the Rogue's *Scimitar and hand crossbow* is **Cat burglar**.
+- **Five were already archetypes and were left alone** — Fighter's Archer, Duelist, Musketeer and
+  Pistolier, and Wizard's Traveling scholar. They were the existing voice; the pass matched them.
+- **No gendered forms.** The generator is species-blind and its characters have no assumed gender, so
+  the "-man" names that a weapon-first pass produces (Pikeman, Reachman, Glaivesman) are instead
+  **Bulwark**, **Gatekeeper** and **Harrower**.
+- **Nothing keys off a kit name.** `kit.n` is display-only — the roll-table label, the summary line
+  and the gear editor. Every gate reads the kit INDEX plus `ac` and `tags` (`genKitIdxFor`,
+  `genKitTags`, `genAfford`, `validateGenPayload`), so the D-037 style filter, the D-038 purse and
+  the wire validator are untouched by the rename.
+- New floor in `test/gen.test.js`: a kit name is never a contents list ("X and Y"), never echoes more
+  than one item off its own gear line, is unique inside its class, and stays sentence case; the kit
+  count is pinned at 109 so the pass can't have dropped one. **136 tests green**, verified live in
+  the ritual and on the summary screen, zero console errors.
+- Noted while working: `deriveGenChar` sets `kitName` on the derived character and nothing reads it.
+  Left in place — it is one field, and the card's gear line is the obvious future consumer.
+
 ## Batch 299 — G5 and G10: the ritual's categories become visible, death saves become one widget (D-045, D-046)
 Four design rounds with Francesco (mockups + a research round he called for), then both builds.
 - **G5 — the ritual's macro categories are on screen** (D-045). The D-034 groups — Species · Scores ·

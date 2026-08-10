@@ -402,3 +402,13 @@ Rejected, with reasons: **two glyph plates with the number inside** (his origina
 Enforced by: combat.js (`deathSavesWidgetHTML` shared renderer, `deathSavesRowHTML` swap, `rollDeathSave`), gen.js (the H2 HP block, hit dice, the card's widget), styles.css (`.dsw-*`), floors in `test/units.test.js` and `test/gen.test.js`.
 Affects: combat.js, gen.js, styles.css, tests, TASKS.md (G10), DEVELOPMENT.md.
 Note: T2.8's death-save visual was flagged to wait for this design — it is now unblocked and inherits this widget.
+
+### D-047 — Equipment kits are named for the character they imply · 2026-08-10 · DECIDED
+Mechanism: sample round (three voices drafted over the real tables) + AskUserQuestion
+Raw note: "Rename the equipment kits to something more flavorful rather than repeating what's in the kit." · then, on the samples: "Archetype throughout, remove *The*".
+Chosen: **archetype names** — a noun phrase naming the character the loadout implies (Line soldier, Cathedral sentinel, Cat burglar), **with no leading article**, in sentence case like every other name in the app. The contents keep printing beside the name in the roll table, on the summary and in the gear editor, so nothing is lost. Six kits already written this way (Fighter's Archer, Duelist, Musketeer, Pistolier and Wizard's Traveling scholar) were left untouched — they were the existing voice, and the pass matched them rather than the reverse.
+House rules the pass held to, now pinned by the test: no name is a contents list (no "X and Y"), no name echoes more than one item off its own gear line, no two kits in a class share a name, and no gendered "-man" forms (the generator is species-blind and its characters have no assumed gender, so Pikeman/Reachman/Glaivesman became Bulwark/Gatekeeper/Harrower).
+Rejected, with reasons: **tactic voice** ("Hold the line", "Shoot from cover") — never drifts back to the gear and tells a first-time one-shot player what the turn is for, but he chose the register his own six names had already set; **provenance voice** ("Chapel armoury", "Tavern-circuit kit") — seeds a character hook, but it can contradict the rolled background; **a mix of the two by kit** — richest, but a roll table reading in two registers is noise.
+Known cost, accepted: archetype names carry no tactical hint, so a brand-new player reads the contents rather than the name to know what to do. The contents are right there, which is why this is cheap.
+Enforced by: gen.js (`GEN_CLASSES[*].kits[*].n` — display-only; every gate keys off the kit INDEX, `ac` and `tags`, never the name), a floor in `test/gen.test.js`.
+Affects: gen.js, tests, TASKS.md (G6), CHANGELOG.md.

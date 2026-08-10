@@ -781,6 +781,35 @@ test("D-040: every kit is tagged, offers a Dex option, and no class repeats one 
   assert.ok(r.heavyKits > 0 && r.shieldKits > 0, "defence tags are derived from the armor recipe");
 });
 
+test("G6: a kit is named for the character it implies, never for its own gear list", () => {
+  const r = ev(`(()=>{
+    const STOP=["with","from","pair","kits","20","2","3","4","5","6","50"];
+    const listy=[],echo=[],dupe=[],cased=[];
+    Object.entries(GEN_CLASSES).forEach(([cls,K])=>{
+      const seen=new Set();
+      K.kits.forEach(k=>{
+        const n=k.n,low=n.toLowerCase();
+        // the old names were "X and Y" — a conjunction is the tell of a contents list
+        if(/\\band\\b/.test(low))listy.push(cls+":"+n);
+        // at most one word may echo the gear line, and only as flavour (Shieldbearer, Musketeer)
+        const words=k.gear.toLowerCase().replace(/[(),]/g," ").split(/\\s+/)
+          .filter(w=>w.length>3&&STOP.indexOf(w)<0);
+        const hits=[...new Set(words)].filter(w=>low.indexOf(w)>=0);
+        if(hits.length>1)echo.push(cls+":"+n+" ["+hits.join("+")+"]");
+        // a roll table can't offer the same row twice
+        if(seen.has(low))dupe.push(cls+":"+n); seen.add(low);
+        // sentence case, like every other name in the app
+        if(!/^[A-Z][^A-Z]*$/.test(n.replace(/'/g,"")))cased.push(cls+":"+n);
+      });
+    });
+    return {listy,echo,dupe,cased,total:Object.values(GEN_CLASSES).reduce((a,K)=>a+K.kits.length,0)};})()`);
+  assert.deepEqual(r.listy, [], "a kit name still reads as a contents list");
+  assert.deepEqual(r.echo, [], "a kit name repeats more than one item from its own gear line");
+  assert.deepEqual(r.dupe, [], "a class offers the same kit name twice");
+  assert.deepEqual(r.cased, [], "a kit name breaks sentence case");
+  assert.equal(r.total, 109, "the kit count is unchanged by the naming pass");
+});
+
 test("D-038: every weapon and armor is featured in some kit, and everything carries a price", () => {
   const r = ev(`(()=>{
     const usedW=new Set(),usedAC=new Set();

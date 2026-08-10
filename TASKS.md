@@ -57,11 +57,12 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   Chosen treatment: **category rules** — a labelled hairline above each group's first step, steps
   untouched. Ships on the DM ritual and the phone flow together (one renderer). **D-034's open item
   is closed**: yes to visible macro-category headers, as rules.
-- [ ] **G6 — Equipment kits get real names** · Sonnet @ medium · ~½
-  "Rename the equipment kits to something more flavorful rather than repeating what's in the kit."
-  109 kits currently name their own contents ("Rapier and hand crossbow"). Needs a naming pass with
-  a consistent voice, and the contents already print beside the name, so nothing is lost.
-  *Done when:* every kit has a name that isn't its gear list, the tests still pin the gear.
+- [x] **G6 — Equipment kits get real names** · done B300 (sample round → D-047)
+  Archetype voice, no leading article, sentence case: 104 kits renamed for the character the
+  loadout implies (Line soldier, Cathedral sentinel, Cat burglar); the six that already read that
+  way were left alone. Contents still print beside the name. A floor pins the house rules — no
+  contents lists, no name echoing more than one item off its own gear line, no duplicate inside a
+  class, no gendered "-man" forms.
 - [ ] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
   "Plan a task where we review the name generator and the random lists." A read-through pass with
   him: sample names per species (the profiles are new and unproven at the table), the 100 quirks,
