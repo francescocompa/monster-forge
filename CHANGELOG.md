@@ -18,7 +18,7 @@ Francesco's eight notes on the B300 list. Two were content, six were naming.
   change either way: darts are Simple Ranged, so they were never Monk weapons and never carried
   Martial Arts.
 - **Nine names re-cut**: War priest → **Battle priest** (War Cleric is a subclass) · Pistolier →
-  **Gunslinger** · Venom tracker → **Thornclan tracker** (tribal, per his note) · Frugal conjurer →
+  **Gunslinger** · Venom tracker → **Canopy warrior** (tribal, per his note) · Frugal conjurer →
   **Frugal ritualist** (Conjurer is a wizard subclass).
 - **The pure casters now key off what the kit actually is**, which was the note that the caster names
   described the character and not the loadout. Sorcerer: Wild talent → **Reckless prodigy** (the

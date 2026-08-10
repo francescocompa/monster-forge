@@ -588,7 +588,7 @@ const GEN_CLASSES={
       {n:"Poacher",ac:"padded",tags:["ranged","thrown"],weapons:[{w:"shortbow"},{w:"handaxe",count:2}],gear:"Padded Armor, Shortbow, 20 Arrows, 2 Handaxes, Druidic Focus (yew wand)"},
       {n:"Tidewatcher",ac:"scale",tags:["onehand","thrown","finesse"],weapons:[{w:"trident"},{w:"dagger",count:2}],gear:"Scale Mail, Trident, Net, 2 Daggers, Druidic Focus (wooden staff)",gpExtra:1},
       // The blowgun's 1 damage is a utility line, so this kit carries a real martial sidearm.
-      {n:"Thornclan tracker",ac:"hide",tags:["ranged","onehand","finesse"],weapons:[{w:"blowgun"},{w:"rapier"}],gear:"Hide Armor, Blowgun, 50 Needles, Rapier, Druidic Focus (totem)",gpExtra:1}],
+      {n:"Canopy warrior",ac:"hide",tags:["ranged","onehand","finesse"],weapons:[{w:"blowgun"},{w:"rapier"}],gear:"Hide Armor, Blowgun, 50 Needles, Rapier, Druidic Focus (totem)",gpExtra:1}],
     traits:[],
     bonus:[{n:"Favored Enemy (Hunter's Mark)",t:"Hunter's Mark is always prepared and castable twice per Long Rest without a spell slot."}],
     res:[{k:"fav",label:"Hunter's Mark (free)",max:2,per:"Long Rest"}],

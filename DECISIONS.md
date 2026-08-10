@@ -415,8 +415,8 @@ Affects: gen.js, tests, TASKS.md (G6), CHANGELOG.md.
 
 **AMENDED 2026-08-10 (B301, his review of the B300 list):** nine names re-cut and two kits fixed.
 **Names:** War priest → Battle priest and Frugal conjurer → Frugal ritualist (both collided with
-subclass names — War Cleric, Conjurer); Pistolier → Gunslinger; Venom tracker → Thornclan tracker
-(he asked for tribal). **The pure casters were named for the character rather than the loadout**,
+subclass names — War Cleric, Conjurer); Pistolier → Gunslinger; Venom tracker → Canopy warrior
+(he asked for a jungle-tribal read, not an invented clan name). **The pure casters were named for the character rather than the loadout**,
 so they now key off what distinguishes the kit: Wild talent → Reckless prodigy (the spear kit that
 closes) and Untamed spark → Wary spark (the crossbow kit that doesn't) — which also separates the
 two he read as near-synonyms — plus Storm-touched → Nimble channeler and Drifter → Gutter mage
