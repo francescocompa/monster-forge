@@ -428,3 +428,29 @@ range with darts in four kits of eight while Dancing adept had no ranged option 
 traveler took a Shortbow, Forge disciple a Light Crossbow and Dancing adept a Sling. Rule worth
 keeping: **reading a naming list beside its contents is what exposes a dominated option** — the
 names were fine, the kits underneath them were not.
+
+**AMENDED 2026-08-10 (B303, the G7 name-generator pass): the seam rule.** Sampling the profiles for
+G7's review showed the assembler producing unpronounceable names — Vorptch, Skitp, Ordnrik, Gnashk,
+and the whole Human column (Aldrdon, Garteic, Elmsel). Cause: the middle piece was a flat 45% coin
+flip, so **half the time `pre` was glued straight onto `suf`**, and an exhaustive audit put the
+clashing-seam rate at 33-66% per profile.
+**The rule now: where pre meets suf the sound must ALTERNATE.** Two consonants collide (Vorp+tch),
+two vowels smear (Nara+ael), and a repeated 2-gram stutters (Thur+urr) — in all three the middle
+piece is REQUIRED, not optional; where the seam is already clean it stays a flourish, at 30% rather
+than 45% (a forced repair fires far more often, and without the reduction every name grew a
+syllable). `genNameCls`/`genNameMids`/`genNameEchoes` are the definition; `genNameMids` also drops a
+mid that echoes its own neighbours, which is what stopped the first cut emitting Thurururr, Pavakaka
+and Lugagagar — **a repair that stutters reads worse than the clash it fixed.**
+**The parts collection grew to feed the rule.** A mid can only repair a seam if it starts opposite
+to pre's last sound AND ends opposite to suf's first, which sorts mids into four families
+(vowel/consonant × start/end). The shipped profiles had only two of the four — no profile had a
+consonant-ending mid at all, so no vowel-vowel seam was repairable (the elf had 54 such pairs), and
+VC/CV were nearly empty, so an echo had nothing to fix it with. Every profile now carries all four
+families plus wider `pre`/`suf` lists: **~1,240 names per species on average, up from ~530**, and
+**0 clashes and 0 stutters across all 21,505 reachable combinations** (was 33-66% clashing).
+Enforced by: gen.js (`genNameCls`, `genNameMids`, `genNameEchoes`, `genRollName`, `GEN_NAME_PROFILES`,
+`GEN_NAME_FALLBACK`), a floor in `test/gen.test.js` that pins BOTH the content (every profile carries
+every mid family; no clashing pair is unrepairable) and the rule (every mid the chooser offers
+alternates at both joins).
+Note: this is the mechanical half of G7. **The list content — quirks, the 20 extra trinkets, and
+whether each species SOUNDS right — is still his read-through.**

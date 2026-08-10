@@ -63,10 +63,14 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   way were left alone. Contents still print beside the name. A floor pins the house rules — no
   contents lists, no name echoing more than one item off its own gear line, no duplicate inside a
   class, no gendered "-man" forms.
-- [ ] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
-  "Plan a task where we review the name generator and the random lists." A read-through pass with
-  him: sample names per species (the profiles are new and unproven at the table), the 100 quirks,
-  the 20 extra trinkets. Expect edits, not architecture.
+- [~] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
+  **Mechanical half done B303 (D-042 amended):** sampling for the review exposed a real defect, not
+  a taste one — the middle piece was a flat 45% coin flip, so 33-66% of seams glued two consonants
+  or two vowels together (Vorptch, Ordnrik, Aldrdon). The seam now must alternate, the middle piece
+  is a required repair rather than a flourish, and the parts collection grew to feed it (the
+  profiles carried only two of the four mid families). 0 clashes and 0 stutters across 21,505
+  combinations; the pool roughly doubled.
+  **Still his:** sample names species by species, the 100 quirks, the 20 extra trinkets.
   *Done when:* he has signed off species by species and list by list.
 - [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
   "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,

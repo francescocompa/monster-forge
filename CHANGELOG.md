@@ -4,6 +4,36 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 303 — G7 (part): names get a seam rule, and the parts collection grows to feed it (D-042 amended)
+Sampling the name profiles for G7's review turned up a real defect, not a taste one.
+- **The defect**: the middle piece was a flat 45% coin flip, so half the time `pre` was glued
+  straight onto `suf` — Vorptch, Skitp, Gnashk, Ordnrik, and the entire Human column (Aldrdon,
+  Garteic, Elmsel). An exhaustive audit put the clashing-seam rate at **33-66% per profile**.
+- **The rule**: where pre meets suf the sound must ALTERNATE. Two consonants collide, two vowels
+  smear, a repeated 2-gram stutters (Thur+urr) — in all three the middle piece is now REQUIRED
+  rather than optional. Where the seam is already clean it stays a flourish, dropped from 45% to
+  **30%**: a forced repair fires far more often, and without that reduction every name grew a
+  syllable and the short punchy ones stopped appearing.
+- **The first cut fixed the clash and introduced a stutter** — Thurururr, Pavakaka, Lugagagar —
+  because a repair that echoes its own neighbours reads worse than the clash it replaced.
+  `genNameEchoes` drops any mid that repeats the tail of `pre` or the head of `suf`, whole or in
+  its first/last two letters.
+- **The parts collection grew because the rule needs material.** A mid only repairs a seam if it
+  starts opposite to pre's last sound and ends opposite to suf's first, which sorts mids into four
+  families. The shipped profiles carried **two of the four**: no profile had a single
+  consonant-ending mid, so no vowel-vowel seam could be repaired (the elf had 54 such pairs), and
+  the two echo-repairing families were nearly empty. Every profile now carries all four, with
+  wider `pre`/`suf` lists to match.
+- **Result: 0 class clashes and 0 stutters across all 21,505 reachable combinations**, and the pool
+  roughly doubled — ~1,240 distinct names per species against ~530 before. Kobolds read as kobolds
+  (Snivizz, Trikup), gnomes as gnomes (Murrelobble, Nackizzle), dwarves as dwarves (Kragodin,
+  Brogokar).
+- New floor in `test/gen.test.js` pins both halves: the CONTENT (every profile carries every mid
+  family; no clashing pair is unrepairable) and the RULE (every mid the chooser offers alternates at
+  both joins). **137 tests green**, verified live on the summary screen, zero console errors.
+- This is the mechanical half of G7. The list content — quirks, the 20 extra trinkets, and whether
+  each species sounds right — is still Francesco's read-through.
+
 ## Batch 302 — G9: the beyond-level-1 spike, plus a domination sweep over the 109 kits
 No app code. A written spike and one mechanical check.
 - **`GEN_LEVELS.md`** — the G9 feasibility memo. Measured against the local 5etools mirror and gen.js:

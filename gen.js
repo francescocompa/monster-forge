@@ -1041,47 +1041,112 @@ const GEN_QUIRKS=[
 // assembles a name from it, so the pool is infinite and nothing is transcribed from a rulebook.
 // A species with no profile of its own (every uploaded pack) borrows this one.
 const GEN_NAME_FALLBACK={
-  pre:["Ar","Bel","Cor","Dain","El","Fen","Gar","Hal","Kel","Mar","Nor","Ral","Sel","Tor","Vel"],
-  mid:["a","e","i","o","u"],
-  suf:["n","r","th","l","s","k","dor","wen","mir","ric"]};
+  pre:["Ar","Bel","Cor","Dain","El","Fen","Gar","Hal","Kel","Mar","Nor","Ral","Sel","Tor","Vel",
+       "Ash","Bren","Dov","Esk","Ith","Lor","Mir","Ove","Ryn","Tal","Yur"],
+  mid:["a","e","i","o","u","ia","ae","n","r","l","th","nd","ar","en","or","il","ra","na","le","mo"],
+  suf:["n","r","th","l","s","k","dor","wen","mir","ric","an","eth","is","or","ael","und","ir","as"]};
 // One profile per shipped pack. A pack may carry its own `names` instead (that wins); anything with
 // neither — every uploaded species — falls back above, so no species is ever left without names.
+// Each `mid` list deliberately carries BOTH families: vowel-start/vowel-end pieces (they repair a
+// consonant clash, Vorp+a+tch) and consonant-start/consonant-end pieces (they repair a vowel clash,
+// Nara+th+ael). A profile missing one family can't fix half its seams — see genNameMids.
 const GEN_NAME_PROFILES={
-  kobold:{pre:["Snik","Krib","Vex","Grik","Taz","Yip","Rek","Skit","Nub","Zik","Chak","Durt","Gnash","Mek","Rax","Sput","Klik","Vorp"],
-          mid:["a","i","u","ka","ri"],suf:["k","x","tch","zz","rk","nak","rit","sk","p","nix"]},
-  aasimar:{pre:["Ari","Cael","Eli","Ith","Lum","Nara","Ori","Sera","Thae","Val"],
-           mid:["a","e","i","el"],suf:["ael","riel","thos","mira","dan","seth","lia","nor","vion"]},
-  dragonborn:{pre:["Arjh","Bhar","Dhaz","Ghesh","Kriv","Med","Nagh","Pand","Rhog","Sham","Thur","Zar"],
-              mid:["a","o","ra","ka"],suf:["ash","kar","rax","thar","ndra","zil","vash","kir","rios"]},
-  dwarf:{pre:["Bar","Dur","Grum","Thra","Har","Mor","Bal","Kaz","Vond","Ordn","Fal","Gim"],
-         mid:["a","o","u","ur"],suf:["din","rik","grim","bek","dur","nar","muth","kar","li","gar"]},
-  elf:{pre:["Ae","Ily","Thal","Ny","Sae","Elu","Cael","Ari","Fael","Miri","Sol","Va"],
-       mid:["la","ri","the","na","el"],suf:["nor","wen","riel","dris","thas","mir","lian","ath","ynn"]},
-  gnome:{pre:["Fizz","Bim","Wren","Nack","Zook","Pim","Dab","Griz","Quil","Snor"],
-         mid:["a","i","o","el"],suf:["wick","bles","dink","nap","tock","fizzle","bit","gle","zin"]},
-  goliath:{pre:["Kav","Thul","Gar","Ura","Bur","Nal","Ka","Vand","Orn","Zar"],
-           mid:["a","u","o","ak"],suf:["aka","thul","ruk","gan","mak","dor","nak","vok","tha"]},
-  halfling:{pre:["Bil","Mer","Rosc","Tan","Pip","Dob","Wil","Hild","Cor","Nim"],
-            mid:["a","o","er"],suf:["by","ric","ock","wise","bell","fin","dle","kin","row"]},
-  human:{pre:["Aldr","Ber","Cas","Dor","Elm","Gart","Hen","Ives","Jor","Kest","Lor","Mira","Ren","Sabe","Tor"],
-         mid:["a","e","i","o"],suf:["ic","na","ran","wyn","don","sel","ther","mund","va","lin"]},
-  orc:{pre:["Gru","Thok","Mur","Zag","Bruk","Kor","Ur","Sha","Vrak","Ghar"],
-       mid:["a","u","og"],suf:["mak","gash","thak","nar","zug","rok","dul","gar","ka"]},
-  tiefling:{pre:["Ak","Bael","Cim","Dam","Eis","Kal","Mor","Nem","Ronw","Zar"],
-            mid:["a","e","i","ae"],suf:["mon","zael","reth","ixis","thys","vane","noch","kar","ess"]}};
+  kobold:{pre:["Snik","Krib","Vex","Grik","Taz","Yip","Rek","Skit","Nub","Zik","Chak","Durt","Gnash",
+               "Mek","Rax","Sput","Klik","Vorp","Zag","Trik","Sniv","Grib","Scut","Yark","Rill","Zeb"],
+          mid:["a","i","u","ika","aza","uru","k","tt","zz","rk","sk","ik","ak","urt","ez","ka","zi","tu","gra"],
+          suf:["k","x","tch","zz","rk","nak","rit","sk","p","nix","kit","tix","rup","zash","ak","ix",
+               "ux","irr","ozz","eb"]},
+  aasimar:{pre:["Ari","Cael","Eli","Ith","Lum","Nara","Ori","Sera","Thae","Val","Anu","Cere","Ilm",
+                "Miri","Sol","Vesh","Zeru","Aur"],
+           mid:["a","e","i","ia","ae","l","n","th","ss","rn","el","ar","in","eth","li","ne","sa","tha"],
+           suf:["ael","riel","thos","mira","dan","seth","lia","nor","vion","thiel","sana","din","eth",
+                "ariel","oth","ynn","vera","is"]},
+  dragonborn:{pre:["Arjh","Bhar","Dhaz","Ghesh","Kriv","Med","Nagh","Pand","Rhog","Sham","Thur","Zar",
+                   "Balas","Donaar","Heskan","Kava","Mehen","Torinn","Vrak"],
+              mid:["a","o","aza","r","n","rr","zh","th","ur","ar","esh","ok","ra","ka","zha","tho"],
+              suf:["ash","kar","rax","thar","ndra","zil","vash","kir","rios","axun","esh","urr","onn",
+                   "ath","izar","ok","ux"]},
+  dwarf:{pre:["Bar","Dur","Grum","Thra","Har","Mor","Bal","Kaz","Vond","Ordn","Fal","Gim","Brog",
+              "Dain","Krag","Nal","Rurik","Tork","Ulf","Hjal"],
+         mid:["a","o","u","ara","oro","d","g","rr","nn","th","ur","ar","in","old","ra","du","gi","tho"],
+         suf:["din","rik","grim","bek","dur","nar","muth","kar","li","gar","born","hild","dan","aki",
+              "ok","un","eld","arn"]},
+  elf:{pre:["Ae","Ily","Thal","Ny","Sae","Elu","Cael","Ari","Fael","Miri","Sol","Va","Lue","Ithra",
+            "Sylv","Ana","Riel","Thea"],
+       mid:["ia","ae","ea","io","l","n","th","nd","ss","rr","el","ar","in","ath","la","ri","the","na"],
+       suf:["nor","wen","riel","dris","thas","mir","lian","ath","ynn","aeth","sil","ndil","wyn","ara",
+            "ion","eth","uin","las"]},
+  gnome:{pre:["Fizz","Bim","Wren","Nack","Zook","Pim","Dab","Griz","Quil","Snor","Tink","Wobb","Jib",
+              "Fenn","Podd","Zan","Murr","Glim"],
+         mid:["a","i","o","ee","idi","b","dd","zz","nn","rk","el","ib","ot","up","bi","zo","na","dee"],
+         suf:["wick","bles","dink","nap","tock","fizzle","bit","gle","zin","nock","obble","izzle",
+              "ick","umble","apper","iddle","ort"]},
+  goliath:{pre:["Kav","Thul","Gar","Ura","Bur","Nal","Ka","Vand","Orn","Zar","Ilo","Mak","Pav","Tharn",
+                "Uth","Vun","Keo","Aza"],
+           mid:["a","u","o","ura","ao","n","r","th","nn","kk","ak","un","or","ath","ka","ma","tho","ru"],
+           suf:["aka","thul","ruk","gan","mak","dor","nak","vok","tha","ok","ath","uma","gorn","eka",
+                "ur","and","iva"]},
+  halfling:{pre:["Bil","Mer","Rosc","Tan","Pip","Dob","Wil","Hild","Cor","Nim","Ando","Ever","Fenn",
+                 "Garr","Lyle","Perr","Sam","Wend"],
+            mid:["a","o","ia","ee","b","d","ll","rr","nn","er","in","ol","ad","be","ri","do","na"],
+            suf:["by","ric","ock","wise","bell","fin","dle","kin","row","ander","ory","ett","ins",
+                 "ade","up","ley","orn"]},
+  human:{pre:["Aldr","Ber","Cas","Dor","Elm","Gart","Hen","Ives","Jor","Kest","Lor","Mira","Ren",
+              "Sabe","Tor","Ansel","Bryn","Cort","Edda","Halle","Idris","Marek","Nell","Ost","Rhea","Vance"],
+         mid:["a","e","i","o","ea","ia","n","r","l","nd","st","rr","an","er","in","ol","ri","ta","le","do"],
+         suf:["ic","na","ran","wyn","don","sel","ther","mund","va","lin","wick","stan","gar","ette",
+              "ora","is","ard","elle","by","win"]},
+  orc:{pre:["Gru","Thok","Mur","Zag","Bruk","Kor","Ur","Sha","Vrak","Ghar","Dush","Grim","Hark","Lug",
+            "Mog","Rok","Snag","Zul"],
+       mid:["a","u","aga","uru","g","k","rr","gg","nk","og","ak","ur","ash","ga","zu","mo","kra"],
+       suf:["mak","gash","thak","nar","zug","rok","dul","gar","ka","ash","urk","oth","grim","ug","ak",
+            "olg","ra"]},
+  tiefling:{pre:["Ak","Bael","Cim","Dam","Eis","Kal","Mor","Nem","Ronw","Zar","Ash","Cael","Dross",
+                 "Iri","Lev","Mal","Sere","Vex"],
+            mid:["a","e","i","ae","ia","ero","r","n","th","ss","nd","ar","in","esh","ax","ze","ma","ri","tho"],
+            suf:["mon","zael","reth","ixis","thys","vane","noch","kar","ess","phel","ador","ith",
+                 "axis","une","riel","oth","yx"]}};
 function genNameProfile(sp){
   const pack=GEN_SPECIES[sp];
   const p=(pack&&pack.names)||GEN_NAME_PROFILES[sp]||GEN_NAME_FALLBACK;
   return p&&Array.isArray(p.pre)&&p.pre.length&&Array.isArray(p.suf)&&p.suf.length?p:GEN_NAME_FALLBACK;
 }
 // A name is assembled, not drawn from a list — so it never runs out and nothing is transcribed.
-// The middle piece lands about half the time, which is what makes the same profile give both
-// "Snikk" and "Snikarit".
+// THE SEAM RULE (D-042 amended, B303): where pre meets suf the sound must alternate. Two consonants
+// collide (Vorp+tch, Ordn+rik) and two vowels smear (Nara+ael, Gart+e+ic), so the middle piece is
+// not a flourish — it is the repair. It is REQUIRED when the seam clashes and merely optional when
+// it doesn't, which is why the old flat 45% coin flip produced an unpronounceable name half the time.
+function genNameCls(c){return "aeiou".indexOf(String(c||"").toLowerCase())>=0?"v":"c";}
+// The mids that actually repair THIS pair: one that starts opposite to pre's last sound and ends
+// opposite to suf's first. An empty list means the profile can't fix that seam — a content gap, and
+// a test pins it at zero for every shipped profile.
+// It also has to not STUTTER. Forcing a repair on every clash makes the middle piece fire far more
+// often than the old coin flip did, and a piece that echoes its neighbour reads worse than the clash
+// it fixed: Thur+ur+urr, Pav+aka+aka, Lug+aga+gar. So a mid that repeats the tail of pre or the head
+// of suf — as a whole or in its last/first two letters — is dropped.
+function genNameEchoes(pre,mid,suf){
+  const a=String(pre).toLowerCase(),m=String(mid).toLowerCase(),s=String(suf).toLowerCase();
+  if(a.endsWith(m)||s.startsWith(m))return true;
+  return m.length>1&&(s.startsWith(m.slice(-2))||a.endsWith(m.slice(0,2)));
+}
+function genNameMids(p,pre,suf){
+  const a=genNameCls(String(pre).slice(-1)),s=genNameCls(String(suf).charAt(0));
+  return (p.mid||[]).filter(m=>m&&genNameCls(m.charAt(0))!==a&&genNameCls(m.slice(-1))!==s
+    &&!genNameEchoes(pre,m,suf));
+}
 function genRollName(sp,rng){
   rng=rng||Math.random;
   const p=genNameProfile(sp),pick=a=>a[Math.floor(rng()*a.length)%a.length];
-  const mid=Array.isArray(p.mid)&&p.mid.length&&rng()<0.45?pick(p.mid):"";
-  let n=(pick(p.pre)+mid+pick(p.suf)).replace(/(.)\1{2,}/g,"$1$1");
+  const pre=pick(p.pre),suf=pick(p.suf);
+  // pre and suf can stutter against each other too (Thur|urr, Donaar|urr) — same echo, different
+  // join, so it counts as a clash and takes a repair
+  const clash=genNameCls(pre.slice(-1))===genNameCls(suf.charAt(0))
+    ||pre.slice(-2).toLowerCase()===suf.slice(0,2).toLowerCase();
+  const ok=genNameMids(p,pre,suf);
+  // 0.30, not the old 0.45: a clashing seam now takes a mid unconditionally, so the OPTIONAL branch
+  // has to give ground or every name grows a syllable and the short punchy ones stop appearing.
+  const mid=ok.length&&(clash||rng()<0.30)?pick(ok):"";
+  let n=(pre+mid+suf).replace(/(.)\1{2,}/g,"$1$1");
   n=n.charAt(0).toUpperCase()+n.slice(1);
   return n.slice(0,28);
 }

@@ -986,6 +986,39 @@ test("D-042: identity tables are whole, and every species can name a character",
 
 // D-043 (G4): individual boons switch off. A disabled boon leaves the option table, a die landing
 // on its face resolves to no boon, and the DM's cfg outranks a stale phone's payload — tolerantly.
+test("D-042 (B303): every name seam alternates, and every profile can repair every pair it can roll", () => {
+  const r = ev(`(()=>{
+    const gap=[],bad=[],thin=[];
+    const all=Object.assign({_fallback:GEN_NAME_FALLBACK},GEN_NAME_PROFILES);
+    Object.entries(all).forEach(([k,p])=>{
+      // a profile needs BOTH mid families or it can only fix half its seams
+      const vv=(p.mid||[]).filter(m=>genNameCls(m.charAt(0))==="v"&&genNameCls(m.slice(-1))==="v").length;
+      const cc=(p.mid||[]).filter(m=>genNameCls(m.charAt(0))==="c"&&genNameCls(m.slice(-1))==="c").length;
+      if(!vv||!cc)thin.push(k+":vowel-both "+vv+"/cons-both "+cc);
+      p.pre.forEach(a=>p.suf.forEach(s=>{
+        const clash=genNameCls(a.slice(-1))===genNameCls(s.charAt(0));
+        const ok=genNameMids(p,a,s);
+        if(clash&&!ok.length)gap.push(k+": "+a+"|"+s);
+        // whatever the rule permits must actually alternate at both joins
+        ok.forEach(m=>{
+          if(genNameCls(a.slice(-1))===genNameCls(m.charAt(0))
+           ||genNameCls(m.slice(-1))===genNameCls(s.charAt(0)))bad.push(k+": "+a+"+"+m+"+"+s);});
+      }));
+    });
+    // and the assembled output honours it: sample every profile hard
+    const seams=[];
+    Object.keys(GEN_NAME_PROFILES).forEach(k=>{
+      let seed=7;const rng=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+      for(let i=0;i<400;i++){const n=genRollName(k,rng);if(!n||n.length<3)seams.push(k+":"+n);}
+    });
+    return {gap,bad,thin,seams,
+      parts:Object.entries(all).map(([k,p])=>k+":"+p.pre.length+"/"+(p.mid||[]).length+"/"+p.suf.length)};})()`);
+  assert.deepEqual(r.thin, [], "a profile is missing one of the two mid families");
+  assert.deepEqual(r.gap, [], "a clashing pre/suf pair has no mid that can repair it");
+  assert.deepEqual(r.bad, [], "genNameMids offered a mid that does not alternate at both joins");
+  assert.deepEqual(r.seams, [], "a rolled name came out empty or too short");
+});
+
 test("D-043: a switched-off boon leaves the table, the roll, and the wire", () => {
   const r = ev(`(()=>{
     const rng=${RNG}(77);
