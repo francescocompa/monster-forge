@@ -4,6 +4,36 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 302 — G9: the beyond-level-1 spike, plus a domination sweep over the 109 kits
+No app code. A written spike and one mechanical check.
+- **`GEN_LEVELS.md`** — the G9 feasibility memo. Measured against the local 5etools mirror and gen.js:
+  **67 class features across levels 2-5**, and **48 XPHB subclasses carrying 162 features at levels
+  3-5**. The cliff is level 3, because 2024 puts the subclass there for every class, and it is a step
+  rather than a slope: everything before it is arithmetic, everything from it is a second content
+  library the size of the species arc times four.
+- **On the parser question**: `class.json` condenses for prose and for progressions — `classFeatures`
+  is a flat `Name|Class|Source|Level` list so filtering by level is trivial, and `classTableGroups`
+  carries slots, cantrips known and Sneak Attack dice as machine-readable rows indexed by level. It
+  does NOT condense for the features the card must COMPUTE (Extra Attack, Sneak Attack scaling, Wild
+  Shape), which need a progression-aware successor to the species `fx` vocabulary, nor for choices
+  that cascade into later choices' domains. Prose and numbers are cheap; a runnable statblock is not.
+- **The wire is the easy part** (~1 batch): payload `v:3` with a `lvl` field, every closed domain in
+  `validateGenPayload` becomes level-indexed, and the crew cfg gains a level with the DM's cfg still
+  the authority. **Nothing new crosses D-007.**
+- Nine level-1 assumptions catalogued in the memo, of which only three (`pb=2`, `genHdMax()`,
+  the meta line) are one-line changes.
+- **A flaky test found and fixed** (`test/crew-flow.test.js`, the D-011 override test). `data-gkopt`
+  is `String(value)` while the rolled step value is a number, so `x.dataset.gkopt!==before` was
+  ALWAYS true: `.find` silently returned row 1, and the test no-oped whenever the roll had landed
+  there — a ~1-in-3 flake that randomly blocked the commit hook. Stringified. Ten consecutive clean
+  suite runs after the fix. **The fix's first attempt re-broke the file the documented way**: the
+  test body is a template literal, and backticks inside a comment terminate it (the gotcha is in the
+  memory and now in the comment itself, in capitals).
+- **Domination sweep over all 109 kits** (same armor recipe, same gate, weapon multiset containment):
+  the only hit is Wizard's Traveling scholar under Cloistered adept, and it is a false positive — the
+  scholar trades a dagger for Ink and Quill and a separate staff focus, which a weapon-only
+  comparison can't see. **Barbarian's Berserker (fixed in B301) was the only real one.**
+
 ## Batch 301 — G6 review: two dominated kits fixed, nine names re-cut (D-047 amended)
 Francesco's eight notes on the B300 list. Two were content, six were naming.
 - **The Barbarian's Berserker was strictly dominated** — 2 Handaxes + 2 Daggers, every item of which

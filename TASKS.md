@@ -75,13 +75,16 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   it is licensed content, not user content. Wire boundary: an edited list rides the crew cfg and
   is rebuilt phone-side like every other cfg field (D-007).
   *Done when:* a DM can edit, paste and import a list, phones roll the same one, floors updated.
-- [ ] **G9 — Beyond level 1: feasibility** · Opus @ high (spike, no build) · ~1
-  "Plan a task for us to evaluate the feasibility to expand the generator to more character levels
-  (importing player options like we import monsters)." A written spike: what levels 2-5 cost in the
-  fixed-package model (subclasses, spell progression, ASIs, the class-feature explosion), whether
-  5etools class.json can be condensed the way `parseRacesJSON` condenses races, and where the wire
-  and the validator would have to change. Output is a recommendation with a scope, not code.
-  *Done when:* the memo exists and he has picked a direction (including "no").
+- [~] **G9 — Beyond level 1: feasibility** · memo done B302 → `GEN_LEVELS.md` · **⚑ awaiting his pick**
+  Measured: 67 class features at levels 2-5, **48 XPHB subclasses** carrying 162 features at 3-5.
+  The cliff is level 3 (subclasses), and it is a step, not a slope. `class.json` condenses for prose
+  and progressions (`classTableGroups` is machine-readable per level) but NOT for the mechanics the
+  card must compute — that needs a progression-aware successor to the species `fx` vocabulary. The
+  wire is the easy part (~1 batch; nothing new crosses D-007).
+  Options in the memo: **A** stay · **B** level 2 only (~2) · **B′** a numbers-only "hardened crew"
+  dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+). Recommended: B′ if the real problem
+  is fragility, B if it's level 1 itself; C/D are a second crew arc, not a task.
+  *Done when:* ~~the memo exists~~ **and he has picked a direction (including "no").**
 - [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (4 mockup rounds + a research round → D-046)
   The two-counter idea was superseded IN the design round by the BG3 form factor he asked for: one
   widget, a tappable d20 with the counts arcing around it, ending at a skull and a pulse. Ships on

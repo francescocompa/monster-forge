@@ -195,7 +195,11 @@ test("result override (D-011): clicking a rolled class result reopens the table;
     if(!table)return {fail:"clicking the result did not reopen the table"};
     // pick a different class through the full pick list is select-based; table rows carry the top3 —
     // apply a different pick directly through the engine's own pick path via a row click
-    const row=[...table.querySelectorAll("[data-gkopt]")].find(x=>x.dataset.gkopt!==before);
+    // data-gkopt is String(value) while the rolled value is a number, so this comparison MUST be
+    // stringified: a bare !== is always true, silently picks row 1, and the test no-ops whenever the
+    // roll landed there (a ~1-in-3 flake on the top-3 class table). NO BACKTICKS IN HERE — this body
+    // is a template literal.
+    const row=[...table.querySelectorAll("[data-gkopt]")].find(x=>x.dataset.gkopt!==String(before));
     if(!row)return {fail:"no alternative row"};
     row.click();
     const after=_genR.draft.steps.cls.value;
