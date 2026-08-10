@@ -294,3 +294,51 @@ test("a bare library record renders through the full statblock composer", () => 
   assert.equal(o.name, true);
   assert.ok(o.len > 200);
 });
+
+// D-046 — the death-save widget. The rules half is pure, so it's pinned here; the render is checked for
+// the two things a consumer depends on (a segment per point, and the outcome glyph lighting on arrival).
+test("death saves: a flat d20, with the natural 1 and natural 20 rules", () => {
+  // JSON-roundtripped: cross-realm objects fail strict deepEqual on their prototypes.
+  const r = ev(`JSON.stringify((()=>{const z={success:0,fail:0};return {
+      hit:deathSaveApply(z,10), miss:deathSaveApply(z,9), high:deathSaveApply(z,19),
+      one:deathSaveApply(z,1), oneNearDeath:deathSaveApply({success:0,fail:2},1),
+      twenty:deathSaveApply({success:1,fail:2},20),
+      thirdFail:deathSaveApply({success:2,fail:2},4),
+      capped:deathSaveApply({success:3,fail:0},15)};})())`);
+  const j = JSON.parse(r);
+  assert.deepEqual(j.hit.ds, { success: 1, fail: 0 }, "10 is the DC, so 10 succeeds");
+  assert.deepEqual(j.miss.ds, { success: 0, fail: 1 });
+  assert.deepEqual(j.high.ds, { success: 1, fail: 0 });
+  assert.deepEqual(j.one.ds, { success: 0, fail: 2 }, "a natural 1 counts twice");
+  assert.equal(j.oneNearDeath.ds.fail, 3, "and it never runs past three");
+  assert.equal(j.twenty.up, true, "a natural 20 puts them back up");
+  assert.deepEqual(j.twenty.ds, { success: 0, fail: 0 }, "…with the slate cleared");
+  assert.equal(j.thirdFail.ds.fail, 3);
+  assert.equal(j.capped.ds.success, 3, "counts stay in 0-3");
+});
+
+test("death-save widget: one lit segment per point, outcome glyphs light only on arrival", () => {
+  const r = ev(`(()=>{const lit=h=>(h.match(/dsw-seg dsw-[fs] on/g)||[]).length;
+    const mid=deathSavesWidgetHTML({fail:2,success:1},{interactive:true});
+    const dead=deathSavesWidgetHTML({fail:3,success:1},{interactive:true});
+    const stable=deathSavesWidgetHTML({fail:1,success:3},{interactive:false});
+    return {midLit:lit(mid), deadLit:lit(dead),
+      midEndsOff:mid.indexOf("dsw-end dsw-f on")<0&&mid.indexOf("dsw-end dsw-s on")<0,
+      deadSkullOn:dead.indexOf("dsw-end dsw-f on")>=0, deadClass:dead.indexOf("dsw-dead")>=0,
+      stablePulseOn:stable.indexOf("dsw-end dsw-s on")>=0, stableClass:stable.indexOf("dsw-stable")>=0,
+      midHits:(mid.match(/data-dsset=/g)||[]).length, midRoll:mid.indexOf("data-dsroll")>=0,
+      roHits:(stable.match(/data-dsset=/g)||[]).length, roRoll:stable.indexOf("data-dsroll")>=0,
+      overflow:lit(deathSavesWidgetHTML({fail:9,success:-4},{}))};})()`);
+  assert.equal(r.midLit, 3, "two failures and one success light three segments");
+  assert.equal(r.midEndsOff, true, "neither outcome glyph lights before its side completes");
+  assert.equal(r.deadLit, 4);
+  assert.equal(r.deadSkullOn, true);
+  assert.equal(r.deadClass, true);
+  assert.equal(r.stablePulseOn, true);
+  assert.equal(r.stableClass, true);
+  assert.equal(r.midHits, 6, "every segment is correctable when interactive");
+  assert.equal(r.midRoll, true, "…and the die is a button");
+  assert.equal(r.roHits, 0, "a read-only widget offers no targets");
+  assert.equal(r.roRoll, false);
+  assert.equal(r.overflow, 3, "junk counts clamp to 0-3 rather than drawing extra arcs");
+});

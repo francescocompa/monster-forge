@@ -295,6 +295,12 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   sections are whole-surface click targets to reopen; ritual dropdowns number their rows so
   physical dice map to picks; the ASI step is explicit (class default preselected, Apply commits).
   Identity (name + optional quirk/trinket) is typed.
+- **The steps' macro categories are on screen** (D-045, B299 — this closed D-034's open question):
+  each group prints a labelled hairline above its first step (Species · Scores · Class · Background ·
+  Training · Magic · Gear). `GEN_STEP_CAT`/`genStepCat` is the ONE definition of which group a step
+  belongs to, so a category with no step in the current order never prints, and the groups stay
+  contiguous (a test enforces both). The step boxes themselves were deliberately left alone — the
+  rejected alternatives all weakened the active-step signal or cost phone width.
 - **Spell rolls are cross-source clean (D-018) and two-table (D-024, B283):** any spell roll
   rerolls names already granted by another source (`genSpellsGranted` — feat, legacy, tome,
   always-prepared). Cantrips and prepared spells roll PER SLOT on one of two tables — Damaging
@@ -320,10 +326,27 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   chevron opens the all-18-skills panel; the Gear chevron opens the manual editor (per-character
   overlay: `pc.gen.gear` DM-side, localStorage on phones — never on the wire). The pip tracker
   persists on `pc.gen.res` (per-device on phones); labels reset rows, `SR +N` restores partially.
+- **The HP block is the combat panel, inline** (D-046, B299): label + value, a coloured bar, a
+  damage/heal field with Apply (positive damages, temp absorbs first; negative heals), and hit dice
+  as its footer — no `−`/`+` steppers, that was the option NOT chosen. At 0 HP the death-save widget
+  takes the middle of the block and the hit-dice row greys out (no rest while dying). Hit dice
+  (`hd`) and death-save counts (`dsF`/`dsS`) are RESERVED KEYS on the same resource store as the
+  pips — per-device, never on the wire. The block repaints and rebinds itself rather than
+  re-rendering the card (a card render re-runs the composer and colourizer on every tap).
+- **Death saves are ONE widget, shared by both surfaces** (D-046): `deathSavesWidgetHTML` in
+  **combat.js** serves the tracker's HP popover (its home — combat rows keep only the down/stable
+  badge) and the crew card's HP block, so the app has a single death-save language. A centred d20
+  with three segments a side: failures arc left from twelve o'clock, successes right, both capped
+  ~50° short of the bottom where each side ends at its outcome glyph (skull left, pulse right)
+  which lights on arrival — which is why the die never morphs, it just goes inert. Tapping the die
+  rolls a flat d20 (XPHB: no modifier): 10+ success, 9− failure, natural 1 counts twice, natural 20
+  returns them at 1 HP; tapping a filled segment corrects the count. The rules half is pure
+  (`deathSaveApply`/`deathSaveVerdict`) so both surfaces and the tests read the same rules. The arc
+  geometry is a locked mirrored set — don't retune one arc without redrawing all six.
 - **Payloads, never statblocks, on the wire** (D-007) — see the crew-share note in the security
   section above (incl. the B281 `/refs` popover texts and their phone-side sanitizer). The phone
   poll reads only `/crew`; cfg refreshes on focus, refs load once at boot.
-  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (132 tests).
+  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (135 tests).
 - Backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, further species packs.
   Parked by the user (2026-08-05): the phone-flow polish pass waits for the next real playtest.
 

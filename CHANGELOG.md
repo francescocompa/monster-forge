@@ -4,6 +4,56 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 299 — G5 and G10: the ritual's categories become visible, death saves become one widget (D-045, D-046)
+Four design rounds with Francesco (mockups + a research round he called for), then both builds.
+- **G5 — the ritual's macro categories are on screen** (D-045). The D-034 groups — Species · Scores ·
+  Class · Background · Training · Magic · Gear — now print as a labelled hairline above each group's
+  first step. Steps themselves are untouched: same border, same states, same accent on the active one.
+  `GEN_STEP_CAT`/`genStepCat` is the one definition of which group a step belongs to, so a category
+  with no step in the current order never prints (a class with no spells shows no Magic rule).
+  **This closes D-034's open question** about visible category headers. Rejected in the round: one box
+  per group (the active-step signal would have had to move), a per-group spine (costs phone width), and
+  a quiet spacing-plus-prefix treatment (too quiet to count as an answer).
+- **G10 — death saves are one widget, on both surfaces** (D-046). The six pips are gone. In their place:
+  a centred d20 with three segments a side, failures arcing left from twelve o'clock and successes
+  right, both stopping short of the bottom where each side ends at its outcome glyph — a skull left, a
+  pulse right — which lights when that side completes. Because the glyphs carry "dead" and "stable",
+  **the die never morphs**; it just goes inert.
+  - **Tapping the die rolls the save**: a flat d20 (XPHB, no modifier), 10+ a success, 9- a failure, a
+    natural 1 counts as two failures, a natural 20 puts them back up at 1 hit point. The 3D dice show
+    it when that layer is loaded. Tapping a filled segment corrects the count, exactly as the pips did.
+  - **One renderer, two surfaces**: `deathSavesWidgetHTML` serves the tracker's HP popover (its home —
+    combat rows keep only their down/stable badge, his call) and the crew card's HP block.
+  - The rules half is pure (`deathSaveApply`/`deathSaveVerdict`) so both surfaces and the tests read
+    the same rules.
+- **The crew card's HP row became the combat panel, inline.** Label and value, a coloured bar, the
+  death-save widget while at 0 HP, a damage/heal field with Apply (positive damages, temporary hit
+  points absorb first; negative heals), and hit dice as its footer. **The −/+ steppers are gone** — that
+  was the difference between the option he picked and the one he didn't.
+- **Hit dice are new per-character state**: the class die and a spent count, spending one heals 1dHD +
+  CON (minimum 1), tapping a spent die hands it back, and `rest` clears dice and death saves and fills
+  HP. The row greys out at 0 HP — you can't take a rest while you're dying. Hit dice and death-save
+  counts ride the resource store under reserved keys (`hd`, `dsF`, `dsS`), which means **per-device,
+  never on the wire** — nothing new crosses D-029's boundary.
+- The HP block repaints itself and rebinds rather than re-rendering the card (a card render re-runs the
+  composer and the colourizer on every tap).
+- **The research round is worth keeping** (recorded in D-046): D&D Beyond turns the HP section itself
+  into the tracker at 0 HP; BG3 uses a big solid skull as a STATE badge, never as a counter; Pathfinder
+  2e collapses the whole race into one numbered condition; Foundry's Custom D&D 5e treats it as a
+  counter primitive and auto-clears counts on regaining HP and on rests; the paper sheet survives on
+  countability. Nobody draws a detailed skull as a counter — which is why the skull here is large,
+  solid, and only ever an outcome.
+- Drawn and rejected on the way: two glyph plates with the number inside (the glyph fought the digit),
+  a socketless skull silhouette (it reads as a lightbulb at small size), fractions, a segmented ring,
+  a bidirectional track, orbiting pips, concentric rings.
+- **135 tests green** (three new floors: the category map is total and its groups stay contiguous; the
+  death-save rules including the natural 1 and 20; the widget's segment/glyph rendering and its
+  read-only variant). Verified live: the ritual's seven rules, the block at 0 HP and above, a segment
+  correction, a rolled save, a hit-die spend, the rest, and the tracker's popover row. Zero console
+  errors.
+- Retired: `CIRCLE_CHECK_ICON`/`CIRCLE_XMARK_ICON` (the pip glyphs) and the `.gk-hp-step` stepper CSS.
+- Mockups and the research digest: https://claude.ai/code/artifact/a3805f3b-2889-46d3-850b-ca44e5982ddb
+
 ## Batch 298 — The B297 review: plausible classes, manual scores, struck-through options, filters (D-044)
 Francesco's review of B297 — the eleven mechanical notes. The other six are planned, not built
 (TASKS "Side quest 2"), because they need naming passes, a spike, or a design round with him.

@@ -996,3 +996,34 @@ test("D-043: a switched-off boon leaves the table, the roll, and the wire", () =
   assert.notEqual(r.looseValue, "false", "with no cfg the payload's own boon stands");
   assert.deepEqual(r.cleaned, ["ok", "123", "z".repeat(40)], "the list is rebuilt, never trusted");
 });
+
+// D-045 (G5) — the D-034 macro categories, made visible. The floor is that every step in a real order
+// belongs to a category and the groups stay contiguous: a category that reappears later would print a
+// second rule and make the grouping a lie.
+test("ritual steps: every step carries a macro category, and each category is one contiguous run", () => {
+  const r = ev(`(()=>{
+    const d=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    genRollAll(d,${RNG}(4242));
+    const order=genStepOrder(d),cats=order.map(genStepCat);
+    const seen=[],runs=[];
+    cats.forEach(c=>{if(!runs.length||runs[runs.length-1]!==c)runs.push(c);});
+    runs.forEach(c=>{if(seen.indexOf(c)<0)seen.push(c);});
+    // The ritual with species in play: a species table and a gear step must be in the same run as
+    // their siblings, and nothing may fall through uncategorised.
+    const dr=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},spMode:"ritual",counts:{}});
+    genRollAll(dr,${RNG}(99));
+    const ritualCats=genStepOrder(dr).map(genStepCat);
+    return {blank:cats.filter(c=>!c).length, runs, seen, dupRuns:runs.length-seen.length,
+      first:cats[0], gearLast:cats[cats.length-1], koboldSpecies:cats.filter(c=>c==="Species").length,
+      spTables:ritualCats.filter(c=>c==="Species").length,ritualFirst:ritualCats[0],
+      ritualBlank:ritualCats.filter(c=>!c).length,
+      known:cats.every(c=>["Species","Scores","Class","Background","Training","Magic","Gear"].indexOf(c)>=0)};})()`);
+  assert.equal(r.blank, 0, "an uncategorised step would sit under the previous group's rule");
+  assert.equal(r.known, true, "categories come from the one map, not ad-hoc strings");
+  assert.equal(r.dupRuns, 0, "a category never reappears after another one interrupts it");
+  assert.equal(r.gearLast, "Gear", "gear closes the ritual");
+  assert.equal(r.ritualBlank, 0);
+  assert.equal(r.ritualFirst, "Species", "in ritual-species mode the species group leads the ritual");
+  assert.ok(r.spTables >= 1, "…carrying whatever tables that species happens to ship (a Dwarf ships none)");
+  assert.ok(r.koboldSpecies >= 2, "a species WITH tables groups them with itself (kobold: legacy + boon)");
+});

@@ -254,9 +254,6 @@ function toggleReaction(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_
 // Concentration toggle (B125): a bullseye chip beside reaction — "on" = the creature is concentrating on a
 // spell. Manual (broken by failed CON saves, which the DM adjudicates); unlike reaction it doesn't auto-reset.
 const CONC_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>';
-// FA-free solid circle-check / circle-xmark — death-save success / failure pips in the HP popover (B127).
-const CIRCLE_CHECK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
-const CIRCLE_XMARK_ICON='<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
 function toggleConcentration(itId){const it=combatItem(itId);if(!it)return;if(PLAYER_MODE&&!playerCanEdit(it))return;
   // Turning OFF is a deliberate break (T2.4): linked effects end with it, pending CON prompts clear.
   if(it.concentration&&!PLAYER_MODE){const ctx=combatOf();
@@ -662,8 +659,16 @@ function openHPManage(itId,anchor,concPrompt){
   dmg.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}else if(e.key==="Escape")closePopover();});
   p.querySelector(".hpm-cur").addEventListener("change",e=>{it.hpCur=clamp(Number(e.target.value||0),0,it.hpMax);applyDownState(it);reopen(null);});
   p.querySelector(".hpm-temp").addEventListener("change",e=>{it.hpTemp=Math.max(0,Number(e.target.value||0));reopen(null);});
-  p.querySelectorAll(".hpm-ds-pip").forEach(b=>b.addEventListener("click",()=>{const[kind,n]=b.dataset.ds.split(":");const t=combatItem(itId);if(!t)return;if(!t.deathSaves)t.deathSaves={success:0,fail:0};
-    t.deathSaves[kind]=clamp(t.deathSaves[kind]===+n?+n-1:+n,0,3);if((t.deathSaves.fail||0)>=3)t.status="dead";reopen(null);}));
+  // D-046: the die rolls the save; a segment tap corrects the count (tapping the filled one clears back
+  // to it, exactly as the old pips did).
+  {const die=p.querySelector("[data-dsroll]");
+   if(die)die.addEventListener("click",()=>{rollDeathSave(itId);reopen(null);});}
+  p.querySelectorAll("[data-dsset]").forEach(el=>el.addEventListener("click",()=>{
+    const[kind,n]=el.dataset.dsset.split(":"),key=kind==="f"?"fail":"success";
+    const t=combatItem(itId);if(!t)return;if(!t.deathSaves)t.deathSaves={success:0,fail:0};
+    t.deathSaves[key]=clamp(t.deathSaves[key]===+n?+n-1:+n,0,3);
+    if((t.deathSaves.fail||0)>=3)t.status="dead";else if(t.status==="dead")t.status="active";
+    reopen(null);}));
   // The inline roll routes through the shared T2.4 resolver: same verdict/cascade as the strip's
   // one-tap, and the queued strip prompt for this damage event clears with it.
   const cr=p.querySelector(".hpm-conc-roll");if(cr)cr.addEventListener("click",()=>{closePopover();rollConcSave(combatItem(itId),concPrompt.dc);});
@@ -931,12 +936,68 @@ function openSelStatusMenu(anchor){const p=showPopover(anchor,CI_STATUSES.map(s=
 function openSelDmg(anchor){const p=showPopover(anchor,`<div class="seldmg"><input type="number" class="seldmg-in" placeholder="dmg / heal" title="Positive damages; negative heals" autocomplete="off"><button class="btn primary sm seldmg-go" style="width:auto">Apply</button></div>`);
   const inp=p.querySelector(".seldmg-in");inp.focus();const go=()=>{const v=inp.value;closePopover();applyDmgSel(v);};
   p.querySelector(".seldmg-go").addEventListener("click",go);inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}else if(e.key==="Escape")closePopover();});}
-// Death-save tracker rendered inside the HP popover (B127): three success + three failure circles. Empty
-// circles fill green (circle-check) / red (circle-xmark) on click.
+// ── The death-save widget (D-046) ────────────────────────────────────────────────────────────────
+// ONE renderer for both surfaces — the DM's HP popover (here) and the crew card's HP block (gen.js) —
+// so the app has a single death-save language. A centred d20 with three segments a side: failures fill
+// left from twelve o'clock, successes right, both capped ~50° short of the bottom where each side ends
+// at its outcome glyph (skull left, pulse right). The glyphs light on arrival, which is why the die
+// itself never morphs — it just goes inert. Geometry is the locked spec; don't retune the arcs without
+// redrawing all six (they're mirrored pairs and the caps have to line up with the end glyphs).
+const DSW_F=["M42.71 8.64 A42 42 0 0 0 19.44 21.2","M17.04 23.97 A42 42 0 0 0 8.02 48.83","M8.07 52.49 A42 42 0 0 0 17.83 76.99"];
+const DSW_S=["M57.29 8.64 A42 42 0 0 1 80.56 21.2","M82.96 23.97 A42 42 0 0 1 91.98 48.83","M91.93 52.49 A42 42 0 0 1 82.17 76.99"];
+// Small solid skull (sockets kept: a socketless silhouette reads as a lightbulb at this size) + pulse.
+const DSW_SKULL='<path fill="currentColor" fill-rule="evenodd" d="M8 1.4c-3.3 0-5.7 2.3-5.7 5.4 0 1.6.7 2.9 1.6 3.7h8.2c.9-.8 1.6-2.1 1.6-3.7 0-3.1-2.4-5.4-5.7-5.4ZM5.7 7.8a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Zm4.6 0a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Z"/><path fill="currentColor" d="M5 11.5h6v1.7c0 .9-.7 1.6-1.6 1.6H6.6c-.9 0-1.6-.7-1.6-1.6z"/>';
+function dsCount(v){return clamp(Math.round(Number(v)||0),0,3);}
+function deathSavesWidgetHTML(ds,opts){
+  opts=opts||{};
+  const f=dsCount(ds&&ds.fail),s=dsCount(ds&&ds.success);
+  const arcs=(kind,paths,n)=>paths.map((p,i)=>`<path class="dsw-seg dsw-${kind}${i<n?" on":""}" d="${p}"/>`).join("")
+    +(opts.interactive?paths.map((p,i)=>`<path class="dsw-hit" d="${p}" data-dsset="${kind}:${i+1}"/>`).join(""):"");
+  const die=opts.interactive
+    ? `<button class="dsw-die" data-dsroll="1" title="Roll a death save" aria-label="Roll a death save">${D20_ICON}</button>`
+    : `<span class="dsw-die" aria-hidden="true">${D20_ICON}</span>`;
+  return `<div class="dsw${opts.sm?" dsw-sm":""}${f>=3?" dsw-dead":s>=3?" dsw-stable":""}" role="img"
+    aria-label="Death saves: ${f} failed, ${s} saved">
+    <svg class="dsw-ring" viewBox="0 0 100 100" aria-hidden="true">
+      ${arcs("f",DSW_F,f)}${arcs("s",DSW_S,s)}
+      <svg class="dsw-end dsw-f${f>=3?" on":""}" x="16" y="77" width="18" height="18" viewBox="0 0 16 16">${DSW_SKULL}</svg>
+      <path class="dsw-end dsw-s${s>=3?" on":""}" d="M67 86h2.6l1.6-4 2.7 8 1.8-5 1.3 3h3.6"/>
+    </svg>${die}</div>`;
+}
+// The rules half of a tapped save, pure so both surfaces (and the tests) share one reading of them:
+// flat d20, no modifier (XPHB) — 10+ a success, 9- a failure, a natural 1 counts as TWO failures, a
+// natural 20 puts them straight back up at 1 hit point.
+function deathSaveApply(ds,face){
+  const n={success:dsCount(ds&&ds.success),fail:dsCount(ds&&ds.fail)};
+  if(face===20)return {up:true,ds:{success:0,fail:0}};
+  if(face===1)n.fail=Math.min(3,n.fail+2);
+  else if(face>=10)n.success=Math.min(3,n.success+1);
+  else n.fail=Math.min(3,n.fail+1);
+  return {up:false,ds:n};
+}
+function deathSaveVerdict(face,ds){
+  if(face===20)return "natural 20 — back up with 1 hit point";
+  const what=face===1?"natural 1 — two failures":face>=10?"success":"failure";
+  return what+(ds.fail>=3?" · dead":ds.success>=3?" · stable":"");
+}
+// DM-side tap: roll, record, and let the 3D dice show it when that layer is loaded.
+function rollDeathSave(itId){
+  const it=combatItem(itId);if(!it)return null;
+  if(PLAYER_MODE&&!playerCanEdit(it))return null;
+  const face=rollFormula("1d20").total;
+  const r=deathSaveApply(dsOf(it),face);
+  if(r.up){it.deathSaves=null;it.hpCur=Math.max(1,Math.min(1,it.hpMax||1));it.status="active";}
+  else{it.deathSaves=r.ds;if(r.ds.fail>=3)it.status="dead";}
+  if(typeof genFire3D==="function")genFire3D("Death save",[{rolls:[face],die:20}],`Death save: ${face}`,face);
+  toast(`${it.name} death save: rolled ${face} — ${deathSaveVerdict(face,r.ds)}.`);
+  saveAdv();return face;
+}
+// The tracker's home for the widget (his call): it stays inside the HP popover, so combat rows keep
+// only their down/stable badge and nothing else moves.
 function deathSavesRowHTML(it){
-  const d=dsOf(it);
-  const grp=(kind,n,ico)=>[0,1,2].map(i=>`<button class="hpm-ds-pip ds-${kind}${i<n?" on":""}" data-ds="${kind}:${i+1}" aria-label="${kind==="success"?"Success":"Failure"} ${i+1}">${i<n?ico:""}</button>`).join("");
-  return `<div class="hpm-ds"><span class="hpm-ds-grp succ">${grp("success",d.success,CIRCLE_CHECK_ICON)}</span><span class="hpm-ds-lbl">Death saves</span><span class="hpm-ds-grp fail">${grp("fail",d.fail,CIRCLE_XMARK_ICON)}</span></div>`;
+  return `<div class="hpm-ds"><span class="hpm-ds-lbl">Death saves</span>
+    ${deathSavesWidgetHTML(dsOf(it),{interactive:true})}
+    <span class="dsw-hint">Tap the die to roll · tap a segment to correct</span></div>`;
 }
 function combatRowHTML(it,active,drag){
   const status=it.status||"active",isDead=status==="dead",dying=isDying(it),stable=isStable(it);

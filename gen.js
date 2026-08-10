@@ -855,6 +855,14 @@ function genStepOrder(d){
   // summary is what gates the card.
   return ids;
 }
+// D-045 (G5): the D-034 macro categories, made visible as a labelled rule above each group. The map is
+// the ONE definition of which group a step belongs to; a category with no step in the current order
+// never emits a rule (a class with no spells shows no Magic rule). Species tables share the species
+// category via the `sp:` prefix.
+const GEN_STEP_CAT={species:"Species",feat2:"Species",stats:"Scores",cls:"Class",asi:"Background",feat:"Background",
+  skills:"Training",feature:"Training",cantrips:"Magic",spells:"Magic",familiar:"Magic",
+  equip:"Gear",gearPack:"Gear",sundries:"Gear"};
+function genStepCat(id){return /^sp:/.test(String(id))?"Species":(GEN_STEP_CAT[id]||"");}
 function genSpTable(sp,id){return (GEN_SPECIES[sp].tables||[]).find(t=>t.id===id)||null;}
 // Hooks of the currently-resolved class feature option (invocation etc.); {} when none.
 function genFeatureHooks(d){
@@ -2175,16 +2183,39 @@ function genHpState(hp,max){return {cur:genHpClamp(hp&&hp.cur,max,max),tmp:genHp
 function genHpValHTML(s,max){
   return `<b>${s.cur}</b><span class="gk-hp-max">/${max}</span>${s.tmp?`<span class="gk-hp-tmp">+${s.tmp}</span>`:""}`;
 }
-function genHpTrackerHTML(ch,hp,interactive){
+// D-046 (G10): the HP row grew into the combat panel, inline — bar, damage/heal field, the death-save
+// widget at 0 HP, and hit dice as its footer. Hit dice and death saves are PER-DEVICE state carried on
+// the same store as the resource pips (`pc.gen.res` DM-side, localStorage on phones), so nothing new
+// crosses the wire beyond the D-029 HP report. Reserved keys: `hd` spent, `dsF`/`dsS` counts.
+function genHitDie(ch){const m=String((ch&&ch.hd)||"").match(/d(\d+)/);if(m)return Number(m[1]);
+  const K=GEN_CLASSES[ch&&ch.cls];return (K&&K.hd)||8;}
+function genHdMax(){return 1;} // level 1 by scope — one hit die, like the character's one level
+function genDsOf(res){res=res||{};return {fail:Math.max(0,Math.min(3,Number(res.dsF)||0)),success:Math.max(0,Math.min(3,Number(res.dsS)||0))};}
+function genHpTrackerHTML(ch,hp,interactive,res){
   const max=Math.max(0,Math.round(Number(ch.hp)||0));
   const s=genHpState(hp,max);
-  const step=(d,l)=>`<button class="gk-hp-step" data-gkhp="${d}" aria-label="${l}">${d>0?"+":"−"}</button>`;
-  return `<div class="gk-hp${s.cur<=0?" gk-hp-out":(max&&s.cur<=Math.ceil(max/3)?" gk-hp-low":"")}" data-max="${max}">
-    <span class="gk-res-l">Hit points</span>
-    ${interactive?step(-1,"Lose a hit point"):""}
-    <button class="gk-hp-v"${interactive?` data-gkhpedit title="Type exact values"`:" disabled"}>${genHpValHTML(s,max)}</button>
-    ${interactive?step(1,"Regain a hit point"):""}
-    ${interactive?`<button class="gk-res-per" data-gkhpfull title="Back to full">full</button>`:`<span class="gk-res-per gk-res-per-s">reported</span>`}
+  const down=s.cur<=0;
+  const pct=max?Math.max(0,Math.min(100,s.cur/max*100)):0;
+  const fill=down?"var(--bad)":(s.cur<=Math.ceil(max/3)?"var(--amber)":"var(--ok)");
+  const ds=genDsOf(res),hdSpent=Math.max(0,Math.min(genHdMax(),Number((res||{}).hd)||0));
+  // Hit dice are spent on a rest, which a dying character can't take — the row greys out at 0 HP.
+  const hdLive=interactive&&!down;
+  const hdPips=Array.from({length:genHdMax()},(x,i)=>
+    `<button class="gk-hd${i<hdSpent?" gk-spent":""}"${hdLive?` data-gkhd="${i}"`:" disabled"} aria-label="Hit die ${i+1}">d${genHitDie(ch)}</button>`).join("");
+  return `<div class="gk-hp${down?" gk-hp-out":(max&&s.cur<=Math.ceil(max/3)?" gk-hp-low":"")}" data-max="${max}">
+    <div class="gk-hp-h"><span class="gk-res-l">Hit points</span>
+      <button class="gk-hp-v"${interactive?` data-gkhpedit title="Type exact values"`:" disabled"}>${genHpValHTML(s,max)}</button></div>
+    <div class="gk-hp-bar"><i style="width:${pct}%;background:${fill}"></i></div>
+    ${down&&typeof deathSavesWidgetHTML==="function"?`<div class="gk-ds">
+      ${deathSavesWidgetHTML(ds,{interactive})}
+      ${interactive?`<span class="dsw-hint">Tap to roll your death save</span>`:`<span class="dsw-hint">Death saves</span>`}</div>`:""}
+    ${interactive?`<div class="gk-hp-dmg">
+      <input type="number" class="popinput gk-hp-in" placeholder="damage / heal" inputmode="numeric" autocomplete="off">
+      <button class="btn primary sm gk-hp-apply" style="width:auto">Apply</button>
+      <button class="gk-res-per" data-gkhpfull title="Back to full">full</button></div>`
+      :`<div class="gk-hp-dmg"><span class="gk-res-per gk-res-per-s">reported</span></div>`}
+    <div class="gk-hp-hd${down?" gk-hp-hd-off":""}"><span class="gk-res-l">Hit dice</span><span class="gk-pips">${hdPips}</span>
+      ${interactive?`<button class="gk-res-per" data-gkhdrest title="Long Rest: hit dice and death saves reset">rest</button>`:""}</div>
   </div>`;
 }
 function genCardHTML(ch,opts){
@@ -2212,7 +2243,7 @@ function genCardHTML(ch,opts){
     finally{M=prevF;}
   }
   return `<div class="sb gk-card${opts.dead?" gk-dead":""}">${core}${flavor}</div>`
-    +(opts.dead||!opts.hp?"":genHpTrackerHTML(ch,opts.hp,!!opts.hpEdit))
+    +(opts.dead||!opts.hp?"":genHpTrackerHTML(ch,opts.hp,!!opts.hpEdit,opts.res))
     +(opts.dead||opts.pips==="off"?"":genResTrackerHTML(ch,opts.res,opts.pips==="live"))
     +fam;
 }
@@ -2247,7 +2278,7 @@ function genMountCard(host,ch,opts,handlers){
     try{M=genFamiliarMonster(ch.familiar);colorizeStatblock(famEl);}catch(e){/* cosmetic */}
     finally{M=prevM;}
   }
-  bindGenCard(host,handlers);
+  bindGenCard(host,handlers,ch,opts);
   if(handlers.onFlavor)host.querySelectorAll("[data-gkfl]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.gkfl,cur=b.closest(".gk-flrow").querySelector(".gk-flv").textContent.trim();
     showPopover(b,`<div class="gk-flpop"><input type="text" class="popinput" id="gkFlIn" maxlength="90"
@@ -2306,7 +2337,7 @@ function gkBuildGearEditor(root,h){
   const rst=box.querySelector(".gk-greset");
   if(rst)rst.addEventListener("click",()=>commit(null));
 }
-function bindGenCard(root,h){
+function bindGenCard(root,h,ch,opts){
   // D-027: pack-name popover (delegated, so gear-line rewrites keep working).
   root.addEventListener("click",e=>{
     const pk=e.target.closest("[data-gkpack]");if(!pk)return;
@@ -2358,20 +2389,54 @@ function bindGenCard(root,h){
     const next=Math.max(0,cur-n);
     [...row.children].forEach((p,j)=>p.classList.toggle("gk-spent",j<next));
     if(h.onRes)h.onRes(k,next);}));
-  // B286: HP row. Repainted in place (a full card re-render on every tap would re-run the
-  // composer + colourizer); the handler owns persistence and the cloud report.
-  {const box=root.querySelector(".gk-hp");
-  if(box&&h.onHp&&h.hpGet){
-    const max=Math.max(0,Math.round(Number(box.dataset.max)||0));
-    const paint=s=>{const v=box.querySelector(".gk-hp-v");if(v)v.innerHTML=genHpValHTML(s,max);
-      box.classList.toggle("gk-hp-out",s.cur<=0);
-      box.classList.toggle("gk-hp-low",s.cur>0&&!!max&&s.cur<=Math.ceil(max/3));};
-    const commit=s=>{const n=genHpState(s,max);paint(n);h.onHp(n);};
+  // B286 / D-046: the HP block. It repaints ITSELF (bar, death-save widget, hit dice) instead of
+  // re-rendering the card — a full card render on every tap would re-run the composer and the
+  // colourizer. The handler owns persistence and the cloud report; hit dice and death-save counts ride
+  // the resource store under the reserved keys `hd`, `dsF`, `dsS` (per-device, never on the wire).
+  {const max=Math.max(0,Math.round(Number(ch&&ch.hp)||0));
+   const res={...((opts&&opts.res)||{})};
+   const setRes=(k,v)=>{res[k]=v;if(h.onRes)h.onRes(k,v);};
+   const bindHp=()=>{
+    const box=root.querySelector(".gk-hp");
+    if(!box||!h.onHp||!h.hpGet||!ch)return;
     const now=()=>genHpState(h.hpGet(),max);
-    box.querySelectorAll("[data-gkhp]").forEach(b=>b.addEventListener("click",()=>{
-      const d=Number(b.dataset.gkhp)||0,s=now();
-      // Damage comes off temporary hit points first; healing never touches them.
-      if(d<0&&s.tmp>0)commit({cur:s.cur,tmp:s.tmp-1});else commit({cur:s.cur+d,tmp:s.tmp});}));
+    const repaint=()=>{const el=root.querySelector(".gk-hp");if(!el)return;
+      const tmp=document.createElement("div");
+      tmp.innerHTML=genHpTrackerHTML(ch,now(),true,res);
+      const next=tmp.firstElementChild;if(!next)return;
+      el.replaceWith(next);bindHp();};
+    const commit=s=>{const n=genHpState(s,max);h.onHp(n);repaint();};
+    // Positive damages (temporary hit points absorb first), negative heals — the tracker's convention.
+    const applyDmg=()=>{const inp=box.querySelector(".gk-hp-in");if(!inp)return;
+      const v=Number(inp.value||0);if(!v)return;
+      const s=now();let cur=s.cur,tmp=s.tmp;
+      if(v>0){const eat=Math.min(tmp,v);tmp-=eat;cur=Math.max(0,cur-(v-eat));}
+      else cur=Math.min(max,cur-v);
+      inp.value="";commit({cur,tmp});};
+    const ap=box.querySelector(".gk-hp-apply");if(ap)ap.addEventListener("click",applyDmg);
+    const din=box.querySelector(".gk-hp-in");
+    if(din)din.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();applyDmg();}});
+    // Spending a hit die heals 1dHD + CON (minimum 1); tapping a spent die hands it back.
+    box.querySelectorAll("[data-gkhd]").forEach(b=>b.addEventListener("click",()=>{
+      const i=Number(b.dataset.gkhd),spent=Math.max(0,Math.min(genHdMax(),Number(res.hd)||0));
+      if(i<spent){setRes("hd",i);repaint();return;}
+      const die=genHitDie(ch),con=Number(ch.mods&&ch.mods.con)||0,roll=genRollDie(null,die);
+      const heal=Math.max(1,roll+con),s=now();
+      setRes("hd",i+1);commit({cur:Math.min(max,s.cur+heal),tmp:s.tmp});
+      if(typeof toast==="function")toast(`Hit die: d${die} → ${roll}${con?` ${con>0?"+":"−"}${Math.abs(con)}`:""} = ${heal} healed.`);}));
+    // D-046: the die rolls the save, a segment tap corrects it, and a Long Rest clears both counts.
+    const dsDie=box.querySelector("[data-dsroll]");
+    if(dsDie&&typeof deathSaveApply==="function")dsDie.addEventListener("click",()=>{
+      const face=genRollDie(null,20),r=deathSaveApply(genDsOf(res),face);
+      setRes("dsF",r.ds.fail);setRes("dsS",r.ds.success);
+      if(typeof genFire3D==="function")genFire3D("Death save",[{rolls:[face],die:20}],`Death save: ${face}`,face);
+      if(typeof toast==="function")toast(`Death save: rolled ${face} — ${deathSaveVerdict(face,r.ds)}.`);
+      if(r.up)commit({cur:1,tmp:0});else repaint();});
+    box.querySelectorAll("[data-dsset]").forEach(el=>el.addEventListener("click",()=>{
+      const[kind,n]=el.dataset.dsset.split(":"),key=kind==="f"?"dsF":"dsS",cur=Number(res[key])||0;
+      setRes(key,cur===+n?+n-1:+n);repaint();}));
+    const rest=box.querySelector("[data-gkhdrest]");
+    if(rest)rest.addEventListener("click",()=>{setRes("hd",0);setRes("dsF",0);setRes("dsS",0);commit({cur:max,tmp:0});});
     const full=box.querySelector("[data-gkhpfull]");
     if(full)full.addEventListener("click",()=>commit({cur:max,tmp:0}));
     const edit=box.querySelector("[data-gkhpedit]");
@@ -2385,7 +2450,9 @@ function bindGenCard(root,h){
       p.querySelector("#gkHpOk").addEventListener("click",apply);
       p.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();apply();}}));
       setTimeout(()=>{try{cin.focus();cin.select();}catch(err){}},30);});
-  }}
+   };
+   bindHp();
+  }
 }
 function openGenCard(a,payload,o){
   o=o||{};
@@ -2801,7 +2868,11 @@ function renderGenRitual(){
   const order=genStepOrder(d);
   const firstOpen=order.find(id=>!genStepDone(d,id));
   const complete=!firstOpen;
+  let lastCat=""; // D-045: a category rule is emitted the first time a group's steps appear
   const rows=order.map(id=>{
+    const cat=genStepCat(id);
+    const catRow=(cat&&cat!==lastCat)?`<div class="gk-cat"><span>${esc(cat)}</span><i></i></div>`:"";
+    if(cat)lastCat=cat;
     const s=d.steps[id],done=genStepDone(d,id),active=id===firstOpen;
     const state=done?"done":(active?"active":"idle");
     const needsSub=s&&s.value!=null&&!done&&id!=="stats";
@@ -2818,7 +2889,7 @@ function renderGenRitual(){
     const info=genStepInfo(d,id);
     // D-044: roll filters (the D-024 Damaging/All strip) hide behind a filter button in the header
     const hasTabs=(id==="cantrips"||id==="spells")&&!!genTabStripHTML(d,id);
-    return `<div class="gk-step gk-${state}" data-step="${id}">
+    return `${catRow}<div class="gk-step gk-${state}" data-step="${id}">
       <div class="gk-step-h"><span class="gk-step-l">${esc(genStepLabel(d,id))}${info?`<button class="gk-q" data-gkq="${id}" aria-label="How this step works">?</button>`:""}</span>
         <span class="gk-step-acts">${id==="stats"&&!genStepDone(d,id)
           ?`<button class="btn ghost sm gk-typein" data-gktype="1" style="width:auto">${R.typed?"Roll them":"Type them in"}</button>`:""}${hasTabs

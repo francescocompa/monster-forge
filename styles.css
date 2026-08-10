@@ -1228,17 +1228,32 @@ body.cmd-armed input,body.cmd-armed textarea,body.cmd-armed select,body.cmd-arme
 .hpm-row .hpm-dmg:focus{outline:none;border-color:var(--accent)}
 /* Death-save tracker inside the HP popover (B127): successes (green) left of the centred title, failures
    (red) right. Coloured borders make each group's meaning clear even before the circles are filled. */
-.hpm-ds{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+/* D-046: the death-save widget replaced the six pips here — the popover stays its home in the tracker. */
+.hpm-ds{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .hpm-ds-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);text-align:center}
-.hpm-ds-grp{display:inline-flex;gap:4px}
-.hpm-ds-grp.succ{justify-self:end}
-.hpm-ds-grp.fail{justify-self:start}
-.hpm-ds-pip{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--in);cursor:pointer;padding:0;display:grid;place-items:center;color:var(--faint);line-height:0}
-.hpm-ds-pip svg{display:block;width:12px;height:12px}
-.hpm-ds-pip.ds-success{border-color:var(--ok)}
-.hpm-ds-pip.ds-fail{border-color:var(--bad)}
-.hpm-ds-pip.ds-success.on{color:var(--ok)}
-.hpm-ds-pip.ds-fail.on{color:var(--bad)}
+/* The widget itself (D-046) — shared by the tracker's HP popover and the crew card's HP block.
+   Failures arc left from twelve o'clock, successes right; both stop short of the bottom, where each
+   side's outcome glyph (skull / pulse) waits in a dim neutral and lights when that side completes. */
+.dsw{position:relative;width:76px;height:76px;flex:none}
+.dsw-sm{width:40px;height:40px}
+.dsw-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.dsw-seg{fill:none;stroke:var(--panel3);stroke-width:8;stroke-linecap:butt}
+.dsw-seg.dsw-f.on{stroke:var(--bad)}
+.dsw-seg.dsw-s.on{stroke:var(--ok)}
+/* A transparent fat stroke over each segment: the visible arc is ~6px, too thin to tap accurately. */
+.dsw-hit{fill:none;stroke:transparent;stroke-width:17;cursor:pointer;pointer-events:stroke}
+.dsw-end{color:#6a717c;fill:currentColor}
+.dsw-end.dsw-f.on{color:var(--bad)}
+.dsw-end.dsw-s{fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.dsw-end.dsw-s.on{color:var(--ok)}
+.dsw-die{position:absolute;inset:0;margin:auto;width:36px;height:36px;padding:0;border:0;background:none;
+  border-radius:50%;display:grid;place-items:center;color:var(--dim)}
+.dsw-die svg{display:block;width:26px;height:26px}
+.dsw-sm .dsw-die{width:20px;height:20px}
+.dsw-sm .dsw-die svg{width:15px;height:15px}
+button.dsw-die:hover{color:var(--txt)}
+.dsw-dead .dsw-die,.dsw-stable .dsw-die{color:#4b515b}
+.dsw-hint{font-size:10.5px;color:var(--faint);text-align:center}
 .hpm-conc{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 9px;background:color-mix(in srgb,var(--accent) 12%,var(--in));border:1px solid var(--accent);border-radius:6px;font-size:11.5px;color:var(--txt)}
 .hpm-conc .hpm-conc-t{flex:1;line-height:1.4}
 .hpm-conc .hpm-conc-roll{flex:none}
@@ -2428,6 +2443,11 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 /* ritual */
 .modal.gk-host{max-width:640px}
 .gk-steps{display:flex;flex-direction:column;gap:7px}
+/* D-045: the D-034 macro categories, made visible — a labelled hairline above each group's first step. */
+.gk-cat{display:flex;align-items:center;gap:9px;margin-top:5px}
+.gk-cat:first-child{margin-top:0}
+.gk-cat span{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);flex:none}
+.gk-cat i{height:1px;background:var(--line);flex:1}
 .gk-step{border:1px solid var(--line);border-radius:7px;padding:8px 11px;opacity:.45;transition:opacity .15s,border-color .15s}
 .gk-step.gk-active{opacity:1;border-color:var(--accent-soft)}
 .gk-step.gk-done{opacity:1}
@@ -2547,10 +2567,21 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-pip:disabled{cursor:default}
 .gk-res-per{font-size:10px;color:var(--faint);flex:none}
 /* B286: HP row under the card — same frame as the resource tracker */
-.gk-hp{margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:8px}
-.gk-hp-step{width:28px;height:28px;flex:none;border:1px solid var(--line);border-radius:50%;background:none;color:var(--dim);font-size:15px;line-height:1;padding:0;cursor:pointer}
-.gk-hp-step:hover{border-color:var(--accent);color:var(--txt)}
-.gk-hp-v{background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);font-size:15px;padding:2px 8px;cursor:pointer;flex:none;min-width:74px}
+/* D-046: the HP row became the combat panel inline — bar, damage/heal, the widget at 0 HP, hit dice. */
+.gk-hp{margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:9px}
+.gk-hp-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gk-hp-bar{height:6px;border-radius:3px;background:var(--in);border:1px solid var(--line);overflow:hidden}
+.gk-hp-bar i{display:block;height:100%;transition:width .18s}
+.gk-hp-dmg{display:flex;align-items:center;gap:7px}
+.gk-hp-in{flex:1;min-width:0}
+.gk-hp-hd{display:flex;align-items:center;gap:8px}
+.gk-hp-hd-off{opacity:.5}
+.gk-hd{min-width:30px;height:24px;padding:0 7px;border:1px solid var(--line);border-radius:5px;background:var(--in);
+  color:var(--dim);font-size:11px;font-weight:700;cursor:pointer}
+.gk-hd:hover{border-color:var(--accent);color:var(--txt)}
+.gk-hd.gk-spent{color:#4b515b;border-color:#262a31;text-decoration:line-through}
+.gk-ds{display:flex;flex-direction:column;align-items:center;gap:5px}
+.gk-hp-v{background:none;border:1px solid transparent;border-radius:6px;color:var(--txt);font-size:15px;padding:2px 8px;cursor:pointer;flex:none;min-width:74px;text-align:right}
 .gk-hp-v[data-gkhpedit]:hover{border-color:var(--line)}
 .gk-hp-v:disabled{cursor:default}
 .gk-hp-max{color:var(--faint);font-size:12px}

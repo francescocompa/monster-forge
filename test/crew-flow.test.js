@@ -325,15 +325,17 @@ test("crew mode (phone): HP row reports to its own hp leaf, notes stay local", a
     if(!root){root=document.createElement("div");root.id="crewRoot";document.body.appendChild(root);}
     try{localStorage.removeItem("mf_crewhp:"+payload.id);localStorage.removeItem("mf_crewnote:"+payload.id);}catch(e){}
     renderCrewScreen();
-    const box=document.querySelector("#crewRoot .gk-hp");
-    if(!box)return {fail:"no HP row on the crew card"};
-    const max=Number(box.dataset.max);
-    const start=box.querySelector(".gk-hp-v b").textContent;
-    box.querySelector('[data-gkhp="-1"]').click();
-    const afterHit=box.querySelector(".gk-hp-v b").textContent;
+    // D-046: the block repaints itself on every change, so each step re-queries it.
+    const q=()=>document.querySelector("#crewRoot .gk-hp");
+    if(!q())return {fail:"no HP block on the crew card"};
+    const max=Number(q().dataset.max);
+    const start=q().querySelector(".gk-hp-v b").textContent;
+    q().querySelector(".gk-hp-in").value="1";
+    q().querySelector(".gk-hp-apply").click();
+    const afterHit=q().querySelector(".gk-hp-v b").textContent;
     const stored=JSON.parse(localStorage.getItem("mf_crewhp:"+payload.id)||"null");
-    box.querySelector("[data-gkhpfull]").click();
-    const afterFull=box.querySelector(".gk-hp-v b").textContent;
+    q().querySelector("[data-gkhpfull]").click();
+    const afterFull=q().querySelector(".gk-hp-v b").textContent;
     const notes=document.getElementById("crewNotes");
     if(notes){notes.value="knows the sewer route";notes.dispatchEvent(new window.Event("change"));}
     await new Promise(res=>setTimeout(res,900));

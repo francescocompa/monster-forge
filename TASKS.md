@@ -53,12 +53,10 @@ D-042 identity content sourcing, D-043 per-boon toggles). Off-roadmap like the r
 Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
 asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
 
-- [ ] **G5 — Grouped steps read as groups** · Opus @ high (mockup round first) · ~1
-  "Grouped boxes with same provenance should have more visually clear grouping." The macro
-  categories (D-034) are real in the order but invisible on screen. **🔶 mockup + AskUserQuestion
-  before building** — core-surface visual, and it finally answers D-034's open question about
-  visible category headers (headers vs nesting vs a shared rail: put all three in front of him).
-  *Done when:* the chosen treatment ships on DM and phone, and D-034's open item is closed.
+- [x] **G5 — Grouped steps read as groups** · done B299 (mockup round → D-045)
+  Chosen treatment: **category rules** — a labelled hairline above each group's first step, steps
+  untouched. Ships on the DM ritual and the phone flow together (one renderer). **D-034's open item
+  is closed**: yes to visible macro-category headers, as rules.
 - [ ] **G6 — Equipment kits get real names** · Sonnet @ medium · ~½
   "Rename the equipment kits to something more flavorful rather than repeating what's in the kit."
   109 kits currently name their own contents ("Rapier and hand crossbow"). Needs a naming pass with
@@ -83,22 +81,18 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   5etools class.json can be condensed the way `parseRacesJSON` condenses races, and where the wire
   and the validator would have to change. Output is a recommendation with a scope, not code.
   *Done when:* the memo exists and he has picked a direction (including "no").
-- [ ] **G10 — The player's HP section, hit dice, and death saves** · Opus @ high · ~2 (absorbs T2.8's visual)
-  "In the player view, rework the HP section: it should resemble more the combat hp design, and
-  include hit dice (spend them to heal) and death saves." Plus a GLOBAL change he wants iterated
-  together: **death saves become two icon counters — a skull for failures, something else for
-  successes, each with its number inside — shown at 0 HP, everywhere they appear** (crew card AND
-  the combat tracker). **🔶 design round first, explicitly with him** ("iterate it with me"):
-  mockups of the counter pair, then the HP block, before any code. Hit dice are new state on the
-  payload's derived character (class HD, spent count) and need a per-device home like the pips.
-  *Done when:* the counters ship on both surfaces, the crew card tracks HP/hit dice/death saves,
-  and nothing new goes on the wire beyond what D-029 already allows.
+- [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (4 mockup rounds + a research round → D-046)
+  The two-counter idea was superseded IN the design round by the BG3 form factor he asked for: one
+  widget, a tappable d20 with the counts arcing around it, ending at a skull and a pulse. Ships on
+  both surfaces (tracker HP popover + crew card); the crew card's HP row became the combat panel
+  inline; hit dice and death-save counts ride the resource store per-device, so the wire is
+  unchanged. **T2.8's death-save visual is unblocked and inherits this widget.**
 
 ---
 
-Standing from this arc: push + deploy remains the first manual action (B292–B297 are committed
-locally, nothing is live). Open taste items: leftover coin for cheap-kit casters (D-040), and
-whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
+Standing from this arc: ~~push + deploy~~ **done 2026-08-10 — B292–B298 are live** (`origin/main` =
+`b5d29f6`). Open taste items: leftover coin for cheap-kit casters (D-040), and whether the d100
+identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---
 
@@ -163,10 +157,11 @@ and the phase code review with fixes applied (B273).
   Resource parsing from statblock text; recharge rolls itself at turn start. (P2.5)
 - [ ] **T2.8 — PC death saves** · Sonnet @ medium · ~1
   Extend the monster tracker to PC rows. Player-mode surface waits for Phase 7. (P2.6)
-  ⚠ **Overlaps G10** (Francesco, 2026-08-10): he wants death saves REDESIGNED everywhere as two
-  icon counters (skull = failures, a counterpart = successes, number inside, shown at 0 HP) —
-  combat tracker included. G10's design round settles the visual for BOTH surfaces; do that first,
-  then this task is the tracker half of it. Don't build two death-save designs.
+  ~~⚠ Overlaps G10~~ **RESOLVED B299 (D-046):** the visual is settled and the tracker half already
+  shipped — `deathSavesWidgetHTML` replaced the six pips in the HP popover, where death saves stay
+  (his call: rows keep only their down/stable badge). What's left of T2.8 is the ROW-eligibility
+  work this task always meant: PC rows beyond the `downMode` setting's reach. Reuse the widget;
+  don't design a second one.
 - [ ] **T2.9 — Damage-type hooks** · Sonnet @ high · ~1
   Auto resist/immune/vulnerable at damage entry; verify B241 coverage first. (P2.7)
 - [ ] **T2.10 — Roles read effects** · Opus @ high · ~1
