@@ -28,6 +28,12 @@ function genSpanFor(nOpts){
   return {die,spans:Array.from({length:nOpts},(x,i)=>w>1?[i*w+1,(i+1)*w]:[i+1,i+1]),reroll:die%nOpts!==0};
 }
 function genSpanHit(span,r){return Array.from({length:span.spans.length},(x,i)=>i).find(i=>r>=span.spans[i][0]&&r<=span.spans[i][1]);}
+// A one-face span reads as the bare number (3), never a degenerate range (3-3). Reroll tables
+// are one face per row by construction, so this covers them too.
+function genSpanText(span,i){const lo=span.spans[i][0],hi=span.spans[i][1];return lo===hi?String(lo):lo+"-"+hi;}
+// The die a span actually rolls on — genDieFor's answer parts company with it at 3 and 5 options,
+// so anything describing a rendered table must quote this, not the bare next-size-up die.
+function genSpanDie(span,n){return "d"+span.die+(span.reroll?" (reroll over "+n+")":"");}
 const GEN_ABILS=["str","dex","con","int","wis","cha"];
 const GEN_ABIL_LABEL={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const GEN_SKILLS=[["Acrobatics","dex"],["Animal Handling","wis"],["Arcana","int"],["Athletics","str"],
@@ -329,208 +335,305 @@ const GEN_DMG_SPELLS=["Armor of Agathys","Arms of Hadar","Burning Hands","Chroma
   "Witch Bolt","Wrathful Smite"];
 
 // ── Weapon and armor atoms for the kit tables (XPHB numbers) ─────────────────
-// w: {n, ability ("dex" marks finesse/ranged use), dice, dtype, kind, reach/range, mastery?, note?}
+// w: {n, ability ("dex" marks finesse/ranged use), dice, dtype, kind, reach/range, mastery?, note?,
+//     gp} — `gp` is the XPHB list price, the unit the D-038 gold budget counts in. The full XPHB
+// weapon table is modelled, firearms included: a Musket at 500 gp simply can't be afforded under
+// any class budget, so it only ever surfaces with the budget switched off.
 const GEN_W={
-  greataxe:{n:"Greataxe",ability:"str",dice:"1d12",dtype:"Slashing",kind:"Melee",mastery:"Cleave"},
-  greatsword:{n:"Greatsword",ability:"str",dice:"2d6",dtype:"Slashing",kind:"Melee",mastery:"Graze"},
-  maul:{n:"Maul",ability:"str",dice:"2d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Topple"},
-  halberd:{n:"Halberd",ability:"str",dice:"1d10",dtype:"Slashing",kind:"Melee",reach:10,mastery:"Cleave"},
-  longsword:{n:"Longsword",ability:"str",dice:"1d8",dtype:"Slashing",kind:"Melee",mastery:"Sap",note:"1d10 two-handed"},
-  warhammer:{n:"Warhammer",ability:"str",dice:"1d8",dtype:"Bludgeoning",kind:"Melee",mastery:"Push",note:"1d10 two-handed"},
-  flail:{n:"Flail",ability:"str",dice:"1d8",dtype:"Bludgeoning",kind:"Melee",mastery:"Sap"},
-  battleaxe:{n:"Battleaxe",ability:"str",dice:"1d8",dtype:"Slashing",kind:"Melee",mastery:"Topple",note:"1d10 two-handed"},
-  rapier:{n:"Rapier",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Melee",mastery:"Vex"},
-  scimitar:{n:"Scimitar",ability:"dex",dice:"1d6",dtype:"Slashing",kind:"Melee",mastery:"Nick"},
-  shortsword:{n:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Melee",mastery:"Vex"},
-  spear:{n:"Spear",ability:"str",dice:"1d6",dtype:"Piercing",kind:"Melee or Ranged",range:"20/60",mastery:"Sap",note:"1d8 two-handed"},
-  dagger:{n:"Dagger",ability:"dex",dice:"1d4",dtype:"Piercing",kind:"Melee or Ranged",range:"20/60",mastery:"Nick"},
-  handaxe:{n:"Handaxe",ability:"str",dice:"1d6",dtype:"Slashing",kind:"Melee or Ranged",range:"20/60",mastery:"Vex"},
-  javelin:{n:"Javelin",ability:"str",dice:"1d6",dtype:"Piercing",kind:"Melee or Ranged",range:"30/120",mastery:"Slow"},
-  mace:{n:"Mace",ability:"str",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Sap"},
-  quarterstaff:{n:"Quarterstaff",ability:"str",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Topple",note:"1d8 two-handed"},
-  sickle:{n:"Sickle",ability:"str",dice:"1d4",dtype:"Slashing",kind:"Melee",mastery:"Nick"},
-  club:{n:"Club",ability:"str",dice:"1d4",dtype:"Bludgeoning",kind:"Melee",mastery:"Slow"},
-  unarmed:{n:"Unarmed Strike",ability:"dex",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",note:"Martial Arts"},
-  longbow:{n:"Longbow",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Ranged",range:"150/600",mastery:"Slow"},
-  shortbow:{n:"Shortbow",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Ranged",range:"80/320",mastery:"Vex"},
-  lightxbow:{n:"Light Crossbow",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Ranged",range:"80/320",mastery:"Slow"},
-  heavyxbow:{n:"Heavy Crossbow",ability:"dex",dice:"1d10",dtype:"Piercing",kind:"Ranged",range:"100/400",mastery:"Push"},
-  handxbow:{n:"Hand Crossbow",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Ranged",range:"30/120",mastery:"Vex"},
-  sling:{n:"Sling",ability:"dex",dice:"1d4",dtype:"Bludgeoning",kind:"Ranged",range:"30/120",mastery:"Slow"},
-  dart:{n:"Dart",ability:"dex",dice:"1d4",dtype:"Piercing",kind:"Ranged",range:"20/60",mastery:"Vex"}
+  greataxe:{n:"Greataxe",ability:"str",dice:"1d12",dtype:"Slashing",kind:"Melee",mastery:"Cleave",gp:30},
+  greatsword:{n:"Greatsword",ability:"str",dice:"2d6",dtype:"Slashing",kind:"Melee",mastery:"Graze",gp:50},
+  maul:{n:"Maul",ability:"str",dice:"2d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Topple",gp:10},
+  halberd:{n:"Halberd",ability:"str",dice:"1d10",dtype:"Slashing",kind:"Melee",reach:10,mastery:"Cleave",gp:20},
+  glaive:{n:"Glaive",ability:"str",dice:"1d10",dtype:"Slashing",kind:"Melee",reach:10,mastery:"Graze",gp:20},
+  pike:{n:"Pike",ability:"str",dice:"1d10",dtype:"Piercing",kind:"Melee",reach:10,mastery:"Push",gp:5},
+  lance:{n:"Lance",ability:"str",dice:"1d10",dtype:"Piercing",kind:"Melee",reach:10,mastery:"Topple",gp:10,note:"Heavy; two-handed unless mounted"},
+  longsword:{n:"Longsword",ability:"str",dice:"1d8",dtype:"Slashing",kind:"Melee",mastery:"Sap",note:"1d10 two-handed",gp:15},
+  warhammer:{n:"Warhammer",ability:"str",dice:"1d8",dtype:"Bludgeoning",kind:"Melee",mastery:"Push",note:"1d10 two-handed",gp:15},
+  warpick:{n:"War Pick",ability:"str",dice:"1d8",dtype:"Piercing",kind:"Melee",mastery:"Sap",note:"1d10 two-handed",gp:5},
+  morningstar:{n:"Morningstar",ability:"str",dice:"1d8",dtype:"Piercing",kind:"Melee",mastery:"Sap",gp:15},
+  flail:{n:"Flail",ability:"str",dice:"1d8",dtype:"Bludgeoning",kind:"Melee",mastery:"Sap",gp:10},
+  battleaxe:{n:"Battleaxe",ability:"str",dice:"1d8",dtype:"Slashing",kind:"Melee",mastery:"Topple",note:"1d10 two-handed",gp:10},
+  trident:{n:"Trident",ability:"str",dice:"1d8",dtype:"Piercing",kind:"Melee or Ranged",range:"20/60",mastery:"Topple",note:"1d10 two-handed",gp:5},
+  rapier:{n:"Rapier",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Melee",mastery:"Vex",gp:25},
+  scimitar:{n:"Scimitar",ability:"dex",dice:"1d6",dtype:"Slashing",kind:"Melee",mastery:"Nick",gp:25},
+  shortsword:{n:"Shortsword",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Melee",mastery:"Vex",gp:10},
+  whip:{n:"Whip",ability:"dex",dice:"1d4",dtype:"Slashing",kind:"Melee",reach:10,mastery:"Slow",gp:2},
+  spear:{n:"Spear",ability:"str",dice:"1d6",dtype:"Piercing",kind:"Melee or Ranged",range:"20/60",mastery:"Sap",note:"1d8 two-handed",gp:1},
+  dagger:{n:"Dagger",ability:"dex",dice:"1d4",dtype:"Piercing",kind:"Melee or Ranged",range:"20/60",mastery:"Nick",gp:2},
+  handaxe:{n:"Handaxe",ability:"str",dice:"1d6",dtype:"Slashing",kind:"Melee or Ranged",range:"20/60",mastery:"Vex",gp:5},
+  lighthammer:{n:"Light Hammer",ability:"str",dice:"1d4",dtype:"Bludgeoning",kind:"Melee or Ranged",range:"20/60",mastery:"Nick",gp:2},
+  javelin:{n:"Javelin",ability:"str",dice:"1d6",dtype:"Piercing",kind:"Melee or Ranged",range:"30/120",mastery:"Slow",gp:0.5},
+  mace:{n:"Mace",ability:"str",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Sap",gp:5},
+  quarterstaff:{n:"Quarterstaff",ability:"str",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",mastery:"Topple",note:"1d8 two-handed",gp:0.2},
+  greatclub:{n:"Greatclub",ability:"str",dice:"1d8",dtype:"Bludgeoning",kind:"Melee",mastery:"Push",gp:0.2},
+  sickle:{n:"Sickle",ability:"str",dice:"1d4",dtype:"Slashing",kind:"Melee",mastery:"Nick",gp:1},
+  club:{n:"Club",ability:"str",dice:"1d4",dtype:"Bludgeoning",kind:"Melee",mastery:"Slow",gp:0.1},
+  unarmed:{n:"Unarmed Strike",ability:"dex",dice:"1d6",dtype:"Bludgeoning",kind:"Melee",note:"Martial Arts",gp:0},
+  longbow:{n:"Longbow",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Ranged",range:"150/600",mastery:"Slow",gp:50},
+  shortbow:{n:"Shortbow",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Ranged",range:"80/320",mastery:"Vex",gp:25},
+  lightxbow:{n:"Light Crossbow",ability:"dex",dice:"1d8",dtype:"Piercing",kind:"Ranged",range:"80/320",mastery:"Slow",gp:25},
+  heavyxbow:{n:"Heavy Crossbow",ability:"dex",dice:"1d10",dtype:"Piercing",kind:"Ranged",range:"100/400",mastery:"Push",gp:50},
+  handxbow:{n:"Hand Crossbow",ability:"dex",dice:"1d6",dtype:"Piercing",kind:"Ranged",range:"30/120",mastery:"Vex",gp:75},
+  blowgun:{n:"Blowgun",ability:"dex",dice:"1",dtype:"Piercing",kind:"Ranged",range:"25/100",mastery:"Vex",gp:10},
+  musket:{n:"Musket",ability:"dex",dice:"1d12",dtype:"Piercing",kind:"Ranged",range:"40/120",mastery:"Slow",gp:500,note:"Loading; two-handed"},
+  pistol:{n:"Pistol",ability:"dex",dice:"1d10",dtype:"Piercing",kind:"Ranged",range:"30/90",mastery:"Vex",gp:250,note:"Loading"},
+  sling:{n:"Sling",ability:"dex",dice:"1d4",dtype:"Bludgeoning",kind:"Ranged",range:"30/120",mastery:"Slow",gp:0.1},
+  dart:{n:"Dart",ability:"dex",dice:"1d4",dtype:"Piercing",kind:"Ranged",range:"20/60",mastery:"Vex",gp:0.05}
 };
-// AC recipes: {kind:"none"|"armor"|"fixed"|"unarmored-con"|"unarmored-wis", base, dex, dexMax, shield, label}
+// AC recipes: {kind:"none"|"armor"|"fixed"|"unarmored-con"|"unarmored-wis", base, dex, dexMax,
+// shield, label, gp, stealth?, str?/alt?}. `gp` includes the Shield (10 gp) on the shield variants.
+// The whole XPHB armor table is modelled; Breastplate upward is priced out of every class budget,
+// so heavy plate only reaches a kit when the DM turns the budget off or raises it a long way.
 const GEN_AC={
-  none:{kind:"none",label:"Unarmored"},
-  leather:{kind:"armor",base:11,dex:true,label:"Leather Armor"},
-  leatherShield:{kind:"armor",base:11,dex:true,shield:true,label:"Leather Armor, Shield"},
-  studded:{kind:"armor",base:12,dex:true,label:"Studded Leather"},
-  studdedShield:{kind:"armor",base:12,dex:true,shield:true,label:"Studded Leather, Shield"},
-  chainShirt:{kind:"armor",base:13,dex:true,dexMax:2,label:"Chain Shirt"},
-  chainShirtShield:{kind:"armor",base:13,dex:true,dexMax:2,shield:true,label:"Chain Shirt, Shield"},
-  scaleShield:{kind:"armor",base:14,dex:true,dexMax:2,shield:true,label:"Scale Mail, Shield"},
-  chainMail:{kind:"fixed",base:16,label:"Chain Mail",str:13,alt:"chainShirt"},
-  chainMailShield:{kind:"fixed",base:16,shield:true,label:"Chain Mail, Shield",str:13,alt:"chainShirtShield"},
-  unarmCon:{kind:"unarmored-con",label:"Unarmored Defense"},
-  unarmConShield:{kind:"unarmored-con",shield:true,label:"Unarmored Defense, Shield"},
-  unarmWis:{kind:"unarmored-wis",label:"Unarmored Defense"}
+  none:{kind:"none",w:"none",label:"Unarmored",gp:0},
+  padded:{kind:"armor",w:"light",base:11,dex:true,label:"Padded Armor",gp:5,stealth:true},
+  leather:{kind:"armor",w:"light",base:11,dex:true,label:"Leather Armor",gp:10},
+  leatherShield:{kind:"armor",w:"light",base:11,dex:true,shield:true,label:"Leather Armor, Shield",gp:20},
+  studded:{kind:"armor",w:"light",base:12,dex:true,label:"Studded Leather",gp:45},
+  studdedShield:{kind:"armor",w:"light",base:12,dex:true,shield:true,label:"Studded Leather, Shield",gp:55},
+  hide:{kind:"armor",w:"medium",base:12,dex:true,dexMax:2,label:"Hide Armor",gp:10},
+  hideShield:{kind:"armor",w:"medium",base:12,dex:true,dexMax:2,shield:true,label:"Hide Armor, Shield",gp:20},
+  chainShirt:{kind:"armor",w:"medium",base:13,dex:true,dexMax:2,label:"Chain Shirt",gp:50},
+  chainShirtShield:{kind:"armor",w:"medium",base:13,dex:true,dexMax:2,shield:true,label:"Chain Shirt, Shield",gp:60},
+  scale:{kind:"armor",w:"medium",base:14,dex:true,dexMax:2,label:"Scale Mail",gp:50,stealth:true},
+  scaleShield:{kind:"armor",w:"medium",base:14,dex:true,dexMax:2,shield:true,label:"Scale Mail, Shield",gp:60,stealth:true},
+  breastplate:{kind:"armor",w:"medium",base:14,dex:true,dexMax:2,label:"Breastplate",gp:400},
+  halfPlate:{kind:"armor",w:"medium",base:15,dex:true,dexMax:2,label:"Half Plate Armor",gp:750,stealth:true},
+  ringMail:{kind:"fixed",w:"heavy",base:14,label:"Ring Mail",gp:30,stealth:true},
+  ringMailShield:{kind:"fixed",w:"heavy",base:14,shield:true,label:"Ring Mail, Shield",gp:40,stealth:true},
+  chainMail:{kind:"fixed",w:"heavy",base:16,label:"Chain Mail",gp:75,stealth:true,str:13,alt:"chainShirt"},
+  chainMailShield:{kind:"fixed",w:"heavy",base:16,shield:true,label:"Chain Mail, Shield",gp:85,stealth:true,str:13,alt:"chainShirtShield"},
+  splint:{kind:"fixed",w:"heavy",base:17,label:"Splint Armor",gp:200,stealth:true,str:15,alt:"ringMail"},
+  plate:{kind:"fixed",w:"heavy",base:18,label:"Plate Armor",gp:1500,stealth:true,str:15,alt:"splint"},
+  unarmCon:{kind:"unarmored-con",w:"none",label:"Unarmored Defense",gp:0},
+  unarmConShield:{kind:"unarmored-con",w:"none",shield:true,label:"Unarmored Defense, Shield",gp:10},
+  unarmWis:{kind:"unarmored-wis",w:"none",label:"Unarmored Defense",gp:0}
 };
 
 // ── Class packages v2 (D-013): kits, feature options, spells config ──────────
-// {hd, saves, prim, sec, skills:{from,n}, kits:[{n, ac, weapons:[{w, count?, noMastery?}], gear}],
-//  traits/bonus (statblock sections), res, caster:{abil, cantrips:N, prepared:N, slots, short?,
-//  always?:[names]}, featureOpt:{label, kind?, options:[{label, value, t, hooks?}]}, tools, langs}
+// {hd, saves, prim, sec, skills:{from,n}, kits:[{n, ac, tags?, needs?, weapons:[{w, count?,
+//  noMastery?}], gear}], traits/bonus (statblock sections), res, caster:{abil, cantrips:N,
+//  prepared:N, slots, short?, always?:[names]},
+//  featureOpt:{label, kind?, options:[{label, value, t, hooks?, fits?}]}, tools, langs}
+// D-037: a kit answers to the class feature option twice over. `needs:"<hook>"` UNLOCKS it (the
+// option grants the training the kit assumes); the option's `fits` NARROWS the table to the kits
+// whose `tags` match the tactic it rolled. An option with no `fits` keeps the whole table — three
+// Fighting Styles genuinely don't dictate gear, and inventing a tie for them would be noise.
 // Kit weapons reference GEN_W keys; masteries print only for classes with the Weapon Mastery
 // feature (masteries:N caps how many kit weapons carry the tag).
 const GEN_CLASS_LIST=["Barbarian","Bard","Cleric","Druid","Fighter","Monk","Paladin","Ranger","Rogue","Sorcerer","Warlock","Wizard"]; // d12, alphabetical
 const GEN_CLASSES={
-  Barbarian:{hd:12,saves:["str","con"],prim:"str",sec:"con",masteries:2,
+  Barbarian:{hd:12,gp:75,saves:["str","con"],prim:"str",sec:"con",masteries:2,
     skills:{from:["Animal Handling","Athletics","Intimidation","Nature","Perception","Survival"],n:2},
     kits:[
-      {n:"Greataxe and handaxes",ac:"unarmCon",weapons:[{w:"greataxe"},{w:"handaxe",count:4}],gear:"Greataxe, 4 Handaxes"},
-      {n:"Maul and javelins",ac:"unarmCon",weapons:[{w:"maul"},{w:"javelin",count:4}],gear:"Maul, 4 Javelins"},
-      {n:"Twin handaxes",ac:"unarmCon",weapons:[{w:"handaxe",count:2},{w:"javelin",count:2}],gear:"2 Handaxes, 2 Javelins"},
-      {n:"Greatsword and daggers",ac:"unarmCon",weapons:[{w:"greatsword"},{w:"dagger",count:2}],gear:"Greatsword, 2 Daggers"},
-      {n:"Halberd",ac:"unarmCon",weapons:[{w:"halberd"},{w:"javelin",count:3}],gear:"Halberd, 3 Javelins"},
-      {n:"Spear and shield",ac:"unarmConShield",weapons:[{w:"spear"},{w:"javelin",count:3}],gear:"Shield, Spear, 3 Javelins"}],
+      // Rage forbids Heavy armor, so the armored kits stop at Medium; taking any armor trades
+      // Unarmored Defense away, which is the choice the kit is offering.
+      {n:"Greataxe and handaxes",ac:"unarmCon",tags:["twohand","thrown"],weapons:[{w:"greataxe"},{w:"handaxe",count:4},{w:"dagger",count:2}],gear:"Greataxe, 4 Handaxes, 2 Daggers"},
+      {n:"Maul and javelins",ac:"unarmCon",tags:["twohand","thrown"],weapons:[{w:"maul"},{w:"javelin",count:4},{w:"sling"}],gear:"Maul, 4 Javelins, Sling, 20 Bullets"},
+      {n:"Twin handaxes",ac:"unarmCon",tags:["dual","thrown"],weapons:[{w:"handaxe",count:2},{w:"dagger",count:2}],gear:"2 Handaxes, 2 Daggers"},
+      {n:"Greatsword and daggers",ac:"unarmCon",tags:["twohand"],weapons:[{w:"greatsword"},{w:"dagger",count:2}],gear:"Greatsword, 2 Daggers"},
+      {n:"Halberd and shortbow",ac:"unarmCon",tags:["twohand","ranged"],weapons:[{w:"halberd"},{w:"shortbow"}],gear:"Halberd, Shortbow, 20 Arrows"},
+      {n:"Spear and shield",ac:"unarmConShield",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"javelin",count:3},{w:"dagger"}],gear:"Shield, Spear, 3 Javelins, Dagger"},
+      {n:"Greatclub and javelins",ac:"hide",tags:["twohand","thrown"],weapons:[{w:"greatclub"},{w:"javelin",count:4},{w:"dagger"}],gear:"Hide Armor, Greatclub, 4 Javelins, Dagger"},
+      {n:"Pike and sling",ac:"studded",tags:["twohand","thrown","ranged"],weapons:[{w:"pike"},{w:"handaxe",count:2},{w:"sling"}],gear:"Studded Leather, Pike, 2 Handaxes, Sling, 20 Bullets"},
+      {n:"Battleaxe and shield",ac:"scaleShield",tags:["onehand"],weapons:[{w:"battleaxe"},{w:"dagger",count:2}],gear:"Scale Mail, Shield, Battleaxe, 2 Daggers"},
+      {n:"Flail and shield",ac:"chainShirtShield",tags:["onehand","ranged"],weapons:[{w:"flail"},{w:"shortbow"}],gear:"Chain Shirt, Shield, Flail, Shortbow, 20 Arrows"},
+      {n:"Twin scimitars",ac:"leather",tags:["dual","finesse"],weapons:[{w:"scimitar",count:2},{w:"handaxe"}],gear:"Leather Armor, 2 Scimitars, Handaxe"}],
     traits:[{n:"Unarmored Defense",t:"AC equals 10 + Dex modifier + Con modifier while the barbarian isn't wearing armor (a Shield is allowed)."}],
     bonus:[{n:"Rage (2/Long Rest)",t:"While not wearing Heavy armor: +2 bonus to damage with Strength-based weapon attacks, Resistance to Bludgeoning, Piercing, and Slashing damage, and Advantage on Strength checks and Strength saving throws. Lasts 10 minutes while the barbarian attacks a foe or takes damage each round. One use returns on a Short Rest, all of them on a Long Rest."}],
     res:[{k:"rage",label:"Rage",max:2,per:"Long Rest",sr:1}]},
-  Bard:{hd:8,saves:["dex","cha"],prim:"cha",sec:"dex",
+  Bard:{hd:8,gp:90,saves:["dex","cha"],prim:"cha",sec:"dex",
     skills:{from:GEN_SKILL_NAMES,n:3},
     kits:[
-      {n:"Daggers and a lute",ac:"leather",weapons:[{w:"dagger",count:2}],gear:"Leather Armor, 2 Daggers, Lute"},
-      {n:"Spear and a drum",ac:"leather",weapons:[{w:"spear"}],gear:"Leather Armor, Spear, Drum"},
-      {n:"Light crossbow and a flute",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Flute"},
-      {n:"Quarterstaff and a lyre",ac:"leather",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Leather Armor, Quarterstaff, Dagger, Lyre"}],
+      // Bards train in Light armor only, so the variety is padded/leather/studded plus which
+      // instrument the kit is built around (each one a real XPHB instrument at its real price).
+      {n:"Daggers and a lute",ac:"leather",tags:["dual","finesse","thrown"],weapons:[{w:"dagger",count:2}],gear:"Leather Armor, 2 Daggers, Lute",gpExtra:35},
+      {n:"Spear and a drum",ac:"padded",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"dagger"}],gear:"Padded Armor, Spear, Dagger, Drum",gpExtra:6},
+      {n:"Light crossbow and a flute",ac:"leather",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Flute",gpExtra:2},
+      {n:"Quarterstaff and a lyre",ac:"studded",tags:["twohand"],weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Studded Leather, Quarterstaff, Dagger, Lyre",gpExtra:30},
+      {n:"Greatclub and a horn",ac:"padded",tags:["twohand","ranged"],weapons:[{w:"greatclub"},{w:"sling"}],gear:"Padded Armor, Greatclub, Sling, 20 Bullets, Horn",gpExtra:3},
+      {n:"Rapier and a pan flute",ac:"studded",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger"}],gear:"Studded Leather, Rapier, Dagger, Pan Flute",gpExtra:12},
+      {n:"Shortsword and bagpipes",ac:"leather",tags:["onehand","finesse","ranged"],weapons:[{w:"shortsword"},{w:"handxbow"}],gear:"Leather Armor, Shortsword, Hand Crossbow, 20 Bolts, Bagpipes",gpExtra:30},
+      {n:"Hand crossbow and a viol",ac:"studded",tags:["ranged"],weapons:[{w:"handxbow"},{w:"dagger"}],gear:"Studded Leather, Hand Crossbow, 20 Bolts, Dagger, Viol",gpExtra:30}],
     traits:[],
     bonus:[{n:"Bardic Inspiration (d6)",t:"One creature within 60 feet that can hear the bard gains a d6 it can add to one d20 Test within the next hour. Uses per Long Rest equal the bard's Charisma modifier (minimum 1)."}],
     res:[{k:"insp",label:"Bardic Inspiration",max:"chaMin1",per:"Long Rest"}],
     caster:{abil:"cha",cantrips:2,prepared:4,slots:2}},
-  Cleric:{hd:8,saves:["wis","cha"],prim:"wis",sec:"con",
+  Cleric:{hd:8,gp:110,saves:["wis","cha"],prim:"wis",sec:"con",
     skills:{from:["History","Insight","Medicine","Persuasion","Religion"],n:2},
     kits:[
-      {n:"Mace and shield",ac:"chainShirtShield",weapons:[{w:"mace"}],gear:"Chain Shirt, Shield, Mace, Holy Symbol"},
-      {n:"Warhammer",ac:"scaleShield",weapons:[{w:"warhammer",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Holy Symbol",note:"Warhammer needs Protector's Martial training"},
-      {n:"Crossbow and mace",ac:"chainShirt",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Light Crossbow, 20 Bolts, Mace, Holy Symbol"},
-      {n:"Quarterstaff and shield",ac:"chainShirtShield",weapons:[{w:"quarterstaff"}],gear:"Chain Shirt, Shield, Quarterstaff, Holy Symbol"},
-      {n:"Spear and crossbow",ac:"scaleShield",weapons:[{w:"spear"},{w:"lightxbow"}],gear:"Scale Mail, Shield, Spear, Light Crossbow, 20 Bolts, Holy Symbol"}],
+      // The holy symbol is named per kit (amulet / emblem / reliquary, all 5 gp in XPHB).
+      {n:"Mace and shield",ac:"chainShirtShield",tags:["onehand","ranged"],weapons:[{w:"mace"},{w:"lightxbow"}],gear:"Chain Shirt, Shield, Mace, Light Crossbow, 20 Bolts, Holy Symbol (amulet)"},
+      {n:"Crossbow and mace",ac:"chainShirt",tags:["ranged","onehand"],weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Light Crossbow, 20 Bolts, Mace, Holy Symbol (emblem)"},
+      {n:"Quarterstaff and shield",ac:"leatherShield",tags:["onehand","ranged"],weapons:[{w:"quarterstaff"},{w:"sling"}],gear:"Leather Armor, Shield, Quarterstaff, Sling, 20 Bullets, Holy Symbol (reliquary)"},
+      {n:"Spear and crossbow",ac:"scaleShield",tags:["onehand","thrown","ranged"],weapons:[{w:"spear"},{w:"lightxbow"}],gear:"Scale Mail, Shield, Spear, Light Crossbow, 20 Bolts, Holy Symbol (amulet)"},
+      {n:"Greatclub and sling",ac:"hide",tags:["twohand","ranged"],weapons:[{w:"greatclub"},{w:"sling"}],gear:"Hide Armor, Greatclub, Sling, 20 Bullets, Holy Symbol (emblem)"},
+      {n:"Sickle and darts",ac:"studdedShield",tags:["onehand","ranged"],weapons:[{w:"sickle"},{w:"dart",count:3}],gear:"Studded Leather, Shield, Sickle, 3 Darts, Holy Symbol (reliquary)"},
+      // Protector variants: the order's Martial weapon and Heavy armor training is what unlocks
+      // these four, and it's the only way a cleric reaches a martial weapon or heavy plate.
+      {n:"Warhammer and shield",ac:"scaleShield",needs:"martialTrained",tags:["onehand","ranged"],weapons:[{w:"warhammer",noMastery:true},{w:"lightxbow",noMastery:true}],gear:"Scale Mail, Shield, Warhammer, Light Crossbow, 20 Bolts, Holy Symbol (amulet)"},
+      {n:"Ring mail and morningstar",ac:"ringMailShield",needs:"martialTrained",tags:["onehand","thrown"],weapons:[{w:"morningstar",noMastery:true},{w:"lighthammer",count:2,noMastery:true},{w:"dagger",noMastery:true}],gear:"Ring Mail, Shield, Morningstar, 2 Light Hammers, Dagger, Holy Symbol (emblem)"},
+      {n:"Chain mail and battleaxe",ac:"chainMail",needs:"martialTrained",tags:["onehand","ranged"],weapons:[{w:"battleaxe",noMastery:true},{w:"lightxbow",noMastery:true}],gear:"Chain Mail, Battleaxe, Light Crossbow, 20 Bolts, Holy Symbol (reliquary)"},
+      {n:"Chain mail and halberd",ac:"chainMail",needs:"martialTrained",tags:["twohand"],weapons:[{w:"halberd",noMastery:true},{w:"dagger",noMastery:true}],gear:"Chain Mail, Halberd, Dagger, Holy Symbol (amulet)"}],
     traits:[],bonus:[],
     featureOpt:{label:"Divine Order",options:[
-      {label:"Protector",value:"protector",t:"Divine Order: Protector. Trained for battle — proficient with Martial weapons and Heavy armor."},
+      {label:"Protector",value:"protector",t:"Divine Order: Protector. Trained for battle — proficient with Martial weapons and Heavy armor.",hooks:{martialTrained:true}},
       {label:"Thaumaturge",value:"thaumaturge",t:"Divine Order: Thaumaturge. One extra Cleric cantrip; add the Wisdom modifier (minimum +1) to Intelligence (Arcana or Religion) checks.",hooks:{extraCantrip:true}}]},
     caster:{abil:"wis",cantrips:3,prepared:4,slots:2}},
-  Druid:{hd:8,saves:["int","wis"],prim:"wis",sec:"con",
+  Druid:{hd:8,gp:50,saves:["int","wis"],prim:"wis",sec:"con",
     skills:{from:["Arcana","Animal Handling","Insight","Medicine","Nature","Perception","Religion","Survival"],n:2},
     kits:[
-      {n:"Sickle and shield",ac:"leatherShield",weapons:[{w:"sickle"}],gear:"Leather Armor, Shield, Sickle, Druidic Focus (Quarterstaff), Herbalism Kit"},
-      {n:"Spear",ac:"leather",weapons:[{w:"spear"}],gear:"Leather Armor, Spear, Druidic Focus (sprig of mistletoe), Herbalism Kit"},
-      {n:"Sling and staff",ac:"leather",weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Leather Armor, Sling, Quarterstaff (Druidic Focus), Herbalism Kit"},
-      {n:"Club and shield",ac:"leatherShield",weapons:[{w:"club"},{w:"sling"}],gear:"Leather Armor, Shield, Club, Sling, Druidic Focus (yew wand), Herbalism Kit"}],
+      // The Druidic Focus is named per kit (XPHB offers sprig of mistletoe, wooden staff, yew
+      // wand and totem), and the Herbalism Kit rides only the kits actually built around it.
+      {n:"Sickle and shield",ac:"leatherShield",tags:["onehand","ranged"],weapons:[{w:"sickle"},{w:"sling"}],gear:"Leather Armor, Shield, Sickle, Sling, 20 Bullets, Druidic Focus (sprig of mistletoe), Herbalism Kit",gpExtra:5},
+      {n:"Spear and totem",ac:"padded",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"dagger"}],gear:"Padded Armor, Spear, Dagger, Druidic Focus (totem)"},
+      {n:"Sling and staff",ac:"leather",tags:["twohand","ranged"],weapons:[{w:"sling"},{w:"quarterstaff"}],gear:"Leather Armor, Sling, 20 Bullets, Druidic Focus (wooden staff), Herbalism Kit",gpExtra:5},
+      {n:"Club and shield",ac:"leatherShield",tags:["onehand","ranged"],weapons:[{w:"club"},{w:"sling"}],gear:"Leather Armor, Shield, Club, Sling, 20 Bullets, Druidic Focus (yew wand)"},
+      {n:"Greatclub and darts",ac:"studded",tags:["twohand","ranged"],weapons:[{w:"greatclub"},{w:"dart",count:4}],gear:"Studded Leather, Greatclub, 4 Darts, Druidic Focus (sprig of mistletoe), Herbalism Kit",gpExtra:5},
+      // Warden-only: the order's Martial weapon and Medium armor training is what makes these legal.
+      {n:"Warden's battleaxe",ac:"hideShield",needs:"martialTrained",tags:["onehand","thrown"],weapons:[{w:"battleaxe",noMastery:true},{w:"handaxe",count:2,noMastery:true},{w:"dagger",noMastery:true}],gear:"Hide Armor, Shield, Battleaxe, 2 Handaxes, Dagger, Druidic Focus (totem)"},
+      {n:"Warden's scimitar",ac:"scaleShield",needs:"martialTrained",tags:["onehand","finesse"],weapons:[{w:"scimitar",noMastery:true},{w:"dagger",count:2,noMastery:true}],gear:"Scale Mail, Shield, Scimitar, 2 Daggers, Druidic Focus (wooden staff), Herbalism Kit",gpExtra:5}],
     traits:[{n:"Druidic",t:"The druid knows Druidic and always has Speak with Animals prepared."}],
     bonus:[],langs:["Druidic"],
     featureOpt:{label:"Primal Order",options:[
       {label:"Magician",value:"magician",t:"Primal Order: Magician. One extra Druid cantrip; add the Wisdom modifier (minimum +1) to Intelligence (Arcana or Nature) checks.",hooks:{extraCantrip:true}},
-      {label:"Warden",value:"warden",t:"Primal Order: Warden. Trained for battle — proficient with Martial weapons and Medium armor."}]},
+      {label:"Warden",value:"warden",t:"Primal Order: Warden. Trained for battle — proficient with Martial weapons and Medium armor.",hooks:{martialTrained:true}}]},
     caster:{abil:"wis",cantrips:2,prepared:4,slots:2,always:["Speak with Animals"]}},
-  Fighter:{hd:10,saves:["str","con"],prim:"dex",sec:"con",masteries:3,
+  Fighter:{hd:10,gp:155,saves:["str","con"],prim:"dex",sec:"con",masteries:3,
     skills:{from:["Acrobatics","Animal Handling","Athletics","History","Insight","Intimidation","Persuasion","Perception","Survival"],n:2},
     kits:[
-      {n:"Sword and shield",ac:"chainMailShield",weapons:[{w:"longsword"},{w:"javelin",count:4}],gear:"Chain Mail, Shield, Longsword, 4 Javelins"},
-      {n:"Greatsword",ac:"chainMail",weapons:[{w:"greatsword"},{w:"handaxe",count:2}],gear:"Chain Mail, Greatsword, 2 Handaxes"},
-      {n:"Archer",ac:"studded",weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword"},
-      {n:"Two scimitars",ac:"studded",weapons:[{w:"scimitar",count:2},{w:"dagger"}],gear:"Studded Leather, 2 Scimitars, Dagger"},
-      {n:"Polearm",ac:"chainMail",weapons:[{w:"halberd"},{w:"handaxe",count:2}],gear:"Chain Mail, Halberd, 2 Handaxes"},
-      {n:"Crossbow and shield",ac:"chainShirtShield",weapons:[{w:"lightxbow"},{w:"mace"}],gear:"Chain Shirt, Shield, Light Crossbow, 20 Bolts, Mace"},
-      {n:"Warhammer and shield",ac:"chainMailShield",weapons:[{w:"warhammer"},{w:"handaxe",count:2}],gear:"Chain Mail, Shield, Warhammer, 2 Handaxes"},
-      {n:"Duelist",ac:"chainShirt",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Chain Shirt, Rapier, 2 Daggers"}],
+      {n:"Sword and shield",ac:"chainMailShield",tags:["onehand","thrown"],weapons:[{w:"longsword"},{w:"javelin",count:4},{w:"dagger"}],gear:"Chain Mail, Shield, Longsword, 4 Javelins, Dagger"},
+      {n:"Greatsword",ac:"scale",tags:["twohand","thrown"],weapons:[{w:"greatsword"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Scale Mail, Greatsword, 2 Handaxes, Dagger"},
+      {n:"Archer",ac:"studded",tags:["ranged","finesse"],weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword"},
+      {n:"Two scimitars",ac:"leather",tags:["dual","finesse"],weapons:[{w:"scimitar",count:2},{w:"dagger"}],gear:"Leather Armor, 2 Scimitars, Dagger"},
+      {n:"Polearm",ac:"chainMail",tags:["twohand","thrown"],weapons:[{w:"halberd"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Chain Mail, Halberd, 2 Handaxes, Dagger"},
+      {n:"Crossbow and shield",ac:"chainShirtShield",tags:["ranged","onehand"],weapons:[{w:"lightxbow"},{w:"mace"},{w:"dagger"}],gear:"Chain Shirt, Shield, Light Crossbow, 20 Bolts, Mace, Dagger"},
+      {n:"Warhammer and shield",ac:"ringMailShield",tags:["onehand","thrown"],weapons:[{w:"warhammer"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Ring Mail, Shield, Warhammer, 2 Handaxes, Dagger"},
+      {n:"Duelist",ac:"chainShirt",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Chain Shirt, Rapier, 2 Daggers"},
+      {n:"Twin shortswords",ac:"studded",tags:["dual","finesse"],weapons:[{w:"shortsword",count:2},{w:"dagger",count:2}],gear:"Studded Leather, 2 Shortswords, 2 Daggers"},
+      {n:"Twin handaxes",ac:"hide",tags:["dual","thrown"],weapons:[{w:"handaxe",count:2},{w:"javelin",count:3},{w:"dagger"}],gear:"Hide Armor, 2 Handaxes, 3 Javelins, Dagger"},
+      {n:"Heavy crossbow",ac:"chainShirt",tags:["ranged","finesse"],weapons:[{w:"heavyxbow"},{w:"shortsword"}],gear:"Chain Shirt, Heavy Crossbow, 20 Bolts, Shortsword"},
+      {n:"Greataxe",ac:"chainMail",tags:["twohand","thrown"],weapons:[{w:"greataxe"},{w:"javelin",count:3},{w:"dagger"}],gear:"Chain Mail, Greataxe, 3 Javelins, Dagger"},
+      {n:"Glaive",ac:"scale",tags:["twohand","thrown"],weapons:[{w:"glaive"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Scale Mail, Glaive, 2 Handaxes, Dagger"},
+      {n:"Pike wall",ac:"ringMail",tags:["twohand","thrown","ranged"],weapons:[{w:"pike"},{w:"javelin",count:3},{w:"sling"}],gear:"Ring Mail, Pike, 3 Javelins, Sling, 20 Bullets"},
+      {n:"Morningstar and shield",ac:"hideShield",tags:["onehand","thrown"],weapons:[{w:"morningstar"},{w:"lighthammer",count:2},{w:"dagger"}],gear:"Hide Armor, Shield, Morningstar, 2 Light Hammers, Dagger"},
+      {n:"War pick and shield",ac:"chainShirtShield",tags:["onehand","thrown"],weapons:[{w:"warpick"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Chain Shirt, Shield, War Pick, 2 Handaxes, Dagger"},
+      {n:"Whip and shield",ac:"leatherShield",tags:["onehand","finesse"],weapons:[{w:"whip"},{w:"shortsword"}],gear:"Leather Armor, Shield, Whip, Shortsword"},
+      // The four below are priced far past every class budget (D-038): they only reach the table
+      // with the gold budget switched off, or raised a very long way.
+      {n:"Half plate duelist",ac:"halfPlate",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Half Plate Armor, Rapier, 2 Daggers"},
+      {n:"Plate and greatsword",ac:"plate",tags:["twohand"],weapons:[{w:"greatsword"},{w:"dagger"}],gear:"Plate Armor, Greatsword, Dagger"},
+      {n:"Musketeer",ac:"studded",tags:["ranged","finesse"],weapons:[{w:"musket"},{w:"rapier"}],gear:"Studded Leather, Musket, 20 Bullets, Rapier"},
+      {n:"Pistolier",ac:"breastplate",tags:["ranged","onehand","finesse"],weapons:[{w:"pistol"},{w:"rapier"}],gear:"Breastplate, Pistol, 20 Bullets, Rapier"}],
     traits:[],
     bonus:[{n:"Second Wind (2 uses)",t:"The fighter regains 1d10 + 1 Hit Points. One use returns on a Short Rest, all of them on a Long Rest."}],
     res:[{k:"wind",label:"Second Wind",max:2,per:"Long Rest",sr:1}],
     featureOpt:{label:"Fighting Style",options:[
-      {label:"Archery",value:"Archery",t:"Fighting Style: Archery. +2 bonus to attack rolls with Ranged weapons (counted).",hooks:{rangedAtk:2}},
-      {label:"Blind Fighting",value:"Blind Fighting",t:"Fighting Style: Blind Fighting. Blindsight within 10 feet."},
+      {label:"Archery",value:"Archery",t:"Fighting Style: Archery. +2 bonus to attack rolls with Ranged weapons (counted).",hooks:{rangedAtk:2},fits:["ranged"]},
+      {label:"Blind Fighting",value:"Blind Fighting",t:"Fighting Style: Blind Fighting. Blindsight within 10 feet.",fits:["shield","onehand","twohand","dual"]},
       {label:"Defense",value:"Defense",t:"Fighting Style: Defense. +1 AC while wearing armor (counted).",hooks:{acArmor:1}},
-      {label:"Dueling",value:"Dueling",t:"Fighting Style: Dueling. +2 damage with a Melee weapon held in one hand and no other weapons (counted on the main line).",hooks:{dueling:2}},
-      {label:"Great Weapon Fighting",value:"Great Weapon Fighting",t:"Fighting Style: Great Weapon Fighting. Treat 1s and 2s on damage dice as 3s with two-handed Melee weapons."},
+      {label:"Dueling",value:"Dueling",t:"Fighting Style: Dueling. +2 damage with a Melee weapon held in one hand and no other weapons.",fits:["onehand"]},
+      {label:"Great Weapon Fighting",value:"Great Weapon Fighting",t:"Fighting Style: Great Weapon Fighting. Treat 1s and 2s on damage dice as 3s with two-handed Melee weapons.",fits:["twohand"]},
       {label:"Interception",value:"Interception",t:"Fighting Style: Interception. Reaction: reduce damage to a creature within 5 feet by 1d10 + 2 (needs Shield or weapon in hand)."},
-      {label:"Protection",value:"Protection",t:"Fighting Style: Protection. Reaction while holding a Shield: impose Disadvantage on an attack against a creature within 5 feet."},
-      {label:"Thrown Weapon Fighting",value:"Thrown Weapon Fighting",t:"Fighting Style: Thrown Weapon Fighting. +2 damage with thrown weapon attacks."},
-      {label:"Two-Weapon Fighting",value:"Two-Weapon Fighting",t:"Fighting Style: Two-Weapon Fighting. Add the ability modifier to the damage of the extra (Light-weapon) attack."},
+      {label:"Protection",value:"Protection",t:"Fighting Style: Protection. Reaction while holding a Shield: impose Disadvantage on an attack against a creature within 5 feet.",fits:["shield"]},
+      {label:"Thrown Weapon Fighting",value:"Thrown Weapon Fighting",t:"Fighting Style: Thrown Weapon Fighting. +2 damage with thrown weapon attacks.",fits:["thrown"]},
+      {label:"Two-Weapon Fighting",value:"Two-Weapon Fighting",t:"Fighting Style: Two-Weapon Fighting. Add the ability modifier to the damage of the extra (Light-weapon) attack.",fits:["dual"]},
       {label:"Unarmed Fighting",value:"Unarmed Fighting",t:"Fighting Style: Unarmed Fighting. Unarmed Strikes deal 1d6 + Str (1d8 with both hands free); 1d4 to grappled creatures at the start of turns."}]}},
-  Monk:{hd:8,saves:["str","dex"],prim:"dex",sec:"wis",
+  Monk:{hd:8,gp:50,saves:["str","dex"],prim:"dex",sec:"wis",
     skills:{from:["Acrobatics","Athletics","History","Insight","Religion","Stealth"],n:2},
     kits:[
-      {n:"Spear and daggers",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"spear"},{w:"dagger",count:5}],gear:"Spear, 5 Daggers"},
-      {n:"Shortsword and darts",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"shortsword"},{w:"dart",count:6}],gear:"Shortsword, 6 Darts"},
-      {n:"Staff and sling",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"quarterstaff"},{w:"sling"}],gear:"Quarterstaff, Sling"},
-      {n:"Handaxes and darts",ac:"unarmWis",weapons:[{w:"unarmed"},{w:"handaxe",count:2},{w:"dart",count:4}],gear:"2 Handaxes, 4 Darts"}],
+      // Monks train in no armor at all, so the variety is entirely in the weapons: Simple ones
+      // plus the Light Martial melee that counts as a Monk weapon.
+      {n:"Spear and daggers",ac:"unarmWis",tags:["onehand","thrown"],weapons:[{w:"unarmed"},{w:"spear"},{w:"dagger",count:5}],gear:"Spear, 5 Daggers"},
+      {n:"Shortsword and darts",ac:"unarmWis",tags:["onehand","finesse","ranged"],weapons:[{w:"unarmed"},{w:"shortsword"},{w:"dart",count:6}],gear:"Shortsword, 6 Darts"},
+      {n:"Staff and sling",ac:"unarmWis",tags:["twohand","ranged"],weapons:[{w:"unarmed"},{w:"quarterstaff"},{w:"sling"}],gear:"Quarterstaff, Sling, 20 Bullets"},
+      {n:"Handaxes and darts",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"handaxe",count:2},{w:"dart",count:4}],gear:"2 Handaxes, 4 Darts"},
+      {n:"Light hammers and staff",ac:"unarmWis",tags:["dual","thrown","ranged"],weapons:[{w:"unarmed"},{w:"lighthammer",count:2},{w:"quarterstaff"},{w:"dart",count:3}],gear:"2 Light Hammers, Quarterstaff, 3 Darts"},
+      {n:"Twin scimitars",ac:"unarmWis",tags:["dual","finesse"],weapons:[{w:"unarmed"},{w:"scimitar",count:2}],gear:"2 Scimitars"},
+      {n:"Sickles and darts",ac:"unarmWis",tags:["dual","ranged"],weapons:[{w:"unarmed"},{w:"sickle",count:2},{w:"dart",count:4}],gear:"2 Sickles, 4 Darts"},
+      {n:"Club and shortbow",ac:"unarmWis",tags:["onehand","ranged"],weapons:[{w:"unarmed"},{w:"club"},{w:"shortbow"}],gear:"Club, Shortbow, 20 Arrows"}],
     traits:[{n:"Martial Arts (d6)",t:"Unarmed Strikes and Monk weapons (Simple Melee, plus Light Martial Melee) deal 1d6 and can use Dexterity."},
             {n:"Unarmored Defense",t:"AC equals 10 + Dex modifier + Wis modifier while wearing no armor and no Shield."}],
     bonus:[{n:"Bonus Unarmed Strike",t:"The monk makes one Unarmed Strike as a Bonus Action."}]},
-  Paladin:{hd:10,saves:["wis","cha"],prim:"str",sec:"cha",masteries:2,
+  Paladin:{hd:10,gp:150,saves:["wis","cha"],prim:"str",sec:"cha",masteries:2,
     skills:{from:["Athletics","Insight","Intimidation","Medicine","Persuasion","Religion"],n:2},
     kits:[
-      {n:"Longsword and shield",ac:"chainMailShield",weapons:[{w:"longsword"},{w:"javelin",count:6}],gear:"Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol"},
-      {n:"Greatsword",ac:"chainMail",weapons:[{w:"greatsword"},{w:"javelin",count:3}],gear:"Chain Mail, Greatsword, 3 Javelins, Holy Symbol"},
-      {n:"Warhammer and shield",ac:"chainMailShield",weapons:[{w:"warhammer"},{w:"handaxe",count:2}],gear:"Chain Mail, Shield, Warhammer, 2 Handaxes, Holy Symbol"},
-      {n:"Flail and shield",ac:"scaleShield",weapons:[{w:"flail"},{w:"javelin",count:4}],gear:"Scale Mail, Shield, Flail, 4 Javelins, Holy Symbol"},
-      {n:"Halberd",ac:"chainMail",weapons:[{w:"halberd"},{w:"javelin",count:3}],gear:"Chain Mail, Halberd, 3 Javelins, Holy Symbol"},
-      {n:"Battleaxe and shield",ac:"scaleShield",weapons:[{w:"battleaxe"},{w:"handaxe",count:2}],gear:"Scale Mail, Shield, Battleaxe, 2 Handaxes, Holy Symbol"}],
+      {n:"Longsword and shield",ac:"chainMailShield",tags:["onehand","thrown"],weapons:[{w:"longsword"},{w:"javelin",count:6},{w:"dagger"}],gear:"Chain Mail, Shield, Longsword, 6 Javelins, Dagger, Holy Symbol (amulet)"},
+      {n:"Greatsword",ac:"scale",tags:["twohand","thrown"],weapons:[{w:"greatsword"},{w:"javelin",count:3},{w:"dagger"}],gear:"Scale Mail, Greatsword, 3 Javelins, Dagger, Holy Symbol (emblem)"},
+      {n:"Warhammer and shield",ac:"ringMailShield",tags:["onehand","thrown"],weapons:[{w:"warhammer"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Ring Mail, Shield, Warhammer, 2 Handaxes, Dagger, Holy Symbol (reliquary)"},
+      {n:"Flail and shield",ac:"scaleShield",tags:["onehand","ranged"],weapons:[{w:"flail"},{w:"javelin",count:4},{w:"sling"}],gear:"Scale Mail, Shield, Flail, 4 Javelins, Sling, 20 Bullets, Holy Symbol (amulet)"},
+      {n:"Halberd",ac:"chainMail",tags:["twohand","thrown"],weapons:[{w:"halberd"},{w:"javelin",count:3},{w:"dagger"}],gear:"Chain Mail, Halberd, 3 Javelins, Dagger, Holy Symbol (emblem)"},
+      {n:"Battleaxe and shield",ac:"chainShirtShield",tags:["onehand","thrown"],weapons:[{w:"battleaxe"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Chain Shirt, Shield, Battleaxe, 2 Handaxes, Dagger, Holy Symbol (reliquary)"},
+      {n:"Lance and shield",ac:"chainMailShield",tags:["onehand","thrown"],weapons:[{w:"lance"},{w:"javelin",count:3},{w:"dagger"}],gear:"Chain Mail, Shield, Lance, 3 Javelins, Dagger, Holy Symbol (amulet)"},
+      {n:"Ring mail and pike",ac:"ringMail",tags:["twohand","ranged"],weapons:[{w:"pike"},{w:"javelin",count:4},{w:"lightxbow"}],gear:"Ring Mail, Pike, 4 Javelins, Light Crossbow, 20 Bolts, Holy Symbol (emblem)"},
+      // Both priced past the paladin's purse (D-038/D-040) — budget-off kits.
+      {n:"Breastplate and glaive",ac:"breastplate",tags:["twohand","thrown"],weapons:[{w:"glaive"},{w:"handaxe",count:2},{w:"dagger"}],gear:"Breastplate, Glaive, 2 Handaxes, Dagger, Holy Symbol (reliquary)"},
+      {n:"Splint and morningstar",ac:"splint",tags:["onehand","ranged"],weapons:[{w:"morningstar"},{w:"javelin",count:4},{w:"handxbow"}],gear:"Splint Armor, Morningstar, 4 Javelins, Hand Crossbow, 20 Bolts, Holy Symbol (amulet)"}],
     traits:[],
     bonus:[{n:"Lay on Hands (5 HP pool)",t:"The paladin touches a creature and restores any number of Hit Points remaining in the pool. The pool refills on a Long Rest."}],
     res:[{k:"loh",label:"Lay on Hands (HP)",max:5,per:"Long Rest"}],
     caster:{abil:"cha",cantrips:0,prepared:2,slots:2}},
-  Ranger:{hd:10,saves:["str","dex"],prim:"dex",sec:"wis",masteries:2,
+  Ranger:{hd:10,gp:150,saves:["str","dex"],prim:"dex",sec:"wis",masteries:2,
     skills:{from:["Animal Handling","Athletics","Insight","Investigation","Nature","Perception","Stealth","Survival"],n:3},
     kits:[
-      {n:"Longbow and shortsword",ac:"studded",weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword, Druidic Focus"},
-      {n:"Twin shortswords",ac:"studded",weapons:[{w:"shortsword",count:2},{w:"dagger",count:2}],gear:"Studded Leather, 2 Shortswords, 2 Daggers, Druidic Focus"},
-      {n:"Heavy crossbow",ac:"studded",weapons:[{w:"heavyxbow"},{w:"scimitar"}],gear:"Studded Leather, Heavy Crossbow, 20 Bolts, Scimitar, Druidic Focus"},
-      {n:"Spear and shield",ac:"studdedShield",weapons:[{w:"spear"},{w:"shortbow"}],gear:"Studded Leather, Shield, Spear, Shortbow, 20 Arrows, Druidic Focus"},
-      {n:"Scimitar and shield",ac:"studdedShield",weapons:[{w:"scimitar"},{w:"dagger",count:2}],gear:"Studded Leather, Shield, Scimitar, 2 Daggers, Druidic Focus"},
-      {n:"Shortbow and handaxes",ac:"studded",weapons:[{w:"shortbow"},{w:"handaxe",count:2}],gear:"Studded Leather, Shortbow, 20 Arrows, 2 Handaxes, Druidic Focus"}],
+      {n:"Longbow and shortsword",ac:"studded",tags:["ranged","finesse"],weapons:[{w:"longbow"},{w:"shortsword"}],gear:"Studded Leather, Longbow, 20 Arrows, Shortsword, Druidic Focus (sprig of mistletoe)"},
+      {n:"Twin shortswords",ac:"leather",tags:["dual","finesse"],weapons:[{w:"shortsword",count:2},{w:"dagger",count:2}],gear:"Leather Armor, 2 Shortswords, 2 Daggers, Druidic Focus (yew wand)"},
+      {n:"Heavy crossbow",ac:"chainShirt",tags:["ranged","finesse"],weapons:[{w:"heavyxbow"},{w:"scimitar"}],gear:"Chain Shirt, Heavy Crossbow, 20 Bolts, Scimitar, Druidic Focus (wooden staff)"},
+      {n:"Spear and shield",ac:"studdedShield",tags:["onehand","ranged","thrown"],weapons:[{w:"spear"},{w:"shortbow"}],gear:"Studded Leather, Shield, Spear, Shortbow, 20 Arrows, Druidic Focus (totem)"},
+      {n:"Scimitar and shield",ac:"hideShield",tags:["onehand","finesse"],weapons:[{w:"scimitar"},{w:"dagger",count:2}],gear:"Hide Armor, Shield, Scimitar, 2 Daggers, Druidic Focus (sprig of mistletoe)"},
+      {n:"Shortbow and handaxes",ac:"padded",tags:["ranged","thrown"],weapons:[{w:"shortbow"},{w:"handaxe",count:2}],gear:"Padded Armor, Shortbow, 20 Arrows, 2 Handaxes, Druidic Focus (yew wand)"},
+      {n:"Trident and net",ac:"scale",tags:["onehand","thrown","finesse"],weapons:[{w:"trident"},{w:"dagger",count:2}],gear:"Scale Mail, Trident, Net, 2 Daggers, Druidic Focus (wooden staff)",gpExtra:1},
+      // The blowgun's 1 damage is a utility line, so this kit carries a real martial sidearm.
+      {n:"Blowgun and rapier",ac:"hide",tags:["ranged","onehand","finesse"],weapons:[{w:"blowgun"},{w:"rapier"}],gear:"Hide Armor, Blowgun, 50 Needles, Rapier, Druidic Focus (totem)",gpExtra:1}],
     traits:[],
     bonus:[{n:"Favored Enemy (Hunter's Mark)",t:"Hunter's Mark is always prepared and castable twice per Long Rest without a spell slot."}],
     res:[{k:"fav",label:"Hunter's Mark (free)",max:2,per:"Long Rest"}],
     caster:{abil:"wis",cantrips:0,prepared:2,slots:2,always:["Hunter's Mark"]}},
-  Rogue:{hd:8,saves:["dex","int"],prim:"dex",sec:"int",masteries:2,
+  Rogue:{hd:8,gp:100,saves:["dex","int"],prim:"dex",sec:"int",masteries:2,
     skills:{from:["Acrobatics","Athletics","Deception","Insight","Intimidation","Investigation","Perception","Persuasion","Sleight of Hand","Stealth"],n:4},
     kits:[
-      {n:"Shortsword and shortbow",ac:"leather",weapons:[{w:"shortsword"},{w:"shortbow"},{w:"dagger",count:2}],gear:"Leather Armor, Shortsword, Shortbow, 20 Arrows, 2 Daggers, Thieves' Tools"},
-      {n:"Rapier and dagger",ac:"leather",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Leather Armor, Rapier, 2 Daggers, Thieves' Tools"},
-      {n:"Rapier and hand crossbow",ac:"leather",weapons:[{w:"rapier"},{w:"handxbow"}],gear:"Leather Armor, Rapier, Hand Crossbow, 20 Bolts, Thieves' Tools"},
-      {n:"Twin shortswords",ac:"leather",weapons:[{w:"shortsword",count:2},{w:"sling"}],gear:"Leather Armor, 2 Shortswords, Sling, Thieves' Tools"},
-      {n:"Daggers everywhere",ac:"leather",weapons:[{w:"dagger",count:4},{w:"dart",count:2}],gear:"Leather Armor, 4 Daggers, 2 Darts, Thieves' Tools"},
-      {n:"Scimitar and shortbow",ac:"leather",weapons:[{w:"scimitar"},{w:"shortbow"}],gear:"Leather Armor, Scimitar, Shortbow, 20 Arrows, Thieves' Tools"}],
+      // Every rogue kit is Finesse or Ranged throughout — Sneak Attack needs one or the other,
+      // so a Strength weapon would be a dead line on the card.
+      {n:"Shortsword and shortbow",ac:"leather",tags:["onehand","finesse","ranged"],weapons:[{w:"shortsword"},{w:"shortbow"},{w:"dagger",count:2}],gear:"Leather Armor, Shortsword, Shortbow, 20 Arrows, 2 Daggers, Thieves' Tools",gpExtra:25},
+      {n:"Rapier and dagger",ac:"studded",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Studded Leather, Rapier, 2 Daggers, Thieves' Tools",gpExtra:25},
+      {n:"Rapier and hand crossbow",ac:"leather",tags:["onehand","finesse","ranged"],weapons:[{w:"rapier"},{w:"handxbow"}],gear:"Leather Armor, Rapier, Hand Crossbow, 20 Bolts, Thieves' Tools",gpExtra:25},
+      {n:"Twin shortswords",ac:"padded",tags:["dual","finesse","ranged"],weapons:[{w:"shortsword",count:2},{w:"sling"}],gear:"Padded Armor, 2 Shortswords, Sling, 20 Bullets, Thieves' Tools",gpExtra:25},
+      {n:"Daggers everywhere",ac:"leather",tags:["dual","finesse","thrown"],weapons:[{w:"dagger",count:4},{w:"dart",count:2}],gear:"Leather Armor, 4 Daggers, 2 Darts, Thieves' Tools",gpExtra:25},
+      {n:"Scimitar and shortbow",ac:"studded",tags:["onehand","finesse","ranged"],weapons:[{w:"scimitar"},{w:"shortbow"}],gear:"Studded Leather, Scimitar, Shortbow, 20 Arrows, Thieves' Tools",gpExtra:25},
+      {n:"Whip and daggers",ac:"padded",tags:["onehand","finesse"],weapons:[{w:"whip"},{w:"dagger",count:2}],gear:"Padded Armor, Whip, 2 Daggers, Thieves' Tools",gpExtra:25},
+      {n:"Scimitar and hand crossbow",ac:"studded",tags:["onehand","finesse","ranged"],weapons:[{w:"scimitar"},{w:"handxbow"}],gear:"Studded Leather, Scimitar, Hand Crossbow, 20 Bolts, Thieves' Tools",gpExtra:25}],
     traits:[{n:"Sneak Attack (1d6)",t:"Once per turn, +1d6 damage on a hit with a Finesse or Ranged weapon if the rogue has Advantage, or if an able ally is within 5 feet of the target and the rogue doesn't have Disadvantage."},
             {n:"Thieves' Cant",t:"The rogue knows Thieves' Cant and one other language."}],
     bonus:[],tools:["Thieves' Tools"],langs:["Thieves' Cant"],
     featureOpt:{label:"Expertise",kind:"expertise",n:2},
     hooks:{}},
-  Sorcerer:{hd:6,saves:["con","cha"],prim:"cha",sec:"con",
+  Sorcerer:{hd:6,gp:50,saves:["con","cha"],prim:"cha",sec:"con",
     skills:{from:["Arcana","Deception","Insight","Intimidation","Persuasion","Religion"],n:2},
     kits:[
-      {n:"Spear and daggers",ac:"none",weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
-      {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (crystal)"},
-      {n:"Quarterstaff",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (crystal)"},
-      {n:"Darts and staff",ac:"none",weapons:[{w:"dart",count:4},{w:"quarterstaff"}],gear:"4 Darts, Quarterstaff, Arcane Focus (crystal)"}],
+      // One Arcane Focus per kit, named: XPHB offers crystal, orb, rod, staff and wand, and a
+      // sorcerer's focus is the most personal thing it owns.
+      {n:"Spear and crystal",ac:"none",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"dagger",count:2}],gear:"Spear, 2 Daggers, Arcane Focus (crystal)"},
+      {n:"Light crossbow and wand",ac:"none",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand)"},
+      {n:"Quarterstaff focus",ac:"none",tags:["twohand"],weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (staff)"},
+      {n:"Darts and orb",ac:"none",tags:["ranged"],weapons:[{w:"dart",count:4},{w:"quarterstaff"}],gear:"4 Darts, Quarterstaff, Arcane Focus (orb)"},
+      {n:"Sling and rod",ac:"none",tags:["ranged","onehand"],weapons:[{w:"sling"},{w:"sickle"},{w:"dagger"}],gear:"Sling, 20 Bullets, Sickle, Dagger, Arcane Focus (rod)"}],
     traits:[],
     bonus:[{n:"Innate Sorcery (2/Long Rest)",t:"For 1 minute: the sorcerer's spell save DC increases by 1 and it has Advantage on Sorcerer spell attack rolls."}],
     res:[{k:"innate",label:"Innate Sorcery",max:2,per:"Long Rest"}],
     caster:{abil:"cha",cantrips:4,prepared:2,slots:2}},
-  Warlock:{hd:8,saves:["wis","cha"],prim:"cha",sec:"con",
+  Warlock:{hd:8,gp:100,saves:["wis","cha"],prim:"cha",sec:"con",
     skills:{from:["Arcana","Deception","History","Intimidation","Investigation","Nature","Religion"],n:2},
     kits:[
-      {n:"Sickle and daggers",ac:"leather",weapons:[{w:"sickle"},{w:"dagger",count:2}],gear:"Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb)"},
-      {n:"Light crossbow",ac:"leather",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Leather Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (orb)"},
-      {n:"Spear",ac:"leather",weapons:[{w:"spear"},{w:"club"}],gear:"Leather Armor, Spear, Club, Arcane Focus (orb)"},
-      {n:"Daggers and darts",ac:"leather",weapons:[{w:"dagger",count:2},{w:"dart",count:3}],gear:"Leather Armor, 2 Daggers, 3 Darts, Arcane Focus (orb)"},
+      {n:"Sickle and orb",ac:"leather",tags:["onehand","thrown"],weapons:[{w:"sickle"},{w:"dagger",count:2}],gear:"Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb)"},
+      {n:"Light crossbow and rod",ac:"padded",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Padded Armor, Light Crossbow, 20 Bolts, Dagger, Arcane Focus (rod)"},
+      {n:"Spear and wand",ac:"leather",tags:["onehand","thrown"],weapons:[{w:"spear"},{w:"club"},{w:"dagger"}],gear:"Leather Armor, Spear, Club, Dagger, Arcane Focus (wand)"},
+      {n:"Daggers and crystal",ac:"studded",tags:["dual","finesse","ranged"],weapons:[{w:"dagger",count:2},{w:"dart",count:3}],gear:"Studded Leather, 2 Daggers, 3 Darts, Arcane Focus (crystal)"},
       // Blade-pact kits (v4 note): only on the table once Pact of the Blade is the invocation —
       // the pact makes the warlock proficient with its bonded martial weapon.
-      {n:"Pact greatsword",ac:"leather",needs:"pactBlade",weapons:[{w:"greatsword"},{w:"dagger"}],gear:"Leather Armor, Greatsword, Dagger, Arcane Focus (orb)"},
-      {n:"Pact halberd",ac:"leather",needs:"pactBlade",weapons:[{w:"halberd"},{w:"dagger"}],gear:"Leather Armor, Halberd, Dagger, Arcane Focus (orb)"},
-      {n:"Pact rapier",ac:"leather",needs:"pactBlade",weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Leather Armor, Rapier, 2 Daggers, Arcane Focus (orb)"}],
+      {n:"Pact greatsword",ac:"leather",needs:"pactBlade",tags:["twohand"],weapons:[{w:"greatsword"},{w:"dagger"}],gear:"Leather Armor, Greatsword, Dagger, Arcane Focus (orb)"},
+      {n:"Pact halberd",ac:"leather",needs:"pactBlade",tags:["twohand"],weapons:[{w:"halberd"},{w:"dagger"}],gear:"Leather Armor, Halberd, Dagger, Arcane Focus (staff)"},
+      {n:"Pact rapier",ac:"studded",needs:"pactBlade",tags:["onehand","finesse"],weapons:[{w:"rapier"},{w:"dagger",count:2}],gear:"Studded Leather, Rapier, 2 Daggers, Arcane Focus (rod)"},
+      {n:"Pact glaive",ac:"padded",needs:"pactBlade",tags:["twohand","ranged"],weapons:[{w:"glaive"},{w:"handxbow"}],gear:"Padded Armor, Glaive, Hand Crossbow, 20 Bolts, Arcane Focus (crystal)"}],
     traits:[{n:"Pact Magic",t:"One level-1 Pact slot; it refills on a Short or Long Rest."}],
     bonus:[],
     featureOpt:{label:"Eldritch Invocation",options:[
@@ -540,13 +643,14 @@ const GEN_CLASSES={
       {label:"Pact of the Chain",value:"Pact of the Chain",t:"Invocation: Pact of the Chain. The warlock knows Find Familiar and can take special familiar forms (imp, quasit, sprite...); the familiar can attack when the warlock takes the Attack action."},
       {label:"Pact of the Tome",value:"Pact of the Tome",t:"Invocation: Pact of the Tome. A Book of Shadows grants three extra cantrips from any class list.",hooks:{tome:true}}]},
     caster:{abil:"cha",cantrips:2,prepared:2,slots:1,short:true}},
-  Wizard:{hd:6,saves:["int","wis"],prim:"int",sec:"con",
+  Wizard:{hd:6,gp:55,saves:["int","wis"],prim:"int",sec:"con",
     skills:{from:["Arcana","History","Insight","Investigation","Medicine","Nature","Religion"],n:2},
     kits:[
-      {n:"Staff and daggers",ac:"none",weapons:[{w:"quarterstaff"},{w:"dagger",count:2}],gear:"Quarterstaff (Arcane Focus), 2 Daggers, Robe, Spellbook"},
-      {n:"Dagger and darts",ac:"none",weapons:[{w:"dagger"},{w:"dart",count:3}],gear:"Dagger, 3 Darts, Arcane Focus (wand), Robe, Spellbook"},
-      {n:"Traveling scholar",ac:"none",weapons:[{w:"quarterstaff"}],gear:"Quarterstaff (Arcane Focus), Robe, Spellbook, Ink and Quill"},
-      {n:"Light crossbow",ac:"none",weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (wand), Spellbook"}],
+      {n:"Staff and daggers",ac:"none",tags:["twohand","finesse"],weapons:[{w:"quarterstaff"},{w:"dagger",count:2}],gear:"Quarterstaff (Arcane Focus), 2 Daggers, Robe, Spellbook"},
+      {n:"Dagger and darts",ac:"none",tags:["ranged","finesse"],weapons:[{w:"dagger"},{w:"dart",count:3}],gear:"Dagger, 3 Darts, Arcane Focus (wand), Robe, Spellbook"},
+      {n:"Traveling scholar",ac:"none",tags:["twohand","finesse"],weapons:[{w:"quarterstaff"},{w:"dagger"}],gear:"Quarterstaff, Dagger, Arcane Focus (staff), Robe, Spellbook, Ink and Quill"},
+      {n:"Light crossbow",ac:"none",tags:["ranged"],weapons:[{w:"lightxbow"},{w:"dagger"}],gear:"Light Crossbow, 20 Bolts, Dagger, Arcane Focus (crystal), Spellbook"},
+      {n:"Sling and pouch",ac:"none",tags:["ranged","finesse"],weapons:[{w:"sling"},{w:"dagger",count:2}],gear:"Sling, 20 Bullets, 2 Daggers, Component Pouch, Robe, Spellbook"}],
     traits:[{n:"Arcane Recovery (1/day)",t:"On a Short Rest, the wizard recovers one expended level-1 spell slot."},
             {n:"Ritual Adept",t:"The wizard can cast Ritual-tagged spells straight from its spellbook without preparing them."}],
     bonus:[],
@@ -595,6 +699,22 @@ const GEN_SUNDRIES_B=["Block and Tackle","Iron Pot and Ladle","Waterskin (full)"
   "Ink, Quill, and 5 Sheets of Parchment","Candles (10)","Oil Flask (spare)","Whetstone","Two Sacks",
   "Bucket","Iron Spikes (10)","Padlock with Key","Merchant's Scale","Hourglass",
   "String (50 ft.)","Sealing Wax and Plain Seal","Dice Set","Two-Person Tent","Blank Book"];
+// D-038 prices (XPHB list price, in GP). Packs are priced as the book prices them; a compound
+// sundry is the sum of its parts. Anything absent from this map costs nothing, which is the safe
+// direction: an unpriced item can never make a legal roll unaffordable.
+const GEN_PACK_GP={"Burglar's Pack":16,"Dungeoneer's Pack":12,"Entertainer's Pack":40,
+  "Explorer's Pack":10,"Priest's Pack":33,"Scholar's Pack":40};
+const GEN_SUNDRY_GP={
+  "Rope (50 ft.)":1,"Crowbar":2,"Grappling Hook":2,"Caltrops (bag)":1,"Ball Bearings (bag)":1,
+  "Chalk (10 pieces)":0.1,"Steel Mirror":5,"Hooded Lantern and Oil Flask":5.1,"Tinderbox and 10 Torches":0.6,
+  "Shovel":2,"Manacles":2,"Fishing Tackle":1,"Healer's Kit":5,"Hunting Trap":5,
+  "Bell and String (10 ft.)":1.1,"Playing Cards":0.5,"Net":1,"Bedroll and Blanket":1.5,
+  "3 Empty Vials":3,"Signal Whistle":0.05,
+  "Block and Tackle":1,"Iron Pot and Ladle":2,"Waterskin (full)":0.2,"Bar of Soap":0.02,"Perfume (vial)":5,
+  "Ink, Quill, and 5 Sheets of Parchment":10.5,"Candles (10)":0.1,"Oil Flask (spare)":0.1,"Whetstone":0.01,
+  "Two Sacks":0.02,"Bucket":0.05,"Iron Spikes (10)":1,"Padlock with Key":10,"Merchant's Scale":5,
+  "Hourglass":25,"String (50 ft.)":0.1,"Sealing Wax and Plain Seal":0.5,"Dice Set":0.1,
+  "Two-Person Tent":2,"Blank Book":25};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENGINE — draft, steps, rolls, picks, completion, validation, derivation.
@@ -623,7 +743,9 @@ function genNewDraft(cfg){
           boons:cfg.boons!==false,               // D-035: optional species boon tables, crew setting
           set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
-                      asi:!(cfg.set&&cfg.set.asi===false)},
+                      asi:!(cfg.set&&cfg.set.asi===false),
+                      gold:!!(cfg.set&&cfg.set.gold),          // D-038: restricted starting gold
+                      goldPlus:genGoldPlus(cfg.set&&cfg.set.goldPlus)},
           counts:cfg.counts||{},tables:cfg.tables||null,steps:{}};
 }
 // The rollable species pool (D-031). Curated packs ship in-code; uploaded packs join here (B289).
@@ -699,10 +821,131 @@ function genFeatureHooks(d){
   const o=(K.featureOpt.options||[]).find(x=>x.value===fe.value);
   return (o&&o.hooks)||{};
 }
-// Kits legal for the draft right now — full-array indexes, so payloads stay stable.
+// D-037: kits legal for a class once its feature option has landed — full-array indexes, so
+// payloads stay stable however the table narrows. `needs` gates a kit behind the option's hook
+// (Pact of the Blade, the Cleric's and Druid's Martial training); the option's `fits` then keeps
+// only the kits tagged for the tactic it rolled. An option with no `fits` leaves the table whole,
+// and a `fits` that matches nothing falls back to it rather than emptying the step.
+// D-040: a kit's full tag set = the WEAPON-SHAPE tags it declares, plus the DEFENCE tags derived
+// from its armor recipe (weight, shield, unarmored). Deriving the defence half means it can never
+// drift from the recipe, and it makes `fits` able to express an armor tie — which is what a
+// species-granted Fighting Style, or a future Protector/Warden `fits`, would need.
+function genKitTags(kit){
+  const A=GEN_AC[kit.ac],t=(kit.tags||[]).slice();
+  if(A){
+    if(A.w&&A.w!=="none")t.push(A.w);
+    if(A.shield)t.push("shield");
+    if(A.kind==="none"||/^unarmored/.test(A.kind||""))t.push("unarmored");
+  }
+  return t;
+}
+function genKitIdxFor(K,featVal){
+  const o=K.featureOpt&&!K.featureOpt.kind?(K.featureOpt.options||[]).find(x=>x.value===featVal):null;
+  const hooks=(o&&o.hooks)||{};
+  const avail=K.kits.map((k,i)=>k.needs&&!hooks[k.needs]?null:i).filter(i=>i!=null);
+  const fits=o&&o.fits;
+  if(!fits||!fits.length)return avail;
+  const m=avail.filter(i=>genKitTags(K.kits[i]).some(t=>fits.indexOf(t)>=0));
+  return m.length?m:avail;
+}
+// ── D-038: the starting-gold budget ─────────────────────────────────────────
+// Restricted mode prices the whole gear group against the class's own XPHB starting gold — the
+// "or N GP" alternative each class lists, which is what WotC balanced its package against — plus a
+// crew-wide bonus the DM can raise. Tables filter to what the purse still covers, in ritual order
+// (kit → pack → sundries), and the remainder prints on the card as coin, exactly as XPHB's own
+// packages hand over their leftover. Class-mandatory gear (spellbook, holy symbol, spellcasting
+// focus) is NOT counted: at 55 GP a wizard's own spellbook would eat the entire budget.
+// An unpriced item costs 0 — the safe direction, since it can never make a legal roll unaffordable.
+function genGoldPlus(v){const n=Number(v);return Number.isFinite(n)&&n>0?Math.min(Math.round(n),100000):0;}
+function genGP(n){return Math.round(n*100)/100;}
+function genGoldOn(d){return !!(d.set&&d.set.gold);}
+// D-040: a 2024 character takes its class's gold alternative AND its background's, and every one
+// of the sixteen XPHB backgrounds offers exactly 50 GP. The generator's custom background is no
+// exception, so the purse is class + background + whatever the crew adds on top.
+const GEN_BG_GP=50;
+function genBudget(d){
+  const K=GEN_CLASSES[genClsOf(d)];
+  if(!genGoldOn(d)||!K)return Infinity;
+  return genGP((K.gp||0)+GEN_BG_GP+genGoldPlus(d.set.goldPlus));
+}
+function genKitCost(K,kit){
+  const A=GEN_AC[kit.ac];
+  // Costed as written, never as the Str gate demotes it: the nominal armor is the dearer one, so
+  // the budget can't be talked into affording something the character couldn't have bought.
+  return genGP((A&&A.gp||0)
+    +kit.weapons.reduce((n,r)=>{const w=GEN_W[r.w];return n+(w?(w.gp||0)*(r.count||1):0);},0)
+    +(kit.gpExtra||0));
+}
+function genPackCost(n){return GEN_PACK_GP[n]||0;}
+function genSundryCost(n){return GEN_SUNDRY_GP[n]||0;}
+// What the purse holds when each gear step comes up. Steps that haven't landed cost nothing yet.
+function genPurseAt(d,step){
+  const b=genBudget(d);if(b===Infinity)return Infinity;
+  const K=GEN_CLASSES[genClsOf(d)];
+  let left=b;
+  if(step==="equip")return left;
+  if(K&&d.steps.equip&&K.kits[d.steps.equip.value])left=genGP(left-genKitCost(K,K.kits[d.steps.equip.value]));
+  if(step==="gearPack")return left;
+  if(d.steps.gearPack)left=genGP(left-genPackCost(d.steps.gearPack.value));
+  return left; // "sundries"
+}
+// Leftover coin: what the character walks away with once every gear step has landed.
+function genCoin(d){
+  const b=genBudget(d);if(b===Infinity)return null;
+  let left=genPurseAt(d,"sundries");
+  if(d.steps.sundries&&Array.isArray(d.steps.sundries.value))
+    d.steps.sundries.value.forEach(n=>{left=genGP(left-genSundryCost(n));});
+  return Math.max(0,left);
+}
+// A filtered table never empties: if nothing fits, the cheapest option stays so the step can land.
+function genAfford(list,cost,purse){
+  if(purse===Infinity)return list.slice();
+  const fit=list.filter(x=>cost(x)<=purse);
+  if(fit.length)return fit;
+  let best=list[0];list.forEach(x=>{if(cost(x)<cost(best))best=x;});
+  return [best];
+}
+function genPacksAvail(d){return genAfford(GEN_PACKS,genPackCost,genPurseAt(d,"gearPack"));}
+// The sentence a gear step adds to its ? popover while the budget is on.
+function genPurseNote(d,step){
+  const purse=genPurseAt(d,step);
+  if(purse===Infinity)return "";
+  const K=GEN_CLASSES[genClsOf(d)],plus=genGoldPlus(d.set.goldPlus);
+  if(step==="equip")
+    return ` The purse holds ${genGPText(genBudget(d))}: ${genGPText(K.gp||0)} from the class,`
+      +` ${genGPText(GEN_BG_GP)} from the background`+(plus?`, ${genGPText(plus)} from the crew`:"")
+      +". Anything dearer than the purse is off the table, and whatever is left becomes coin.";
+  return ` ${genGPText(purse)} left in the purse; anything dearer is off the table.`;
+}
+function genGPText(n){return (Math.round(n*100)/100)+" GP";}
+// The second sundry sees the purse the first one left behind.
+function genSundriesAvail(d,which,firstPick){
+  let purse=genPurseAt(d,"sundries");
+  if(which===1&&purse!==Infinity&&firstPick!=null)purse=genGP(purse-genSundryCost(firstPick));
+  return genAfford(which?GEN_SUNDRIES_B:GEN_SUNDRIES_A,genSundryCost,purse);
+}
+// Kits legal for the draft right now — feature-legal (D-037) AND affordable (D-038).
 function genKitIdx(d,K){
-  const fh=genFeatureHooks(d);
-  return K.kits.map((k,i)=>k.needs&&!fh[k.needs]?null:i).filter(i=>i!=null);
+  const idx=genKitIdxFor(K,(d.steps.feature||{}).value);
+  const purse=genPurseAt(d,"equip");
+  if(purse===Infinity)return idx;
+  return genAfford(idx,i=>genKitCost(K,K.kits[i]),purse);
+}
+// A gear step whose price no longer fits the purse above it is DROPPED, not left showing a total
+// the character can't pay (same idiom as genDropUnfitKit).
+function genDropUnaffordable(d){
+  if(!genGoldOn(d))return;
+  if(d.steps.gearPack&&genPackCost(d.steps.gearPack.value)>genPurseAt(d,"gearPack"))delete d.steps.gearPack;
+  if(d.steps.sundries&&genCoin(d)===0){
+    let left=genPurseAt(d,"sundries");
+    const v=d.steps.sundries.value||[];
+    if(genGP(left-genSundryCost(v[0])-genSundryCost(v[1]))<0)delete d.steps.sundries;
+  }
+}
+// The feature option just moved: a landed kit it no longer allows is DROPPED, not left on screen
+// under a table it isn't in (the step reopens either way — this keeps the stale line off it).
+function genDropUnfitKit(d,K){
+  if(d.steps.equip&&genKitIdx(d,K).indexOf(d.steps.equip.value)<0)delete d.steps.equip;
 }
 // D-025: which familiar list applies — the Chain invocation's special forms, or the plain
 // Find Familiar beasts when the spell is known through any source. Null = no familiar step.
@@ -841,12 +1084,14 @@ function genRollStep(d,id,rng){
       d.steps.feature=rec;
       const o=opts[idx];
       if(o.hooks&&o.hooks.tome)rec.sub=genRollN(rng,GEN_ALL_CANTRIPS,3,[...genSpellsGranted(d,"feature")]);
+      genDropUnfitKit(d,K);
     }
   }else if(id==="equip"){
     if(!K)return null;
     const avail=genKitIdx(d,K),span=genSpanFor(avail.length);
     const r=genRollTable(rng,span.die,span.reroll?avail.length:span.die,null);
     d.steps.equip={rolls:[r],value:avail[span.reroll?r-1:genSpanHit(span,r)],die:span.die};
+    genDropUnaffordable(d); // a dearer kit can price the landed pack out of the purse
   }else if(id==="cantrips"){
     if(!cls)return null;
     // D-024 (subsumes D-018): slot 1 rolls on the Damaging table by default, so a rolled caster
@@ -870,10 +1115,17 @@ function genRollStep(d,id,rng){
     const r=genRollTable(rng,span.die,span.reroll?list.length:span.die,null);
     d.steps.familiar={rolls:[r],value:list[span.reroll?r-1:genSpanHit(span,r)],die:span.die,kind};
   }else if(id==="gearPack"){
-    const r=genRollDie(rng,6);d.steps.gearPack={rolls:[r],value:GEN_PACKS[r-1],die:6};
+    // D-038: the packs the purse still covers, equal-weight over whatever die that leaves.
+    const av=genPacksAvail(d),span=genSpanFor(av.length);
+    const r=genRollTable(rng,span.die,span.reroll?av.length:span.die,null);
+    d.steps.gearPack={rolls:[r],value:av[span.reroll?r-1:genSpanHit(span,r)],die:span.die};
   }else if(id==="sundries"){
-    const rA=genRollDie(rng,20),rB=genRollDie(rng,20);
-    d.steps.sundries={rolls:[rA,rB],value:[GEN_SUNDRIES_A[rA-1],GEN_SUNDRIES_B[rB-1]],die:20};
+    const A=genSundriesAvail(d,0),spA=genSpanFor(A.length);
+    const rA=genRollTable(rng,spA.die,spA.reroll?A.length:spA.die,null);
+    const pickA=A[spA.reroll?rA-1:genSpanHit(spA,rA)];
+    const B=genSundriesAvail(d,1,pickA),spB=genSpanFor(B.length);
+    const rB=genRollTable(rng,spB.die,spB.reroll?B.length:spB.die,null);
+    d.steps.sundries={rolls:[rA,rB],value:[pickA,B[spB.reroll?rB-1:genSpanHit(spB,rB)]],die:spA.die};
   }else if(id.startsWith("sp:")){
     const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
     if(t.kind==="skill"){
@@ -1037,13 +1289,14 @@ function genApplyPick(d,id,value){
     const rec={rolls:[],pick:true,value:o.value};
     if(o.hooks&&o.hooks.tome)rec.sub=null;
     d.steps.feature=rec;
+    genDropUnfitKit(d,K);
     if(d.steps.cantrips)delete d.steps.cantrips; // extra-cantrip hooks change the count
     return true;}
   if(id==="equip"){
     if(!K)return false;const i=Number(value);
     if(!(i>=0&&i<K.kits.length))return false;
-    if(K.kits[i].needs&&!genFeatureHooks(d)[K.kits[i].needs])return false;
-    d.steps.equip={rolls:[],pick:true,value:i};return true;}
+    if(genKitIdx(d,K).indexOf(i)<0)return false; // unlocked, fitting the feature option, affordable
+    d.steps.equip={rolls:[],pick:true,value:i};genDropUnaffordable(d);return true;}
   if(id==="cantrips"){
     if(!cls)return false;const T=genTablesOf(d),need=genCantripCount(d);
     if(!Array.isArray(value)||value.length!==need)return false;
@@ -1054,10 +1307,11 @@ function genApplyPick(d,id,value){
     if(!Array.isArray(value)||value.length!==K.caster.prepared)return false;
     if(value.some((s,i)=>!(T.l1[cls]||[]).includes(s)||value.indexOf(s)!==i||(K.caster.always||[]).includes(s)))return false;
     d.steps.spells={rolls:[],pick:true,value:[...value]};return true;}
-  if(id==="gearPack"){if(!GEN_PACKS.includes(value))return false;d.steps.gearPack={rolls:[],pick:true,value};return true;}
+  if(id==="gearPack"){if(!genPacksAvail(d).includes(value))return false;
+    d.steps.gearPack={rolls:[],pick:true,value};genDropUnaffordable(d);return true;}
   if(id==="sundries"){
     if(!Array.isArray(value)||value.length!==2)return false;
-    if(!GEN_SUNDRIES_A.includes(value[0])||!GEN_SUNDRIES_B.includes(value[1]))return false;
+    if(!genSundriesAvail(d,0).includes(value[0])||!genSundriesAvail(d,1,value[0]).includes(value[1]))return false;
     d.steps.sundries={rolls:[],pick:true,value:[...value]};return true;}
   if(id==="familiar"){
     const kind=genFamiliarKind(d);if(!kind)return false;
@@ -1120,7 +1374,10 @@ function genStepDone(d,id){
     return !!kind&&(kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS).includes(s.value);}
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const kit=K&&K.kits[s.value];
     if(!kit)return false;
-    if(kit.needs&&!genFeatureHooks(d)[kit.needs])return false;} // feature changed under a gated kit
+    if(genKitIdx(d,K).indexOf(s.value)<0)return false;} // the feature or the purse moved under it
+  if(id==="gearPack"&&!genPacksAvail(d).includes(s.value))return false;
+  if(id==="sundries"&&Array.isArray(s.value)
+     &&!genSundriesAvail(d,1,s.value[0]).includes(s.value[1]))return false;
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));const e=t&&t.entries.find(x=>x.value===s.value);
     if(e&&e.sub&&(!s.sub||s.sub.value==null))return false;}
   return true;
@@ -1145,13 +1402,19 @@ function genCompletePayload(d){
 }
 
 // ── Validation (D-007) — rebuilds a clean payload from an untrusted one ─────
-function validateGenPayload(raw){
+// `cfg` (optional) is the DM's own crew settings — the authority on the D-038 gold budget, since
+// the payload's copy arrives from a world-writable share. Without it the payload's own set is used,
+// which still catches drift but trusts the sender; every DM-side path passes the real cfg.
+function validateGenPayload(raw,cfg){
   try{
     if(!raw||raw.v!==2||typeof raw!=="object")return {ok:false,err:"shape"};
     const sp=GEN_SPECIES[raw.sp]?raw.sp:null;if(!sp)return {ok:false,err:"species"};
+    const cfgGold=cfg?!!cfg.gold:!!(raw.set&&raw.set.gold);
+    const cfgGoldPlus=genGoldPlus(cfg?cfg.goldPlus:(raw.set&&raw.set.goldPlus));
     const set={stat:raw.set&&raw.set.stat==="4d6"?"4d6":"3d6",
                mode:raw.set&&raw.set.mode==="chaos"?"chaos":"plausible",
-               asi:!(raw.set&&raw.set.asi===false)};
+               asi:!(raw.set&&raw.set.asi===false),
+               gold:cfgGold,goldPlus:cfgGoldPlus};
     const S=raw.steps||{};const out={};
     const intIn=(v,lo,hi)=>{const n=Math.round(Number(v));return n>=lo&&n<=hi?n:null;};
     const clean1=(v,cap)=>String(v==null?"":v).replace(/[<>]/g,"").trim().slice(0,cap);
@@ -1220,14 +1483,17 @@ function validateGenPayload(raw){
         }
       }
     }
-    // equipment kit (a feature-gated kit must be earned by the payload's own feature)
+    // equipment kit — validated by REPLAYING the ritual's own availability chain against a scratch
+    // draft (D-037 needs/fits + the D-038 purse), never by re-summing prices. The chain is the only
+    // definition of what a roll could have produced, fallbacks and all, so validator and ritual
+    // cannot drift apart: a kit that empties the purse legitimately leaves the cheapest pack on the
+    // table, and a naive total would have rejected exactly that legal character.
+    const scratch={set,steps:{cls:out.cls,feature:out.feature}};
     const eq=S.equip||{};const ki=intIn(eq.value,0,K.kits.length-1);
     if(ki==null)return {ok:false,err:"equip"};
-    if(K.kits[ki].needs){
-      const fo=out.feature&&(K.featureOpt&&K.featureOpt.options||[]).find(x=>x.value===out.feature.value);
-      if(!(fo&&fo.hooks&&fo.hooks[K.kits[ki].needs]))return {ok:false,err:"equip"};
-    }
+    if(genKitIdx(scratch,K).indexOf(ki)<0)return {ok:false,err:"equip"};
     out.equip={rolls:[],pick:!!eq.pick,value:ki};
+    scratch.steps.equip=out.equip;
     // spells (validated against the shipped index — the superset of any live table)
     if(K.caster){
       let needC=K.caster.cantrips;
@@ -1254,10 +1520,13 @@ function validateGenPayload(raw){
         out.familiar={rolls:[],pick:!!S.familiar.pick,value:fv,kind};
     }
     // gear
-    const gp=S.gearPack||{};if(!GEN_PACKS.includes(gp.value))return {ok:false,err:"gearPack"};
+    const gp=S.gearPack||{};if(!genPacksAvail(scratch).includes(gp.value))return {ok:false,err:"gearPack"};
     out.gearPack={rolls:[],pick:!!gp.pick,value:gp.value};
+    scratch.steps.gearPack=out.gearPack;
     const su=S.sundries||{};
-    if(!Array.isArray(su.value)||su.value.length!==2||!GEN_SUNDRIES_A.includes(su.value[0])||!GEN_SUNDRIES_B.includes(su.value[1]))return {ok:false,err:"sundries"};
+    if(!Array.isArray(su.value)||su.value.length!==2)return {ok:false,err:"sundries"};
+    if(!genSundriesAvail(scratch,0).includes(su.value[0])
+       ||!genSundriesAvail(scratch,1,su.value[0]).includes(su.value[1]))return {ok:false,err:"sundries"};
     out.sundries={rolls:[],pick:!!su.pick,value:[...su.value]};
     // species tables — a BOON table (D-035) is optional: the crew may have boons off, and a phone
     // on a stale cfg must not have its whole character rejected over one absent extra.
@@ -1341,6 +1610,10 @@ function deriveGenChar(p){
     ac=A.base+dx+(A.shield?2:0)+(fh.acArmor||0);}
   else if(A.kind==="fixed")ac=A.base+(A.shield?2:0)+(fh.acArmor||0);
   if(A.kind==="none"&&fh.mageArmor){ac=13+mods.dex;acSrc="Mage Armor (at will)";}
+  // D-038 (B295): noisy armor is a real cost of the cheap heavy recipes — carry the XPHB Stealth
+  // penalty onto the card instead of leaving it silent. Reads the POST-swap recipe, so a Str-gate
+  // demotion (Chain Mail → Chain Shirt) sheds the penalty with the armor.
+  const acStealth=!!A.stealth;
   // skills / expertise
   const profSkills=new Map();
   p.steps.skills.value.forEach(s=>profSkills.set(s,1));
@@ -1432,13 +1705,19 @@ function deriveGenChar(p){
   fxAcc.res.forEach(r=>resources.push({...r}));
   // gear line: kit + rolled pack + rolled sundries (armor swapped if the Str gate demoted it)
   const kitGear=gearSwap?kit.gear.replace(gearSwap[0],gearSwap[1]):kit.gear;
-  const gear=[kitGear,p.steps.gearPack.value].concat(p.steps.sundries.value).join(", ");
+  // D-038: whatever the purse didn't spend rides the gear line as coin, the way XPHB's own
+  // starting packages hand over their remainder.
+  // Coin lands on the card in whole gold — the loose silver and copper of an exact remainder is
+  // noise on a level-1 sheet, and a purse under 1 GP simply isn't worth a line.
+  const coin=Math.floor(genCoin(p)||0);
+  const gear=[kitGear,p.steps.gearPack.value].concat(p.steps.sundries.value)
+    .concat(coin>0?[coin+" GP"]:[]).join(", ");
   const tools=[...(K.tools||[])];
   featRecs.forEach(([rec,f])=>{if(f.sub==="tools"&&rec.sub)tools.push(...rec.sub.value);});
   const langs=[...sp.langs,...(K.langs||[])];
   const familiar=p.steps.familiar&&GEN_FAMILIARS[p.steps.familiar.value]?p.steps.familiar.value:null;
   return {name:p.steps.name.value,species:sp.label,cls,size:sizeOv||sp.size,level:1,pb,resists,familiar,
-    scores,mods,hp,hd:"1d"+K.hd,ac,acSrc,gear,tools,kitName:kit.n,
+    scores,mods,hp,hd:"1d"+K.hd,ac,acSrc,acStealth,gear,tools,kitName:kit.n,
     speed:{walk:fxAcc.speed||sp.speed,fly:wings?fxAcc.fly:0},
     init:mods.dex+(featRecs.some(([,f])=>f.initPB)?pb:0),
     darkvision:Math.max(sp.darkvision||0,fxAcc.dark||0),langs,saves,skills,pp,
@@ -1480,7 +1759,7 @@ function genCantripEntry(name,dc,atk,label){
 function genToMonster(ch){
   const m=blankMonster();
   m.name=ch.name;m.size=ch.size;m.type="Humanoid";m.subtype=ch.species;m.align="";
-  m.ac=ch.ac;m.acnote=ch.acSrc&&ch.acSrc!=="Unarmored"?ch.acSrc:"";
+  m.ac=ch.ac;m.acnote=ch.acSrc&&ch.acSrc!=="Unarmored"?ch.acSrc+(ch.acStealth?"; Disadvantage on Stealth":""):"";
   m.hp=ch.hp;m.hpf=`${ch.hd}${ch.mods.con?(ch.mods.con>0?" + ":" − ")+Math.abs(ch.mods.con):""}`;
   m.spd.walk=ch.speed.walk;m.spd.fly=ch.speed.fly||0;
   (ch.resists||[]).forEach(r=>{m.dmg[r]="res";}); // species/boon resistances → the real resistance line
@@ -1553,7 +1832,7 @@ function genLivingPCs(a){return (a.party||[]).map(id=>rosterById(id)).filter(pc=
 function genCrewCounts(a){const c={};genLivingPCs(a).forEach(pc=>{const v=pc.gen.payload.steps.cls&&pc.gen.payload.steps.cls.value;if(v)c[v]=(c[v]||0)+1;});return c;}
 function genCrewUrl(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"index.html?crew="+encodeURIComponent(id);}
 function genIngestPayload(a,rawPayload,pn,pid){
-  const v=validateGenPayload(rawPayload);if(!v.ok)return null;
+  const v=validateGenPayload(rawPayload,a.crew&&a.crew.set);if(!v.ok)return null;
   // D-031: a locked-species crew accepts only its own species; ritual mode takes any shipped pack.
   if(a.crew&&a.crew.spMode!=="ritual"&&v.clean.sp!==a.crew.sp)return null;
   if(state.roster.some(r=>r.id===v.clean.id)||(a.crew.fallen||[]).some(f=>f.payload&&f.payload.id===v.clean.id))return null;
@@ -1893,15 +2172,22 @@ function genStepInfo(d,id){
     if(K&&K.featureOpt)return `${genDieLabel(K.featureOpt.options.length)} over the ${K.featureOpt.options.length} options.`;
     return "";}
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const n=K?genKitIdx(d,K).length:0;
-    return `${genDieLabel(n)} over the class kit table. Every item is within the class's training; some kits unlock with a class feature.`;}
+    const die=genSpanDie(genSpanFor(Math.max(n,1)),n);
+    const fo=K&&K.featureOpt&&!K.featureOpt.kind&&d.steps.feature
+      ?(K.featureOpt.options||[]).find(x=>x.value===d.steps.feature.value):null;
+    const narrowed=fo&&fo.fits&&n<K.kits.length
+      ?` The table is down to the kits that suit ${fo.label}.`:"";
+    return `${die} over the class kit table. Every item is within the class's training; some kits unlock with a class feature.${narrowed}${genPurseNote(d,"equip")}`;}
   if(id==="cantrips")return `${genCantripCount(d)} rolls over the class cantrips, one table each: the first defaults to Damaging, the rest to All. Duplicates and cantrips granted elsewhere reroll.`;
   if(id==="spells"){const K=GEN_CLASSES[genClsOf(d)];
     return `${K.caster.prepared} rolls over the class level-1 spells, one table each: the first defaults to Damaging, the rest to All. Duplicates and spells granted elsewhere reroll.`;}
   if(id==="familiar"){const kind=genFamiliarKind(d);
     return kind==="chain"?"d8 over the eight Pact of the Chain special forms; the familiar's statblock joins the card."
       :"Find Familiar is known: "+genDieLabel(GEN_FAMILIAR_BEASTS.length)+" over the beast forms; the familiar's statblock joins the card.";}
-  if(id==="gearPack")return "d6 over the six equipment packs.";
-  if(id==="sundries")return "Two d20 rolls, one on each sundries list.";
+  if(id==="gearPack"){const av=genPacksAvail(d);
+    return `${genSpanDie(genSpanFor(av.length),av.length)} over the equipment packs.${genPurseNote(d,"gearPack")}`;}
+  if(id==="sundries"){const A=genSundriesAvail(d,0),B=genSundriesAvail(d,1,A[0]);
+    return `Two rolls, one on each sundries list (${genSpanDie(genSpanFor(A.length),A.length)} and ${genSpanDie(genSpanFor(B.length),B.length)}).${genPurseNote(d,"sundries")}`;}
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return "";
     if(t.kind==="skill")return `${genDieLabel(t.entries.length)} over the listed skills; skills already owned reroll.`;
     return `d${t.die} on the ${t.label} table.`;}
@@ -1920,22 +2206,22 @@ function genStepTable(d,id){
     const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=d.steps.stats&&d.steps.stats.value&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
     const top3=(s&&s.top3)||genClassShortlist(scores,d.counts);
     const span=genSpanFor(3);
-    return {die:span.die,rows:top3.map((c,i)=>({span:span.spans[i][0]+"-"+span.spans[i][1],label:c,value:c,hit:s&&s.value===c})),
+    return {die:span.die,rows:top3.map((c,i)=>({span:genSpanText(span,i),label:c,value:c,hit:s&&s.value===c})),
       moreRows:GEN_CLASS_LIST.filter(c=>!top3.includes(c)).map(c=>({span:"·",label:c,value:c,hit:s&&s.value===c}))};
   }
   if(id==="species"){const pool=genSpeciesPool(),span=genSpanFor(pool.length);
     return {die:span.die,note:span.reroll?"reroll over "+pool.length:"",
-      rows:pool.map((v,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v}))};}
+      rows:pool.map((v,i)=>({span:genSpanText(span,i),label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v}))};}
   if(id==="feat"||id==="feat2")return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,hit:s&&s.value===f.n}))};
   if(id==="skills"&&K)return mk(K.skills.from);
   if(id==="feature"&&K&&K.featureOpt){
     if(K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];return own.length?mk(own):null;}
     const opts=K.featureOpt.options,span=genSpanFor(opts.length);
-    return {die:span.die,rows:opts.map((o,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:o.label,value:o.value,hit:s&&s.value===o.value})),
+    return {die:span.die,rows:opts.map((o,i)=>({span:genSpanText(span,i),label:o.label,value:o.value,hit:s&&s.value===o.value})),
       note:span.reroll?"reroll over "+opts.length:""};
   }
   if(id==="equip"&&K){const avail=genKitIdx(d,K),span=genSpanFor(avail.length);
-    return {die:span.die,rows:avail.map((ki,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:K.kits[ki].n,sub:K.kits[ki].gear,value:ki,hit:s&&s.value===ki})),
+    return {die:span.die,rows:avail.map((ki,i)=>({span:genSpanText(span,i),label:K.kits[ki].n,sub:K.kits[ki].gear,value:ki,hit:s&&s.value===ki})),
       note:span.reroll?"reroll over "+avail.length:""};}
   // D-024: the spell steps show BOTH tables — Damaging and All — numbered independently.
   const mk2=(full,dmg)=>{
@@ -1950,11 +2236,17 @@ function genStepTable(d,id){
   if(id==="familiar"){const kind=genFamiliarKind(d);if(!kind)return null;
     const list=kind==="chain"?GEN_FAMILIAR_CHAIN:GEN_FAMILIAR_BEASTS,span=genSpanFor(list.length);
     return {die:span.die,note:span.reroll?"reroll over "+list.length:"",
-      rows:list.map((v,i)=>({span:span.reroll?String(i+1):span.spans[i][0]+"-"+span.spans[i][1],label:v,value:v,hit:s&&s.value===v}))};}
-  if(id==="gearPack")return {die:6,rows:GEN_PACKS.map((p,i)=>({span:String(i+1),label:p,value:p,hit:s&&s.value===p}))};
-  if(id==="sundries")return {pair:[
-    {title:"First roll (d20)",die:20,rows:GEN_SUNDRIES_A.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[0]===v}))},
-    {title:"Second roll (d20)",die:20,rows:GEN_SUNDRIES_B.map((v,i)=>({span:String(i+1),label:v,value:v,hit:s&&Array.isArray(s.value)&&s.value[1]===v}))}]};
+      rows:list.map((v,i)=>({span:genSpanText(span,i),label:v,value:v,hit:s&&s.value===v}))};}
+  if(id==="gearPack"){const av=genPacksAvail(d),span=genSpanFor(av.length);
+    return {die:span.die,rows:av.map((p,i)=>({span:genSpanText(span,i),label:p,value:p,hit:s&&s.value===p})),
+      note:span.reroll?"reroll over "+av.length:""};}
+  if(id==="sundries"){
+    const one=(list,which)=>{const span=genSpanFor(list.length);
+      return {title:`${which?"Second":"First"} roll (${genSpanDie(span,list.length)})`,die:span.die,
+        rows:list.map((v,i)=>({span:genSpanText(span,i),label:v,value:v,
+          hit:s&&Array.isArray(s.value)&&s.value[which]===v}))};};
+    const A=genSundriesAvail(d,0);
+    return {pair:[one(A,0),one(genSundriesAvail(d,1,s&&Array.isArray(s.value)?s.value[0]:null),1)]};}
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
     if(t.kind==="skill"){const die=t.die||genDieFor(t.entries.length);
       return {die,note:die>t.entries.length?"reroll over "+t.entries.length:"",
@@ -2365,8 +2657,13 @@ function openCrewSettings(a){
       <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
+      <label class="gk-f"><span>Starting gold</span>${genSel("crewGold",["off","on"],a.crew.set.gold?"on":"off",["Roll anything","Class budget"])}</label>
+      ${a.crew.set.gold?`<label class="gk-f"><span>Extra gold</span><input type="number" id="crewGoldPlus" min="0" step="5" value="${genGoldPlus(a.crew.set.goldPlus)}"></label>`:""}
     </div>
     <p class="hint">Boons are the optional extras a species pack offers on top of its rules — the kobold's Draconic Boon table today.</p>
+    <p class="hint">${a.crew.set.gold
+      ?"Gear rolls stay inside the class's own XPHB starting gold (Fighter 155, Cleric 110, Wizard 55, and so on). Anything the purse can't cover drops off the table before the dice, and the remainder lands on the card as coin. Extra gold is added to every class alike. Spellbooks, holy symbols and spellcasting foci don't count against it."
+      :"Every kit, pack and sundry is on the table whatever it costs — including plate armor and firearms no level-1 character could pay for."}</p>
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
     const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
     sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
@@ -2375,6 +2672,11 @@ function openCrewSettings(a){
     sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
     sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
     sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
+    sel("#crewGold",v=>{a.crew.set.gold=v==="on";draw();}); // the extra-gold field appears with it
+    const gpEl=$("#crewGoldPlus");
+    if(gpEl)gpEl.addEventListener("change",()=>{
+      a.crew.set.goldPlus=genGoldPlus(gpEl.value);gpEl.value=a.crew.set.goldPlus;
+      saveAdv();crewPushConfig(a);});
     $("#crewCfgClose").addEventListener("click",()=>{closeModal();preserveScroll(".adv-detail-body",renderAdvDetail);});
   };
   draw();

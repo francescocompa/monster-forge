@@ -662,18 +662,239 @@ test("v4: pact-blade kits are feature-gated and the kit weapon attacks with Char
   assert.equal(r.gateRejects, true, "a gated kit without its feature fails validation");
 });
 
+test("D-037: a fighting style narrows the kit table, and the narrowed kit is the only one a payload can carry", () => {
+  const r = ev(`(()=>{
+    const K=GEN_CLASSES.Fighter,all=K.kits.length;
+    // every fits tag is a tag some kit actually carries, and no style narrows below a real roll
+    // D-040: the tag set is the authored weapon shape PLUS the tags derived from the armor recipe
+    const tags=new Set();K.kits.forEach(k=>genKitTags(k).forEach(t=>tags.add(t)));
+    const styles=K.featureOpt.options.map(o=>{
+      const idx=genKitIdxFor(K,o.value);
+      return {v:o.value,fits:o.fits||null,n:idx.length,
+        unknown:(o.fits||[]).filter(t=>!tags.has(t)),
+        allMatch:!o.fits||idx.every(i=>genKitTags(K.kits[i]).some(t=>o.fits.includes(t)))};});
+    // gated kits stay out of every fighter table (the fighter has none) and inside the classes that own them
+    const cleric=GEN_CLASSES.Cleric,druid=GEN_CLASSES.Druid;
+    const gated={clericOff:genKitIdxFor(cleric,"thaumaturge").length,clericOn:genKitIdxFor(cleric,"protector").length,
+      druidOff:genKitIdxFor(druid,"magician").length,druidOn:genKitIdxFor(druid,"warden").length};
+    // 40 seeded fighters: the rolled kit always fits the rolled style
+    const mismatch=[];
+    for(let s=1;s<=40;s++){
+      const d=genNewDraft({sp:"kobold",set:{},counts:{}});
+      genApplyPick(d,"stats",[14,14,14,10,10,10]);genRollAll(d,${RNG}(500+s));
+      genApplyPick(d,"cls","Fighter");genRollAll(d,${RNG}(700+s));
+      genApplyPick(d,"name","F"+s);
+      const p=genCompletePayload(d),val=validateGenPayload(p);
+      if(!val.ok){mismatch.push("seed"+s+":"+val.err);continue;}
+      const o=K.featureOpt.options.find(x=>x.value===p.steps.feature.value);
+      if(o&&o.fits&&!genKitTags(K.kits[p.steps.equip.value]).some(t=>o.fits.includes(t)))
+        mismatch.push("seed"+s+":"+o.value+"/"+K.kits[p.steps.equip.value].n);}
+    // a hand-built payload that pairs Archery with a melee kit is rejected at the wire
+    const d2=genNewDraft({sp:"kobold",set:{},counts:{}});
+    genApplyPick(d2,"stats",[14,14,14,10,10,10]);genRollAll(d2,${RNG}(61));
+    genApplyPick(d2,"cls","Fighter");genApplyPick(d2,"feature","Archery");genRollAll(d2,${RNG}(62));
+    genApplyPick(d2,"name","Arch");
+    const p2=genCompletePayload(d2);
+    const melee=K.kits.findIndex(k=>(k.tags||[]).includes("twohand"));
+    const pickRejects=!genApplyPick(d2,"equip",melee);
+    const tampered=JSON.parse(JSON.stringify(p2));tampered.steps.equip={value:melee};
+    const v2=validateGenPayload(tampered);
+    // switching the style under a landed kit reopens the step instead of keeping a mismatch
+    genApplyPick(d2,"feature","Great Weapon Fighting");
+    return {all,styles,gated,mismatch,pickRejects,wireRejects:!v2.ok&&v2.err==="equip",
+      reopened:!genStepDone(d2,"equip")};})()`);
+  assert.ok(r.all >= 12, "the fighter table is broad enough that every style still rolls (D-022/D-037)");
+  r.styles.forEach(s => {
+    assert.deepEqual(s.unknown, [], s.v + " fits a tag no kit carries");
+    assert.equal(s.allMatch, true, s.v + " kept a kit that doesn't match its fits");
+    assert.ok(s.n >= 3, s.v + " narrows to " + s.n + " kits — too few to roll on");
+    if (s.fits) assert.ok(s.n < r.all, s.v + " declares fits but narrows nothing");
+    else assert.equal(s.n, r.all, s.v + " has no gear tie, so it keeps the whole table");
+  });
+  assert.ok(r.gated.clericOn > r.gated.clericOff, "Protector unlocks the cleric's martial kits");
+  assert.ok(r.gated.druidOn > r.gated.druidOff, "Warden unlocks the martial druid kit");
+  assert.deepEqual(r.mismatch, [], "seeded fighters rolled a kit their style doesn't fit");
+  assert.equal(r.pickRejects, true, "picking a kit outside the style's table is refused");
+  assert.equal(r.wireRejects, true, "a tampered payload pairing Archery with a two-hander is rejected");
+  assert.equal(r.reopened, true, "changing the style reopens a kit that no longer fits");
+});
+
+test("B295: noisy armor carries its Stealth penalty onto the card; quiet armor doesn't", () => {
+  const r = ev(`(()=>{
+    const mk=(str)=>{
+      const d=genNewDraft({sp:"kobold",set:{},counts:{}});
+      genApplyPick(d,"stats",[str,14,14,10,10,10]);
+      genRollAll(d,${RNG}(71));genApplyPick(d,"cls","Fighter");
+      genApplyPick(d,"feature","Protection");genRollAll(d,${RNG}(72));
+      const K=GEN_CLASSES.Fighter;
+      genApplyPick(d,"equip",K.kits.findIndex(k=>k.ac==="chainMailShield"));
+      genApplyPick(d,"name","N");
+      const ch=deriveGenChar(validateGenPayload(genCompletePayload(d)).clean);
+      return {stealth:ch.acStealth,note:genToMonster(ch).acnote};};
+    const noisy=mk(14),quiet=mk(8); // Str 8 demotes to Chain Shirt, which is quiet
+    return {noisy,quiet,flagged:Object.keys(GEN_AC).filter(a=>GEN_AC[a].stealth).length};})()`);
+  assert.equal(r.noisy.stealth, true);
+  assert.match(r.noisy.note, /Disadvantage on Stealth/);
+  assert.equal(r.quiet.stealth, false);
+  assert.doesNotMatch(r.quiet.note, /Stealth/);
+  assert.ok(r.flagged >= 8, "the stealth-penalty recipes are flagged in the data");
+});
+
+test("D-040: every kit is tagged, offers a Dex option, and no class repeats one armor recipe to death", () => {
+  const r = ev(`(()=>{
+    const SHAPE=["onehand","twohand","dual","ranged","thrown","finesse"];
+    const DEF=["light","medium","heavy","shield","unarmored"];
+    const untagged=[],noShape=[],noDex=[],badTag=[],thin=[],heavyRage=[],strOnlyRogue=[];
+    Object.entries(GEN_CLASSES).forEach(([cls,K])=>{
+      const acUse={};
+      K.kits.forEach(k=>{
+        const tags=genKitTags(k),shape=(k.tags||[]);
+        if(!tags.length)untagged.push(cls+":"+k.n);
+        if(!shape.length)noShape.push(cls+":"+k.n);
+        shape.forEach(t=>{if(!SHAPE.includes(t))badTag.push(cls+":"+k.n+":"+t);});
+        tags.forEach(t=>{if(!SHAPE.includes(t)&&!DEF.includes(t))badTag.push(cls+":"+k.n+":"+t);});
+        // a Strength weapon always needs a Dex-usable partner to fall back on
+        const abil=k.weapons.map(w=>GEN_W[w.w]&&GEN_W[w.w].ability);
+        if(abil.includes("str")&&!abil.includes("dex"))noDex.push(cls+":"+k.n);
+        acUse[k.ac]=(acUse[k.ac]||0)+1;
+        // Rage is off in Heavy armor, so no barbarian kit may wear it
+        if(cls==="Barbarian"&&GEN_AC[k.ac].w==="heavy")heavyRage.push(k.n);
+        // Sneak Attack needs Finesse or Ranged: no rogue kit may carry a Strength weapon
+        if(cls==="Rogue"&&abil.includes("str"))strOnlyRogue.push(k.n);
+      });
+      const distinct=Object.keys(acUse).length,most=Math.max(...Object.values(acUse));
+      // classes that can actually choose their armor must spread it; Monk/Sorcerer/Wizard can't
+      if(GEN_AC[K.kits[0].ac].kind!=="none"&&!/^unarmored/.test(GEN_AC[K.kits[0].ac].kind||"")
+         &&(distinct<3||most>K.kits.length*0.5))thin.push(cls+":"+distinct+"distinct/"+most+"max of "+K.kits.length);
+    });
+    return {untagged,noShape,noDex,badTag,thin,heavyRage,strOnlyRogue,
+      // the derived half of the tag set tracks the recipe, so a fits:["heavy"] would work today
+      heavyKits:GEN_CLASSES.Fighter.kits.filter(k=>genKitTags(k).includes("heavy")).length,
+      shieldKits:GEN_CLASSES.Fighter.kits.filter(k=>genKitTags(k).includes("shield")).length};})()`);
+  assert.deepEqual(r.untagged, [], "every kit resolves to at least one tag");
+  assert.deepEqual(r.noShape, [], "every kit declares its own weapon-shape tags");
+  assert.deepEqual(r.badTag, [], "a kit carries a tag outside the closed vocabulary");
+  assert.deepEqual(r.noDex, [], "a Strength kit with no Dex weapon to fall back on");
+  assert.deepEqual(r.heavyRage, [], "a barbarian kit wears Heavy armor, which switches Rage off");
+  assert.deepEqual(r.strOnlyRogue, [], "a rogue kit carries a Strength weapon");
+  assert.deepEqual(r.thin, [], "a class leans on too few armor recipes");
+  assert.ok(r.heavyKits > 0 && r.shieldKits > 0, "defence tags are derived from the armor recipe");
+});
+
+test("D-038: every weapon and armor is featured in some kit, and everything carries a price", () => {
+  const r = ev(`(()=>{
+    const usedW=new Set(),usedAC=new Set();
+    Object.values(GEN_CLASSES).forEach(K=>K.kits.forEach(k=>{
+      usedAC.add(k.ac);(k.weapons||[]).forEach(w=>usedW.add(w.w));}));
+    return {
+      orphanW:Object.keys(GEN_W).filter(w=>!usedW.has(w)),
+      orphanAC:Object.keys(GEN_AC).filter(a=>!usedAC.has(a)),
+      badRefW:[...usedW].filter(w=>!GEN_W[w]),
+      badRefAC:[...usedAC].filter(a=>!GEN_AC[a]),
+      noPriceW:Object.keys(GEN_W).filter(w=>typeof GEN_W[w].gp!=="number"),
+      noPriceAC:Object.keys(GEN_AC).filter(a=>typeof GEN_AC[a].gp!=="number"),
+      noPricePack:GEN_PACKS.filter(p=>typeof GEN_PACK_GP[p]!=="number"),
+      noPriceSun:[...GEN_SUNDRIES_A,...GEN_SUNDRIES_B].filter(s=>typeof GEN_SUNDRY_GP[s]!=="number"),
+      classGold:Object.entries(GEN_CLASSES).filter(([,K])=>typeof K.gp!=="number").map(([c])=>c),
+      firearms:Object.keys(GEN_W).filter(w=>GEN_W[w].gp>=250)};})()`);
+  assert.deepEqual(r.badRefW, [], "a kit references a weapon that doesn't exist");
+  assert.deepEqual(r.badRefAC, [], "a kit references an armor recipe that doesn't exist");
+  assert.deepEqual(r.orphanW, [], "every modelled weapon appears in at least one kit");
+  assert.deepEqual(r.orphanAC, [], "every armor recipe appears in at least one kit");
+  assert.deepEqual(r.noPriceW, [], "every weapon carries an XPHB price");
+  assert.deepEqual(r.noPriceAC, [], "every armor recipe carries an XPHB price");
+  assert.deepEqual(r.noPricePack, [], "every pack carries a price");
+  assert.deepEqual(r.noPriceSun, [], "every sundry carries a price");
+  assert.deepEqual(r.classGold, [], "every class carries its XPHB starting gold");
+  assert.ok(r.firearms.length >= 2, "the firearms are modelled (and priced out of every budget)");
+});
+
+test("D-038: the gold budget filters the gear tables, leaves coin, and rejects an overspent payload", () => {
+  const r = ev(`(()=>{
+    const mk=(gold,plus,cls)=>{
+      const d=genNewDraft({sp:"kobold",set:{gold,goldPlus:plus},counts:{}});
+      genApplyPick(d,"stats",[14,15,14,12,12,12]);genApplyPick(d,"cls",cls);
+      return d;};
+    // 1. the budget is the class's own XPHB gold, plus the crew bonus
+    const budgets={fighterOff:genBudget(mk(false,0,"Fighter")),fighter:genBudget(mk(true,0,"Fighter")),
+      wizard:genBudget(mk(true,0,"Wizard")),fighterPlus:genBudget(mk(true,45,"Fighter"))};
+    // 2. restricted mode drops the kits the purse can't cover; unrestricted keeps them all
+    const K=GEN_CLASSES.Fighter;
+    const dOn=mk(true,0,"Fighter"),dOff=mk(false,0,"Fighter");
+    genApplyPick(dOn,"feature","Defense");genApplyPick(dOff,"feature","Defense");
+    const onIdx=genKitIdx(dOn,K),offIdx=genKitIdx(dOff,K);
+    const overpriced=onIdx.filter(i=>genKitCost(K,K.kits[i])>genBudget(dOn));
+    const plateOff=offIdx.some(i=>K.kits[i].ac==="plate");
+    const plateOn=onIdx.some(i=>K.kits[i].ac==="plate");
+    // 3. 30 seeded restricted rolls across classes: never overspend, always leave coin >= 0
+    const bad=[];
+    GEN_CLASS_LIST.forEach((cls,ci)=>{
+      for(let s=0;s<3;s++){
+        const d=mk(true,0,cls);
+        const rng=(seed=>{let x=seed>>>0;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};})(900+ci*7+s);
+        genRollAll(d,rng);genApplyPick(d,"name",cls+s);
+        const p=genCompletePayload(d),v=validateGenPayload(p,{gold:true,goldPlus:0});
+        if(!v.ok){bad.push(cls+s+":"+v.err);continue;}
+        const coin=genCoin(v.clean);
+        if(coin==null||coin<0)bad.push(cls+s+":coin="+coin);
+        const ch=deriveGenChar(v.clean);
+        // the card prints whole gold only: a remainder under 1 GP is deliberately not a line
+        if(Math.floor(coin)>0&&!new RegExp("(^|, )"+Math.floor(coin)+" GP$").test(ch.gear))
+          bad.push(cls+s+":coin "+coin+" missing from '"+ch.gear+"'");}});
+    // 4. a hand-built payload that buys plate on a budget is rejected; the same one passes unrestricted
+    const dRich=mk(false,0,"Fighter");
+    genApplyPick(dRich,"feature","Great Weapon Fighting");
+    const plateIdx=K.kits.findIndex(k=>k.ac==="plate");
+    const pickedPlate=genApplyPick(dRich,"equip",plateIdx);
+    const rng2=(seed=>{let x=seed>>>0;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};})(41);
+    genRollAll(dRich,rng2);genApplyPick(dRich,"name","Rich");
+    const pRich=genCompletePayload(dRich);
+    const okUnrestricted=validateGenPayload(pRich,{gold:false,goldPlus:0}).ok;
+    const vGold=validateGenPayload(pRich,{gold:true,goldPlus:0});
+    // 5. the DM cfg outranks the payload's own claim that the budget was off
+    const spoofed=JSON.parse(JSON.stringify(pRich));spoofed.set={...spoofed.set,gold:false};
+    const spoofRejected=!validateGenPayload(spoofed,{gold:true,goldPlus:0}).ok;
+    // 6. raising the budget lets the plate kit back onto the table
+    const dHuge=mk(true,2000,"Fighter");genApplyPick(dHuge,"feature","Great Weapon Fighting");
+    const plateAffordable=genKitIdx(dHuge,GEN_CLASSES.Fighter).includes(plateIdx);
+    return {budgets,overpriced:overpriced.length,onLen:onIdx.length,offLen:offIdx.length,
+      plateOff,plateOn,bad,pickedPlate,okUnrestricted,
+      // D-040: the validator replays the availability chain, so the rejection names the step the
+      // payload could not have rolled rather than a generic overspend
+      goldRejects:!vGold.ok&&vGold.err==="equip",
+      spoofRejected,plateAffordable};})()`);
+  // D-040: class gold + the background's 50 GP (every XPHB background offers exactly that)
+  assert.equal(r.budgets.fighterOff, null, "budget off means no ceiling at all");
+  assert.equal(r.budgets.fighter, 205, "the Fighter's 155 plus the background's 50");
+  assert.equal(r.budgets.wizard, 105, "the Wizard's 55 plus the background's 50");
+  assert.equal(r.budgets.fighterPlus, 250, "the crew's extra gold rides on top of both");
+  assert.equal(r.overpriced, 0, "no kit on the restricted table costs more than the purse");
+  assert.ok(r.onLen < r.offLen, "the restricted table is smaller than the unrestricted one");
+  assert.equal(r.plateOff, true, "plate is reachable with the budget off");
+  assert.equal(r.plateOn, false, "plate is not reachable on 155 GP");
+  assert.deepEqual(r.bad, [], "a seeded restricted roll overspent or lost its coin");
+  assert.equal(r.pickedPlate, true, "plate is pickable with the budget off");
+  assert.equal(r.okUnrestricted, true, "the same payload is legal when the crew allows anything");
+  assert.equal(r.goldRejects, true, "a payload buying plate is rejected at the step it couldn't roll");
+  assert.equal(r.spoofRejected, true, "the DM's cfg outranks the payload's own gold flag");
+  assert.equal(r.plateAffordable, true, "raising the crew's gold puts plate back on the table");
+});
+
 test("v4: Chain Mail falls back to Chain Shirt under Str 13, gear line follows; gear steps pluralize", () => {
   const r = ev(`(()=>{
     const d=genNewDraft({sp:"kobold",set:{},counts:{}});
     genApplyPick(d,"stats",[8,14,12,10,10,10]); // Str 8: below the Chain Mail gate
     genRollAll(d,${RNG}(33));
-    genApplyPick(d,"cls","Fighter");genRollAll(d,${RNG}(34));
+    genApplyPick(d,"cls","Fighter");
+    genApplyPick(d,"feature","Protection"); // D-037: a shield kit needs a style that fits one
+    genRollAll(d,${RNG}(34));
     const K=GEN_CLASSES.Fighter,cmIdx=K.kits.findIndex(k=>k.ac==="chainMailShield");
     genApplyPick(d,"equip",cmIdx);genApplyPick(d,"name","Weakling");
     const ch=deriveGenChar(validateGenPayload(genCompletePayload(d)).clean);
-    return {ac:ch.ac,acSrc:ch.acSrc,gearHasShirt:/Chain Shirt/.test(ch.gear),gearHasMail:/Chain Mail/.test(ch.gear),
+    return {ac:ch.ac,acSrc:ch.acSrc,acStealth:ch.acStealth,gearHasShirt:/Chain Shirt/.test(ch.gear),gearHasMail:/Chain Mail/.test(ch.gear),
       torch:gkGearStep("10 Torches",-1),torchUp:gkGearStep("1 Torch",1),gone:gkGearStep("1 Javelin",-1)};})()`);
   assert.equal(r.acSrc, "Chain Shirt, Shield");
+  assert.equal(r.acStealth, false, "the Str-gate demotion sheds Chain Mail's Stealth penalty");
   assert.equal(r.ac, 13 + 2 + 2, "chain shirt 13 + dex cap 2 + shield 2");
   assert.equal(r.gearHasShirt, true);
   assert.equal(r.gearHasMail, false);

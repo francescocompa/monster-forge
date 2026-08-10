@@ -4,6 +4,144 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 296 — The kit review pass: tags everywhere, armor variety, Dex fallbacks, background gold (D-040)
+Francesco's review notes on the B293–B295 kit table. Kits 92 → 109.
+- **Tags on every kit, half of them derived.** A kit declares its WEAPON-SHAPE tags (`onehand`,
+  `twohand`, `dual`, `ranged`, `thrown`, `finesse`); `genKitTags()` adds the DEFENCE tags from the
+  armor recipe itself (`light`/`medium`/`heavy`, `shield`, `unarmored`). Deriving the defence half
+  means it can't drift from the recipe, and it's what makes a future `fits` able to express an
+  armor tie — a species-granted Fighting Style, or Protector/Warden switching from `needs` to
+  `fits`, now works with no new vocabulary. `GEN_AC` gained a `w:` weight for this.
+- **Armor variety.** The Fighter was wearing Chain Mail in six of twenty kits; it now spans 15
+  recipes across 21. Cleric 8, Paladin 9, Barbarian 7, Ranger 8 (a different recipe per kit).
+  Bard/Rogue/Warlock sit at 3 — the whole Light armor list, which is all their training allows —
+  and Monk/Sorcerer/Wizard stay at 1 because they have no armor training at all. A test enforces
+  the spread for every class that can actually choose.
+- **Every Strength kit carries a Dex fallback.** Francesco's rule: a Str option always needs a
+  finesse or ranged partner for when Strength doesn't land. Test-enforced across all 109 kits, and
+  it shows on the card immediately (the sample cleric's Light Crossbow at +5 beats its Mace at +3).
+- **Barbarians get armor.** Seven of eleven kits stay Unarmored Defense; the rest wear Light or
+  Medium (never Heavy, which switches Rage off — test-enforced), and shield-and-one-weapon kits
+  join the two-handers.
+- **Casters name their foci.** Every arcane kit carries a specific focus (crystal/orb/rod/staff/
+  wand), every cleric kit a specific holy symbol (amulet/emblem/reliquary), every druid kit a
+  specific Druidic Focus (sprig of mistletoe/wooden staff/yew wand/totem). Bard kits each carry a
+  different real XPHB instrument at its real price. The Wizard gained a Component Pouch kit.
+- **The Druid's Herbalism Kit is no longer universal** — it rides the four kits built around it.
+- **More kits where they were thin:** Monk 5 → 8, Cleric's Protector variants 2 → 4, one more
+  blade-pact Warlock kit (Pact glaive), Barbarian 8 → 11, Bard 5 → 8.
+- **Rogue is Finesse-or-Ranged throughout** — the Light hammers kit is gone and no rogue kit
+  carries a Strength weapon, since Sneak Attack can't use one. Test-enforced.
+- **The Ranger's blowgun kit got a real sidearm** (Rapier, not Shortsword): a blowgun's 1 damage
+  is a utility line, not a melee plan.
+- **D-040: the background's gold joins the purse.** A 2024 character takes its class's gold
+  alternative AND its background's, and all sixteen XPHB backgrounds offer exactly 50 GP (read out
+  of the mirror). Budgets are now class + 50 + the crew's extra: Fighter 205, Cleric 160,
+  Wizard 105, Druid/Monk/Sorcerer 100.
+- **The validator now REPLAYS the availability chain** instead of re-summing prices. The old sum
+  contradicted the documented "a filtered table never empties" fallback: a druid whose kit emptied
+  the purse legitimately rolled the cheapest pack, and the naive total then rejected that legal
+  character (caught by the seeded sweep, not by hand). Validation walks the same
+  `genKitIdx`/`genPacksAvail`/`genSundriesAvail` chain the ritual walked, so the two cannot drift
+  and a rejection names the step that's wrong (`equip`) rather than a generic `gold`.
+- 129 tests green (new D-040 floor: tags present and in-vocabulary, the Dex-fallback rule, the
+  armor-spread rule, no Heavy on a barbarian, no Strength on a rogue). Verified live: 72 seeded
+  restricted rolls across all twelve classes with zero rejections, the card, zero console errors.
+
+## Batch 295 — Armor Stealth penalty on the card; the next-session plan recorded (D-039)
+- **Noisy armor now says so** (closing D-038's open item): `deriveGenChar` exports `acStealth`
+  from the POST-swap AC recipe — a Str-gate demotion (Chain Mail → Chain Shirt) sheds the penalty
+  with the armor — and the card's AC note appends "; Disadvantage on Stealth". One consumer
+  (`genToMonster`), so the DM card and the phone card agree. Test-locked both ways (noisy fighter
+  / demoted quiet fighter); 128 tests green, verified live.
+- **Kit-content review table delivered in-chat** (all 92 kits × class, gear, GP, tags, gates,
+  stealth) — the D-013 review is Francesco's next move.
+- **Next session planned, not built (D-039 + TASKS "Side quest — crew generator follow-ups"):**
+  G1 Reroll replaces "Roll the rest" on a finished ritual · G2 identity → closing summary screen
+  (name required; 🔶 mockup round first) · G3 quirk/trinket roll tables (🔶 sourcing-with-licenses
+  round first; partially supersedes typed-only identity) · G4 the D-035 boons customization,
+  un-tabled (🔶 design round first).
+
+## Batch 294 — Bare span numbers, the whole XPHB armory, and a starting-gold budget (D-038)
+Francesco's three notes.
+- **One-face spans read as a number, not a range.** `genSpanText(span,i)` replaces five hand-built
+  `lo+"-"+hi` renderers, so a 12-row table numbers 1…12 instead of 1-1…12-12. Real ranges are
+  untouched. Reroll tables were already one face per row, so they route through the same helper.
+- **The armory is complete.** Every XPHB weapon is now modelled: the 12 that were missing
+  (Glaive, Greatclub, Lance, Light Hammer, Morningstar, Pike, Trident, War Pick, Whip, Blowgun,
+  plus the Musket and Pistol at Francesco's call) with their real dice, mastery, range and price.
+  Armor gained the 7 it lacked (Padded, Hide, Ring Mail, Breastplate, Half Plate, Splint, Plate).
+  Both were pulled from the local 5etools mirror, not written from memory. **Every weapon and
+  every armor recipe now appears in at least one kit** and a test enforces it, so the next
+  addition can't sit unreachable. Kit count went 71 → 92 across the twelve classes.
+- **D-038, the starting-gold budget.** Crew settings gains "Starting gold: Roll anything / Class
+  budget" plus an "Extra gold" field. Under a budget every kit, pack and sundry is priced at its
+  XPHB list price and measured against the class's OWN starting gold (Fighter 155, Paladin/Ranger
+  150, Cleric 110, Rogue/Warlock 100, Bard 90, Barbarian 75, Wizard 55, Druid/Monk/Sorcerer 50 —
+  the "or N GP" alternative each class prints, read out of the mirror's class files). Tables filter
+  to what the purse still covers, in ritual order (kit → pack → sundries), and the remainder lands
+  on the gear line as whole gold, the way XPHB's own packages hand over their leftover.
+  - **50 GP was the Druid/Monk/Sorcerer figure**, not a universal one. A flat 50 would have priced
+    a fighter out of Chain Mail (75) and a wizard out of its own spellbook (50).
+  - **Class-mandatory gear is exempt** (spellbook, holy symbol, spellcasting focus): at 55 GP a
+    wizard's spellbook alone would eat the budget, and XPHB's own package ignores that too.
+  - **A filtered table never empties** (`genAfford` keeps the cheapest option when nothing fits),
+    and a step whose price no longer fits gets dropped rather than left showing an unpayable total
+    (`genDropUnaffordable`, the D-037 idiom).
+  - **The DM's cfg is the authority on the wire.** `validateGenPayload(raw,cfg)` takes the crew's
+    own settings and re-prices the whole gear group; a payload that overspends is rejected with
+    `err:"gold"`. Passing no cfg falls back to the payload's own set (the phone's self-check),
+    but `genIngestPayload` always passes the real one, so a phone can't claim the budget was off
+    and hand back a fighter in plate.
+  - Off by default, so existing crews roll exactly as they did.
+- **Sundries and packs are priced too**, `GEN_PACK_GP` / `GEN_SUNDRY_GP`; an unpriced item costs 0,
+  which is the safe direction (it can never make a legal roll unaffordable).
+- 127 tests green (two new floors: armory coverage + every price present; and the budget end to
+  end — per-class ceilings, filtered tables, 36 seeded restricted rolls that never overspend, coin
+  on the card, the overspend rejection, the spoofed-cfg rejection, and plate returning to the table
+  when the DM raises the gold). Verified live: settings, the narrowed tables, the ? copy, a rolled
+  card carrying its coin, zero console errors.
+
+## Batch 293 — The fighting style picks the kit table (D-037)
+Francesco's note: a rolled Fighter's Fighting Style and its equipment kit had nothing to do with
+each other — an Archery fighter could roll a greatsword. The style already resolves BEFORE the
+gear group (D-034), so the fix is a filter on the kit table, not a reordering.
+- **Mechanism (D-037), general, not Fighter-shaped:** a kit answers to its class feature option
+  twice over. `needs:"<hook>"` UNLOCKS a kit the option's training makes legal (the existing
+  Pact-of-the-Blade path); the option's new `fits` array NARROWS the table to the kits whose
+  `tags` match the tactic it rolled. `genKitIdxFor(K,featVal)` is the one definition — the roll,
+  the pick, `genStepDone`, and `validateGenPayload` all read it, so the DM app, the ritual UI and
+  the wire agree on which kits a character could have had.
+- **Three Fighting Styles keep the whole table on purpose** — Defense (+1 AC in armor, and every
+  fighter kit is armored), Interception and Unarmed Fighting have no gear consequence, and
+  inventing a tie for them would be noise. Blind Fighting narrows to the melee kits. The rest tie
+  to what they actually modify: Archery → ranged (3), Great Weapon → two-handed (3), Protection →
+  shield (3), Dueling → one-handed (4), Two-Weapon → paired Light weapons (3), Thrown → the
+  javelin/handaxe kits (6).
+- **The fighter kit table grew 8 → 12** (D-022's shape), because a pure filter left Two-Weapon
+  Fighting with a table of ONE: added Twin shortswords, Twin handaxes, Heavy crossbow, Greataxe.
+  Every style now rolls on at least 3 kits and every span die stays clean (d4/d6/d10/d12).
+- **The same gap closed for Cleric and Druid** (Francesco's call): the Cleric's Warhammer kit
+  carried a prose note saying it needed Protector's Martial training but wasn't actually gated —
+  a Thaumaturge could roll a weapon it isn't trained with. It's now `needs:"martialTrained"`
+  behind Protector's hook, and the Druid's Warden order (Martial weapons + Medium armor) finally
+  has a kit of its own behind the same hook.
+- **Changing the style DROPS a kit it no longer allows** (`genDropUnfitKit`, called from both the
+  roll and the pick) — the step already reopened, but the stale kit line rendered above the new
+  table. Same idiom as the extra-cantrip reset that sits next to it.
+- **Die-label fix caught while verifying:** the equip step's info line quoted `genDieLabel`
+  (next size up) while the table renders `genSpanFor` spans — they disagree at 3 and 5 options,
+  so the line read "d4 (reroll over 3)" over a d6-thirds table. The line now quotes the span die.
+  This was already wrong for the 5-kit Cleric before this batch.
+- **Copy:** Dueling's text claimed its +2 damage was "counted on the main line". It never was —
+  the `dueling` hook had no consumer anywhere (the composer's attack entries carry dice + ability
+  modifier, with no flat-damage field). Claim removed, dead hook removed. Counting it properly
+  would mean an entry-schema change in the Forge; not this batch.
+- 125 tests green (new D-037 floor: fits-tag integrity, 3-kit minimum per style, 40 seeded
+  fighters whose kit always fits the rolled style, the cleric/druid unlock deltas, a tampered
+  Archery+greatsword payload rejected at the wire, and the reopen). Verified live: the narrowed
+  table in the ritual, the drop-on-change, the derived card, zero console errors.
+
 ## Batch 292 — Fix: the crew share button was invisible in the roster header
 Francesco's report. **Not a B288-B291 regression — broken since B283 (`d1ce89b`) when the share
 dialog was split out of crew settings and the header button was introduced.**

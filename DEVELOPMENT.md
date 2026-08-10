@@ -221,11 +221,42 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   the Species roll leads the ritual over all enabled packs). Uploaded packs ride the share cfg;
   phones rebuild them through `crewCleanSpeciesPack` (hostile-data stance) before registering.
 - **A species = one data object** in `GEN_SPECIES`; a class = one package in `GEN_CLASSES` carrying
-  equipment KITS (drafted PHB-legal loadouts, Fighter 8 / most martials 6 / casters 4-5 — D-013 as
-  expanded by D-022), feature-option tables (Divine/Primal Order, Fighting Styles, Invocations,
+  equipment KITS (drafted PHB-legal loadouts, Fighter 21 / most martials 8-11 / casters 5-8 — D-013 as
+  expanded by D-022/D-037/D-038/D-040), feature-option tables (Divine/Primal Order, Fighting Styles, Invocations,
   Expertise), spell counts, statblock-section entries (`traits`/`bonus`), and resource declarations
   (a declaration may carry `sr:N` — regain N on a Short Rest, all on the `per` rest; the tracker
   renders both resets — D-020). Weapon/armor atoms live in `GEN_W`/`GEN_AC`.
+- **The feature option decides the kit table (D-037):** a kit's `needs:"<hook>"` UNLOCKS it once the
+  option grants the training it assumes (Pact of the Blade; the Cleric's Protector and Druid's Warden
+  martial kits), and the option's `fits` array NARROWS the table to the kits whose `tags` match the
+  tactic it rolled (Archery → ranged, Great Weapon → two-handed, Protection → shield, and so on).
+  `genKitIdxFor(K,featVal)` is the ONE definition — the roll, the pick, `genStepDone` and
+  `validateGenPayload` all read it, so the ritual, the DM app and the wire can't disagree. An option
+  with no `fits` keeps the whole table on purpose (Defense, Interception and Unarmed Fighting have no
+  gear consequence); a `fits` matching nothing falls back to the full table rather than emptying the
+  step. Changing the option drops a kit it no longer allows (`genDropUnfitKit`).
+- **The starting-gold budget (D-038):** the whole XPHB armory is modelled and PRICED (`gp` on every
+  `GEN_W`/`GEN_AC` entry, `GEN_PACK_GP`, `GEN_SUNDRY_GP`, and each class's XPHB starting gold on
+  `GEN_CLASSES[cls].gp`). With the crew setting on, `genBudget` = class gold + the crew's extra, and
+  the gear steps filter to what `genPurseAt` says the purse still covers, in ritual order (kit →
+  pack → sundries); `genCoin` pays the remainder onto the gear line in whole gold. Class-mandatory
+  gear (spellbook, holy symbol, focus) is deliberately NOT counted. `genAfford` never empties a
+  table (cheapest option survives) and `genDropUnaffordable` drops a step whose price stops fitting.
+  On the wire the DM's cfg is the authority: `validateGenPayload(raw,cfg)` REPLAYS the same
+  availability chain the ritual walked (`genKitIdx` → `genPacksAvail` → `genSundriesAvail`) against
+  a scratch draft, so validator and ritual cannot drift and a rejection names the offending step.
+  Never re-sum prices here: the "a filtered table never empties" fallback means a legal character
+  can legitimately end a few GP over, and a naive total rejects exactly that character (D-040).
+  Off by default. Every weapon and armor recipe must appear in at least one kit; a test enforces it.
+- **Kit tags (D-040)** are half authored, half derived. A kit declares its WEAPON-SHAPE tags
+  (`onehand`/`twohand`/`dual`/`ranged`/`thrown`/`finesse`); `genKitTags(kit)` appends the DEFENCE
+  tags read off `GEN_AC` (`light`/`medium`/`heavy` via `w:`, plus `shield` and `unarmored`).
+  Everything matching `fits` goes through `genKitTags`, never `kit.tags`, so an armor tie works
+  today — that is what a species-granted Fighting Style, or Protector/Warden moving from `needs`
+  to `fits`, would need. Content rules the tests enforce: every Strength kit carries a Dex-usable
+  weapon too; no barbarian kit wears Heavy armor (Rage); no rogue kit carries a Strength weapon
+  (Sneak Attack); and any class that can choose its armor spreads it across at least 3 recipes.
+  The purse is class gold + the background's 50 GP (`GEN_BG_GP`) + the crew's extra.
 - **Every step is pick-or-roll with the table on show** (D-004/D-011/D-015/D-016/D-017): the option
   table renders before the dice land (rows tappable as choices), every span is EQUAL WEIGHT
   (`genSpanFor`); scores fill a statblock-style grid one ability at a time — one editable number

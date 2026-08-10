@@ -24,6 +24,41 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
 
 ---
 
+## Side quest — crew generator follow-ups (planned 2026-08-09, build NEXT SESSION)
+
+Francesco's notes on the B293–B295 build, scoped in-session; full context in DECISIONS D-039 (+
+D-035's tabled boons item, now scheduled). Off-roadmap like the rest of the crew arc — these
+pre-empt T2.5 for one session, then the roadmap resumes.
+
+- [ ] **G1 — "Reroll" replaces "Roll the rest" on a finished ritual** · Sonnet @ medium · ~⅓
+  When every step is done, the footer button flips to a full reroll of the ritual (same crew cfg,
+  fresh draft). One judgment call to settle at build time: whether typed identity survives the
+  reroll (leaning: it clears — the ritual's point is a fresh body).
+  *Done when:* a completed ritual shows Reroll, it re-rolls every step, verified live.
+- [ ] **G2 — Identity becomes a closing summary screen** · Opus @ high (mockup round first) · ~1
+  Identity leaves the step list; after the last roll the modal advances to a summary of the
+  character's main facts (species, class, scores, style, kit, spells) with the name REQUIRED and
+  quirk/trinket optional, then View the card. **🔶 mockup + AskUserQuestion before building** —
+  core-surface visual change, per the standing convention.
+  *Done when:* ritual → summary (name gated) → card, on DM and phone flows, floors updated.
+- [ ] **G3 — Quirks & trinkets roll tables** · Opus @ high · ~1 (after G2's surface exists)
+  Big rollable tables (d100-scale) for quirk and trinket on the summary screen, manual entry
+  stays. **🔶 sourcing round first:** candidate established/beloved lists presented WITH license
+  status (SRD/CC content vs merely-popular lists that would need paraphrase) before any table is
+  authored — content enters the repo, so provenance is decided by Francesco, not assumed.
+  Partially supersedes the identity-is-typed-only stance (D-009/D-011) — logged in D-039.
+  *Done when:* both tables roll like any ritual table, ride the cfg for phones, floors updated.
+- [ ] **G4 — Boons customization (the D-035 tabled item)** · Opus @ high · ~1
+  **🔶 design round opens the session:** per-boon enable toggles vs DM-edited entries vs both;
+  what rides the share cfg; what stale-cfg phones do. Then build. D-035's optional-both-ways
+  validation stance is the floor to preserve.
+  *Done when:* the chosen surface ships, cfg round-trips, validation stays tolerant both ways.
+
+Standing from this arc: kit-content review is Francesco's (D-013 — table delivered 2026-08-09);
+push + deploy B288–B295 remains the first manual action.
+
+---
+
 ## Phase 1 — Monster math engine · CLOSED 2026-07-12 (Batches 258–273, ~16 batches)
 
 **Everything shipped and reviewed** — full history in `CHANGELOG.md` (B258–273), calibration paper

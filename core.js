@@ -351,7 +351,10 @@ function normalizeAdv(a){
     a.crew.boons=a.crew.boons!==false;                        // D-035: optional species boon tables
     a.crew.set={stat:a.crew.set&&a.crew.set.stat==="4d6"?"4d6":"3d6",
                 mode:a.crew.set&&a.crew.set.mode==="chaos"?"chaos":"plausible",
-                asi:!(a.crew.set&&a.crew.set.asi===false)};
+                asi:!(a.crew.set&&a.crew.set.asi===false),
+                // D-038: starting-gold budget, OFF by default so existing crews roll as before.
+                gold:!!(a.crew.set&&a.crew.set.gold),
+                goldPlus:genGoldPlus(a.crew.set&&a.crew.set.goldPlus)};
     a.crew.shareId=typeof a.crew.shareId==="string"?a.crew.shareId:"";
     a.crew.fallen=Array.isArray(a.crew.fallen)?a.crew.fallen:[];
   }else a.crew=null;
