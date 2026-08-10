@@ -1,7 +1,8 @@
 # TASKS — Execution plan for ROADMAP Phases 1–6
 
 > Derived 2026-07-08 from `ROADMAP.md` rev 2 (`233d9ad`). Working document: check tasks off as they
-> ship, collapse completed phases to a one-liner. Batch history stays in `CHANGELOG.md`; strategy
+> ship, collapse completed phases to a one-liner. Batch history stays in `CHANGELOG.md` (B274 and
+> older in `ARCHIVE.md`); strategy
 > stays in `ROADMAP.md`. Phases 7–12 get their task breakdown when Phase 6's gate passes.
 
 ## How to read this
@@ -26,43 +27,18 @@ surface starts as mockups, never code. Day-to-day playtest fixes always pre-empt
 
 ## Side quest — crew generator follow-ups · DONE 2026-08-10 (Batch 297)
 
-Francesco's notes on the B293–B295 build; gates settled in-session (D-041 the summary surface,
-D-042 identity content sourcing, D-043 per-boon toggles). Off-roadmap like the rest of the crew arc.
-
-- [x] **G1 — "Reroll" replaces "Roll the rest" on a finished ritual** · done B297
-  The footer's ghost slot flips to a full Reroll once every step is done: a fresh draft on the same
-  crew config, every step rolled again. Typed identity does NOT survive (settled at build time, as
-  the task allowed). Reachable from the summary screen too.
-- [x] **G2 — Identity becomes a closing summary screen** · done B297 (mockup round → D-041)
-  Two columns (rolled facts left, typed fields right), headline facts only. Plus the four notes the
-  mockup round produced: the command bar is sticky, the scores wear the site's ability colours, the
-  identity fields each carry a per-field reroll, and the copy is Next / Back. **The DM never types
-  a name** — theirs is rolled on arrival; a player's is required before the card.
-- [x] **G3 — Quirks & trinkets roll tables** · done B297 (sourcing round → D-042)
-  The SRD 5.2 d100 trinkets (CC-BY-4.0, attributed in README + the app's Credits card) behind a
-  Classic tab, our own 20 behind Ours; a d100 of quirks, original plus reworked staples; and names
-  are PROCEDURAL per species (a sound profile per pack, neutral fallback for uploads) rather than
-  a copied list, since the D&D name tables are Xanathar's.
-- [x] **G4 — Boons customization (the D-035 tabled item)** · done B297 (scoped by Francesco → D-043)
-  Per-boon enable checkboxes in crew settings, scoped to packs that actually ship boons (the kobold
-  today). A switched-off boon leaves the option table and can never land on a roll; the DM's cfg
-  outranks a stale phone's payload, tolerantly (the boon drops to no-boon, the character stands).
+G1 Reroll · G2 the closing identity summary screen (D-041) · G3 quirks/trinkets with their licensing
+(D-042) · G4 per-boon toggles (D-043). All shipped, all gates settled in-session.
+→ archived 2026-08-10: the four task bodies — `ARCHIVE.md#tasks-side-quest-1-crew-generator-follow-ups`
 
 ## Side quest 2 — crew generator, the B298 review slate (planned 2026-08-10)
 
 Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
 asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
 
-- [x] **G5 — Grouped steps read as groups** · done B299 (mockup round → D-045)
-  Chosen treatment: **category rules** — a labelled hairline above each group's first step, steps
-  untouched. Ships on the DM ritual and the phone flow together (one renderer). **D-034's open item
-  is closed**: yes to visible macro-category headers, as rules.
-- [x] **G6 — Equipment kits get real names** · done B300 (sample round → D-047)
-  Archetype voice, no leading article, sentence case: 104 kits renamed for the character the
-  loadout implies (Line soldier, Cathedral sentinel, Cat burglar); the six that already read that
-  way were left alone. Contents still print beside the name. A floor pins the house rules — no
-  contents lists, no name echoing more than one item off its own gear line, no duplicate inside a
-  class, no gendered "-man" forms.
+- [x] **G5 — Grouped steps read as groups** · done B299 (D-045) — category rules; closed D-034's open item.
+- [x] **G6 — Equipment kits get real names** · done B300, reviewed B301 (D-047) — archetype voice, no
+  article, sentence case; a floor pins the house rules. His review also fixed two dominated kits.
 - [~] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
   **Mechanical half done B303 (D-042 amended):** sampling for the review exposed a real defect, not
   a taste one — the middle piece was a flat 45% coin flip, so 33-66% of seams glued two consonants
@@ -89,12 +65,9 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+). Recommended: B′ if the real problem
   is fragility, B if it's level 1 itself; C/D are a second crew arc, not a task.
   *Done when:* ~~the memo exists~~ **and he has picked a direction (including "no").**
-- [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (4 mockup rounds + a research round → D-046)
-  The two-counter idea was superseded IN the design round by the BG3 form factor he asked for: one
-  widget, a tappable d20 with the counts arcing around it, ending at a skull and a pulse. Ships on
-  both surfaces (tracker HP popover + crew card); the crew card's HP row became the combat panel
-  inline; hit dice and death-save counts ride the resource store per-device, so the wire is
-  unchanged. **T2.8's death-save visual is unblocked and inherits this widget.**
+- [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (D-046) — one shared
+  death-save widget on both surfaces; the crew card's HP row is the combat panel inline.
+  **T2.8 inherits the widget — don't design a second one.**
 
 ---
 
@@ -106,7 +79,7 @@ identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ## Phase 1 — Monster math engine · CLOSED 2026-07-12 (Batches 258–273, ~16 batches)
 
-**Everything shipped and reviewed** — full history in `CHANGELOG.md` (B258–273), calibration paper
+**Everything shipped and reviewed** — full history in `ARCHIVE.md` (B258–273, moved 2026-08-10), calibration paper
 trail in `CR_CALIBRATION.md`, role derivation in `ROLE_CLUSTERS.md`. Decisions: Q1.A hybrid ·
 Q1.B read-out band + dial scaler · Q1.D roles soldier/artillery/brute/skirmisher/controller, stature
 boss/elite/pack/fodder (designer-only) · Q1.E blind two-tier ≥85% benchmark. Deliverables: the
@@ -120,7 +93,7 @@ and the phase code review with fixes applied (B273).
   work; T1.7's dial scaler already absorbed old T1.9's auto-scale. Ask before building either.
 - **Benchmark gate:** 75.0 clean / 80.0 ambiguous vs ≥85 — re-arms at **T2.10** (`npm run benchmark`);
   remaining misses = the user-accepted control-garnish group + the Phase-2 kit-invisible blind spot.
-- Parked from the B273 review (rationale in CHANGELOG): role-map.mjs extractor unification + a ROLE_*
+- Parked from the B273 review (rationale in `ARCHIVE.md`): role-map.mjs extractor unification + a ROLE_*
   constants regeneration check (needs a corpus-mounted session); the `input[type=text]` CSS global;
   entry-walk dedup. Plus the card-role-tag casing question (lowercase card vs capitalized statblock).
 
@@ -137,27 +110,14 @@ and the phase code review with fixes applied (B273).
   death saves, lair actions). T2.5 mockups design it before any code.
 
 ### Tasks
-- [x] **T2.1 — Effect schema design** · Batch 275
-  DEVELOPMENT.md "The effect schema": `mech` payloads — typed reminder atoms + save/end/conc/implies,
-  closed `if` vocabulary, `note` escape hatch — designed together with T2.9's classifier contract
-  (atom-kind control weights, one exported map). Documentation-only by design. (P2.1)
-- [x] **T2.2 — Effect data pass** · Batch 276
-  All CURATED_EFFECTS payloads + `CONDITION_MECH` (the 15 XPHB conditions), transcribed from the
-  5etools mirror with the text open. Four curated texts 2024-corrected (Resistance, Guidance,
-  Invisibility, Sanctuary). Integrity floor: `test/effect-mech.test.js`; exports EFFECT_ATOM_KINDS/
-  EFFECT_IF_TERMS/EFFECT_CONTROL_W (weights provisional until T2.10's calibration).
-- [x] **T2.3 — Duration engine** · Batch 277
-  `effectMechOf`/`saveEndsEdge` (data.js) resolve payloads; `combatAdvance` queues save-ends
-  prompts into `cb.prompts` after ticking; the strip (`combatPromptStripHTML`) is a deliberate
-  SKELETON for T2.5 to design — one-tap d20 + Ends/Continues, DM-only, prune-on-cure. DC captured
-  at add time (per-instance `dc`); tick edge defaults from the save descriptor. `migrateCombat`
-  normalizes legacy condition instances. Floor: `test/duration-engine.test.js`. (P2.2)
-- [x] **T2.4 — Concentration** · Batch 278
-  `concBy` links an instance to its caster (add-popover picker, defaults to the active turn;
-  new-cast-replaces-old, same-name spared). `changeHP` queues the CON prompt on the strip
-  (DC max(10, ⌊lost/2⌋); temp counts; 0 HP just drops it); B124 inline prompt routes through the
-  shared `rollConcSave`. Break by any path (`breakConcentrationOn`) cascades every linked effect.
-  Floor: `test/concentration.test.js`. (P2.3)
+- [x] **T2.1 — Effect schema design** · B275 — the `mech` payload + T2.9's classifier contract.
+- [x] **T2.2 — Effect data pass** · B276 — every curated payload + `CONDITION_MECH` (15 XPHB conditions).
+- [x] **T2.3 — Duration engine** · B277 — `effectMechOf`/`saveEndsEdge`, `cb.prompts`, the strip SKELETON.
+- [x] **T2.4 — Concentration** · B278 — `concBy`, `changeHP` queues the CON prompt, breaks cascade.
+  The schema, its vocabularies and the reminder-timing contract are owned by **DEVELOPMENT.md**
+  ("The effect schema"); floors are `test/effect-mech.test.js`, `duration-engine`, `concentration`.
+  → archived 2026-08-10: the four task bodies — `ARCHIVE.md#tasks-phase-2-shipped-task-bodies`
+
 - [ ] **T2.5 — Reminder chips design session** · Opus @ high · *(design session)*
   Mockups for where/how chips render on a turn — per Q2.A's philosophy. (P2.4)
 - [ ] **T2.6 — Reminder chips build** · Sonnet @ medium · ~1

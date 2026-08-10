@@ -61,7 +61,7 @@
   `resolveRole` pure in data.js, card tags + Role filter + manual override on both surfaces. Memo:
   `ROLE_CLUSTERS.md`. Stature (boss/elite/pack/fodder) is party-relative and ships only in the P3
   designer.
-- **Phase review done** (`/code-review` high, fixes applied — CHANGELOG B273).
+- **Phase review done** (`/code-review` high, fixes applied — B273, in `ARCHIVE.md`).
 
 **Open remainders:** Phase 1 CLOSED 2026-07-12 (B258–273); open remainders + benchmark-gate details
 live in TASKS.md's Phase-1 close block. ROADMAP-only note: role-choice-during-scaling is backlog.
