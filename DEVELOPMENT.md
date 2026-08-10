@@ -257,6 +257,15 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   weapon too; no barbarian kit wears Heavy armor (Rage); no rogue kit carries a Strength weapon
   (Sneak Attack); and any class that can choose its armor spreads it across at least 3 recipes.
   The purse is class gold + the background's 50 GP (`GEN_BG_GP`) + the crew's extra.
+- **Plausibility, manual entry and exclusions** (D-044, B298): the plausible-class shortlist is led
+  by the PRIMARY ability (a class whose primary is below average drops out; `prim` may be a list,
+  since XPHB's Fighter is "Strength or Dexterity"); the background ASI's +1 goes to the best ODD
+  score, widening past the class's own abilities rather than landing where it buys nothing;
+  "Type them in" is a header button that opens the real score fields; a species' own extra origin
+  feat groups with the species; options the rules exclude render struck through with the reason;
+  roll filters hide behind a filter button; packs list their contents like kits do; Reroll applies
+  to the screen it is on; and quirk/trinket live on the card (editable via the `pc.gen.flavor`
+  overlay), never in the roster's notes field.
 - **The ritual ends on the rolls; identity is a closing SUMMARY screen** (D-041, B297): two columns
   — the headline facts (species, class, the ability line in the site's `cc-ab-*` colours, the kit)
   beside the name/quirk/trinket fields, each with its own per-field reroll. The ritual's completed

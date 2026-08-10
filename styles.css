@@ -2457,7 +2457,8 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .modal.gk-host .gk-foot::before{content:"";position:absolute;left:0;right:0;top:-16px;height:16px;
   background:linear-gradient(to top,var(--panel),transparent);pointer-events:none}
 /* the closing summary (D-041): what was rolled on the left, what you write on the right */
-.gk-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+/* D-044: the two columns match height — the rolled facts and the fields read as one panel */
+.gk-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
 .gk-sum .gk-step{opacity:1}
 .gk-sum-rows{display:flex;flex-direction:column;gap:5px}
 .gk-sum-row{display:flex;gap:10px;align-items:baseline}
@@ -2471,7 +2472,10 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-ab6-sum .gk-ab{min-height:auto;padding:5px 2px 4px;gap:1px}
 .gk-ab-s{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
 .gk-ab-m{font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-.gk-tabstrip-id{margin-top:2px}
+.gk-flrow{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.gk-flrow .gk-flv{flex:1;min-width:120px}
+.gk-flpop{display:flex;gap:6px;align-items:center;min-width:260px}
+.gk-flpop .popinput{flex:1}
 @media (max-width:560px){.gk-sum{grid-template-columns:1fr}}
 /* card — a real statblock (.sb) framed by PC-only extras */
 .gk-cardhost{margin:2px 0 4px}
@@ -2614,6 +2618,17 @@ body.crew-mode .app{display:none}
 .gk-q{background:none;border:1px solid var(--line);color:var(--faint);border-radius:50%;width:15px;height:15px;font-size:9.5px;line-height:1;padding:0;margin-left:6px;cursor:pointer;vertical-align:1px}
 .gk-q:hover{color:var(--txt);border-color:var(--dim)}
 .gk-infopop{font-size:12px;line-height:1.5;max-width:240px;color:var(--txt)}
+/* D-044: the step header carries its own controls before the roll button — manual entry for the
+   scores, and the roll filters that used to sit open under the table. */
+.gk-typein{width:auto;padding:3px 9px;font-size:11.5px}
+.gk-filt{background:none;border:1px solid var(--line);border-radius:5px;color:var(--faint);padding:3px 6px;cursor:pointer;width:auto;line-height:0}
+.gk-filt:hover{color:var(--txt);border-color:var(--accent-soft)}
+.gk-filt.gk-filt-on{color:var(--txt);border-color:var(--accent)}
+/* An option the rules put out of reach reads as struck through rather than silently missing. */
+.gk-tr-off{opacity:.55;cursor:default}
+.gk-tr-off .gk-tl{text-decoration:line-through}
+.gk-tr-off:hover{background:none;border-color:var(--line)}
+.gk-tr-why{margin-left:auto;font-size:10.5px;padding-left:8px;text-decoration:none}
 .gk-roll-ico{background:none;border:1px solid transparent;border-radius:5px;color:var(--faint);padding:3px 5px;cursor:pointer;width:auto}
 .gk-roll-ico:hover{color:var(--txt);border-color:var(--line)}
 .gk-roll-ico svg{width:13px;height:13px;display:block}

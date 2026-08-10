@@ -48,6 +48,54 @@ D-042 identity content sourcing, D-043 per-boon toggles). Off-roadmap like the r
   today). A switched-off boon leaves the option table and can never land on a roll; the DM's cfg
   outranks a stale phone's payload, tolerantly (the boon drops to no-boon, the character stands).
 
+## Side quest 2 — crew generator, the B298 review slate (planned 2026-08-10)
+
+Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
+asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
+
+- [ ] **G5 — Grouped steps read as groups** · Opus @ high (mockup round first) · ~1
+  "Grouped boxes with same provenance should have more visually clear grouping." The macro
+  categories (D-034) are real in the order but invisible on screen. **🔶 mockup + AskUserQuestion
+  before building** — core-surface visual, and it finally answers D-034's open question about
+  visible category headers (headers vs nesting vs a shared rail: put all three in front of him).
+  *Done when:* the chosen treatment ships on DM and phone, and D-034's open item is closed.
+- [ ] **G6 — Equipment kits get real names** · Sonnet @ medium · ~½
+  "Rename the equipment kits to something more flavorful rather than repeating what's in the kit."
+  109 kits currently name their own contents ("Rapier and hand crossbow"). Needs a naming pass with
+  a consistent voice, and the contents already print beside the name, so nothing is lost.
+  *Done when:* every kit has a name that isn't its gear list, the tests still pin the gear.
+- [ ] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
+  "Plan a task where we review the name generator and the random lists." A read-through pass with
+  him: sample names per species (the profiles are new and unproven at the table), the 100 quirks,
+  the 20 extra trinkets. Expect edits, not architecture.
+  *Done when:* he has signed off species by species and list by list.
+- [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
+  "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,
+  pasting listed elements." Our own trinket/quirk lists become crew-editable content: a manual
+  editor, paste-a-list, and a spreadsheet import (CSV rows). The SRD hundred stays untouchable —
+  it is licensed content, not user content. Wire boundary: an edited list rides the crew cfg and
+  is rebuilt phone-side like every other cfg field (D-007).
+  *Done when:* a DM can edit, paste and import a list, phones roll the same one, floors updated.
+- [ ] **G9 — Beyond level 1: feasibility** · Opus @ high (spike, no build) · ~1
+  "Plan a task for us to evaluate the feasibility to expand the generator to more character levels
+  (importing player options like we import monsters)." A written spike: what levels 2-5 cost in the
+  fixed-package model (subclasses, spell progression, ASIs, the class-feature explosion), whether
+  5etools class.json can be condensed the way `parseRacesJSON` condenses races, and where the wire
+  and the validator would have to change. Output is a recommendation with a scope, not code.
+  *Done when:* the memo exists and he has picked a direction (including "no").
+- [ ] **G10 — The player's HP section, hit dice, and death saves** · Opus @ high · ~2
+  "In the player view, rework the HP section: it should resemble more the combat hp design, and
+  include hit dice (spend them to heal) and death saves." Plus a GLOBAL change he wants iterated
+  together: **death saves become two icon counters — a skull for failures, something else for
+  successes, each with its number inside — shown at 0 HP, everywhere they appear** (crew card AND
+  the combat tracker). **🔶 design round first, explicitly with him** ("iterate it with me"):
+  mockups of the counter pair, then the HP block, before any code. Hit dice are new state on the
+  payload's derived character (class HD, spent count) and need a per-device home like the pips.
+  *Done when:* the counters ship on both surfaces, the crew card tracks HP/hit dice/death saves,
+  and nothing new goes on the wire beyond what D-029 already allows.
+
+---
+
 Standing from this arc: push + deploy remains the first manual action (B292–B297 are committed
 locally, nothing is live). Open taste items: leftover coin for cheap-kit casters (D-040), and
 whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).

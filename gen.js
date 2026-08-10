@@ -499,7 +499,7 @@ const GEN_CLASSES={
       {label:"Magician",value:"magician",t:"Primal Order: Magician. One extra Druid cantrip; add the Wisdom modifier (minimum +1) to Intelligence (Arcana or Nature) checks.",hooks:{extraCantrip:true}},
       {label:"Warden",value:"warden",t:"Primal Order: Warden. Trained for battle — proficient with Martial weapons and Medium armor.",hooks:{martialTrained:true}}]},
     caster:{abil:"wis",cantrips:2,prepared:4,slots:2,always:["Speak with Animals"]}},
-  Fighter:{hd:10,gp:155,saves:["str","con"],prim:"dex",sec:"con",masteries:3,
+  Fighter:{hd:10,gp:155,saves:["str","con"],prim:["str","dex"],sec:"con",masteries:3,
     skills:{from:["Acrobatics","Animal Handling","Athletics","History","Insight","Intimidation","Persuasion","Perception","Survival"],n:2},
     kits:[
       {n:"Sword and shield",ac:"chainMailShield",tags:["onehand","thrown"],weapons:[{w:"longsword"},{w:"javelin",count:4},{w:"dagger"}],gear:"Chain Mail, Shield, Longsword, 4 Javelins, Dagger"},
@@ -742,6 +742,7 @@ function genNewDraft(cfg){
   return {v:2,sp,spRitual:cfg.spMode==="ritual", // D-031: species rides the ritual when the crew says so
           boons:cfg.boons!==false,               // D-035: optional species boon tables, crew setting
           boonOff:genCleanBoonOff(cfg.boonOff),   // D-043: and individual boons the crew switched off
+          trinketTab:genCleanTrinketTab(cfg.trinketTab), // D-044: which trinket list the crew rolls
           set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
                       asi:!(cfg.set&&cfg.set.asi===false),
@@ -834,11 +835,12 @@ function genStepOrder(d){
   const spReady=!d.spRitual||(d.steps.species&&d.steps.species.value!=null);
   if(d.spRitual)ids.push("species"); // D-031: the ritual opens with the species roll
   if(spReady)genSpTablesOf(d).forEach(t=>ids.push("sp:"+t.id)); // …and resolves its tables with it
+  // D-044: a species' own extra origin feat (Human Versatile) is a SPECIES feature — it groups with
+  // the species, not with the background's feat three steps later.
+  if(spReady&&GEN_SPECIES[d.sp].extraFeat)ids.push("feat2");
   ids.push("stats","cls");
   if(d.set.asi)ids.push("asi");
-  ids.push("feat");
-  if(spReady&&GEN_SPECIES[d.sp].extraFeat)ids.push("feat2"); // Human Versatile: a second origin feat
-  ids.push("skills");
+  ids.push("feat","skills");
   const cls=genClsOf(d);
   if(cls){
     if(GEN_CLASSES[cls].featureOpt)ids.push("feature");
@@ -1074,6 +1076,7 @@ function genRollName(sp,rng){
 // The trinket step rolls on one of two tables (D-042), chosen by a toggle that rides the DRAFT only
 // — never the wire, exactly like the D-024 spell tabs.
 function genTrinketTab(d){return d.trinketTab==="forge"?"forge":"srd";}
+function genCleanTrinketTab(v){return v==="forge"?"forge":"srd";}
 function genIdList(d,id){
   if(id==="quirk")return GEN_QUIRKS;
   return genTrinketTab(d)==="forge"?GEN_TRINKETS_X:GEN_TRINKETS;
@@ -1197,20 +1200,40 @@ function genFamiliarKind(d){
 // the +1 only buys a step on an ODD score (13→14 is +1 to the modifier, 14→15 is nothing), so it
 // goes to the best ODD-scored ability the class cares about — secondary first, then the universally
 // useful Constitution and Dexterity — and falls back to the secondary when nothing is odd.
+// A class's primary ability may be a CHOICE (XPHB's Fighter is "Strength or Dexterity"), so `prim`
+// is a string or a list and the one that matters is whichever the character actually rolled well.
+function genPrimAbils(K){return K?(Array.isArray(K.prim)?K.prim:[K.prim]):["str"];}
+function genPrimAbil(K,score){
+  return genPrimAbils(K).slice().sort((a,b)=>(score[b]||10)-(score[a]||10))[0];
+}
+// D-044: the +2 goes on the class's primary; the +1 goes where it BUYS a modifier — the best ODD
+// score among the abilities the class actually uses, widening to any odd score before it settles
+// for one that changes nothing. It is a suggestion; the step stays explicit and overridable.
 function genAsiDefault(d){
   const K=GEN_CLASSES[genClsOf(d)];
-  const plus2=K?K.prim:"str",sec=K?K.sec:"con";
   const score={};GEN_ABILS.forEach((a,i)=>{
     score[a]=d.steps.stats&&d.steps.stats.value&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
-  const pool=[sec,"con","dex"].filter((a,i,arr)=>a!==plus2&&arr.indexOf(a)===i);
-  const odd=pool.filter(a=>score[a]%2===1);
-  return [plus2,(odd.length?odd:pool)[0]||GEN_ABILS.find(a=>a!==plus2)];
+  const plus2=K?genPrimAbil(K,score):"str",sec=K?K.sec:"con";
+  const near=[sec,"con","dex",...genPrimAbils(K)].filter((a,i,arr)=>a!==plus2&&arr.indexOf(a)===i);
+  const rest=GEN_ABILS.filter(a=>a!==plus2&&!near.includes(a));
+  const bestOdd=list=>list.filter(a=>score[a]%2===1).sort((a,b)=>score[b]-score[a])[0];
+  return [plus2,bestOdd(near)||bestOdd(rest)||near[0]||GEN_ABILS.find(a=>a!==plus2)];
 }
+// D-044: a class is only PLAUSIBLE if the character can actually play it — the primary ability
+// leads and a strong secondary can no longer carry a class whose primary is a dump stat (an 8 WIS
+// cleric was reaching the shortlist off a 14 CON). Classes with a below-average primary drop out
+// entirely; if that leaves nobody, the ranking stands on its own (all stats are terrible).
 function genClassShortlist(scores,counts){
   const mod=s=>Math.floor((s-10)/2);
-  return GEN_CLASS_LIST.map(c=>{const k=GEN_CLASSES[c];
-      return {c,score:mod(scores[k.prim])*2+mod(scores[k.sec])-2*Math.max(0,(counts&&counts[c]||0)-2)};})
-    .sort((a,b)=>b.score-a.score||(a.c<b.c?-1:1)).slice(0,3).map(x=>x.c);
+  const rank=GEN_CLASS_LIST.map(c=>{const k=GEN_CLASSES[c];
+      const prim=Math.max(...genPrimAbils(k).map(a=>mod(scores[a])));
+      return {c,prim,score:prim*10+mod(scores[k.sec])-2*Math.max(0,(counts&&counts[c]||0)-2)};})
+    .sort((a,b)=>b.score-a.score||(a.c<b.c?-1:1));
+  const fit=rank.filter(x=>x.prim>=0);
+  const out=(fit.length?fit:rank).slice(0,3).map(x=>x.c);
+  // never collapse to a single option: the class step is a roll, and a d-something needs a spread
+  for(const x of rank){if(out.length>=2)break;if(!out.includes(x.c))out.push(x.c);}
+  return out;
 }
 function genStatTotal(dice,method){
   const s=[...dice].sort((a,b)=>a-b);
@@ -2063,8 +2086,9 @@ function genToRosterPC(ch,payload,playerName){
     fields.push(f);
   });
   fields.push({k:"skills",v:ch.skills.map(s=>({s:s.n,e:s.exp?2:1}))});
-  const noteBits=[ch.flavor.quirk?"Quirk: "+ch.flavor.quirk:"",ch.flavor.trinket?"Trinket: "+ch.flavor.trinket:""].filter(Boolean);
-  return {id:payload.id,name:ch.name,notes:noteBits.join(" · "),
+  // D-044: quirk and trinket no longer squat in the roster's notes field — that's the player's own
+  // space. They live on the card, where they can be edited (genFlavorEditor).
+  return {id:payload.id,name:ch.name,notes:"",
     fields,gen:{v:2,payload:clone(payload),pn:playerName||""}};
 }
 function genLivingPCs(a){return (a.party||[]).map(id=>rosterById(id)).filter(pc=>pc&&pc.gen&&pc.gen.payload);}
@@ -2169,11 +2193,15 @@ function genCardHTML(ch,opts){
   const prevM=M;let core;
   try{M=m;core=sbHeaderHTML(m)+sbAbilityTableHTML(m,ch.pb)+genPcMetaHTML(ch,opts)+sbEntriesHTML(m);}
   finally{M=prevM;}
-  const fl=ch.flavor;
+  const fl=genFlavorOf(ch,opts);
   const rows=[];
   if(opts.dead)rows.push(`<div class="gk-dead-line">Fallen</div>`);
-  if(fl.quirk)rows.push(`<div><b>Quirk:</b> ${esc(fl.quirk)}</div>`);
-  if(fl.trinket)rows.push(`<div><b>Trinket:</b> ${esc(fl.trinket)}</div>`);
+  const editable=!opts.dead&&!!opts.flavorKey;
+  ["quirk","trinket"].forEach(k=>{
+    if(!fl[k]&&!editable)return;
+    rows.push(`<div class="gk-flrow"><b>${k==="quirk"?"Quirk":"Trinket"}:</b>
+      <span class="gk-flv">${esc(fl[k]||"")}</span>${editable
+        ?`<button class="gk-linklike" data-gkfl="${k}">${fl[k]?"Edit":"Add"}</button>`:""}</div>`);});
   const flavor=rows.length?`<div class="gk-flavor">${rows.join("")}</div>`:"";
   // D-025: the familiar's full statblock rides below the PC card, through the same composer.
   let fam="";
@@ -2195,6 +2223,13 @@ function genFamiliarMonster(name){
 }
 // Mount + post-process: the colour/link/rollable pass runs with M swapped so DCs, damage, spell
 // names, and condition names light up exactly like a bestiary statblock.
+// D-044: quirk and trinket are editable on the card, through the same per-character overlay the
+// gear editor uses (`pc.gen.flavor` DM-side, localStorage on phones) — never on the wire.
+function genFlavorOf(ch,opts){
+  const ov=(opts&&opts.flavor)||null;
+  return {quirk:ov&&ov.quirk!=null?ov.quirk:(ch.flavor&&ch.flavor.quirk)||"",
+          trinket:ov&&ov.trinket!=null?ov.trinket:(ch.flavor&&ch.flavor.trinket)||""};
+}
 function genMountCard(host,ch,opts,handlers){
   opts=opts||{};handlers=handlers||{};
   if(handlers.onGear){opts={...opts,gearEdit:true};
@@ -2213,6 +2248,16 @@ function genMountCard(host,ch,opts,handlers){
     finally{M=prevM;}
   }
   bindGenCard(host,handlers);
+  if(handlers.onFlavor)host.querySelectorAll("[data-gkfl]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.gkfl,cur=b.closest(".gk-flrow").querySelector(".gk-flv").textContent.trim();
+    showPopover(b,`<div class="gk-flpop"><input type="text" class="popinput" id="gkFlIn" maxlength="90"
+      placeholder="${k==="quirk"?"Quirk":"Trinket"}" value="${esc(cur)}">
+      <button class="btn primary sm" id="gkFlOk" style="width:auto">Save</button></div>`);
+    const inp=$("#gkFlIn");if(inp)inp.focus();
+    const ok=$("#gkFlOk");
+    if(ok)ok.addEventListener("click",()=>{
+      handlers.onFlavor(k,String(inp.value||"").replace(/[<>]/g,"").trim().slice(0,90));
+      if(typeof closePopover==="function")closePopover();});}));
 }
 // The gear editor (D-019): remove/add items by hand — used or lost gear stays edited on THIS
 // character (an overlay owned by the card's holder; the wire payload never carries it).
@@ -2348,7 +2393,8 @@ function openGenCard(a,payload,o){
   const ch=deriveGenChar(v.clean);
   const pc=o.pcId?rosterById(o.pcId):null;
   // The HP row appears only once the player's phone has reported some (D-029: read-only here).
-  if(pc)o={...o,res:(pc.gen&&pc.gen.res)||{},pips:"live",hp:(pc.gen&&pc.gen.hp)||null};
+  if(pc)o={...o,res:(pc.gen&&pc.gen.res)||{},pips:"live",hp:(pc.gen&&pc.gen.hp)||null,
+           flavor:(pc.gen&&pc.gen.flavor)||null,flavorKey:pc.id};
   // D-021: the statblock modal is the generated member's home surface — notes live at its bottom.
   openModalRaw(`<div id="gkCardHost"></div>
     ${pc?`<label class="f gk-noterow">Notes<textarea id="gkNotes" placeholder="Anything worth remembering about ${esc(ch.name)}">${esc(pc.notes||"")}</textarea></label>`:""}
@@ -2358,7 +2404,9 @@ function openGenCard(a,payload,o){
     onRes:pc?(k,used)=>{pc.gen.res=pc.gen.res||{};pc.gen.res[k]=used;saveRoster();}:null,
     gearGet:pc?()=>(pc.gen&&pc.gen.gear!=null?pc.gen.gear:rolledGear):null,
     gearDirty:pc?()=>!!(pc.gen&&pc.gen.gear!=null):null,
-    onGear:pc?s=>{if(s==null)delete pc.gen.gear;else pc.gen.gear=String(s).slice(0,400);saveRoster();}:null});
+    onGear:pc?s=>{if(s==null)delete pc.gen.gear;else pc.gen.gear=String(s).slice(0,400);saveRoster();}:null,
+    onFlavor:pc?(k,v)=>{pc.gen.flavor=pc.gen.flavor||{};pc.gen.flavor[k]=v;saveRoster();
+      openGenCard(a,payload,o);}:null});
   const notes=$("#gkNotes");
   if(notes&&pc)notes.addEventListener("change",()=>{pc.notes=String(notes.value||"").slice(0,2000);saveRoster();});
   $("#gkClose").addEventListener("click",closeModal);
@@ -2377,6 +2425,9 @@ function openGenCard(a,payload,o){
 // ═══════════════════════════════════════════════════════════════════════════
 let _genR=null; // {mode, pn, editing, draft, ctx (the draft config, for Reroll), done, more:{}}
 // Font Awesome gear (free solid) — the crew-settings button in the roster header (D-021).
+// Font Awesome filter (free solid). Sized on the element: a constant is only as portable as its
+// intrinsic size, and .gk-filt gives it no box of its own (B292).
+const GEN_FILT_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M3.9 54.9C10.5 40.9 24.5 32 40 32l432 0c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9 320 448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6l0-79.1L9 97.4C-.7 85.4-2.8 68.8 3.9 54.9z"/></svg>';
 const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
 // D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
 function genStepLabel(d,id){
@@ -2450,7 +2501,12 @@ function genStepTable(d,id){
   if(id==="species"){const pool=genSpeciesPool(),span=genSpanFor(pool.length);
     return {die:span.die,note:span.reroll?"reroll over "+pool.length:"",
       rows:pool.map((v,i)=>({span:genSpanText(span,i),label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v}))};}
-  if(id==="feat"||id==="feat2")return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,hit:s&&s.value===f.n}))};
+  if(id==="feat"||id==="feat2"){
+    // The two origin feats stay distinct (you can't take the same feat twice), so the one the other
+    // step already took shows struck through rather than silently missing.
+    const other=id==="feat2"?(d.steps.feat&&d.steps.feat.value):(d.steps.feat2&&d.steps.feat2.value);
+    return {die:10,rows:GEN_FEATS.map((f,i)=>({span:String(i+1),label:f.n,value:f.n,
+      hit:s&&s.value===f.n,off:f.n===other?"taken":""}))};}
   if(id==="skills"&&K)return mk(K.skills.from);
   if(id==="feature"&&K&&K.featureOpt){
     if(K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];return own.length?mk(own):null;}
@@ -2476,7 +2532,8 @@ function genStepTable(d,id){
     return {die:span.die,note:span.reroll?"reroll over "+list.length:"",
       rows:list.map((v,i)=>({span:genSpanText(span,i),label:v,value:v,hit:s&&s.value===v}))};}
   if(id==="gearPack"){const av=genPacksAvail(d),span=genSpanFor(av.length);
-    return {die:span.die,rows:av.map((p,i)=>({span:genSpanText(span,i),label:p,value:p,hit:s&&s.value===p})),
+    const contents=n=>(GEN_PACK_CONTENTS[n]||[]).join(", ");
+    return {die:span.die,rows:av.map((p,i)=>({span:genSpanText(span,i),label:p,sub:contents(p),value:p,hit:s&&s.value===p})),
       note:span.reroll?"reroll over "+av.length:""};}
   if(id==="sundries"){
     const one=(list,which)=>{const span=genSpanFor(list.length);
@@ -2487,8 +2544,10 @@ function genStepTable(d,id){
     return {pair:[one(A,0),one(genSundriesAvail(d,1,s&&Array.isArray(s.value)?s.value[0]:null),1)]};}
   if(id.startsWith("sp:")){const t=genSpTable(d.sp,id.slice(3));if(!t)return null;
     if(t.kind==="skill"){const die=t.die||genDieFor(t.entries.length);
+      const owned=genOwnedSkillNames(d,true);
       return {die,note:die>t.entries.length?"reroll over "+t.entries.length:"",
-        rows:t.entries.map((n,i)=>({span:String(i+1),label:n,value:n,hit:s&&s.value===n}))};}
+        rows:t.entries.map((n,i)=>({span:String(i+1),label:n,value:n,hit:s&&s.value===n,
+          off:s&&s.value===n?"":(owned.has(n)?"already yours":"")}))};}
     const off=t.boon?genBoonOff(d):[];
     return {die:t.die,rows:t.entries.filter(e=>e.value===false||!off.includes(String(e.value)))
       .map(e=>({span:e.lo===e.hi?String(e.lo):e.lo+"-"+e.hi,label:e.label,value:e.value,hit:s&&s.value===e.value}))};}
@@ -2520,6 +2579,7 @@ function genStepValueHTML(d,id){
   if(id==="asi")return `<b data-gkedit="asi">+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}</b> <span class="gk-dim">${s.pick?"chosen":"suggested"}</span>`;
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const k=K&&K.kits[s.value];
     return `<b data-gkedit="equip">${esc(k?k.n:String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc(k?k.gear:"")}</span>`;}
+  if(id==="gearPack")return `<b data-gkedit="gearPack">${esc(String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc((GEN_PACK_CONTENTS[s.value]||[]).join(", "))}</span>`;
   if(id==="feature"&&s.kind==="expertise")return s.value.map(x=>`<span class="gk-chip2" data-gkedit="feature">${esc(x)}</span>`).join(" ")+" "+genDiceChips(s);
   if(id==="feature"){const K=GEN_CLASSES[genClsOf(d)];const o=K.featureOpt.options.find(x=>x.value===s.value);
     let h=`<b data-gkedit="feature">${esc(o?o.label:String(s.value))}</b> ${genDiceChips(s)}`;
@@ -2549,7 +2609,6 @@ function genSel(id,opts,cur,labels,numbered){
 function genEditorHTML(d,id){
   const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,s=d.steps[id];
   const nSel=(list,n,cur,idp)=>Array.from({length:n},(x,i)=>genSel(idp+i,list,cur&&cur[i]||list[i],null,true));
-  if(id==="stats")return GEN_ABILS.map((a,i)=>`<label class="gk-si">${a.toUpperCase()}<input type="number" min="3" max="20" id="gkSt_${a}" value="${s&&s.value&&s.value[i]!=null?s.value[i]:10}"></label>`).join("")+`<button class="btn primary sm gk-apply" data-gkapply="stats">Set scores</button>`;
   if(id==="asi"){const dflt=genAsiDefault(d),cur=s?s.value:dflt;
     return `<span class="gk-dim">Suggested: +2 ${dflt[0].toUpperCase()} / +1 ${dflt[1].toUpperCase()}.</span>`
       +genSel("gkAsi2",GEN_ABILS,cur[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()),true)+genSel("gkAsi1",GEN_ABILS,cur[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
@@ -2584,27 +2643,33 @@ function genSubEditorHTML(d,id){
   return `<div class="gk-subrow"><span class="gk-dim">${esc(e.sub.label)} (${genDieLabel(e.sub.entries.length)}).</span>${roll}${genSel("gkSub_"+id.slice(3),e.sub.entries,"",null,true)}<button class="btn primary sm" data-gksubapply="${id}">Choose</button></div>`;
 }
 // D-015: the six abilities render as the statblock-style grid — one editable score per ability,
-// no printed dice strings (the 3D roll is the theater). Cells are editable once all six landed;
-// before that, "Type them in" opens the manual editor (v4 follow-up).
-function genStatsRowsHTML(d,editing){
+// no printed dice strings (the 3D roll is the theater). Cells are editable once all six landed.
+// D-044: "Type them in" is a header button beside the roll, and it opens THESE fields rather than
+// a second row of inputs under them — one place to type a score, not two.
+function genStatsRowsHTML(d,typing){
   const s=d.steps.stats,n=s&&!s.pick?s.rolls.length:0;
   const complete=!!s&&(s.pick||n===6);
+  const typed=typing&&_genR?_genR.typed:null;
   return `<div class="gk-ab6">${GEN_ABILS.map((a,i)=>{
     const rolled=s&&s.value&&s.value[i]!=null&&(s.pick||i<n);
     const next=s?(!s.pick&&n===i):i===0; // one walking Roll button, STR first
+    if(typed)return `<div class="gk-ab cc-ab-${a}">
+      <span class="gk-ab-k">${a.toUpperCase()}</span>
+      <input class="gk-ab-in" type="number" min="3" max="20" data-gkstat="${i}" value="${typed[i]==null?"":typed[i]}"
+        placeholder="10" aria-label="${GEN_ABIL_LABEL[a]} score">
+    </div>`;
     return `<div class="gk-ab cc-ab-${a}${next?" gk-ab-next":""}">
       <span class="gk-ab-k">${a.toUpperCase()}</span>
       ${rolled?`<input class="gk-ab-in" type="number" min="3" max="20" data-gkstat="${i}" value="${s.value[i]}"${complete?"":" disabled"} aria-label="${GEN_ABIL_LABEL[a]} score">`
         :next?`<button class="btn primary sm gk-ab-roll" data-gkroll="stats" aria-label="Roll ${GEN_ABIL_LABEL[a]}">${D20_ICON}<span>Roll</span></button>`
         :`<span class="gk-ab-dot">·</span>`}
-    </div>`;}).join("")}</div>`
-    +(!complete&&!editing?`<button class="gk-linklike gk-typein" data-gkedit="stats">Type them in</button>`:"");
+    </div>`;}).join("")}</div>`;
 }
 function genTableHTML(d,id,tbl){
   if(tbl.pair)return tbl.pair.map(p=>`<div class="gk-tbl-h">${esc(p.title)}</div>`+genTableHTML(d,id,p)).join("");
   const long=tbl.rows.length>12;
-  const row=r=>`<button class="gk-tr${r.hit?" gk-hit":""}" data-gkopt="${esc(String(r.value))}" data-gkstep="${id}">
-      <span class="gk-td">${esc(r.span)}</span><span class="gk-tl">${esc(r.label)}${r.sub?` <span class="gk-dim">${esc(r.sub)}</span>`:""}</span></button>`;
+  const row=r=>`<button class="gk-tr${r.hit?" gk-hit":""}${r.off?" gk-tr-off":""}"${r.off?" disabled":""} data-gkopt="${esc(String(r.value))}" data-gkstep="${id}">
+      <span class="gk-td">${esc(r.span)}</span><span class="gk-tl">${esc(r.label)}${r.sub?` <span class="gk-dim">${esc(r.sub)}</span>`:""}</span>${r.off?`<span class="gk-dim gk-tr-why">${esc(r.off)}</span>`:""}</button>`;
   // D-016: the class table shows all twelve — the rollable three span-marked, the other nine
   // collapsed behind an expander (pickable once revealed).
   let more="";
@@ -2667,17 +2732,12 @@ function renderGenSummary(){
   // The DM's name is rolled, never typed (D-041) — roll it once, on arrival.
   if(R.mode==="dm"&&!(d.steps.name&&d.steps.name.value))genRollIdentity(d,"name");
   const named=!!(d.steps.name&&String(d.steps.name.value||"").trim());
-  const tab=genTrinketTab(d);
   host.innerHTML=`<div class="gk-sum">
       ${genSummaryFactsHTML(d)}
       <div class="gk-step gk-active gk-sum-id">
         ${genIdFieldHTML(d,"name","Name","Type or roll a name")}
         ${genIdFieldHTML(d,"quirk","Quirk","Optional")}
         ${genIdFieldHTML(d,"trinket","Trinket","Optional")}
-        <div class="gk-tabstrip gk-tabstrip-id">
-          <button class="gk-tab${tab==="srd"?" gk-tab-on":""}" data-gkidtab="srd">Classic</button>
-          <button class="gk-tab${tab==="forge"?" gk-tab-on":""}" data-gkidtab="forge">Ours</button>
-        </div>
       </div>
     </div>
     <div class="mrow gk-foot">
@@ -2694,10 +2754,6 @@ function bindGenSummary(){
     if(rec&&rec.rolls&&rec.rolls.length)genFire3D(id==="quirk"?"Quirk":"Trinket",
       [{rolls:rec.rolls,die:rec.die}],`${id==="quirk"?"Quirk":"Trinket"}: ${rec.value}`);
     renderGenSummary();}));
-  host.querySelectorAll("[data-gkidtab]").forEach(b=>b.addEventListener("click",()=>{
-    d.trinketTab=b.dataset.gkidtab;
-    if(d.steps.trinket&&!d.steps.trinket.pick)genRollIdentity(d,"trinket"); // the shown table owns the value
-    renderGenSummary();}));
   ["name","quirk","trinket"].forEach(id=>{
     const inp=$("#gkId_"+id);if(!inp)return;
     inp.addEventListener("change",()=>{genApplyPick(d,id,inp.value);renderGenSummary();});
@@ -2711,12 +2767,19 @@ function bindGenSummary(){
     genApplyPick(d,"trinket",($("#gkId_trinket")||{}).value||"");
     genShowCard();});
 }
-// G1 (D-039): the same full reroll from both screens — a fresh draft on the same crew config.
-// Typed identity does NOT survive: the point of a reroll is a new body, not the old one's name.
+// G1 (D-039), scoped by D-044: Reroll rerolls THIS SCREEN, not the whole modal. On the rolls that
+// is a fresh draft on the same crew config; on the summary it is the identity, which is all that
+// screen owns. A whole new character from the summary is one Back away.
 function bindGenAgain(){
   const R=_genR,again=$("#gkAgain");if(!again)return;
   again.addEventListener("click",()=>{
-    R.draft=genRollAll(genNewDraft(R.ctx));R.editing=null;R.more={};R.phase="steps";renderGenRitual();});
+    if(R.phase==="summary"){
+      const d=R.draft;
+      ["name","quirk","trinket"].forEach(id=>genRollIdentity(d,id));
+      const t=d.steps.trinket;
+      if(t&&t.rolls&&t.rolls.length)genFire3D("Trinket",[{rolls:t.rolls,die:t.die}],"Trinket: "+t.value);
+      renderGenSummary();return;}
+    R.draft=genRollAll(genNewDraft(R.ctx));R.editing=null;R.more={};R.typed=null;R.phase="steps";renderGenRitual();});
 }
 function genShowCard(){
   const R=_genR,d=R.draft;
@@ -2753,18 +2816,21 @@ function renderGenRitual(){
     // abilities at once (the walking per-cell button stays for the one-at-a-time ritual).
     const wholeRoll=rollable&&(active||done)&&!needsSub;
     const info=genStepInfo(d,id);
+    // D-044: roll filters (the D-024 Damaging/All strip) hide behind a filter button in the header
+    const hasTabs=(id==="cantrips"||id==="spells")&&!!genTabStripHTML(d,id);
     return `<div class="gk-step gk-${state}" data-step="${id}">
       <div class="gk-step-h"><span class="gk-step-l">${esc(genStepLabel(d,id))}${info?`<button class="gk-q" data-gkq="${id}" aria-label="How this step works">?</button>`:""}</span>
-        <span class="gk-step-acts">${wholeRoll?(done
+        <span class="gk-step-acts">${id==="stats"&&!genStepDone(d,id)
+          ?`<button class="btn ghost sm gk-typein" data-gktype="1" style="width:auto">${R.typed?"Roll them":"Type them in"}</button>`:""}${hasTabs
+          ?`<button class="gk-filt${R.filt[id]?" gk-filt-on":""}" data-gkfilt="${id}" title="Roll filters" aria-label="Roll filters">${GEN_FILT_ICON}</button>`:""}${wholeRoll?(done
           ?`<button class="gk-roll-ico" data-gkroll="${id}"${id==="stats"?' data-gkall="1"':""} title="Reroll" aria-label="Reroll">${D20_ICON}</button>`
           :`<button class="btn primary sm gk-roll" data-gkroll="${id}"${id==="stats"?' data-gkall="1"':""}>${D20_ICON}<span>${id==="stats"?"Roll all":"Roll"}</span></button>`):""}</span></div>
-      ${id==="stats"?genStatsRowsHTML(d,editing):""}
+      ${id==="stats"?genStatsRowsHTML(d,!!R.typed):""}
       ${id!=="stats"&&(done||s&&s.value!=null)?`<div class="gk-step-v">${genStepValueHTML(d,id)}</div>`:""}
-      ${(id==="cantrips"||id==="spells")&&(tbl||editing)?genTabStripHTML(d,id):""}
+      ${hasTabs&&R.filt[id]?genTabStripHTML(d,id):""}
       ${tbl&&!(isMulti&&editing)?genTableHTML(d,id,tbl):""}
       ${needsSub?genSubEditorHTML(d,id):""}
       ${editing&&id!=="stats"?`<div class="gk-editor">${genEditorHTML(d,id)}</div>`:""}
-      ${editing&&id==="stats"?`<div class="gk-editor">${genEditorHTML(d,"stats")}</div>`:""}
     </div>`;
   }).join("");
   host.innerHTML=`<div class="gk-steps">${rows}</div>
@@ -2840,8 +2906,15 @@ function bindGenRitual(){
   host.querySelectorAll(".gk-ab-in").forEach(inp=>{
     inp.addEventListener("click",e=>e.stopPropagation());
     inp.addEventListener("change",()=>{
-      const s=d.steps.stats;if(!s||!Array.isArray(s.value)||s.value.length!==6)return;
-      const vals=s.value.slice();vals[Number(inp.dataset.gkstat)]=inp.value;
+      const i=Number(inp.dataset.gkstat);
+      const n=inp.value===""?null:Math.round(Number(inp.value));
+      if(n!=null&&(!Number.isFinite(n)||n<3||n>20)){toast("Scores run 3 to 20.");return;}
+      if(R.typed){
+        R.typed[i]=n;
+        if(R.typed.every(x=>x!=null)&&genApplyPick(d,"stats",R.typed))R.typed=null;
+        R.editing=null;renderGenRitual();return;}
+      const st=d.steps.stats;if(!st||!Array.isArray(st.value)||st.value.length!==6)return;
+      const vals=st.value.slice();vals[i]=inp.value;
       if(genApplyPick(d,"stats",vals)){R.editing=null;renderGenRitual();}
       else toast("Scores run 3 to 20.");});});
   host.querySelectorAll("[data-gkopt]").forEach(b=>b.addEventListener("click",()=>{
@@ -2906,8 +2979,7 @@ function bindGenRitual(){
     const id=b.dataset.gkapply;let ok=false;
     const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
     const read=(n,idp)=>Array.from({length:n},(x,i)=>$("#"+idp+i).value);
-    if(id==="stats")ok=genApplyPick(d,"stats",GEN_ABILS.map(a=>$("#gkSt_"+a).value));
-    else if(id==="asi"){const a2=$("#gkAsi2").value,a1=$("#gkAsi1").value;
+    if(id==="asi"){const a2=$("#gkAsi2").value,a1=$("#gkAsi1").value;
       if(a2===a1){toast("Two different abilities needed.");return;}ok=genApplyPick(d,"asi",[a2,a1]);}
     else if(id==="skills"){const v=read(K.skills.n,"gkSk_");
       if(new Set(v).size!==v.length){toast("No duplicate skills.");return;}ok=genApplyPick(d,"skills",v);}
@@ -2922,7 +2994,18 @@ function bindGenRitual(){
       if(new Set(v).size!==2){toast("Two different items needed.");return;}ok=genApplyPick(d,"sundries",v);}
     if(!ok){toast("That choice doesn't fit here.");return;}
     R.editing=null;renderGenRitual();}));
-  const all=$("#gkAll");if(all)all.addEventListener("click",()=>{genRollAll(d);R.editing=null;renderGenRitual();});
+  // D-044: type the scores straight into the grid; a second click hands them back to the dice.
+  const typeBtn=host.querySelector("[data-gktype]");
+  if(typeBtn)typeBtn.addEventListener("click",e=>{
+    e.stopPropagation();
+    if(R.typed){R.typed=null;}
+    else{const st=d.steps.stats;
+      R.typed=GEN_ABILS.map((a,i)=>st&&st.value&&st.value[i]!=null&&(st.pick||i<(st.rolls||[]).length)?st.value[i]:null);
+      delete d.steps.stats;}
+    R.editing=null;renderGenRitual();});
+  host.querySelectorAll("[data-gkfilt]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();const id=b.dataset.gkfilt;R.filt[id]=!R.filt[id];renderGenRitual();}));
+  const all=$("#gkAll");if(all)all.addEventListener("click",()=>{R.typed=null;genRollAll(d);R.editing=null;renderGenRitual();});
   bindGenAgain();
   // The rolls are done: identity is the next screen, not the last step (D-041).
   const next=$("#gkNext");if(next)next.addEventListener("click",()=>{R.phase="summary";renderGenSummary();});
@@ -2931,8 +3014,9 @@ function bindGenRitual(){
 function openGenRitual(ctx){
   const set=ctx.set,ritual=ctx.spMode==="ritual";
   // The draft config is kept so the G1 Reroll can mint a fresh draft on the same crew settings.
-  const dcfg={sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,boonOff:ctx.boonOff,set,counts:ctx.counts||{},tables:ctx.tables||null};
-  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},ctx:dcfg,
+  const dcfg={sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,boonOff:ctx.boonOff,trinketTab:ctx.trinketTab,
+    set,counts:ctx.counts||{},tables:ctx.tables||null};
+  _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},filt:{},typed:null,ctx:dcfg,
     draft:genNewDraft(dcfg),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${ritual?"character":esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
     <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
@@ -2941,7 +3025,8 @@ function openGenRitual(ctx){
   renderGenRitual();
 }
 function openGenRitualDM(a){
-  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,boonOff:a.crew.boonOff,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
+  openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,boonOff:a.crew.boonOff,
+    trinketTab:a.crew.trinketTab,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
     const pc=genIngestPayload(a,payload,"",null);
     _genR=null;closeModal();
     if(pc){toast(esc(pc.name)+" joins the crew.",2200,true);preserveScroll(".adv-detail-body",renderAdvDetail);}
@@ -2979,6 +3064,7 @@ function openCrewSettings(a){
     <div class="gk-cfg gk-cfg-modal">
       <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["locked","ritual"],ritual?"ritual":"locked",["One species for the crew","Rolled in the ritual"])}</label>
       ${ritual?"":`<label class="gk-f"><span>Which</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>`}
+      <label class="gk-f"><span>Trinkets</span>${genSel("crewTrink",["srd","forge"],genCleanTrinketTab(a.crew.trinketTab),["Classic (SRD)","Our own list"])}</label>
       <label class="gk-f"><span>Species boons</span>${genSel("crewBoons",["on","off"],a.crew.boons?"on":"off",["Rolled","Off"])}</label>
       ${a.crew.boons?genBoonListHTML(a):""}
       <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
@@ -2994,6 +3080,7 @@ function openCrewSettings(a){
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
     const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
     sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
+    sel("#crewTrink",v=>{a.crew.trinketTab=genCleanTrinketTab(v);});
     sel("#crewBoons",v=>{a.crew.boons=v==="on";draw();}); // the per-boon list appears with it
     $("#modal").querySelectorAll("[data-crewboon]").forEach(cb=>cb.addEventListener("change",()=>{
       const v=cb.dataset.crewboon,off=genCleanBoonOff(a.crew.boonOff);
@@ -3053,7 +3140,7 @@ function openCrewShareDialog(a){
 // so phones roll over the same lists the DM's library produces (D-012).
 function crewShareCfg(a){
   const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",boons:a.crew.boons!==false,
-    boonOff:genCleanBoonOff(a.crew.boonOff),
+    boonOff:genCleanBoonOff(a.crew.boonOff),trinketTab:genCleanTrinketTab(a.crew.trinketTab),
     set:{...a.crew.set},tables:genSpellTables()};
   // D-030: uploaded packs ride the cfg so phones can roll and derive them (curated packs ship
   // in-code). Phones SANITIZE these at ingestion like every other cloud-read field.
@@ -3242,6 +3329,9 @@ function crewMyRec(){const c=_crew.node&&_crew.node.crew;return (c&&c[_crew.pid]
 function crewTyping(){const a=document.activeElement;return !!(a&&a.id==="crewNotes");}
 function crewResGet(payloadId){try{return JSON.parse(localStorage.getItem("mf_crewres:"+payloadId)||"{}");}catch(e){return {};}}
 function crewResSet(payloadId,k,used){try{const o=crewResGet(payloadId);o[k]=used;localStorage.setItem("mf_crewres:"+payloadId,JSON.stringify(o));}catch(e){}}
+function crewFlavorGet(payloadId){try{const o=JSON.parse(localStorage.getItem("mf_crewfl:"+payloadId)||"null");return (o&&typeof o==="object")?o:null;}catch(e){return null;}}
+function crewFlavorSet(payloadId,k,v){try{const o=crewFlavorGet(payloadId)||{};o[k]=String(v||"").slice(0,90);
+  localStorage.setItem("mf_crewfl:"+payloadId,JSON.stringify(o));}catch(e){}}
 function crewGearGet(payloadId){try{return localStorage.getItem("mf_crewgear:"+payloadId);}catch(e){return null;}}
 function crewGearSet(payloadId,s){try{if(s==null)localStorage.removeItem("mf_crewgear:"+payloadId);else localStorage.setItem("mf_crewgear:"+payloadId,String(s).slice(0,400));}catch(e){}}
 // B286 / D-029 — HP is per-device like the pips, and ALSO reported to the DM (two clamped numbers
@@ -3301,13 +3391,15 @@ function bindCrewScreen(sp,cfg,my){
     if(v.ok){const ch=deriveGenChar(v.clean);
       const host=$("#crewCard");
       if(host)genMountCard(host,ch,{pn:_crew.pn,res:crewResGet(v.clean.id),pips:"live",
-          hp:crewHpGet(v.clean.id)||{cur:ch.hp,tmp:0},hpEdit:true},
+          hp:crewHpGet(v.clean.id)||{cur:ch.hp,tmp:0},hpEdit:true,
+          flavor:crewFlavorGet(v.clean.id),flavorKey:v.clean.id},
         {onRes:(k,used)=>crewResSet(v.clean.id,k,used),
          hpGet:()=>crewHpGet(v.clean.id)||{cur:ch.hp,tmp:0},
          onHp:s=>{crewHpSet(v.clean.id,s);crewPushHp(s);},
          gearGet:()=>{const g=crewGearGet(v.clean.id);return g!=null?g:ch.gear;},
          gearDirty:()=>crewGearGet(v.clean.id)!=null,
-         onGear:s=>crewGearSet(v.clean.id,s)});
+         onGear:s=>crewGearSet(v.clean.id,s),
+         onFlavor:(k,val)=>{crewFlavorSet(v.clean.id,k,val);renderCrewScreen();}});
       const nt=$("#crewNotes");
       if(nt){let t=null;const save=()=>crewNoteSet(v.clean.id,nt.value);
         nt.addEventListener("input",()=>{if(t)clearTimeout(t);t=setTimeout(save,400);});
@@ -3335,7 +3427,8 @@ function crewCounts(){
   return c;
 }
 function crewOpenRitual(sp,cfg,isReplacement){
-  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,boonOff:genCleanBoonOff(cfg.boonOff),set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
+  openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,boonOff:genCleanBoonOff(cfg.boonOff),
+    trinketTab:genCleanTrinketTab(cfg.trinketTab),set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
     const prev=crewMyRec();
     const rec={pn:_crew.pn,deaths:(prev&&Number(prev.deaths)||0)+(isReplacement&&prev&&prev.cur?1:0),cur:payload};
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}.json`,

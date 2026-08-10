@@ -546,7 +546,7 @@ test("roster bridge: the generated PC normalizes with gen payload, class chip, s
   assert.equal(r.ac, r.acDerived);
   assert.equal(r.hp, r.hpDerived);
   assert.equal(r.wisProf, true);
-  assert.ok(r.notes.includes("Conta i gradini"));
+  assert.equal(r.notes, "", "D-044: quirk and trinket no longer squat in the roster's notes field");
   assert.equal(r.player, "Fra");
 });
 

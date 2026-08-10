@@ -4,6 +4,40 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 298 — The B297 review: plausible classes, manual scores, struck-through options, filters (D-044)
+Francesco's review of B297 — the eleven mechanical notes. The other six are planned, not built
+(TASKS "Side quest 2"), because they need naming passes, a spike, or a design round with him.
+- **Two real bugs, both his.** (1) **The plausible-class shortlist was suggesting classes you
+  cannot play**: an 8 WIS character was offered Cleric and Druid because a 14 CON secondary
+  outweighed the primary. The primary now leads (weighted ×10) and any class whose primary is below
+  average drops out of the shortlist entirely; only if that empties does the raw ranking stand
+  ("unless all stats are terrible"). His exact roll now reads Barbarian / Fighter / Paladin.
+  Related: **a class's primary may be a CHOICE** — XPHB's Fighter is "Strength or Dexterity", and
+  judging it on Dexterity alone is what hid the Fighter from a STR 11 character; `prim` takes a
+  list now and the best of them counts. (2) **The ASI's +1 was landing where it did nothing**: it
+  took the first odd score in a fixed order rather than the best one, and never looked past the
+  class's own abilities. It now picks the best odd score and widens the search before settling for
+  one where +1 changes no modifier.
+- **"Type them in" is a header button** beside the roll, and it opens the six REAL score fields —
+  the redundant second row of inputs is gone.
+- **Species features group with the species**: the Human's Versatile origin feat sat three steps
+  down among the background choices; it now resolves with Skillful, before the scores.
+- **Excluded options render struck through** with the reason, disabled: the second origin feat's
+  twin reads "taken", a species skill you already have reads "already yours". (The rule was already
+  right — the two origin feats must differ, on the roll and on the pick. It just wasn't visible.)
+- **Roll filters hide behind a filter button** in the step header, before the roll button.
+- **Packs list their contents** after the name, like kits list their gear.
+- **The trinket list is a crew setting** now ("Classic (SRD)" / "Our own list"), not a per-roll tab.
+- **Reroll is scoped to the screen it is on**: on the rolls it mints a new character; on the
+  summary it rerolls identity only. A whole new body from the summary is one Back away.
+- **Quirk and trinket leave the roster's notes field** — that space belongs to the player — and
+  become editable on the card through the same per-character overlay the gear editor uses
+  (`pc.gen.flavor` DM-side, localStorage on phones). The wire payload is never touched.
+- The identity columns match height.
+- 132 tests green (two updated for the new behaviour: empty notes, scoped reroll). Verified live:
+  his exact roll through the shortlist and the ASI, manual entry, the struck-through feat, the
+  filter button, pack contents, the summary, the card editor, the settings. Zero console errors.
+
 ## Batch 297 — The G-slate: reroll, the closing summary screen, identity tables, per-boon toggles (D-041/042/043)
 Francesco's four follow-ups from B295, all four gates settled in-session before any of it was built.
 - **G1 — Reroll (D-039).** A finished ritual's ghost slot flips from "Roll the rest" to **Reroll**:

@@ -217,14 +217,22 @@ test("G1 (D-039): a finished ritual swaps Roll the rest for Reroll, and Reroll r
     const openAll=!!document.getElementById("gkAll"),openAgain=!!document.getElementById("gkAgain");
     document.getElementById("gkAll").click();               // Roll the rest
     const doneAll=!!document.getElementById("gkAll"),doneAgain=!!document.getElementById("gkAgain");
-    // reach the summary and name it, so we can prove the name does not survive the reroll
+    // D-044: Reroll applies to the CURRENT screen. On the summary it rerolls identity only…
     document.getElementById("gkNext").click();
     const nm=document.getElementById("gkId_name");
     nm.value="Sgrizzo";nm.dispatchEvent(new window.Event("change"));
-    const before=JSON.stringify(_genR.draft.steps),beforeName=_genR.draft.steps.name.value;
-    document.getElementById("gkAgain").click();             // Reroll, from the summary
+    const clsBefore=_genR.draft.steps.cls.value;
+    document.getElementById("gkAgain").click();
+    const idOnly=_genR.draft.steps.cls.value===clsBefore
+      &&_genR.draft.steps.name.value!=="Sgrizzo"
+      &&!!document.querySelector(".gk-sum");
+    // …and on the rolls it is a whole new character.
+    document.getElementById("gkBackSteps").click();
+    document.getElementById("gkId_name");
+    const before=JSON.stringify(_genR.draft.steps),beforeName="Sgrizzo";
+    document.getElementById("gkAgain").click();             // Reroll, from the rolls
     const d=_genR.draft;
-    const out={openAll,openAgain,doneAll,doneAgain,before,beforeName,
+    const out={openAll,openAgain,doneAll,doneAgain,before,beforeName,idOnly,
                backOnSteps:!!document.getElementById("gkNext")&&!document.querySelector(".gk-sum"),
                after:JSON.stringify(d.steps),
                afterName:d.steps.name?d.steps.name.value:null,
@@ -237,9 +245,9 @@ test("G1 (D-039): a finished ritual swaps Roll the rest for Reroll, and Reroll r
   assert.equal(r.openAgain, false, "…and not Reroll");
   assert.equal(r.doneAll, false, "a finished ritual drops Roll the rest");
   assert.equal(r.doneAgain, true, "…and offers Reroll in its place");
-  assert.equal(r.beforeName, "Sgrizzo");
+  assert.equal(r.idOnly, true, "Reroll on the summary rerolls identity only, and stays there (D-044)");
   assert.notEqual(r.after, r.before, "Reroll rolls every step again");
-  assert.equal(r.afterName, null, "typed identity does not survive a reroll — a new body, not the old name");
+  assert.equal(r.afterName, null, "a reroll from the rolls clears identity — a new body, not the old name");
   assert.equal(r.backOnSteps, true, "a reroll from the summary lands back on the rolls");
   assert.equal(r.cls, true, "the fresh draft is rolled through, not left empty");
   assert.equal(r.stats, true);
