@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 305 — The quirk voice goes second person, and G7 closes (D-042 amended)
+
+His call, in four words: *"use you instead of it."*
+
+- **All 100 quirks are now whole second-person sentences.** 33 of them said "it"/"its" — written
+  when the crew was kobolds only, so after B288 the list was calling a human paladin "it".
+- **A pronoun swap alone would not have worked.** The card renders `<b>Quirk:</b> <text>`, and the
+  rows were headless third person ("Counts everything out loud, badly"), whose implied subject is
+  the character. Dropping "you" into that disagrees with the row's own verb ("Names every weapon you
+  pick up"). So every row became a sentence whose subject is the reader: "You count everything out
+  loud, badly." That also matches both trinket lists, which already say "you"/"your".
+- The only "it" left in the list is an **object** pronoun — "then follow it", "then regret it" —
+  which is correct English and stays. The test allows exactly those two shapes and nothing else.
+- Floor added: any row that does not start "You ", or that calls the character "it"/"its"/"itself",
+  fails `test/gen.test.js`. Voices drift silently otherwise.
+- 137 tests green; verified in the live preview through the real card composer — a generated human
+  renders "Quirk: You always take the smallest portion, loudly".
+- **G7 is closed** on his re-read: *"G7 looks ok for now."* The crew side quest is down to G8.
+
 ## Batch 304 — G7 content pass: the mid stops padding, nine species get real phonology, and the lists get pruned (D-042 amended)
 
 His G7 read-through, executed. The headline finding was his: **"mid is the weakest part of the

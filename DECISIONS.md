@@ -513,9 +513,19 @@ of the owner, or plant a quiet HOOK. Six replaced on that test; the ones naming 
 event fail the first job (a fresh level-1 character has no "two dungeons back") and an object with
 an adjective fails all three. **Exactly 20, now pinned by a test** — `genDieFor` gives 20 a clean
 d20 and anything from 21 up degrades to "d100 (reroll over N)".
-**OPEN, not decided:** 33 of the 100 quirks say "it" or "its", written when the crew was kobolds
-only and now describing a human paladin. Raised in the G7 pack, not answered, so **nothing was
-changed** and the fifteen new entries match the existing voice. Ask before rewriting the voice.
+**RESOLVED 2026-08-11 (B305) — the quirk voice is SECOND PERSON.** Raw note: *"use you instead of
+it"*. 33 of the 100 said "it"/"its", written when the crew was kobolds only and, after B288, calling
+a human paladin "it". A pronoun swap alone does not work: the card renders `<b>Quirk:</b> <text>`,
+so a headless third-person phrase ("Counts everything out loud") cannot simply take "you" without
+disagreeing with its own verb. All 100 rows are therefore whole second-person sentences beginning
+"You " — which also matches both trinket lists, already written in "you"/"your". The only "it" left
+is an OBJECT pronoun ("then follow it", "then regret it"), which is correct English and stays.
+Rejected: keeping third person and swapping only the pronoun (ungrammatical against the render
+frame); they/their (works, but the card is read by the player holding it, so second person is the
+shorter and more direct sentence).
+Enforced by: gen.js (`GEN_QUIRKS` + its voice comment) and a floor in `test/gen.test.js` that fails
+any row not starting "You " or calling the character "it".
+**G7 CLOSED 2026-08-11** on his re-read — *"G7 looks ok for now"*.
 Enforced by: gen.js (`genNameClash`, `genRollName`, `GEN_NAME_PROFILES`, `GEN_QUIRKS`,
 `GEN_TRINKETS_X`) · `test/gen.test.js` (seam invariants, mean length per policy, virtue share,
 `NOT_OURS`, the exact-20 floor).

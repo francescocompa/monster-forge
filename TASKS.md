@@ -39,7 +39,7 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
 - [x] **G5 — Grouped steps read as groups** · done B299 (D-045) — category rules; closed D-034's open item.
 - [x] **G6 — Equipment kits get real names** · done B300, reviewed B301 (D-047) — archetype voice, no
   article, sentence case; a floor pins the house rules. His review also fixed two dominated kits.
-- [~] **G7 — Review the name generator and the random lists** · Opus @ high · ~½
+- [x] **G7 — Review the name generator and the random lists** · done B303–B305 · Opus @ high
   **Mechanical half done B303 (D-042 amended):** sampling for the review exposed a real defect, not
   a taste one — the middle piece was a flat 45% coin flip, so 33-66% of seams glued two consonants
   or two vowels together (Vorptch, Ordnrik, Aldrdon). The seam now must alternate, the middle piece
@@ -52,10 +52,10 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   seam policy moved onto the profile because **his call — "mid is the weakest part" — was right**,
   five negation pairs collapsed and ten weak quirks replaced, six trinkets rewritten against his
   three-jobs rule. Elf and aasimar untouched (he signed them off).
-  **⚑ OPEN (raised, not answered): the quirk pronoun** — 33 of 100 say "it", written for a
-  kobold-only crew. Nothing changed pending his voice call.
-  *Done when:* ~~he has signed off species by species and list by list~~ — **his notes are in and
-  executed; this needs one re-read of the new output plus the pronoun call, then it closes.**
+  **B305 closed the last two items:** the quirk voice went SECOND PERSON, all 100 rows ("use you
+  instead of it" — the 33 third-person rows were calling a human paladin "it" after B288); and his
+  re-read came back *"G7 looks ok for now"*.
+  *Done when:* ~~he has signed off species by species and list by list~~ — **done 2026-08-11.**
 - [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
   "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,
   pasting listed elements." Our own trinket/quirk lists become crew-editable content: a manual

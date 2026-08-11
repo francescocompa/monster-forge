@@ -957,6 +957,9 @@ test("D-042: identity tables are whole, and every species can name a character",
       srdFirst:GEN_TRINKETS[0],srdLast:GEN_TRINKETS[99],
       dupT:GEN_TRINKETS.filter((x,i)=>GEN_TRINKETS.indexOf(x)!==i).length,
       dupQ:GEN_QUIRKS.filter((x,i)=>GEN_QUIRKS.indexOf(x)!==i).length,
+      // "it" survives only as an object pronoun ("then follow it") — never as the character
+      qVoice:GEN_QUIRKS.filter(q=>!/^You /.test(q)||/\b(its|itself)\b/i.test(q)
+        ||(/\bit\b/i.test(q)&&!/\b(follow|regret) it$/i.test(q))),
       names,upN:up.size,
       qIn:GEN_QUIRKS.includes(q.value),qDie:q.die,tIn:GEN_TRINKETS.includes(t.value),tDie:t.die,
       t2In:GEN_TRINKETS_X.includes(t2.value),
@@ -970,6 +973,10 @@ test("D-042: identity tables are whole, and every species can name a character",
   assert.equal(r.dupQ, 0);
   // exactly 20, not "at least": genDieFor gives 20 a clean d20 and 21+ falls to "d100 (reroll over N)"
   assert.equal(r.extras, 20, "our own trinket extras must stay a clean d20");
+  // B305: the quirk voice is second person, one whole sentence per row. The list was headless third
+  // person with 33 rows calling the character "it" — fine for a kobold-only crew, wrong once every
+  // species could roll one. A row that drifts back reads as somebody else's character on the card.
+  assert.deepEqual(r.qVoice, [], "a quirk is not second person, or calls the character 'it'");
   assert.equal(r.qDie, 100);
   assert.equal(r.tDie, 100);
   assert.equal(r.qIn, true, "a rolled quirk comes from the table");
