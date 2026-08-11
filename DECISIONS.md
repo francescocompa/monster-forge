@@ -454,3 +454,68 @@ every mid family; no clashing pair is unrepairable) and the rule (every mid the 
 alternates at both joins).
 Note: this is the mechanical half of G7. **The list content — quirks, the 20 extra trinkets, and
 whether each species SOUNDS right — is still his read-through.**
+
+### D-048 — The crew generator stays at level 1; levels 2-3 stay on the table, unscheduled · 2026-08-11 · DECIDED
+**Mechanism:** AskUserQuestion at session start (`/resume`), on the B302 feasibility memo (`GEN_LEVELS.md`).
+**Raw note (verbatim):** "Keep C on the table for later".
+Francesco picked **neither A nor B nor B′**: the generator is not expanded now, and **C (levels 2-3) is
+explicitly NOT rejected** — it stays a live option with no batch count attached. So level 1 remains the
+shipped behaviour by omission rather than by principle, and the memo's reopen condition stands: **a real
+campaign, not a one-shot, starts using the crew.** That is the trigger to bring C back, and nothing else is.
+**What this means in practice:** no `lvl` on the wire, no `pbForLevel`, no progression-aware `fx` successor,
+no subclass packs. The nine level-1 assumptions catalogued in `GEN_LEVELS.md` §1 stay as they are and stay
+documented — the memo is the artifact that makes C cheap to restart, so it does not get archived.
+**Rejected, with reasons (do not re-propose unprompted):**
+- **A — close G9 as a flat no.** Would have thrown away the memo's finding that nothing in the data or the
+  architecture blocks C; he kept the door open deliberately.
+- **B — level 2 only (~2 batches).** 22 features for +1 hit die and a third slot. Not refused on cost; simply
+  not what he wanted to buy, and it would have moved every level-1 assumption for a small gain.
+- **B′ — the numbers-only "hardened crew" dial (~1 batch).** My recommendation, declined. The memo argued
+  the real complaint was fragility; his pick says the premise ("death → next kobold in seconds") is fine as
+  it stands, so there is no fragility to patch. **Don't re-pitch B′ as a fix for a one-shot death rate.**
+**Supersedes:** closes the ⚑ on TASKS G9 (open since B302).
+**Enforced by:** `GEN_LEVELS.md` (kept, not archived) · TASKS.md G9 · D-001's level-1 scope, unchanged.
+
+**AMENDED 2026-08-11 (B304, his G7 read-through): the seam policy, nine rebuilt profiles, and the
+two list rules.** His verdict on the mechanical half was one sentence — **"mid is the weakest part
+of the generator so far"** — and it was right in a way B303 could not see from inside its own fix.
+B303 made a clashing seam take a middle piece UNCONDITIONALLY. That is correct where a name should
+flow (elf, aasimar) and wrong where it should read as a WORD, because the padding is the syllable
+that turns Merric into Merolins and Meepo into Snivurutix.
+**The policy now rides the profile, not the engine:** `seam:"repick"` redraws the SUFFIX on a clash
+instead of padding the join, and `midRate` sets the flourish chance on an already-clean seam
+(default 0.30; the word-like species run 0.03-0.22). The mid stays the last-resort repair, so
+B303's "every clashing pair is repairable" invariant is untouched and still tested.
+**Elf and aasimar keep B303 exactly — he signed both off, so they were not touched.** (The root
+echo I flagged in the aasimar sample, Arilimira/Mirisamira, was left alone for the same reason.)
+**Nine profiles rebuilt on researched phonology, not taste:** kobold short and silly (Meepo/Deekin
+register, mean 7.9 → 6.0) · dragonborn with the Z removed and length down · dwarf measured against
+the **Dvergatal**, the Old Norse catalogue in Völuspá, which named what was "off" — the `-muth`
+suffix and the `oro`/`ara` mids had given dwarves a rolling, soft cadence · **goliath rebuilt inside
+Gol-Kaa's documented THIRTEEN phonetic elements** (a e g i k l m n o p u th v), which the old profile
+mostly ignored (r, z, d, s, b, h, w, x) and which is exactly why it read generic · halfling as
+rustic English diminutives and gnome as bouncy whole words, both with the mid near zero · human
+built from real Germanic dithematic elements (prototheme + deuterotheme) · orc back to one or two
+syllables · **tiefling doing both halves of the D&D convention — an infernal name or a VIRTUE name**
+(one word chosen as a statement of intent, not required to be a virtue; ~a third of rolls, forty
+words that are ours and not the PHB's).
+**New rule, learned the hard way: a stem is only worth keeping if every name it can build is ours.**
+The parts are public-domain Old Norse and orc phonology, which is legitimate — but an ASSEMBLY can
+still land on a name a reader recognises. The live preview rolled **Gandolf** (Gand+olf) and the
+exhaustive guard then caught **Durin** (Dur+in). Both stems dropped; `NOT_OURS` in `test/gen.test.js`
+checks every assemblable name against a blocklist.
+**GEN_QUIRKS:** the five negation pairs collapse to one each (his call — "remove the doubled ones
+where one is the negative of the other"), ten more pruned for thinness or cluster-crowding (three
+sleep, three repeat-speech, three musical; the record-keeping group from 16 of 100 down to 10),
+fifteen new. Still exactly d100.
+**GEN_TRINKETS_X — the rule he set:** every row must hint at a PAST without dating it, show a QUIRK
+of the owner, or plant a quiet HOOK. Six replaced on that test; the ones naming a specific place or
+event fail the first job (a fresh level-1 character has no "two dungeons back") and an object with
+an adjective fails all three. **Exactly 20, now pinned by a test** — `genDieFor` gives 20 a clean
+d20 and anything from 21 up degrades to "d100 (reroll over N)".
+**OPEN, not decided:** 33 of the 100 quirks say "it" or "its", written when the crew was kobolds
+only and now describing a human paladin. Raised in the G7 pack, not answered, so **nothing was
+changed** and the fifteen new entries match the existing voice. Ask before rewriting the voice.
+Enforced by: gen.js (`genNameClash`, `genRollName`, `GEN_NAME_PROFILES`, `GEN_QUIRKS`,
+`GEN_TRINKETS_X`) · `test/gen.test.js` (seam invariants, mean length per policy, virtue share,
+`NOT_OURS`, the exact-20 floor).

@@ -46,8 +46,16 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   is a required repair rather than a flourish, and the parts collection grew to feed it (the
   profiles carried only two of the four mid families). 0 clashes and 0 stutters across 21,505
   combinations; the pool roughly doubled.
-  **Still his:** sample names species by species, the 100 quirks, the 20 extra trinkets.
-  *Done when:* he has signed off species by species and list by list.
+  **His read-through landed 2026-08-11; B304 executed all of it** (D-042 amended again). Nine
+  profiles rebuilt on researched phonology (Dvergatal for dwarf, Gol-Kaa's thirteen phonemes for
+  goliath, Germanic dithematic elements for human, the D&D infernal/virtue split for tiefling), the
+  seam policy moved onto the profile because **his call — "mid is the weakest part" — was right**,
+  five negation pairs collapsed and ten weak quirks replaced, six trinkets rewritten against his
+  three-jobs rule. Elf and aasimar untouched (he signed them off).
+  **⚑ OPEN (raised, not answered): the quirk pronoun** — 33 of 100 say "it", written for a
+  kobold-only crew. Nothing changed pending his voice call.
+  *Done when:* ~~he has signed off species by species and list by list~~ — **his notes are in and
+  executed; this needs one re-read of the new output plus the pronoun call, then it closes.**
 - [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
   "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,
   pasting listed elements." Our own trinket/quirk lists become crew-editable content: a manual
@@ -55,16 +63,18 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   it is licensed content, not user content. Wire boundary: an edited list rides the crew cfg and
   is rebuilt phone-side like every other cfg field (D-007).
   *Done when:* a DM can edit, paste and import a list, phones roll the same one, floors updated.
-- [~] **G9 — Beyond level 1: feasibility** · memo done B302 → `GEN_LEVELS.md` · **⚑ awaiting his pick**
+- [x] **G9 — Beyond level 1: feasibility** · memo done B302 → `GEN_LEVELS.md` · **picked 2026-08-11 → D-048:
+  stay at level 1, keep C on the table.** Not a rejection of C — it is unscheduled, and its reopen condition
+  is the memo's: a real campaign, not a one-shot, starts using the crew. B′ was declined, so don't re-pitch a
+  fragility dial. `GEN_LEVELS.md` stays live (it is what makes C cheap to restart), not archived.
   Measured: 67 class features at levels 2-5, **48 XPHB subclasses** carrying 162 features at 3-5.
   The cliff is level 3 (subclasses), and it is a step, not a slope. `class.json` condenses for prose
   and progressions (`classTableGroups` is machine-readable per level) but NOT for the mechanics the
   card must compute — that needs a progression-aware successor to the species `fx` vocabulary. The
   wire is the easy part (~1 batch; nothing new crosses D-007).
   Options in the memo: **A** stay · **B** level 2 only (~2) · **B′** a numbers-only "hardened crew"
-  dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+). Recommended: B′ if the real problem
-  is fragility, B if it's level 1 itself; C/D are a second crew arc, not a task.
-  *Done when:* ~~the memo exists~~ **and he has picked a direction (including "no").**
+  dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+).
+  *Done when:* ~~the memo exists~~ ~~and he has picked a direction (including "no")~~ — **both done.**
 - [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (D-046) — one shared
   death-save widget on both surfaces; the crew card's HP row is the combat panel inline.
   **T2.8 inherits the widget — don't design a second one.**

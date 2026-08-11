@@ -976,67 +976,82 @@ const GEN_TRINKETS=[
   "A metal urn containing the ashes of a hero"];
 // Our own extras (D-042), written for the crew's world: short lives, borrowed gear, previous owners.
 // Rolled from the same step behind the second tab — never merged into the SRD hundred.
+// Ours, and the only trinkets we are allowed to edit — the SRD hundred beside them is licensed
+// content (D-042). Twenty exactly, because genDieFor gives a d20 a clean face-per-row and anything
+// from 21 up degrades to "d100 (reroll over N)".
+// THE RULE (B305, his G7 read): every row must do one of three jobs — hint at a PAST without
+// dating it, show a QUIRK of the owner, or plant a quiet HOOK. A row that names a specific place or
+// event fails the first job (a fresh level-1 character has no "two dungeons back"), and a row that
+// is only an object with an adjective fails all three. Six rows were replaced on that test.
 const GEN_TRINKETS_X=[
   "A ration tin with the previous owner's name scratched out",
-  "A key that fits a door two dungeons back","A tooth on a string, drilled by hand",
-  "A cracked whistle that only dogs answer","A pouch of teeth that are not yours",
-  "A folded map of a room you have never entered","A cheap ring worn smooth by nervous hands",
+  "A key too ornate for any door you have owned","A tooth on a string, drilled by hand",
+  "A cracked whistle that only dogs answer","A coin from no kingdom anyone can name",
+  "A map with everything labelled except one building","A cheap ring worn smooth by nervous hands",
   "A finger bone marked with three notches","A helmet liner too big for your head",
-  "A letter of introduction addressed to nobody","A candle stub burned at both ends",
+  "A letter of introduction addressed to nobody","A glove for the wrong hand, mended twice",
   "A shard of mirror wrapped in cloth","A collar with the tag filed off",
   "A wooden charm carved by someone who died first","A jar of grave dirt, labelled in a careful hand",
   "A knucklebone die that has never rolled a one","A note promising one favor, signed with a claw mark",
-  "A boot worn through at the sole, kept for luck","A dented flask that still smells of something strong",
+  "A ribbon someone tied on you while you slept",
+  "A whetstone worn into a curve by one repeated angle",
   "A scrap of banner from a company that no longer exists"];
 // QUIRKS (D-042): a mix of original entries and well-worn table staples rewritten in our own words.
 // One short behaviour each, playable at the table, no mechanics.
 const GEN_QUIRKS=[
   "Counts everything out loud, badly","Names every weapon it picks up",
   "Refuses to walk through a door someone else opened","Repeats the last word anyone says",
-  "Keeps a tally of debts owed to it, on its arm","Sleeps standing up","Won't eat anything with a face",
-  "Eats anything with a face, first","Apologizes to doors before forcing them",
-  "Whistles when nervous, which is often","Collects buttons off the dead",
-  "Talks to its shadow when it thinks nobody is listening","Never sits with its back to a room",
-  "Salutes anyone taller","Believes it is invisible when it holds still",
-  "Insists on going last, out of manners","Insists on going first, out of pride",
+  "Keeps a tally of debts owed to it, on its arm","Eats anything with a face, first",
+  "Apologizes to doors before forcing them","Whistles when nervous, which is often",
+  "Collects buttons off the dead","Talks to its shadow when it thinks nobody is listening",
+  "Never sits with its back to a room","Salutes anyone taller",
+  "Believes it is invisible when it holds still","Insists on going first, out of pride",
   "Cracks its knuckles before lying","Hums the same six notes constantly",
   "Refuses to say its own name aloud","Rewords every order it is given, then follows it",
-  "Keeps score of who has saved whom","Won't touch gold with bare hands","Licks unfamiliar objects",
+  "Won't touch gold with bare hands","Licks unfamiliar objects",
   "Flinches at loud noises, then pretends it didn't","Sharpens a blade that is already sharp",
   "Sleeps with one boot on","Argues with corpses","Bows before attacking",
   "Keeps a running list of things that nearly killed it","Distrusts anything that floats",
-  "Always takes the smallest portion, loudly","Steals salt","Narrates its own actions in the third person",
-  "Refuses to cross running water without asking permission","Blames the nearest object when it trips",
-  "Keeps stones in its pockets to feel heavier","Wears a talisman it knows is fake",
-  "Tries to bargain with anything that talks","Won't be the one to open a chest",
+  "Always takes the smallest portion, loudly","Steals salt",
+  "Narrates its own actions in the third person",
+  "Refuses to cross running water without asking permission",
+  "Blames the nearest object when it trips","Keeps stones in its pockets to feel heavier",
+  "Wears a talisman it knows is fake","Tries to bargain with anything that talks",
   "Insists on opening every chest","Whispers when discussing money",
   "Draws maps that nobody else can read","Marks every room it has survived",
-  "Feeds the first bite of every meal to the floor","Speaks to animals as equals, and waits for answers",
+  "Feeds the first bite of every meal to the floor",
+  "Speaks to animals as equals, and waits for answers",
   "Snores loudly enough to be a tactical problem","Fusses over the party's gear before its own",
-  "Keeps its teeth extremely clean","Refuses to be thanked","Names the dead out loud each morning",
+  "Refuses to be thanked","Names the dead out loud each morning",
   "Won't step on cracks, in dungeons or out","Trusts anyone who feeds it",
-  "Wears trophies from fights it lost","Practices its last words","Hoards candle stubs",
-  "Corrects other people's grammar mid-fight","Believes it is the reincarnation of something great",
-  "Rubs a lucky scar before every risk","Will not lie, but omits generously",
-  "Answers questions with questions","Keeps its hood up indoors","Sings while it works, badly and constantly",
-  "Cannot resist a bet","Counts the party every few minutes","Wraps its hands before a fight, ritually",
-  "Refuses to sleep in a bed","Divides all loot into equal piles, obsessively",
-  "Won't fight anything smaller than itself","Keeps its old shackle as a bracelet",
-  "Says grace over fallen enemies","Learns everyone's name and uses it constantly",
+  "Wears trophies from fights it lost","Practices its last words",
+  "Corrects other people's grammar mid-fight",
+  "Believes it is the reincarnation of something great","Rubs a lucky scar before every risk",
+  "Will not lie, but omits generously","Answers questions with questions","Cannot resist a bet",
+  "Wraps its hands before a fight, ritually","Refuses to sleep in a bed",
+  "Divides all loot into equal piles, obsessively","Won't fight anything smaller than itself",
+  "Keeps its old shackle as a bracelet","Says grace over fallen enemies",
   "Never learns a name, uses job titles instead","Tastes the air before entering a room",
   "Keeps a pebble for each friend still living","Hates being touched on the shoulder",
   "Volunteers for everything first, then regrets it","Talks about itself in the plural",
   "Assumes every stranger is an old acquaintance","Won't part with a broken weapon",
   "Insists the walls are listening","Puts its gear in the same order every night",
-  "Keeps a small mirror and checks it often","Refuses to be carried, ever",
-  "Bites its cloak when concentrating","Claims to be allergic to magic","Sneezes near gold",
+  "Refuses to be carried, ever","Bites its cloak when concentrating",
+  "Claims to be allergic to magic","Sneezes near gold",
   "Buries what it cannot carry, and remembers where","Calls every big creature sir",
-  "Repeats instructions back word for word","Trades away useful things for shiny ones",
-  "Keeps a jar of dirt from each floor of a dungeon",
-  "Insists on carrying the light, then walks too fast","Freezes solid at the sight of a rat",
-  "Tells the same story every night, differently each time","Won't wear anything red","Only wears red",
-  "Adopts anything small that survives","Swears elaborate oaths over trivial things",
-  "Keeps a written will, updated weekly"];
+  "Trades away useful things for shiny ones","Insists on carrying the light, then walks too fast",
+  "Freezes solid at the sight of a rat","Tells the same story every night, differently each time",
+  "Only wears red","Adopts anything small that survives",
+  "Swears elaborate oaths over trivial things","Keeps a written will, updated weekly",
+  "Tests every ladder with one foot, twice","Gives directions nobody asked for",
+  "Falls asleep instantly, anywhere, mid-sentence","Assumes the loudest person is in charge",
+  "Explains the plan back to the party, wrongly","Winces at its own jokes",
+  "Takes off its boots to think","Answers for other people before they can",
+  "Says goodbye to rooms","Warms up before a fight like an athlete",
+  "Stops mid-fight to check who is still standing","Cannot whisper, and believes it is whispering",
+  "Volunteers other people for things","Refuses to spend the last coin in its purse",
+  "Keeps talking for a while after everyone has left"
+];
 // NAMES (D-042): built, never copied. A pack carries a sound profile (`names`) and genRollName
 // assembles a name from it, so the pool is infinite and nothing is transcribed from a rulebook.
 // A species with no profile of its own (every uploaded pack) borrows this one.
@@ -1050,62 +1065,131 @@ const GEN_NAME_FALLBACK={
 // Each `mid` list deliberately carries BOTH families: vowel-start/vowel-end pieces (they repair a
 // consonant clash, Vorp+a+tch) and consonant-start/consonant-end pieces (they repair a vowel clash,
 // Nara+th+ael). A profile missing one family can't fix half its seams — see genNameMids.
+//
+// B304 (D-042 amended again, his G7 read-through): the MID was the weakest part of the generator.
+// The B303 seam rule made every clash take a middle piece, which is right for the species whose
+// names are meant to flow (elf, aasimar) and wrong for the ones whose names are meant to read as
+// WORDS — a filler syllable is exactly what turned Merric into Merolins and Meepo into Snivurutix.
+// So a profile now declares its seam policy:
+//   seam:"repick"  — on a clash, draw a DIFFERENT suffix rather than padding the join. Short,
+//                    word-like species use this; the mid survives only as a last-resort repair.
+//   midRate:n      — chance of a mid on an already-clean seam (default 0.30). Word-like species
+//                    run it near zero, so the two-piece name is the norm and not the exception.
+// Elf and aasimar keep the B303 behaviour untouched — he signed both off as working.
 const GEN_NAME_PROFILES={
-  kobold:{pre:["Snik","Krib","Vex","Grik","Taz","Yip","Rek","Skit","Nub","Zik","Chak","Durt","Gnash",
-               "Mek","Rax","Sput","Klik","Vorp","Zag","Trik","Sniv","Grib","Scut","Yark","Rill","Zeb"],
-          mid:["a","i","u","ika","aza","uru","k","tt","zz","rk","sk","ik","ak","urt","ez","ka","zi","tu","gra"],
-          suf:["k","x","tch","zz","rk","nak","rit","sk","p","nix","kit","tix","rup","zash","ak","ix",
-               "ux","irr","ozz","eb"]},
+  // Short and charming, not harsh: the canon kobolds people remember are Meepo, Deekin and Spurt —
+  // rarely more than two syllables, open vowels, a bit silly. The old profile read like a small orc.
+  kobold:{seam:"repick",midRate:0.06,
+          pre:["Meep","Snik","Yip","Blip","Grib","Tup","Wibb","Nib","Zek","Dree","Skit","Pib","Flit",
+               "Murp","Kib","Chit","Nub","Spud","Tik","Squib","Plop","Gnib","Vess","Rill","Dib","Skree",
+               "Wug","Ket","Snuf","Toop"],
+          mid:["i","u","a","ee","k","p","tt","zz","ss","bb","ik","ub","it","ka","po","zi"],
+          suf:["o","ip","it","ee","up","ek","ik","ok","in","ut","az","is","ux","ka","po","ki","na",
+               "az","ub","el"]},
   aasimar:{pre:["Ari","Cael","Eli","Ith","Lum","Nara","Ori","Sera","Thae","Val","Anu","Cere","Ilm",
                 "Miri","Sol","Vesh","Zeru","Aur"],
            mid:["a","e","i","ia","ae","l","n","th","ss","rn","el","ar","in","eth","li","ne","sa","tha"],
            suf:["ael","riel","thos","mira","dan","seth","lia","nor","vion","thiel","sana","din","eth",
                 "ariel","oth","ynn","vera","is"]},
-  dragonborn:{pre:["Arjh","Bhar","Dhaz","Ghesh","Kriv","Med","Nagh","Pand","Rhog","Sham","Thur","Zar",
-                   "Balas","Donaar","Heskan","Kava","Mehen","Torinn","Vrak"],
-              mid:["a","o","aza","r","n","rr","zh","th","ur","ar","esh","ok","ra","ka","zha","tho"],
-              suf:["ash","kar","rax","thar","ndra","zil","vash","kir","rios","axun","esh","urr","onn",
-                   "ath","izar","ok","ux"]},
-  dwarf:{pre:["Bar","Dur","Grum","Thra","Har","Mor","Bal","Kaz","Vond","Ordn","Fal","Gim","Brog",
-              "Dain","Krag","Nal","Rurik","Tork","Ulf","Hjal"],
-         mid:["a","o","u","ara","oro","d","g","rr","nn","th","ur","ar","in","old","ra","du","gi","tho"],
-         suf:["din","rik","grim","bek","dur","nar","muth","kar","li","gar","born","hild","dan","aki",
-              "ok","un","eld","arn"]},
+  // The Z is gone (he counted them). Draconic canon barely uses it — Balasar, Donaar, Ghesh, Kriv,
+  // Medrash, Rhogar, Tarhun, Torinn — and leans on aspirated stops (bh/dh/gh/rh/th) and -ar/-ash/
+  // -inn/-aar endings instead. Two syllables is the target, so the seam repicks.
+  dragonborn:{seam:"repick",midRate:0.08,
+              pre:["Arjh","Bhar","Dhal","Ghesh","Kriv","Medr","Nagh","Pandj","Rhog","Sham","Tarh",
+                   "Thur","Torn","Vrak","Hesk","Kaval","Mehen","Surh","Jher","Balas","Donn","Akr",
+                   "Harr","Perr","Uadj","Nadar"],
+              mid:["a","o","u","ae","r","n","th","rr","dh","ar","un","or","ka","ra","tho","vi"],
+              suf:["an","ar","ash","esh","inn","ur","ath","aar","orn","un","arn","ai","os","ann",
+                   "ir","av","ax","ed"]},
+  // Measured against the Dvergatal, the Old Norse dwarf-catalogue in Völuspá that Tolkien mined for
+  // The Hobbit: hard percussive stops (k/g/d/b/th), short syllables, and -inn/-i/-ur/-ar/-nir/-orn
+  // endings. What was off is now nameable — the old -muth suffix and the oro/ara mids gave dwarves a
+  // rolling, almost soft cadence (Baroromuth, Torkorodur). Both are gone.
+  dwarf:{seam:"repick",midRate:0.10,
+         // "Gand" and "Bal" are gone on purpose: the parts are public-domain Old Norse, but Gand+olf
+         // and Bal+in assemble into names nobody would read as their own kobold's. The guard test
+         // below pins that — a stem is only worth having if every name it can build is ours.
+         pre:["Bif","Bof","Brok","Virf","Dval","Fjal","Frost","Ginn","Glo","Hann","Kil","Dain","Reg",
+              "Krag","Lof","Nal","Nar","Ott","Rekk","Skirf","Thek","Thrain","Thror","Vig","Yng",
+              "Grim","Hjal","Ulf","Ord","Tork","Sind","Bomb","Fund","Nain","Hept","Jar","Vit"],
+         mid:["a","o","u","i","d","g","k","rr","nn","th","ar","in","ur","ki","va","dr"],
+         suf:["in","inn","i","ur","ar","ri","nir","orn","olf","ki","li","din","mir","ok","un","arn",
+              "eld","is","ni","dur","vi"]},
   elf:{pre:["Ae","Ily","Thal","Ny","Sae","Elu","Cael","Ari","Fael","Miri","Sol","Va","Lue","Ithra",
             "Sylv","Ana","Riel","Thea"],
        mid:["ia","ae","ea","io","l","n","th","nd","ss","rr","el","ar","in","ath","la","ri","the","na"],
        suf:["nor","wen","riel","dris","thas","mir","lian","ath","ynn","aeth","sil","ndil","wyn","ara",
             "ion","eth","uin","las"]},
-  gnome:{pre:["Fizz","Bim","Wren","Nack","Zook","Pim","Dab","Griz","Quil","Snor","Tink","Wobb","Jib",
-              "Fenn","Podd","Zan","Murr","Glim"],
-         mid:["a","i","o","ee","idi","b","dd","zz","nn","rk","el","ib","ot","up","bi","zo","na","dee"],
-         suf:["wick","bles","dink","nap","tock","fizzle","bit","gle","zin","nock","obble","izzle",
-              "ick","umble","apper","iddle","ort"]},
-  goliath:{pre:["Kav","Thul","Gar","Ura","Bur","Nal","Ka","Vand","Orn","Zar","Ilo","Mak","Pav","Tharn",
-                "Uth","Vun","Keo","Aza"],
-           mid:["a","u","o","ura","ao","n","r","th","nn","kk","ak","un","or","ath","ka","ma","tho","ru"],
-           suf:["aka","thul","ruk","gan","mak","dor","nak","vok","tha","ok","ath","uma","gorn","eka",
-                "ur","and","iva"]},
-  halfling:{pre:["Bil","Mer","Rosc","Tan","Pip","Dob","Wil","Hild","Cor","Nim","Ando","Ever","Fenn",
-                 "Garr","Lyle","Perr","Sam","Wend"],
-            mid:["a","o","ia","ee","b","d","ll","rr","nn","er","in","ol","ad","be","ri","do","na"],
-            suf:["by","ric","ock","wise","bell","fin","dle","kin","row","ander","ory","ett","ins",
-                 "ade","up","ley","orn"]},
-  human:{pre:["Aldr","Ber","Cas","Dor","Elm","Gart","Hen","Ives","Jor","Kest","Lor","Mira","Ren",
-              "Sabe","Tor","Ansel","Bryn","Cort","Edda","Halle","Idris","Marek","Nell","Ost","Rhea","Vance"],
-         mid:["a","e","i","o","ea","ia","n","r","l","nd","st","rr","an","er","in","ol","ri","ta","le","do"],
-         suf:["ic","na","ran","wyn","don","sel","ther","mund","va","lin","wick","stan","gar","ette",
-              "ora","is","ard","elle","by","win"]},
-  orc:{pre:["Gru","Thok","Mur","Zag","Bruk","Kor","Ur","Sha","Vrak","Ghar","Dush","Grim","Hark","Lug",
-            "Mog","Rok","Snag","Zul"],
-       mid:["a","u","aga","uru","g","k","rr","gg","nk","og","ak","ur","ash","ga","zu","mo","kra"],
-       suf:["mak","gash","thak","nar","zug","rok","dul","gar","ka","ash","urk","oth","grim","ug","ak",
-            "olg","ra"]},
-  tiefling:{pre:["Ak","Bael","Cim","Dam","Eis","Kal","Mor","Nem","Ronw","Zar","Ash","Cael","Dross",
-                 "Iri","Lev","Mal","Sere","Vex"],
+  // The gnome joke is a bouncy WORD (Gimble, Zook, Boddynock), not a mash of three fragments —
+  // Jibidifizzle was the profile losing the joke. Plosives b/p/g/k/t carry it; the diminutive
+  // endings do the rest. The mid is all but switched off.
+  gnome:{seam:"repick",midRate:0.05,
+         pre:["Bod","Bimp","Burg","Dimb","Erk","Fonk","Gerb","Gimb","Glim","Jeb","Kell","Nack","Namf",
+              "Orr","Pim","Quil","Roon","Seeb","Sind","Tink","Warr","Wobb","Zook","Fizz","Dabb","Podd",
+              "Griz","Wren","Snorb","Jib","Fenn","Zan"],
+         mid:["i","o","e","ee","b","dd","k","nn","zz","tt","el","ib","ot","na","dee","po"],
+         suf:["le","ble","ock","ik","ix","en","in","ell","it","ub","o","ee","ott","ick","um","ny",
+              "oodle","ynock","ick","idge"]},
+  // Gol-Kaa, the goliath tongue, is documented as having exactly THIRTEEN phonetic elements:
+  // a e g i k l m n o p u th v. The old profile spent most of its parts outside that inventory
+  // (r, z, d, s, b, h, w, x) — which is why it read generic. Rebuilt inside the thirteen, the
+  // species finally sounds like itself, and the tight inventory is what buys the variety back.
+  goliath:{seam:"repick",midRate:0.22,
+           pre:["Auk","Egl","Gauth","Ilik","Kav","Keo","Lok","Man","Mav","Nal","Paav","Peth","Thal",
+                "Thoth","Uth","Vaun","Ving","Kuop","Ile","Ono","Ekk","Gol","Nim","Vek","Ath","Imu",
+                "Lav","Thug","Pel","Kaan","Muth","Ogl","Ven","Iln"],
+           mid:["a","e","i","o","u","ae","g","k","l","m","n","p","th","v","al","ek","im","on","un","ith"],
+           suf:["an","ath","ali","ovu","uth","al","ek","en","im","on","un","ai","ea","ok","ul","ip",
+                "av","ith","ano","eth","ela","ume","ika","aki","olan","emi","uva"]},
+  // Halfling names are rustic ENGLISH, the register Tolkien built from real West Country naming:
+  // Alton, Merric, Milo, Osborn, Perrin, Roscoe, Wellby. They are diminutives, not compounds, so the
+  // same mashing that hurt the gnome hurt this list twice as much. The mid is effectively off.
+  halfling:{seam:"repick",midRate:0.03,
+            pre:["Alt","And","Cad","Corr","Eld","Err","Finn","Garr","Lind","Lyl","Merr","Mil","Osb",
+                 "Perr","Rosc","Well","Wend","Brand","Call","Kith","Lav","Ned","Sham","Trym","Vern",
+                 "Bil","Dob","Hild","Nim","Pip","Sam","Tan","Wil","Jill","Podd","Rud","Tolm"],
+            mid:["a","o","e","i","b","d","ll","rr","nn","er","in","ol","be","do"],
+            suf:["on","ic","o","y","ie","in","an","by","kin","ric","well","don","ett","ins","ard",
+                 "ow","ley","el","ock","a","yn","wise","bury","cot"]},
+  // "Use more existing names and name parts as bases" — so the parts ARE the real ones: Germanic
+  // dithematic name elements, the system every medieval European name was actually built from.
+  // A prototheme (Ald-, Ber-, Gar-, Os-, Sig-, Wulf-) meets a deuterotheme (-bert, -gar, -mund,
+  // -ric, -wald, -win, -helm, -stan), which is why the output reads like a name and not like fantasy.
+  human:{seam:"repick",midRate:0.10,
+         pre:["Ald","Ans","Bald","Ber","Cas","Cort","Dor","Ead","Edd","Elm","Ev","Gar","Gil","Hall",
+              "Hen","Hild","Idr","Iv","Jor","Kest","Leof","Lor","Mar","Mir","Nell","Os","Rand","Reg",
+              "Ren","Rhe","Sab","Sig","Ther","Tor","Vanc","Wil","Wulf","Beorn","Cuth","Frid","Gund"],
+         mid:["a","e","i","o","ea","n","r","l","nd","st","rr","an","er","in","ol","ri","le","do"],
+         suf:["bert","gar","mund","ric","wald","win","helm","stan","ald","ard","wick","don","ora",
+              "elle","ette","is","a","ic","an","red","frid","mar","wyn","gith","hild","fred",
+              "ulf","rada","burg","laf","tred","gund","swith","and","rich"]},
+  // Tolkien's orc-names and Warhammer's both do the same thing: ONE or two syllables, guttural, done.
+  // Grishnákh and Uglúk are the long ones and they belong to captains. The old profile averaged three
+  // syllables and had settled into a -ga-thak formula, so the parts are shorter and the seam repicks.
+  // The parts are phonology, not transcription — no assembly here reproduces a published name.
+  orc:{seam:"repick",midRate:0.05,
+       pre:["Grash","Skug","Nurg","Zug","Brug","Karg","Thrak","Dush","Mog","Lug","Snag","Urk","Gorb",
+            "Hark","Bolg","Ghaz","Rukh","Vrak","Zul","Grum","Maz","Ozn","Skarn","Yag","Drub","Kresh",
+            "Ulg","Warg","Gnak","Torg"],
+       mid:["a","u","o","g","k","rr","gg","nk","ak","ur","og","ga","zu","kra","na","dr"],
+       suf:["ak","uk","ash","at","ur","og","ug","nak","gash","dur","zug","gar","ok","im","ath","ub",
+            "il","az","urk","olg"]},
+  // The D&D convention, both halves of it (his call): an INFERNAL name — Greek-shaped, -os/-on/-ai
+  // and -a/-eis/-aia, the inheritance you were born with — or a VIRTUE name, one word chosen in
+  // adolescence as a statement of intent. A virtue name is not required to be a virtue; that is the
+  // point of it, and the list below is ours, weighted so roughly a third of tieflings carry one.
+  tiefling:{seam:"repick",virtueRate:0.34,midRate:0.15,
+            virtue:["Ardor","Bitter","Candor","Cinder","Debt","Doubt","Ember","Errand","Ferment",
+                    "Grace","Grief","Kindly","Latch","Mercy","Owing","Patience","Penance","Praise",
+                    "Quiet","Reason","Reckon","Remorse","Ruin","Spite","Truth","Vigil","Welcome",
+                    "Wonder","Zeal","Almost","Enough","Later","Mend","Solace","Thrift","Verdict",
+                    "Wake","Tally","Scruple","Nevermind"],
+            pre:["Ak","Amn","Bar","Bael","Cim","Dam","Ekem","Iad","Kair","Leuc","Mel","Mor","Nem",
+                 "Oris","Phel","Ronw","Sker","Thax","Val","Zeph","Iss","Krev","Mast","Neb","Ash",
+                 "Dross","Iri","Lev"],
             mid:["a","e","i","ae","ia","ero","r","n","th","ss","nd","ar","in","esh","ax","ze","ma","ri","tho"],
-            suf:["mon","zael","reth","ixis","thys","vane","noch","kar","ess","phel","ador","ith",
-                 "axis","une","riel","oth","yx"]}};
+            suf:["os","on","ai","eis","aia","a","eus","ith","akos","enos","ia","or","iel","yx","es",
+                 "an","ax","oth","une","reth"]}};
 function genNameProfile(sp){
   const pack=GEN_SPECIES[sp];
   const p=(pack&&pack.names)||GEN_NAME_PROFILES[sp]||GEN_NAME_FALLBACK;
@@ -1134,18 +1218,33 @@ function genNameMids(p,pre,suf){
   return (p.mid||[]).filter(m=>m&&genNameCls(m.charAt(0))!==a&&genNameCls(m.slice(-1))!==s
     &&!genNameEchoes(pre,m,suf));
 }
+// pre and suf can stutter against each other too (Thur|urr, Donaar|urr) — same echo, different
+// join, so it counts as a clash and takes a repair
+function genNameClash(pre,suf){
+  return genNameCls(String(pre).slice(-1))===genNameCls(String(suf).charAt(0))
+    ||String(pre).slice(-2).toLowerCase()===String(suf).slice(0,2).toLowerCase();
+}
 function genRollName(sp,rng){
   rng=rng||Math.random;
   const p=genNameProfile(sp),pick=a=>a[Math.floor(rng()*a.length)%a.length];
-  const pre=pick(p.pre),suf=pick(p.suf);
-  // pre and suf can stutter against each other too (Thur|urr, Donaar|urr) — same echo, different
-  // join, so it counts as a clash and takes a repair
-  const clash=genNameCls(pre.slice(-1))===genNameCls(suf.charAt(0))
-    ||pre.slice(-2).toLowerCase()===suf.slice(0,2).toLowerCase();
+  // A virtue name is a whole word, not an assembly — the tiefling convention, and the one place
+  // where the generator's answer is "don't assemble anything" (D-042 amended, B304).
+  if(Array.isArray(p.virtue)&&p.virtue.length&&rng()<(p.virtueRate||0))return pick(p.virtue);
+  const pre=pick(p.pre);
+  let suf=pick(p.suf);
+  // SEAM POLICY. A clashing join has two possible repairs: pad it with a middle piece, or draw a
+  // different suffix. Padding is right where the name should flow and wrong where it should read as
+  // a word, because the padding IS the syllable that makes Merric into Merolins. "repick" tries a
+  // clean suffix first and only falls back to the mid when the profile has no clean pairing left,
+  // so the invariant below (every clashing pair is repairable) still carries the safety.
+  if(p.seam==="repick")for(let i=0;i<8&&genNameClash(pre,suf);i++)suf=pick(p.suf);
+  const clash=genNameClash(pre,suf);
   const ok=genNameMids(p,pre,suf);
-  // 0.30, not the old 0.45: a clashing seam now takes a mid unconditionally, so the OPTIONAL branch
-  // has to give ground or every name grows a syllable and the short punchy ones stop appearing.
-  const mid=ok.length&&(clash||rng()<0.30)?pick(ok):"";
+  // Default 0.30, not the old 0.45: a clashing seam takes a mid unconditionally, so the OPTIONAL
+  // branch has to give ground or every name grows a syllable and the short punchy ones stop
+  // appearing. A profile may lower it further — the word-like species run it near zero.
+  const rate=typeof p.midRate==="number"?p.midRate:0.30;
+  const mid=ok.length&&(clash||rng()<rate)?pick(ok):"";
   let n=(pre+mid+suf).replace(/(.)\1{2,}/g,"$1$1");
   n=n.charAt(0).toUpperCase()+n.slice(1);
   return n.slice(0,28);

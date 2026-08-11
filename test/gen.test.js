@@ -968,7 +968,8 @@ test("D-042: identity tables are whole, and every species can name a character",
   assert.equal(r.dupT, 0);
   assert.equal(r.quirks, 100, "quirks are a d100");
   assert.equal(r.dupQ, 0);
-  assert.ok(r.extras >= 20, "our own trinket extras");
+  // exactly 20, not "at least": genDieFor gives 20 a clean d20 and 21+ falls to "d100 (reroll over N)"
+  assert.equal(r.extras, 20, "our own trinket extras must stay a clean d20");
   assert.equal(r.qDie, 100);
   assert.equal(r.tDie, 100);
   assert.equal(r.qIn, true, "a rolled quirk comes from the table");
@@ -986,11 +987,20 @@ test("D-042: identity tables are whole, and every species can name a character",
 
 // D-043 (G4): individual boons switch off. A disabled boon leaves the option table, a die landing
 // on its face resolves to no boon, and the DM's cfg outranks a stale phone's payload — tolerantly.
+//
+// B304: the dwarf parts are public-domain Old Norse (the Dvergatal) and the orc parts are phonology,
+// which is legitimate — but an ASSEMBLY can still land on a name a reader recognises, and a crew PC
+// called Gandolf reads as a bug rather than as theirs. Checked exhaustively over pre × mid × suf,
+// because a one-in-twelve-thousand roll is exactly the one that turns up at the table.
+const NOT_OURS = ["gandalf","gandolf","balin","dwalin","thorin","gimli","bilbo","frodo","legolas",
+                  "ugluk","shagrat","grishnakh","gorbag","lugdush","azog","bolg","durin"];
 test("D-042 (B303): every name seam alternates, and every profile can repair every pair it can roll", () => {
   const r = ev(`(()=>{
     const gap=[],bad=[],thin=[];
     const all=Object.assign({_fallback:GEN_NAME_FALLBACK},GEN_NAME_PROFILES);
     Object.entries(all).forEach(([k,p])=>{
+      // B304: "repick" draws a clean suffix instead of padding, but the mid stays the LAST-RESORT
+      // repair, so the invariants below still apply to every profile without exception.
       // a profile needs BOTH mid families or it can only fix half its seams
       const vv=(p.mid||[]).filter(m=>genNameCls(m.charAt(0))==="v"&&genNameCls(m.slice(-1))==="v").length;
       const cc=(p.mid||[]).filter(m=>genNameCls(m.charAt(0))==="c"&&genNameCls(m.slice(-1))==="c").length;
@@ -1011,12 +1021,36 @@ test("D-042 (B303): every name seam alternates, and every profile can repair eve
       let seed=7;const rng=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
       for(let i=0;i<400;i++){const n=genRollName(k,rng);if(!n||n.length<3)seams.push(k+":"+n);}
     });
-    return {gap,bad,thin,seams,
+    // B304: a "repick" profile exists to keep names SHORT and word-like. If its parts drift long
+    // again the whole point is lost silently, so the mean length is pinned per policy.
+    const lens={};
+    Object.keys(GEN_NAME_PROFILES).forEach(k=>{
+      let seed=11;const rng=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+      let t=0;for(let i=0;i<600;i++)t+=genRollName(k,rng).length;
+      lens[k]=+(t/600).toFixed(2);});
+    // and the tiefling's virtue names are a real branch, not a dead field
+    let seed=5;const vrng=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+    let virt=0;for(let i=0;i<600;i++)if(GEN_NAME_PROFILES.tiefling.virtue.includes(genRollName("tiefling",vrng)))virt++;
+    // exhaustive: every name any profile can physically assemble, against the blocklist
+    const NOT_OURS=${JSON.stringify(NOT_OURS)},famous=[];
+    Object.entries(all).forEach(([k,p])=>{
+      p.pre.forEach(a=>p.suf.forEach(s=>{
+        [""].concat(genNameMids(p,a,s)).forEach(m=>{
+          const n=(a+m+s).replace(/(.)\\1{2,}/g,"$1$1").toLowerCase();
+          if(NOT_OURS.indexOf(n)>=0)famous.push(k+": "+a+"+"+m+"+"+s+" = "+n);});}));});
+    return {gap,bad,thin,seams,lens,famous,virt:virt/600,
+      repick:Object.keys(GEN_NAME_PROFILES).filter(k=>GEN_NAME_PROFILES[k].seam==="repick"),
       parts:Object.entries(all).map(([k,p])=>k+":"+p.pre.length+"/"+(p.mid||[]).length+"/"+p.suf.length)};})()`);
   assert.deepEqual(r.thin, [], "a profile is missing one of the two mid families");
   assert.deepEqual(r.gap, [], "a clashing pre/suf pair has no mid that can repair it");
   assert.deepEqual(r.bad, [], "genNameMids offered a mid that does not alternate at both joins");
   assert.deepEqual(r.seams, [], "a rolled name came out empty or too short");
+  // the nine profiles he asked to shorten and de-mash (G7); elf and aasimar are deliberately not here
+  assert.equal(r.repick.length, 9, "the word-like profiles must keep the repick seam policy");
+  r.repick.forEach(k => assert.ok(r.lens[k] <= 7.6,
+    k + " is a repick profile but its names drifted long again (" + r.lens[k] + ")"));
+  assert.ok(r.virt > 0.25 && r.virt < 0.45, "roughly a third of tieflings carry a virtue name, got " + r.virt);
+  assert.deepEqual(r.famous, [], "a profile can assemble a name that belongs to somebody else");
 });
 
 test("D-043: a switched-off boon leaves the table, the roll, and the wire", () => {

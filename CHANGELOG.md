@@ -4,6 +4,64 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 304 — G7 content pass: the mid stops padding, nine species get real phonology, and the lists get pruned (D-042 amended)
+
+His G7 read-through, executed. The headline finding was his: **"mid is the weakest part of the
+generator so far."** B303 made a clashing seam take a middle piece unconditionally, which is right
+for the species whose names should FLOW and wrong for the ones whose names should read as WORDS —
+the padding is exactly what turned Merric into Merolins and Meepo into Snivurutix.
+
+- **Seam policy, per profile.** `seam:"repick"` draws a different SUFFIX on a clash instead of
+  padding the join; `midRate` sets the chance of a mid on an already-clean seam (default 0.30, the
+  word-like species run 0.03-0.22). The mid survives as the last-resort repair, so B303's invariant
+  — every clashing pair is repairable — still holds for every profile, guard test unchanged.
+  Nine profiles take the new policy. **Elf and aasimar are untouched: he signed both off.**
+- **Kobold** was "too harsh, not enough funny, clumsy or weird". The canon kobolds anyone remembers
+  are Meepo, Deekin and Spurt — rarely two syllables. Mean length 7.9 → 6.0: Blipit, Squibo, Gnibee,
+  Meepup, Plopub.
+- **Dragonborn**: the Z is gone (he counted them), and length is down. Draconic canon barely uses it
+  and leans on aspirated stops and -ar/-ash/-inn/-aar instead: Tarhath, Krivar, Medrax, Rhogash.
+- **Dwarf** — "something off, compare it to established dwarven names". Measured against the
+  Dvergatal, the Old Norse dwarf-catalogue in Völuspá that Tolkien mined for The Hobbit. What was
+  off is now nameable: the `-muth` suffix and the `oro`/`ara` mids gave dwarves a rolling, almost
+  soft cadence (Baroromuth, Torkorodur). Both gone; hard stops and -inn/-i/-ur/-nir/-orn in.
+- **Goliath** — "not enough variety, research languages with similar sounds". The answer was better
+  than a lookalike: **Gol-Kaa is documented as having exactly thirteen phonetic elements** (a e g i
+  k l m n o p u th v). The old profile spent most of its parts OUTSIDE that inventory (r, z, d, s,
+  b, h, w, x), which is precisely why it read generic. Rebuilt inside the thirteen — Eglekai,
+  Muthela, Pethume, Kuopai — and the tight inventory is what buys the variety back.
+- **Halfling and gnome** both "mashed words". Halfling names are rustic ENGLISH diminutives (Alton,
+  Merric, Osborn, Roscoe, Wellby) and the gnome joke is a bouncy WORD (Gimble, Zook, Boddynock), so
+  both run the mid near zero: Roscin, Cadard, Hildie, Alton / Fennick, Gimbock, Seebo, Nackix.
+- **Human** — "use more existing names and name parts as bases". So the parts ARE the real ones:
+  Germanic dithematic elements, prototheme + deuterotheme, the system every medieval European name
+  was actually built from. Eadette, Jorard, Nellald, Cuthedon, Berard.
+- **Orc** — "often too long now, repeated sounds". It had settled into a -ga-thak formula at three
+  syllables. Tolkien's and Warhammer's orcs are both one-or-two and done: Drubash, Zulurk, Grashug.
+- **Tiefling** now does BOTH halves of the D&D convention, his call: an infernal name (Greek-shaped,
+  -os/-on/-ai and -a/-eis/-aia) or a **virtue name**, one word chosen as a statement of intent and
+  not required to be a virtue. Roughly a third carry one; the forty words are ours, not the PHB's.
+- **A guard test, and it earned itself twice.** The dwarf parts are public-domain Old Norse and the
+  orc parts are phonology, both legitimate — but an ASSEMBLY can still land on a name a reader
+  recognises. The live preview rolled **Gandolf** (Gand+olf), and the exhaustive check then caught
+  **Durin** (Dur+in). Both stems are gone. A stem is only worth keeping if every name it can build
+  is ours.
+- **Quirks:** the five negation pairs collapse to one each (he asked), plus ten pruned for being
+  thin or for crowding a cluster — three sleep quirks, three repeat-speech, three musical, and the
+  record-keeping group down from 16 of 100 to 10. Fifteen new entries, still exactly d100.
+- **Trinkets:** six of twenty replaced against the rule he set — every row must hint at a PAST
+  without dating it, show a QUIRK of the owner, or plant a quiet HOOK. Out: "two dungeons back" and
+  "a room you have never entered" (a fresh level-1 character has neither), and the candle stub
+  burned at both ends (an object with an adjective, doing none of the three jobs). The list stays at
+  exactly 20 and the test now pins that — `genDieFor` gives 20 a clean d20 and 21+ falls to
+  "d100 (reroll over N)".
+- Floors: the name test now also pins mean length per seam policy, the virtue-name share, and the
+  blocklist. 137 tests green, verified live end to end (eleven species, three characters composed
+  through the real card composer, wire validation green).
+- **Still open, deliberately: the quirk pronoun.** 33 of the 100 say "it" — written when the crew
+  was kobolds only, and now describing a human paladin. He did not answer that one, so nothing was
+  changed and the new entries match the existing voice.
+
 ## Batch 303 — G7 (part): names get a seam rule, and the parts collection grows to feed it (D-042 amended)
 Sampling the name profiles for G7's review turned up a real defect, not a taste one.
 - **The defect**: the middle piece was a flat 45% coin flip, so half the time `pre` was glued

@@ -120,4 +120,10 @@ that would make it worth it, and it hasn't happened yet.
 
 ## 7 · What I need from Francesco
 
-A direction: **A**, **B**, **B′**, or "keep C on the table for later". G9 is done when that is picked.
+~~A direction: **A**, **B**, **B′**, or "keep C on the table for later". G9 is done when that is picked.~~
+
+**ANSWERED 2026-08-11 → D-048: "keep C on the table for later".** The generator stays at level 1, and
+nothing in §1 changes. C is *unscheduled, not rejected* — so this memo stays live rather than being
+archived: it is the artifact that makes restarting C cheap. **The reopen condition is §6's, unchanged —
+a real campaign, not a one-shot, starts using the crew.** B′ was declined, which also settles the
+premise question: the level-1 death rate is not treated as a problem to patch.
