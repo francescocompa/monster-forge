@@ -4,6 +4,20 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 305b — Docs: /handoff pass — G7 and G9 bodies archived, DEVELOPMENT catches up
+
+No code. Session close-out after B304/B305.
+- `TASKS.md`: the G7 and G9 bodies move to `ARCHIVE.md` behind outcome-line stubs; the side-quest
+  header gets a status line (5 of 6, G8 remains); the stale `origin/main = b5d29f6` claim in the
+  standing line is replaced with a dated ⚑ that B304/B305 are committed but unpushed.
+- `DEVELOPMENT.md` catches up with D-042 as amended: the three assembly rules (seam alternation, the
+  per-profile repair policy, "a stem is only worth keeping if every name it can build is ours"), the
+  tiefling virtue branch, the second-person quirk voice and why the render frame forces it, and the
+  exactly-20 trinket floor with its d20 reason.
+- Handoff memory restamped to `8b72bb0`; two new gotchas recorded — a deduplicated sample is a
+  biased sample (it nearly produced a false finding in B304), and a procedural assembler can land on
+  somebody else's name.
+
 ## Batch 305 — The quirk voice goes second person, and G7 closes (D-042 amended)
 
 His call, in four words: *"use you instead of it."*

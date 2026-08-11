@@ -276,11 +276,21 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
 - **Identity content and its provenance** (D-042): `GEN_TRINKETS` is the SRD 5.2 d100 used VERBATIM
   under CC-BY-4.0 — the attribution in `README.md` and the app's settings Credits card is required,
   don't drop either, and don't edit those hundred rows. `GEN_TRINKETS_X` (ours) sits behind the
-  step's second tab, draft-only like the D-024 spell tabs. `GEN_QUIRKS` is a d100 of original and
-  rewritten entries. Names are PROCEDURAL — `genRollName` assembles one from the pack's sound
-  profile (`GEN_NAME_PROFILES`, or a pack's own `names`), so uploaded species get names too and
-  nothing is transcribed from a rulebook. Rolled identity lands on the draft as an ordinary picked
-  value, so the wire is unchanged.
+  step's second tab, draft-only like the D-024 spell tabs — **exactly 20 rows, pinned by a test**
+  (`genDieFor` gives 20 a clean d20; 21+ degrades to "d100 (reroll over N)"), and every row must hint
+  at a past without dating it, show a quirk of the owner, or plant a hook. `GEN_QUIRKS` is a d100 of
+  original and rewritten entries, **all in SECOND PERSON** ("You count everything out loud, badly") —
+  the card renders `<b>Quirk:</b> <text>`, so a row has to be a sentence whose subject is the reader;
+  a floor fails any row that isn't. Names are PROCEDURAL — `genRollName` assembles one from the
+  pack's sound profile (`GEN_NAME_PROFILES`, or a pack's own `names`), so uploaded species get names
+  too and nothing is transcribed from a rulebook. **Three rules govern the assembly (B303–B304):**
+  the SEAM must alternate consonant/vowel; each profile chooses how to repair a clash —
+  `seam:"repick"` draws another suffix (the word-like species) versus padding with a mid, with
+  `midRate` setting the flourish chance on a clean seam; and **a stem is only worth keeping if every
+  name it can build is ours** (`NOT_OURS` in `test/gen.test.js` checks exhaustively — `Gand`+`olf`
+  and `Dur`+`in` were both caught this way). Tiefling additionally carries `virtue`/`virtueRate`: a
+  whole-word virtue name instead of an assembly, per the D&D convention. Rolled identity lands on the
+  draft as an ordinary picked value, so the wire is unchanged.
 - **Boons are optional twice over** (D-035 whole-table, D-043 per-boon): crew settings lists the
   individual boons a pack ships; a switched-off one leaves the option table and resolves to the
   table's no-boon entry if the die lands on its face. `boonOff` rides the share cfg, is rebuilt

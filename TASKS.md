@@ -31,7 +31,7 @@ G1 Reroll · G2 the closing identity summary screen (D-041) · G3 quirks/trinket
 (D-042) · G4 per-boon toggles (D-043). All shipped, all gates settled in-session.
 → archived 2026-08-10: the four task bodies — `ARCHIVE.md#tasks-side-quest-1-crew-generator-follow-ups`
 
-## Side quest 2 — crew generator, the B298 review slate (planned 2026-08-10)
+## Side quest 2 — crew generator, the B298 review slate · ⏳ 5 of 6 done, **G8 is all that remains**
 
 Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
 asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
@@ -39,23 +39,12 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
 - [x] **G5 — Grouped steps read as groups** · done B299 (D-045) — category rules; closed D-034's open item.
 - [x] **G6 — Equipment kits get real names** · done B300, reviewed B301 (D-047) — archetype voice, no
   article, sentence case; a floor pins the house rules. His review also fixed two dominated kits.
-- [x] **G7 — Review the name generator and the random lists** · done B303–B305 · Opus @ high
-  **Mechanical half done B303 (D-042 amended):** sampling for the review exposed a real defect, not
-  a taste one — the middle piece was a flat 45% coin flip, so 33-66% of seams glued two consonants
-  or two vowels together (Vorptch, Ordnrik, Aldrdon). The seam now must alternate, the middle piece
-  is a required repair rather than a flourish, and the parts collection grew to feed it (the
-  profiles carried only two of the four mid families). 0 clashes and 0 stutters across 21,505
-  combinations; the pool roughly doubled.
-  **His read-through landed 2026-08-11; B304 executed all of it** (D-042 amended again). Nine
-  profiles rebuilt on researched phonology (Dvergatal for dwarf, Gol-Kaa's thirteen phonemes for
-  goliath, Germanic dithematic elements for human, the D&D infernal/virtue split for tiefling), the
-  seam policy moved onto the profile because **his call — "mid is the weakest part" — was right**,
-  five negation pairs collapsed and ten weak quirks replaced, six trinkets rewritten against his
-  three-jobs rule. Elf and aasimar untouched (he signed them off).
-  **B305 closed the last two items:** the quirk voice went SECOND PERSON, all 100 rows ("use you
-  instead of it" — the 33 third-person rows were calling a human paladin "it" after B288); and his
-  re-read came back *"G7 looks ok for now"*.
-  *Done when:* ~~he has signed off species by species and list by list~~ — **done 2026-08-11.**
+- [x] **G7 — Review the name generator and the random lists** · done B303–B305 (D-042 amended twice)
+  The seam rule (B303), then his full read-through executed (B304): nine profiles rebuilt on
+  researched phonology, the seam policy moved onto the profile because **his call — "mid is the
+  weakest part" — was right**, quirks and trinkets pruned. B305 took the quirk voice to second
+  person. Elf and aasimar were never touched — he signed both off. Closed on his re-read.
+  → archived 2026-08-11: the full body — `ARCHIVE.md#tasks-g7-name-generator-and-random-lists`
 - [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
   "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,
   pasting listed elements." Our own trinket/quirk lists become crew-editable content: a manual
@@ -63,26 +52,20 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   it is licensed content, not user content. Wire boundary: an edited list rides the crew cfg and
   is rebuilt phone-side like every other cfg field (D-007).
   *Done when:* a DM can edit, paste and import a list, phones roll the same one, floors updated.
-- [x] **G9 — Beyond level 1: feasibility** · memo done B302 → `GEN_LEVELS.md` · **picked 2026-08-11 → D-048:
-  stay at level 1, keep C on the table.** Not a rejection of C — it is unscheduled, and its reopen condition
-  is the memo's: a real campaign, not a one-shot, starts using the crew. B′ was declined, so don't re-pitch a
-  fragility dial. `GEN_LEVELS.md` stays live (it is what makes C cheap to restart), not archived.
-  Measured: 67 class features at levels 2-5, **48 XPHB subclasses** carrying 162 features at 3-5.
-  The cliff is level 3 (subclasses), and it is a step, not a slope. `class.json` condenses for prose
-  and progressions (`classTableGroups` is machine-readable per level) but NOT for the mechanics the
-  card must compute — that needs a progression-aware successor to the species `fx` vocabulary. The
-  wire is the easy part (~1 batch; nothing new crosses D-007).
-  Options in the memo: **A** stay · **B** level 2 only (~2) · **B′** a numbers-only "hardened crew"
-  dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+).
-  *Done when:* ~~the memo exists~~ ~~and he has picked a direction (including "no")~~ — **both done.**
+- [x] **G9 — Beyond level 1: feasibility** · memo B302 → `GEN_LEVELS.md` · picked 2026-08-11 → **D-048**
+  **Stay at level 1; C (levels 2-3) is UNSCHEDULED, not rejected.** Reopen condition, and the only
+  one: a real campaign rather than a one-shot starts using the crew. B′ was declined, so don't
+  re-pitch a fragility dial. **`GEN_LEVELS.md` stays live, not archived** — it is what makes C cheap
+  to restart.
+  → archived 2026-08-11: the measurements — `ARCHIVE.md#tasks-g9-beyond-level-1`
 - [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (D-046) — one shared
   death-save widget on both surfaces; the crew card's HP row is the combat panel inline.
   **T2.8 inherits the widget — don't design a second one.**
 
 ---
 
-Standing from this arc: ~~push + deploy~~ **done 2026-08-10 — B292–B298 are live** (`origin/main` =
-`b5d29f6`). Open taste items: leftover coin for cheap-kit casters (D-040), and whether the d100
+Standing from this arc: ~~push + deploy~~ **done 2026-08-10 — B292–B298 are live.** ⚑ B304 and B305
+are committed but NOT pushed (2026-08-11, owner: Francesco). Open taste items: leftover coin for cheap-kit casters (D-040), and whether the d100
 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---

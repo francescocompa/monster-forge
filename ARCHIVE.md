@@ -3550,3 +3550,44 @@ and points at DEVELOPMENT.md, which owns the schema itself.
   Floor: `test/concentration.test.js`. (P2.3)
 
 ---
+
+
+## TASKS: G7, name generator and random lists
+
+> Archived 2026-08-11 from `TASKS.md`. Shipped B303–B305; outcome line kept in TASKS.
+
+- [x] **G7 — Review the name generator and the random lists** · done B303–B305 · Opus @ high
+  **Mechanical half done B303 (D-042 amended):** sampling for the review exposed a real defect, not
+  a taste one — the middle piece was a flat 45% coin flip, so 33-66% of seams glued two consonants
+  or two vowels together (Vorptch, Ordnrik, Aldrdon). The seam now must alternate, the middle piece
+  is a required repair rather than a flourish, and the parts collection grew to feed it (the
+  profiles carried only two of the four mid families). 0 clashes and 0 stutters across 21,505
+  combinations; the pool roughly doubled.
+  **His read-through landed 2026-08-11; B304 executed all of it** (D-042 amended again). Nine
+  profiles rebuilt on researched phonology (Dvergatal for dwarf, Gol-Kaa's thirteen phonemes for
+  goliath, Germanic dithematic elements for human, the D&D infernal/virtue split for tiefling), the
+  seam policy moved onto the profile because **his call — "mid is the weakest part" — was right**,
+  five negation pairs collapsed and ten weak quirks replaced, six trinkets rewritten against his
+  three-jobs rule. Elf and aasimar untouched (he signed them off).
+  **B305 closed the last two items:** the quirk voice went SECOND PERSON, all 100 rows ("use you
+  instead of it" — the 33 third-person rows were calling a human paladin "it" after B288); and his
+  re-read came back *"G7 looks ok for now"*.
+  *Done when:* ~~he has signed off species by species and list by list~~ — **done 2026-08-11.**
+
+
+## TASKS: G9, beyond level 1
+
+> Archived 2026-08-11 from `TASKS.md`. Closed by D-048; the memo itself (`GEN_LEVELS.md`) stays LIVE.
+
+- [x] **G9 — Beyond level 1: feasibility** · memo done B302 → `GEN_LEVELS.md` · **picked 2026-08-11 → D-048:
+  stay at level 1, keep C on the table.** Not a rejection of C — it is unscheduled, and its reopen condition
+  is the memo's: a real campaign, not a one-shot, starts using the crew. B′ was declined, so don't re-pitch a
+  fragility dial. `GEN_LEVELS.md` stays live (it is what makes C cheap to restart), not archived.
+  Measured: 67 class features at levels 2-5, **48 XPHB subclasses** carrying 162 features at 3-5.
+  The cliff is level 3 (subclasses), and it is a step, not a slope. `class.json` condenses for prose
+  and progressions (`classTableGroups` is machine-readable per level) but NOT for the mechanics the
+  card must compute — that needs a progression-aware successor to the species `fx` vocabulary. The
+  wire is the easy part (~1 batch; nothing new crosses D-007).
+  Options in the memo: **A** stay · **B** level 2 only (~2) · **B′** a numbers-only "hardened crew"
+  dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+).
+  *Done when:* ~~the memo exists~~ ~~and he has picked a direction (including "no")~~ — **both done.**
