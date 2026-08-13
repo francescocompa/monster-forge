@@ -746,8 +746,11 @@ function genNewDraft(cfg){
   return {v:2,sp,spRitual:cfg.spMode==="ritual", // D-031: species rides the ritual when the crew says so
           boons:cfg.boons!==false,               // D-035: optional species boon tables, crew setting
           boonOff:genCleanBoonOff(cfg.boonOff),   // D-043: and individual boons the crew switched off
-          trinketTab:genCleanTrinketTab(cfg.trinketTab), // D-044: which trinket list the crew rolls
-          set:{stat:cfg.set&&cfg.set.stat==="4d6"?"4d6":"3d6",
+          spOff:genCleanBoonOff(cfg.spOff),clsOff:genCleanBoonOff(cfg.clsOff), // D-051: pool narrowing
+          // D-049: the resolved flavour tables, so the draft never looks a list id up mid-ritual
+          lists:{quirk:genListRowsFor("quirk",cfg.lists),trinket:genListRowsFor("trinket",cfg.lists)},
+          set:{stat:genCleanStat(cfg.set&&cfg.set.stat),
+                      safe:!!(cfg.set&&cfg.set.safe),      // D-051: hopeless sets redealt
                       mode:cfg.set&&cfg.set.mode==="chaos"?"chaos":"plausible",
                       asi:!(cfg.set&&cfg.set.asi===false),
                       gold:!!(cfg.set&&cfg.set.gold),          // D-038: restricted starting gold
@@ -797,16 +800,13 @@ function genSpTablesOf(d){
 // have anything here — today that is the kobold — so the list is absent for everyone else rather
 // than showing an empty box.
 function genBoonListHTML(a){
-  const keys=a.crew.spMode==="ritual"?Object.keys(GEN_SPECIES):[a.crew.sp];
-  const off=genCleanBoonOff(a.crew.boonOff);
-  const rows=keys.flatMap(k=>genBoonEntries(k).map(e=>({k,e})));
+  const rows=genCrewBoonRows(a).rows; // the ONE definition of the crew's boon set (B307)
   if(!rows.length)return "";
-  const seen=new Set();
-  return `<div class="gk-boonlist">${rows.filter(({e})=>{
-    const v=String(e.value);if(seen.has(v))return false;seen.add(v);return true;}).map(({k,e})=>{
+  const off=genCleanBoonOff(a.crew.boonOff),multi=a.crew.spMode==="ritual";
+  return `<div class="gk-boonlist">${rows.map(({k,e})=>{
     const v=String(e.value);
     return `<label class="gk-boonrow"><input type="checkbox" data-crewboon="${esc(v)}"${off.includes(v)?"":" checked"}>
-      <span>${esc(e.label)}</span>${keys.length>1?`<span class="gk-dim">${esc(GEN_SPECIES[k].label)}</span>`:""}</label>`;
+      <span>${esc(e.label)}</span>${multi?`<span class="gk-dim">${esc(GEN_SPECIES[k].label)}</span>`:""}</label>`;
   }).join("")}</div>`;
 }
 // G4 (D-043): boons can also be switched off ONE AT A TIME. The crew keeps a list of the boon
@@ -818,6 +818,21 @@ function genBoonOff(d){return Array.isArray(d.boonOff)?d.boonOff:[];}
 function genCleanBoonOff(v){
   if(!Array.isArray(v))return [];
   return [...new Set(v.filter(x=>typeof x==="string"||typeof x==="number").map(x=>String(x).slice(0,40)))].slice(0,40);
+}
+// B308 (D-051): the Random-mode species pool and the class pool narrow boon-style — disabled ids
+// ride the cfg (genCleanBoonOff is the shared cleaner) and a filtered pool NEVER empties: all-off
+// falls back to the full table, the same never-empty convention as genAfford. Ingestion REJECTS
+// what the pool excludes — species and class are the character's identity, so the D-031
+// locked-species stance applies, not D-043's drop-to-no-boon (there is no "no-class" to drop to).
+function genSpeciesPoolFor(off){
+  const o=genCleanBoonOff(off),all=Object.keys(GEN_SPECIES);
+  const pool=all.filter(k=>!o.includes(k));
+  return pool.length?pool:all;
+}
+function genClassPoolFor(off){
+  const o=genCleanBoonOff(off);
+  const pool=GEN_CLASS_LIST.filter(c=>!o.includes(c));
+  return pool.length?pool:GEN_CLASS_LIST;
 }
 function genBoonEntries(sp){
   const t=((GEN_SPECIES[sp]&&GEN_SPECIES[sp].tables)||[]).filter(x=>x.boon);
@@ -1257,13 +1272,88 @@ function genRollName(sp,rng){
   n=n.charAt(0).toUpperCase()+n.slice(1);
   return n.slice(0,28);
 }
-// The trinket step rolls on one of two tables (D-042), chosen by a toggle that rides the DRAFT only
-// — never the wire, exactly like the D-024 spell tabs.
-function genTrinketTab(d){return d.trinketTab==="forge"?"forge":"srd";}
-function genCleanTrinketTab(v){return v==="forge"?"forge":"srd";}
+// ── Flavour lists (D-049) ────────────────────────────────────────────────────
+// Quirks and trinkets roll on a LIST, and a list is the WHOLE table: the crew picks one per kind
+// and it replaces, never extends. The shipped lists are read-only — GEN_TRINKETS is SRD 5.2 used
+// verbatim under CC-BY-4.0 (D-042) and GEN_TRINKETS_X is pinned at 20 rows by a test — so a DM edit
+// Duplicates instead of mutating. Custom lists live INSTALL-WIDE in state.flavLists, so a house
+// table is typed once and every later crew can pick it; a crew stores only the id, and the share
+// cfg carries the resolved rows (phones have no library to look an id up in).
+const GEN_LIST_KINDS=["quirk","trinket"];
+const GEN_LIST_LABEL={quirk:"Quirks",trinket:"Trinkets"};       // the crew-settings row
+const GEN_LIST_TITLE={quirk:"Quirk lists",trinket:"Trinket lists"}; // the manager's own title
+const GEN_LIST_DEFAULT={quirk:"forge",trinket:"srd"};
+const GEN_LIST_MAX=100,GEN_LIST_ROWCAP=90,GEN_LIST_NAMECAP=28;
+function genListBuiltin(kind){
+  return kind==="quirk"
+    ?[{id:"forge",n:"Our own list",rows:GEN_QUIRKS,locked:true}]
+    :[{id:"srd",n:"Classic (SRD)",rows:GEN_TRINKETS,locked:true},
+      {id:"forge",n:"Our own list",rows:GEN_TRINKETS_X,locked:true}];
+}
+function genListCustom(kind){return (state.flavLists||[]).filter(L=>L&&L.kind===kind);}
+function genListAll(kind){return genListBuiltin(kind)
+  .concat(genListCustom(kind).map(L=>({id:L.id,n:L.n,rows:L.rows,locked:false})));}
+function genListById(kind,id){return genListAll(kind).find(L=>L.id===id)||null;}
+// A picked id can dangle — the list may live on another device, or have been deleted since. Every
+// read falls back to the kind's shipped default rather than emptying the step.
+function genListOr(kind,id){return genListById(kind,id)||genListById(kind,GEN_LIST_DEFAULT[kind]);}
+// ── Cleaners. The store is local, but a list also arrives over a world-writable share, so rows are
+// cleaned the same way in both directions (same shape as the identity fields on the wire).
+function genCleanListRow(s){return String(s==null?"":s).replace(/[<>]/g,"").replace(/\s+/g," ").trim().slice(0,GEN_LIST_ROWCAP);}
+function genCleanListRows(v){
+  if(!Array.isArray(v))return [];
+  const out=[];v.forEach(x=>{const s=genCleanListRow(x);if(s)out.push(s);});
+  return out.slice(0,GEN_LIST_MAX);
+}
+function genCleanListName(s){return String(s==null?"":s).replace(/[<>]/g,"").replace(/\s+/g," ").trim().slice(0,GEN_LIST_NAMECAP);}
+function genCleanFlavStore(v){
+  if(!Array.isArray(v))return [];
+  const seen=new Set(),out=[];
+  v.forEach(L=>{
+    if(!L||typeof L!=="object"||!GEN_LIST_KINDS.includes(L.kind))return;
+    const id=String(L.id||"").slice(0,32);if(!id||seen.has(id))return;
+    const rows=genCleanListRows(L.rows);if(!rows.length)return;
+    seen.add(id);out.push({id,kind:L.kind,n:genCleanListName(L.n)||"Untitled list",rows});
+  });
+  return out;
+}
+// The crew's picks. Migrates D-044's trinketTab ("srd"|"forge"), which this replaces.
+function genCleanCrewLists(v,legacyTab){
+  const out={};
+  GEN_LIST_KINDS.forEach(k=>{
+    const raw=v&&typeof v==="object"?v[k]:null;
+    out[k]=typeof raw==="string"&&raw?raw.slice(0,32)
+      :(k==="trinket"&&legacyTab==="forge"?"forge":GEN_LIST_DEFAULT[k]);
+  });
+  return out;
+}
+// On the wire: a shipped list is its id (phones have the rows in code), a custom one is its rows.
+function genListForCfg(kind,id){
+  const L=genListById(kind,id);
+  if(!L)return GEN_LIST_DEFAULT[kind];
+  return L.locked?L.id:{n:L.n,rows:L.rows};
+}
+// Phone side — the share is world-writable, so cfg lists are hostile data like /refs (D-007).
+function crewCleanLists(v){
+  const out={};
+  GEN_LIST_KINDS.forEach(k=>{
+    const raw=v&&typeof v==="object"?v[k]:null;
+    if(raw&&typeof raw==="object"&&Array.isArray(raw.rows)){
+      const rows=genCleanListRows(raw.rows);
+      out[k]=rows.length?{n:genCleanListName(raw.n)||"Custom list",rows}:GEN_LIST_DEFAULT[k];
+    }else out[k]=typeof raw==="string"&&genListById(k,raw)?raw:GEN_LIST_DEFAULT[k];
+  });
+  return out;
+}
+// ctx.lists → the rows a draft rolls on. Takes both shapes: DM-side ids, phone-side resolved rows.
+function genListRowsFor(kind,v){
+  const raw=v&&typeof v==="object"?v[kind]:null;
+  if(raw&&typeof raw==="object"&&Array.isArray(raw.rows)&&raw.rows.length)return raw.rows;
+  return genListOr(kind,typeof raw==="string"?raw:GEN_LIST_DEFAULT[kind]).rows;
+}
 function genIdList(d,id){
-  if(id==="quirk")return GEN_QUIRKS;
-  return genTrinketTab(d)==="forge"?GEN_TRINKETS_X:GEN_TRINKETS;
+  return (d.lists&&Array.isArray(d.lists[id])&&d.lists[id].length)?d.lists[id]
+    :genListOr(id,GEN_LIST_DEFAULT[id]).rows;
 }
 // Identity rolls (D-041/D-042). Name is generated; quirk and trinket roll a real die on a real
 // table. All three still land on the draft as ordinary picked values, so the wire is unchanged.
@@ -1407,9 +1497,9 @@ function genAsiDefault(d){
 // leads and a strong secondary can no longer carry a class whose primary is a dump stat (an 8 WIS
 // cleric was reaching the shortlist off a 14 CON). Classes with a below-average primary drop out
 // entirely; if that leaves nobody, the ranking stands on its own (all stats are terrible).
-function genClassShortlist(scores,counts){
+function genClassShortlist(scores,counts,pool){
   const mod=s=>Math.floor((s-10)/2);
-  const rank=GEN_CLASS_LIST.map(c=>{const k=GEN_CLASSES[c];
+  const rank=(pool||GEN_CLASS_LIST).map(c=>{const k=GEN_CLASSES[c];
       const prim=Math.max(...genPrimAbils(k).map(a=>mod(scores[a])));
       return {c,prim,score:prim*10+mod(scores[k.sec])-2*Math.max(0,(counts&&counts[c]||0)-2)};})
     .sort((a,b)=>b.score-a.score||(a.c<b.c?-1:1));
@@ -1422,6 +1512,20 @@ function genClassShortlist(scores,counts){
 function genStatTotal(dice,method){
   const s=[...dice].sort((a,b)=>a-b);
   return method==="4d6"?s[1]+s[2]+s[3]:dice.reduce((a,b)=>a+b,0);
+}
+// ── The score methods. 4d6-drop-lowest is the crew default; the XPHB standard array is DEALT
+// rather than rolled: each ability draws one of the REMAINING array values on a d6 (reroll over
+// what's left) — the same shrinking-table convention as every other roll, so the wire carries six
+// one-face rolls and the value column replays deterministically from them.
+const GEN_STD_ARRAY=[15,14,13,12,10,8];
+// D-051: the classic hopeless-set convention — no score of 14+ or total modifiers +0 or less.
+function genHopeless(values){
+  return Math.max(...values)<14||values.reduce((t,v)=>t+Math.floor((v-10)/2),0)<=0;
+}
+function genCleanStat(v){return v==="3d6"||v==="array"?v:"4d6";}
+function genArrayValues(rolls){
+  const rem=[...GEN_STD_ARRAY];
+  return rolls.map(r=>rem.splice(r[0]-1,1)[0]);
 }
 // N distinct rolls over a plain list (die = next die over its length, reroll dupes/overshoot).
 // The die is stamped on the record so the UI can hand the raw faces to the 3D dice (D-015).
@@ -1473,18 +1577,35 @@ function genRollStep(d,id,rng){
   const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,T=genTablesOf(d);
   if(id==="stats"){
     // One ability per call (D-011: individual rolls, dice on show). Rolls land in order STR→CHA.
-    const n=d.set.stat==="4d6"?4:3;
     const st=d.steps.stats&&!d.steps.stats.pick?d.steps.stats:(d.steps.stats={rolls:[],value:[]});
     if(st.pick)return st;
     if(st.rolls.length<6){
-      st.rolls.push(Array.from({length:n},()=>genRollDie(rng,6)));
-      st.value=st.rolls.map(r=>genStatTotal(r,d.set.stat));
+      if(d.set.stat==="array"){
+        // Deal the standard array: a d6 over the remaining values, one per ability.
+        const left=GEN_STD_ARRAY.length-st.rolls.length;
+        st.rolls.push([genRollTable(rng,6,left,null)]);
+        st.value=genArrayValues(st.rolls);
+      }else{
+        const n=d.set.stat==="4d6"?4:3;
+        st.rolls.push(Array.from({length:n},()=>genRollDie(rng,6)));
+        st.value=st.rolls.map(r=>genStatTotal(r,d.set.stat));
+        // D-051 safety net: once the sixth lands, a hopeless set (no 14+, or mods summing to +0
+        // or less) is redealt whole. The final set is what the wire carries and the dice replay.
+        if(st.rolls.length===6&&d.set.safe){
+          let re=0;
+          while(re<25&&genHopeless(st.value)){
+            st.rolls=Array.from({length:6},()=>Array.from({length:n},()=>genRollDie(rng,6)));
+            st.value=st.rolls.map(r=>genStatTotal(r,d.set.stat));re++;
+          }
+          if(re)st.redeals=re;
+        }
+      }
     }
     if(st.rolls.length<6)st.partial=true;else delete st.partial;
     return st;
   }
   if(id==="species"){
-    const pool=genSpeciesPool(),span=genSpanFor(pool.length);
+    const pool=genSpeciesPoolFor(d.spOff),span=genSpanFor(pool.length); // D-051: the crew's pool
     const r=genRollTable(rng,span.die,span.reroll?pool.length:span.die,null);
     const v=pool[span.reroll?r-1:genSpanHit(span,r)];
     d.steps.species={rolls:[r],value:v,die:span.die};
@@ -1493,8 +1614,12 @@ function genRollStep(d,id,rng){
   }
   if(id==="cls"){
     const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=d.steps.stats&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
-    if(d.set.mode==="chaos"){const r=genRollDie(rng,12);d.steps.cls={rolls:[r],value:GEN_CLASS_LIST[r-1],die:12};}
-    else{const top3=genClassShortlist(scores,d.counts);const span=genSpanFor(3);const r=genRollDie(rng,span.die);
+    const pool=genClassPoolFor(d.clsOff); // D-051: chaos rolls the crew's pool, plausible ranks inside it
+    if(d.set.mode==="chaos"){const span=genSpanFor(pool.length);
+      const r=genRollTable(rng,span.die,span.reroll?pool.length:span.die,null);
+      d.steps.cls={rolls:[r],value:pool[span.reroll?r-1:genSpanHit(span,r)],die:span.die};}
+    else{const top3=genClassShortlist(scores,d.counts,pool);
+      const span=genSpanFor(top3.length);const r=genRollDie(rng,span.die); // a 2-class pool = d4 halves
       d.steps.cls={rolls:[r],top3,value:top3[genSpanHit(span,r)],die:span.die};}
     genClsCascade(d);
   }else if(id==="asi"){
@@ -1698,13 +1823,16 @@ function genApplyPick(d,id,value){
     d.steps.stats={rolls:[],pick:true,value:v};return true;
   }
   if(id==="species"){
-    if(!GEN_SPECIES[value])return false;
+    if(!GEN_SPECIES[value]||!genSpeciesPoolFor(d.spOff).includes(value))return false; // D-051
     d.steps.species={rolls:[],pick:true,value};
     genSpeciesSet(d,value);return true;}
-  if(id==="cls"){if(!GEN_CLASSES[value])return false;d.steps.cls={rolls:[],pick:true,value};genClsCascade(d);return true;}
+  if(id==="cls"){if(!GEN_CLASSES[value]||!genClassPoolFor(d.clsOff).includes(value))return false; // D-051
+    d.steps.cls={rolls:[],pick:true,value};genClsCascade(d);return true;}
   if(id==="asi"){
-    if(!Array.isArray(value)||value.length!==2||!GEN_ABILS.includes(value[0])||!GEN_ABILS.includes(value[1])||value[0]===value[1])return false;
-    d.steps.asi={rolls:[],pick:true,value:[value[0],value[1]]};return true;}
+    // D-051: the XPHB's two background shapes — [+2,+1] or [+1,+1,+1] — distinct abilities either way
+    const v=Array.isArray(value)?value:[];
+    if((v.length!==2&&v.length!==3)||v.some(a=>!GEN_ABILS.includes(a))||new Set(v).size!==v.length)return false;
+    d.steps.asi={rolls:[],pick:true,value:[...v]};return true;}
   if(id==="feat"||id==="feat2"){
     const f=GEN_FEATS.find(x=>x.n===value);if(!f)return false;
     const other=id==="feat2"?(d.steps.feat&&d.steps.feat.value):(d.steps.feat2&&d.steps.feat2.value);
@@ -1852,12 +1980,13 @@ function validateGenPayload(raw,cfg){
     if(!raw||raw.v!==2||typeof raw!=="object")return {ok:false,err:"shape"};
     const sp=GEN_SPECIES[raw.sp]?raw.sp:null;if(!sp)return {ok:false,err:"species"};
     const cfgGold=cfg?!!cfg.gold:!!(raw.set&&raw.set.gold);
+    const cfgSafe=cfg?!!cfg.safe:!!(raw.set&&raw.set.safe);
     const cfgBoonOff=genCleanBoonOff(cfg?cfg.boonOff:(raw.set&&raw.set.boonOff));
     const cfgGoldPlus=genGoldPlus(cfg?cfg.goldPlus:(raw.set&&raw.set.goldPlus));
-    const set={stat:raw.set&&raw.set.stat==="4d6"?"4d6":"3d6",
+    const set={stat:genCleanStat(raw.set&&raw.set.stat),
                mode:raw.set&&raw.set.mode==="chaos"?"chaos":"plausible",
                asi:!(raw.set&&raw.set.asi===false),
-               gold:cfgGold,goldPlus:cfgGoldPlus};
+               safe:cfgSafe,gold:cfgGold,goldPlus:cfgGoldPlus};
     const S=raw.steps||{};const out={};
     const intIn=(v,lo,hi)=>{const n=Math.round(Number(v));return n>=lo&&n<=hi?n:null;};
     const clean1=(v,cap)=>String(v==null?"":v).replace(/[<>]/g,"").trim().slice(0,cap);
@@ -1867,12 +1996,23 @@ function validateGenPayload(raw,cfg){
     if(st.pick){const v=Array.isArray(st.value)?st.value.map(x=>intIn(x,3,20)):null;
       if(!v||v.length!==6||v.some(x=>x==null))return {ok:false,err:"stats"};
       out.stats={rolls:[],pick:true,value:v};}
+    else if(set.stat==="array"){
+      // Six one-face deals over the shrinking array; the face must fit what was still left.
+      if(!Array.isArray(st.rolls)||st.rolls.length!==6)return {ok:false,err:"stats"};
+      const rolls=st.rolls.map((r,i)=>{if(!Array.isArray(r)||r.length!==1)return null;
+        const q=intIn(r[0],1,GEN_STD_ARRAY.length-i);return q==null?null:[q];});
+      if(rolls.some(r=>!r))return {ok:false,err:"stats"};
+      out.stats={rolls,value:genArrayValues(rolls)};}
     else{const n=set.stat==="4d6"?4:3;
       if(!Array.isArray(st.rolls)||st.rolls.length!==6)return {ok:false,err:"stats"};
       const rolls=st.rolls.map(r=>{if(!Array.isArray(r)||r.length!==n)return null;
         const q=r.map(x=>intIn(x,1,6));return q.some(x=>x==null)?null:q;});
       if(rolls.some(r=>!r))return {ok:false,err:"stats"};
-      out.stats={rolls,value:rolls.map(r=>genStatTotal(r,set.stat))};}
+      const vals=rolls.map(r=>genStatTotal(r,set.stat));
+      // D-051: with the safety net on, a hopeless ROLLED set can't cross the wire (the honest
+      // engine redeals it, so only a tampered payload arrives this way; typed picks are exempt).
+      if(set.safe&&genHopeless(vals))return {ok:false,err:"stats"};
+      out.stats={rolls,value:vals};}
     // class
     const cl=S.cls||{};if(!GEN_CLASSES[cl.value])return {ok:false,err:"class"};
     out.cls={rolls:Array.isArray(cl.rolls)?cl.rolls.slice(0,1).map(x=>intIn(x,1,12)||1):[],pick:!!cl.pick,value:cl.value};
@@ -1880,8 +2020,8 @@ function validateGenPayload(raw,cfg){
     const K=GEN_CLASSES[cl.value];
     // asi
     if(set.asi){const as=S.asi||{};const v=Array.isArray(as.value)?as.value:null;
-      if(!v||v.length!==2||!GEN_ABILS.includes(v[0])||!GEN_ABILS.includes(v[1])||v[0]===v[1])return {ok:false,err:"asi"};
-      out.asi={rolls:[],pick:!!as.pick,value:[v[0],v[1]]};}
+      if(!v||(v.length!==2&&v.length!==3)||v.some(a=>!GEN_ABILS.includes(a))||new Set(v).size!==v.length)return {ok:false,err:"asi"};
+      out.asi={rolls:[],pick:!!as.pick,value:[...v]};}
     // feat (+sub) — cleanFeat serves both origin-feat steps (feat2 = extraFeat species, D-030)
     const cleanFeat=ft=>{
       const F=GEN_FEATS.find(x=>x.n===ft.value);if(!F)return null;
@@ -2005,7 +2145,8 @@ function deriveGenChar(p){
   const mod=s=>Math.floor((s-10)/2);
   const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=p.steps.stats.value[i];});
   if(p.set.asi&&p.steps.asi){const v=p.steps.asi.value;
-    scores[v[0]]=Math.min(20,scores[v[0]]+2);scores[v[1]]=Math.min(20,scores[v[1]]+1);}
+    if(v.length===3)v.forEach(a=>{scores[a]=Math.min(20,scores[a]+1);}); // D-051: +1/+1/+1
+    else{scores[v[0]]=Math.min(20,scores[v[0]]+2);scores[v[1]]=Math.min(20,scores[v[1]]+1);}}
   const mods={};GEN_ABILS.forEach(a=>{mods[a]=mod(scores[a]);});
   // Generic species-table effects (D-030): one walk over the pack's tables builds everything they
   // grant — the engine never names a species. Pack-level fixed resists/casts merge in.
@@ -2280,8 +2421,11 @@ function genCrewCounts(a){const c={};genLivingPCs(a).forEach(pc=>{const v=pc.gen
 function genCrewUrl(id){return location.origin+location.pathname.replace(/[^/]*$/,"")+"index.html?crew="+encodeURIComponent(id);}
 function genIngestPayload(a,rawPayload,pn,pid){
   const v=validateGenPayload(rawPayload,a.crew&&a.crew.set);if(!v.ok)return null;
-  // D-031: a locked-species crew accepts only its own species; ritual mode takes any shipped pack.
+  // D-031: a locked-species crew accepts only its own species; ritual mode takes the crew's POOL
+  // (D-051). A pooled-out class rejects too — identity has no no-boon entry to drop to.
   if(a.crew&&a.crew.spMode!=="ritual"&&v.clean.sp!==a.crew.sp)return null;
+  if(a.crew&&a.crew.spMode==="ritual"&&!genSpeciesPoolFor(a.crew.spOff).includes(v.clean.sp))return null;
+  if(a.crew&&!genClassPoolFor(a.crew.clsOff).includes(v.clean.steps.cls.value))return null;
   if(state.roster.some(r=>r.id===v.clean.id)||(a.crew.fallen||[]).some(f=>f.payload&&f.payload.id===v.clean.id))return null;
   const ch=deriveGenChar(v.clean),pc=genToRosterPC(ch,v.clean,pn||"");
   if(pid){pc.gen.pid=pid;
@@ -2672,6 +2816,10 @@ let _genR=null; // {mode, pn, editing, draft, ctx (the draft config, for Reroll)
 // intrinsic size, and .gk-filt gives it no box of its own (B292).
 const GEN_FILT_ICON='<svg viewBox="0 0 512 512" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M3.9 54.9C10.5 40.9 24.5 32 40 32l432 0c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9 320 448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6l0-79.1L9 97.4C-.7 85.4-2.8 68.8 3.9 54.9z"/></svg>';
 const GEN_GEAR_ICON='<svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>';
+// G8 (D-049): the read-only marker on a shipped list, and the row remove. Both Font Awesome free
+// solid, sized on the element like the two above.
+const GEN_LOCK_ICON='<svg viewBox="0 0 448 512" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M144 144l0 48 160 0 0-48c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192l0-48C80 64.5 144.5 0 224 0s144 64.5 144 144l0 48 16 0c35.3 0 64 28.7 64 64l0 192c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 256c0-35.3 28.7-64 64-64l16 0z"/></svg>';
+const GEN_X_ICON='<svg viewBox="0 0 384 512" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>';
 // D-017: labels are bare names; the die/method detail lives behind the small ? button (genStepInfo).
 function genStepLabel(d,id){
   if(id==="species")return "Species";
@@ -2692,10 +2840,14 @@ function genStepLabel(d,id){
   return id;
 }
 function genStepInfo(d,id){
-  if(id==="species")return `${genDieLabel(genSpeciesPool().length)} over the available species. Rerolling replaces the species and its rolled traits.`;
-  if(id==="stats")return d.set.stat==="4d6"?"Six rolls of 4d6, lowest die dropped, in order STR to CHA. Any landed score can be edited by hand.":"Six rolls of 3d6, in order STR to CHA. Any landed score can be edited by hand.";
-  if(id==="cls")return d.set.mode==="chaos"?"d12 over all twelve classes.":"d6 over the three classes that best fit the rolled scores; the rest are pickable below them.";
-  if(id==="asi")return "+2 and +1 to two different abilities. The +2 goes to the class's main ability; the +1 goes where it actually raises a modifier, which means an odd score. The suggestion is preselected; apply it or change it.";
+  if(id==="species")return `${genDieLabel(genSpeciesPoolFor(d.spOff).length)} over the species the crew allows. Rerolling replaces the species and its rolled traits.`;
+  if(id==="stats")return d.set.stat==="4d6"?"Six rolls of 4d6, lowest die dropped, in order STR to CHA. Any landed score can be edited by hand."
+    :d.set.stat==="array"?"The standard array — 15, 14, 13, 12, 10, 8 — dealt in order STR to CHA: each roll assigns one of the values still left. Any landed score can be edited by hand."
+    :"Six rolls of 3d6, in order STR to CHA. Any landed score can be edited by hand.";
+  if(id==="cls"){const n=genClassPoolFor(d.clsOff).length;
+    return d.set.mode==="chaos"?`${genDieLabel(n)} over the ${n===12?"twelve classes":n+" classes the crew allows"}.`
+      :"A span roll over the classes that best fit the rolled scores; the rest are pickable below them.";}
+  if(id==="asi")return "+2 and +1 to two different abilities, or +1 to three (both XPHB shapes). The suggested +2 goes to the class's main ability; the +1 goes where it actually raises a modifier, which means an odd score. Apply the suggestion or change it.";
   if(id==="feat")return "d10 over the ten origin feats. Feats with internal choices roll those too.";
   if(id==="feat2")return "The species grants a second origin feat: d10 over the ten, the first feat rerolled.";
   if(id==="skills"){const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
@@ -2734,16 +2886,24 @@ function genStepTable(d,id){
       rows:list.map((v,i)=>({span:String(i+1),label:labels?labels[i]:String(v),value:v,
         hit:s&&Array.isArray(s.value)&&s.value.includes(v)}))};};
   if(id==="cls"){
-    if(d.set.mode==="chaos")return {die:12,rows:GEN_CLASS_LIST.map((c,i)=>({span:String(i+1),label:c,value:c,hit:s&&s.value===c}))};
+    // D-051: excluded classes render struck with the reason (D-044's convention), never rollable.
+    const pool=genClassPoolFor(d.clsOff);
+    const offRows=GEN_CLASS_LIST.filter(c=>!pool.includes(c))
+      .map(c=>({span:"·",label:c,value:c,off:"crew setting"}));
+    if(d.set.mode==="chaos"){const span=genSpanFor(pool.length);
+      return {die:span.die,note:span.reroll?"reroll over "+pool.length:"",
+        rows:pool.map((c,i)=>({span:genSpanText(span,i),label:c,value:c,hit:s&&s.value===c})).concat(offRows)};}
     const scores={};GEN_ABILS.forEach((a,i)=>{scores[a]=d.steps.stats&&d.steps.stats.value&&d.steps.stats.value[i]!=null?d.steps.stats.value[i]:10;});
-    const top3=(s&&s.top3)||genClassShortlist(scores,d.counts);
-    const span=genSpanFor(3);
+    const top3=(s&&s.top3)||genClassShortlist(scores,d.counts,pool);
+    const span=genSpanFor(top3.length);
     return {die:span.die,rows:top3.map((c,i)=>({span:genSpanText(span,i),label:c,value:c,hit:s&&s.value===c})),
-      moreRows:GEN_CLASS_LIST.filter(c=>!top3.includes(c)).map(c=>({span:"·",label:c,value:c,hit:s&&s.value===c}))};
+      moreRows:pool.filter(c=>!top3.includes(c)).map(c=>({span:"·",label:c,value:c,hit:s&&s.value===c})).concat(offRows)};
   }
-  if(id==="species"){const pool=genSpeciesPool(),span=genSpanFor(pool.length);
+  if(id==="species"){const pool=genSpeciesPoolFor(d.spOff),span=genSpanFor(pool.length);
+    const offRows=Object.keys(GEN_SPECIES).filter(k=>!pool.includes(k))
+      .map(k=>({span:"·",label:GEN_SPECIES[k].label,value:k,off:"crew setting"}));
     return {die:span.die,note:span.reroll?"reroll over "+pool.length:"",
-      rows:pool.map((v,i)=>({span:genSpanText(span,i),label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v}))};}
+      rows:pool.map((v,i)=>({span:genSpanText(span,i),label:GEN_SPECIES[v].label,value:v,hit:s&&s.value===v})).concat(offRows)};}
   if(id==="feat"||id==="feat2"){
     // The two origin feats stay distinct (you can't take the same feat twice), so the one the other
     // step already took shows struck through rather than silently missing.
@@ -2819,7 +2979,7 @@ function genStepValueHTML(d,id){
   const s=d.steps[id];if(!s||s.value==null)return "";
   if(id==="species"){const spp=GEN_SPECIES[s.value];
     return `<b data-gkedit="species">${esc(spp?spp.label:String(s.value))}</b> ${genDiceChips(s)}`;}
-  if(id==="asi")return `<b data-gkedit="asi">+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}</b> <span class="gk-dim">${s.pick?"chosen":"suggested"}</span>`;
+  if(id==="asi")return `<b data-gkedit="asi">${s.value.length===3?s.value.map(a=>"+1 "+a.toUpperCase()).join(" / "):`+2 ${s.value[0].toUpperCase()} / +1 ${s.value[1].toUpperCase()}`}</b> <span class="gk-dim">${s.pick?"chosen":"suggested"}</span>`;
   if(id==="equip"){const K=GEN_CLASSES[genClsOf(d)];const k=K&&K.kits[s.value];
     return `<b data-gkedit="equip">${esc(k?k.n:String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc(k?k.gear:"")}</span>`;}
   if(id==="gearPack")return `<b data-gkedit="gearPack">${esc(String(s.value))}</b> ${genDiceChips(s)} <span class="gk-dim">${esc((GEN_PACK_CONTENTS[s.value]||[]).join(", "))}</span>`;
@@ -2853,8 +3013,17 @@ function genEditorHTML(d,id){
   const cls=genClsOf(d),K=cls?GEN_CLASSES[cls]:null,s=d.steps[id];
   const nSel=(list,n,cur,idp)=>Array.from({length:n},(x,i)=>genSel(idp+i,list,cur&&cur[i]||list[i],null,true));
   if(id==="asi"){const dflt=genAsiDefault(d),cur=s?s.value:dflt;
-    return `<span class="gk-dim">Suggested: +2 ${dflt[0].toUpperCase()} / +1 ${dflt[1].toUpperCase()}.</span>`
-      +genSel("gkAsi2",GEN_ABILS,cur[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()),true)+genSel("gkAsi1",GEN_ABILS,cur[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
+    // D-051: both XPHB shapes. The mode rides the render state (R.asiMode), defaulting to the value.
+    const mode=_genR&&_genR.asiMode?_genR.asiMode:(cur.length===3?"3":"2");
+    const tabs=`<span class="gk-tabstrip" style="margin:0"><button class="gk-tab${mode==="2"?" gk-tab-on":""}" data-gkasimode="2">+2 / +1</button><button class="gk-tab${mode==="3"?" gk-tab-on":""}" data-gkasimode="3">+1 / +1 / +1</button></span>`;
+    if(mode==="3"){const c3=cur.length===3?cur:[dflt[0],dflt[1],GEN_ABILS.find(a=>!dflt.includes(a))];
+      return tabs+genSel("gkAsiA",GEN_ABILS,c3[0],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)
+        +genSel("gkAsiB",GEN_ABILS,c3[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)
+        +genSel("gkAsiC",GEN_ABILS,c3[2],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)
+        +`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
+    const c2=cur.length===2?cur:dflt;
+    return tabs+`<span class="gk-dim">Suggested: +2 ${dflt[0].toUpperCase()} / +1 ${dflt[1].toUpperCase()}.</span>`
+      +genSel("gkAsi2",GEN_ABILS,c2[0],GEN_ABILS.map(a=>"+2 "+a.toUpperCase()),true)+genSel("gkAsi1",GEN_ABILS,c2[1],GEN_ABILS.map(a=>"+1 "+a.toUpperCase()),true)+`<button class="btn primary sm gk-apply" data-gkapply="asi">Apply</button>`;}
   if(id==="skills"&&K)return nSel(K.skills.from,K.skills.n,s&&s.value,"gkSk_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="skills">Apply</button>`;
   if(id==="feature"&&K&&K.featureOpt&&K.featureOpt.kind==="expertise"){const own=(d.steps.skills&&d.steps.skills.value)||[];
     return nSel(own,Math.min(2,own.length),s&&s.value,"gkEx_").join("")+`<button class="btn primary sm gk-apply" data-gkapply="feature">Apply</button>`;}
@@ -2942,8 +3111,10 @@ function genSummaryScores(d){
   const base=(d.steps.stats&&d.steps.stats.value)||[];
   const out=GEN_ABILS.map((a,i)=>({a,v:Number(base[i])||10}));
   if(d.set.asi&&d.steps.asi&&Array.isArray(d.steps.asi.value)){
-    const [big,small]=d.steps.asi.value;
-    out.forEach(x=>{if(x.a===big)x.v=Math.min(20,x.v+2);if(x.a===small)x.v=Math.min(20,x.v+1);});
+    const v=d.steps.asi.value;
+    if(v.length===3)out.forEach(x=>{if(v.includes(x.a))x.v=Math.min(20,x.v+1);}); // D-051: +1/+1/+1
+    else{const [big,small]=v;
+      out.forEach(x=>{if(x.a===big)x.v=Math.min(20,x.v+2);if(x.a===small)x.v=Math.min(20,x.v+1);});}
   }
   return out.map(x=>({...x,m:Math.floor((x.v-10)/2)}));
 }
@@ -3100,12 +3271,14 @@ function bindGenRitual(){
       if(st&&st.rolls.length)genFire3D("Ability scores",
         st.rolls.map(dice=>({rolls:dice,die:6,k:d.set.stat==="4d6"?"kh3":""})),
         "Scores: "+st.value.join(" · "));
+      if(st&&st.redeals){toast("Hopeless set — redealt.");delete st.redeals;}
     }else if(id==="stats"){
       const st=genRollStep(d,"stats");
       if(st&&!st.pick&&st.rolls.length){
         const i=st.rolls.length-1,dice=st.rolls[i],a=GEN_ABILS[i];
         genFire3D(GEN_ABIL_LABEL[a],[{rolls:dice,die:6,k:d.set.stat==="4d6"?"kh3":""}],
           `${a.toUpperCase()}: ${st.value[i]}`,st.value[i]);
+        if(st.redeals){toast("Hopeless set — redealt.");delete st.redeals;}
       }
     }else{
       genRollStep(d,id);
@@ -3132,6 +3305,9 @@ function bindGenRitual(){
     if(info)tailPopover(b,`<div class="gk-infopop">${esc(info)}</div>`);}));
   host.querySelectorAll("[data-gkmore]").forEach(b=>b.addEventListener("click",e=>{
     e.stopPropagation();const id=b.dataset.gkmore;R.more[id]=!R.more[id];renderGenRitual();}));
+  // D-051: the ASI editor's shape tabs (+2/+1 vs +1/+1/+1)
+  host.querySelectorAll("[data-gkasimode]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();R.asiMode=b.dataset.gkasimode==="3"?"3":"2";renderGenRitual();}));
   // D-024: table toggles set the slot's table on the draft; an already-rolled step rerolls so the
   // landed names always come from the tables on show.
   host.querySelectorAll("[data-gktab]").forEach(b=>b.addEventListener("click",e=>{
@@ -3226,8 +3402,10 @@ function bindGenRitual(){
     const id=b.dataset.gkapply;let ok=false;
     const K=GEN_CLASSES[genClsOf(d)||"Fighter"];
     const read=(n,idp)=>Array.from({length:n},(x,i)=>$("#"+idp+i).value);
-    if(id==="asi"){const a2=$("#gkAsi2").value,a1=$("#gkAsi1").value;
-      if(a2===a1){toast("Two different abilities needed.");return;}ok=genApplyPick(d,"asi",[a2,a1]);}
+    if(id==="asi"){
+      const v=$("#gkAsiA")?[$("#gkAsiA").value,$("#gkAsiB").value,$("#gkAsiC").value]:[$("#gkAsi2").value,$("#gkAsi1").value];
+      if(new Set(v).size!==v.length){toast(v.length===3?"Three different abilities needed.":"Two different abilities needed.");return;}
+      ok=genApplyPick(d,"asi",v);}
     else if(id==="skills"){const v=read(K.skills.n,"gkSk_");
       if(new Set(v).size!==v.length){toast("No duplicate skills.");return;}ok=genApplyPick(d,"skills",v);}
     else if(id==="feature"){const own=(d.steps.skills&&d.steps.skills.value)||[];
@@ -3261,19 +3439,20 @@ function bindGenRitual(){
 function openGenRitual(ctx){
   const set=ctx.set,ritual=ctx.spMode==="ritual";
   // The draft config is kept so the G1 Reroll can mint a fresh draft on the same crew settings.
-  const dcfg={sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,boonOff:ctx.boonOff,trinketTab:ctx.trinketTab,
-    set,counts:ctx.counts||{},tables:ctx.tables||null};
+  const dcfg={sp:ctx.sp,spMode:ctx.spMode,boons:ctx.boons,boonOff:ctx.boonOff,lists:ctx.lists,
+    spOff:ctx.spOff,clsOff:ctx.clsOff,set,counts:ctx.counts||{},tables:ctx.tables||null};
   _genR={mode:ctx.mode,pn:ctx.pn||"",editing:null,more:{},filt:{},typed:null,ctx:dcfg,
     draft:genNewDraft(dcfg),done:ctx.done};
   openModalRaw(`<h3 style="margin-bottom:4px">Roll a ${ritual?"character":esc(GEN_SPECIES[ctx.sp].label.toLowerCase())}</h3>
-    <p class="hint" style="margin:0 0 10px">${esc(set.stat)} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
+    <p class="hint" style="margin:0 0 10px">${set.stat==="array"?"Standard-array":esc(genCleanStat(set.stat))} scores, ${set.mode==="chaos"?"chaos class":"plausible class"}, ASI ${set.asi?"on":"off"}. Roll each step, or tap an option to choose it. Tap any result to change it.</p>
     <div id="gkR"></div>`);
   const m=$("#modal");if(m)m.classList.add("gk-host");
   renderGenRitual();
 }
 function openGenRitualDM(a){
   openGenRitual({sp:a.crew.sp,spMode:a.crew.spMode,boons:a.crew.boons,boonOff:a.crew.boonOff,
-    trinketTab:a.crew.trinketTab,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
+    spOff:a.crew.spOff,clsOff:a.crew.clsOff,
+    lists:a.crew.lists,set:a.crew.set,counts:genCrewCounts(a),tables:genSpellTables(),mode:"dm",done:payload=>{
     const pc=genIngestPayload(a,payload,"",null);
     _genR=null;closeModal();
     if(pc){toast(esc(pc.name)+" joins the crew.",2200,true);preserveScroll(".adv-detail-body",renderAdvDetail);}
@@ -3301,6 +3480,301 @@ function renderCrewPanel(a){
     const f=a.crew.fallen[Number(b.dataset.gkfallen)];if(!f||!f.payload)return;
     openGenCard(a,f.payload,{dead:true,pn:f.pn||""});}));
 }
+// ── The Lists block + the list manager (G8, D-049) ───────────────────────────
+// Crew settings carries a two-row block — one row per flavour table — stating the list in use AND
+// the die it will actually roll. The die is DERIVED from row count, so pasting 34 rows turns a
+// clean d20 into "d100 (reroll over 34)": the block is where that consequence shows up, before a
+// player sees it. Change opens the manager, which picks and edits on one screen.
+function genCrewListsBlockHTML(a){
+  const rows=GEN_LIST_KINDS.map(k=>{
+    const L=genListOr(k,a.crew.lists[k]);
+    return `<div class="gk-lrow"><span class="gk-lname">${esc(GEN_LIST_LABEL[k])}
+        <span class="gk-lmeta">· ${esc(L.n)} · ${esc(genDieLabel(L.rows.length))}</span></span>
+      <button class="gk-lbtn" data-crewlist="${k}">Change</button></div>`;});
+  // Boons live here too (his call, B307): a table the crew rolls on, not a settings field. The
+  // on/off select sits on the row; Change opens the per-boon page. The row only prints when the
+  // crew's species pool actually ships a boon table (today: the kobold).
+  const boons=genCrewBoonRows(a);
+  if(boons.total){
+    const on=boons.total-boons.off;
+    rows.push(`<div class="gk-lrow"><span class="gk-lname">Boons
+        <span class="gk-lmeta">· ${a.crew.boons?(boons.off?`${on} of ${boons.total} rolled`:"rolled"):"off"}</span></span>
+      ${genSel("crewBoons",["on","off"],a.crew.boons?"on":"off",["Rolled","Off"])}
+      <button class="gk-lbtn" data-crewboonlist="1"${a.crew.boons?"":" disabled"}>Change</button></div>`);
+  }
+  // D-051: the two rule pools, same row grammar. Species narrows only in Random mode (Fixed IS
+  // the narrowing); classes narrow always. "N of M" tells you the die before the ritual does.
+  if(a.crew.spMode==="ritual"){
+    const all=Object.keys(GEN_SPECIES).length,on=genSpeciesPoolFor(a.crew.spOff).length;
+    rows.push(`<div class="gk-lrow"><span class="gk-lname">Species
+        <span class="gk-lmeta">· ${on===all?`all ${all}`:`${on} of ${all}`} rolled · ${esc(genDieLabel(on))}</span></span>
+      <button class="gk-lbtn" data-crewpool="species">Change</button></div>`);
+  }
+  {const on=genClassPoolFor(a.crew.clsOff).length;
+    rows.push(`<div class="gk-lrow"><span class="gk-lname">Classes
+        <span class="gk-lmeta">· ${on===12?"all 12":`${on} of 12`} rolled</span></span>
+      <button class="gk-lbtn" data-crewpool="classes">Change</button></div>`);}
+  return `<div class="gk-lists">${rows.join("")}</div>
+  <p class="hint">The tables this crew rolls on. Lists are shared by every adventure on this device; Change picks a different one, or edits them.</p>`;
+}
+// D-051: one checklist page serves both pools (the boons page is its sibling). Switching every
+// row off is allowed and falls back to the full table — the hint says so rather than a guard.
+function openCrewPoolPage(a,kind){
+  const isSp=kind==="species";
+  const items=isSp?Object.keys(GEN_SPECIES).map(k=>({id:k,label:GEN_SPECIES[k].label}))
+                  :GEN_CLASS_LIST.map(c=>({id:c,label:c}));
+  const key=isSp?"spOff":"clsOff";
+  const off=genCleanBoonOff(a.crew[key]);
+  openModalRaw(`<h3 class="modal-h-row"><button class="modal-back" id="poolBack" title="Back" aria-label="Back">${BACK_SVG}</button><span>${isSp?"Species pool":"Class pool"}</span></h3>
+    <p class="hint" style="margin:0 0 10px">${isSp?"What the ritual's Species roll can land on.":"What the class roll can land on — plausible ranks inside this pool, chaos rolls over all of it."} Excluded rows show struck-through in the ritual's table. Switching everything off falls back to the full table.</p>
+    <div class="gk-boonlist">${items.map(x=>`<label class="gk-boonrow"><input type="checkbox" data-crewpoolitem="${esc(x.id)}"${off.includes(x.id)?"":" checked"}>
+      <span>${esc(x.label)}</span></label>`).join("")}</div>`);
+  const m=$("#modal");if(m)m.classList.add("gk-host");
+  $("#poolBack").addEventListener("click",()=>openCrewSettings(a));
+  $("#modal").querySelectorAll("[data-crewpoolitem]").forEach(cb=>cb.addEventListener("change",()=>{
+    const v=cb.dataset.crewpoolitem,cur=genCleanBoonOff(a.crew[key]);
+    a.crew[key]=cb.checked?cur.filter(x=>x!==v):[...cur,v];
+    saveAdv();crewPushConfig(a);}));
+}
+// The deduped boon entries the crew's species pool offers (ritual mode: every enabled pack).
+function genCrewBoonRows(a){
+  const keys=a.crew.spMode==="ritual"?Object.keys(GEN_SPECIES):[a.crew.sp];
+  const off=genCleanBoonOff(a.crew.boonOff),seen=new Set();
+  const rows=keys.flatMap(k=>genBoonEntries(k).map(e=>({k,e})))
+    .filter(({e})=>{const v=String(e.value);if(seen.has(v))return false;seen.add(v);return true;});
+  return {rows,total:rows.length,off:rows.filter(({e})=>off.includes(String(e.value))).length};
+}
+// The per-boon page (D-043's checklist, moved out of the settings grid — it was crowding a modal
+// it visited). One day this grows list options like quirks and trinkets; today it is the switches.
+function openCrewBoons(a){
+  openModalRaw(`<h3 class="modal-h-row"><button class="modal-back" id="boonBack" title="Back" aria-label="Back">${BACK_SVG}</button><span>Species boons</span></h3>
+    <p class="hint" style="margin:0 0 10px">The optional extras a species pack offers on top of its rules — the kobold's Draconic Boon table today. Untick one and its die face resolves to the table's no-boon entry instead.</p>
+    ${genBoonListHTML(a)}`);
+  const m=$("#modal");if(m)m.classList.add("gk-host");
+  $("#boonBack").addEventListener("click",()=>openCrewSettings(a));
+  $("#modal").querySelectorAll("[data-crewboon]").forEach(cb=>cb.addEventListener("change",()=>{
+    const v=cb.dataset.crewboon,off=genCleanBoonOff(a.crew.boonOff);
+    a.crew.boonOff=cb.checked?off.filter(x=>x!==v):[...off,v];
+    saveAdv();crewPushConfig(a);}));
+}
+function genListNewId(){return "u_"+uid();}
+// Paste path: one entry per line. A leading table number is dropped only when a separator makes it
+// unambiguous ("12. A rusted key", "01-02 A gull's skull") — never a bare "3 teeth on a wire".
+function genStripRowNumber(s){
+  return String(s).replace(/^\s*\d{1,3}\s*[-–—]\s*\d{1,3}[\s.)\]:|]+/,"")
+                  .replace(/^\s*\d{1,3}\s*[.)\]:|]\s*/,"");
+}
+function genParseListText(txt){
+  return genCleanListRows(String(txt||"").split(/\r?\n/).map(genStripRowNumber));
+}
+// Spreadsheet path: comma / tab / semicolon delimited, quotes honoured (a quoted cell may hold the
+// delimiter and doubled quotes). Returns a grid; the import dialog picks the column.
+function genParseDelimited(txt){
+  const src=String(txt||"").replace(/\r\n?/g,"\n");
+  const head=src.split("\n")[0]||"";
+  const delim=head.indexOf("\t")>=0?"\t":(head.split(";").length>head.split(",").length?";":",");
+  const rows=[];let cell="",row=[],q=false;
+  for(let i=0;i<src.length;i++){
+    const c=src[i];
+    if(q){
+      if(c==='"'){if(src[i+1]==='"'){cell+='"';i++;}else q=false;}
+      else cell+=c;
+      continue;}
+    if(c==='"'){q=true;continue;}
+    if(c===delim){row.push(cell);cell="";continue;}
+    if(c==="\n"){row.push(cell);rows.push(row);row=[];cell="";continue;}
+    cell+=c;
+  }
+  row.push(cell);rows.push(row);
+  return rows.filter(r=>r.some(x=>String(x).trim()));
+}
+// The column worth importing is the one carrying prose: longest mean text wins, and an all-numeric
+// column (a table's own numbering) never does.
+function genPickTextCol(grid){
+  const n=grid.reduce((m,r)=>Math.max(m,r.length),0);
+  let best=0,bestScore=-1;
+  for(let c=0;c<n;c++){
+    const vals=grid.map(r=>String(r[c]==null?"":r[c]).trim()).filter(Boolean);
+    if(!vals.length)continue;
+    const numeric=vals.every(v=>/^\d{1,3}(\s*[-–]\s*\d{1,3})?$/.test(v));
+    const score=numeric?-1:vals.reduce((s,v)=>s+v.length,0)/vals.length;
+    if(score>bestScore){bestScore=score;best=c;}
+  }
+  return best;
+}
+// A spreadsheet export usually leads with a header row, and importing it as an entry puts the word
+// "trinket" on somebody's card. Detected, never assumed — this only sets the dialog's checkbox, and
+// the preview shows exactly what will be added either way. ONE signal, deliberately: every row-1
+// cell reads as a short label, AND some column is numbers all the way down but not in row 1 (the
+// "n" over 1, 2, 3 that every exported table has). A length-ratio test was tried first and called a
+// headerless file a header, which silently eats a real entry — the worse failure of the two.
+function genLooksHeader(grid){
+  if(!grid||grid.length<2)return false;
+  const first=grid[0].map(x=>String(x==null?"":x).trim());
+  if(!first.some(Boolean))return false;
+  if(!first.every(c=>!c||(c.length<=24&&!/[.!?]$/.test(c)&&c.split(/\s+/).length<=3)))return false;
+  const num=v=>/^\d{1,3}(\s*[-–]\s*\d{1,3})?$/.test(v);
+  const cols=grid.reduce((m,r)=>Math.max(m,r.length),0);
+  for(let c=0;c<cols;c++){
+    const below=grid.slice(1).map(r=>String(r[c]==null?"":r[c]).trim()).filter(Boolean);
+    if(below.length&&below.every(num)&&first[c]&&!num(first[c]))return true;
+  }
+  return false;
+}
+let _flavM=null;
+function openFlavListManager(a,kind,onBack){
+  const crewId=a?a.crew.lists[kind]:GEN_LIST_DEFAULT[kind];
+  _flavM={a,kind,onBack,sel:crewId,view:"rows"};
+  renderFlavListManager();
+}
+function flavSelList(){const M=_flavM;return genListById(M.kind,M.sel)||genListOr(M.kind,GEN_LIST_DEFAULT[M.kind]);}
+function flavStoreList(id){return (state.flavLists||[]).find(L=>L.id===id)||null;}
+// Every edit writes the store and, when the edited list is the one the crew rolls, republishes the
+// crew config so live phones roll the same table.
+function flavCommit(){
+  const M=_flavM;saveFlavLists();
+  if(M.a&&M.a.crew&&M.a.crew.lists[M.kind]===M.sel&&M.a.crew.shareId)crewPushConfig(M.a);
+}
+function renderFlavListManager(){
+  const M=_flavM,kind=M.kind,all=genListAll(kind),L=flavSelList(),used=M.a?M.a.crew.lists[kind]:null;
+  const rows=L.rows||[];
+  const pick=all.map(x=>`<div class="gk-lpick${x.id===M.sel?" gk-lpick-sel":""}" data-flavpick="${esc(x.id)}">
+      <span class="gk-ldot${x.id===used?" gk-ldot-on":""}"></span>
+      <span class="gk-lpname">${esc(x.n)}${x.locked?` <span class="gk-llock" title="Read-only">${GEN_LOCK_ICON}</span>`:""}</span>
+      <span class="gk-lpmeta">${x.rows.length} · ${esc(genDieLabel(x.rows.length))}</span></div>`).join("");
+  const editor=M.view==="text"
+    ?`<textarea class="gk-lta" id="flavText"${L.locked?" readonly":""} spellcheck="false"
+        placeholder="One entry per line">${esc(rows.join("\n"))}</textarea>`
+    // A read-only row has no handle to offer, so it renders as WRAPPING text: an input would just
+    // truncate the long SRD entries the numbering exists to let you find.
+    :`<div class="gk-lrows"><div class="gk-lscroll">${rows.map((r,i)=>`<div class="gk-lr">
+          <span class="gk-ln">${i+1}</span>
+          ${L.locked?`<span class="gk-lrt">${esc(r)}</span>`
+            :`<input type="text" data-flavrow="${i}" maxlength="${GEN_LIST_ROWCAP}" value="${esc(r)}">
+          <button class="gk-lx" data-flavdel="${i}" title="Remove" aria-label="Remove entry">${GEN_X_ICON}</button>`}</div>`).join("")}
+        ${L.locked?"":`<div class="gk-lr gk-lr-new"><span class="gk-ln">${rows.length+1}</span>
+          <input type="text" id="flavAdd" maxlength="${GEN_LIST_ROWCAP}" placeholder="Add an entry…"></div>`}</div></div>`;
+  openModalRaw(`<h3 class="modal-h-row"><button class="modal-back" id="flavBack" title="Back" aria-label="Back">${BACK_SVG}</button><span>${esc(GEN_LIST_TITLE[kind])}</span></h3>
+    <div class="gk-lpicks">${pick}</div>
+    <div class="gk-leh">
+      ${L.locked?`<span class="gk-lename">${esc(L.n)}</span>`
+        :`<input type="text" class="popinput gk-lename-i" id="flavName" maxlength="${GEN_LIST_NAMECAP}" value="${esc(L.n)}" aria-label="List name">`}
+      <span class="gk-tabstrip gk-ltabs">
+        <button class="gk-tab${M.view==="rows"?" gk-tab-on":""}" data-flavview="rows">Rows</button>
+        <button class="gk-tab${M.view==="text"?" gk-tab-on":""}" data-flavview="text">Text</button></span>
+      ${L.locked?"":`<button class="gk-lbtn" id="flavDel">Delete</button>`}
+    </div>
+    ${L.locked?`<p class="hint gk-llocked">${L.id==="srd"
+      ?"The SRD 5.2 table, used verbatim under CC-BY-4.0. An edited row would no longer be the SRD's, so this list is read-only — Duplicate makes an editable copy of your own."
+      :"One of the lists that ships with the app, kept as written. Duplicate makes an editable copy of your own."}</p>`:""}
+    ${editor}
+    <div class="mrow gk-lfoot">
+      <span class="gk-lcount"><b>${rows.length} ${rows.length===1?"entry":"entries"}</b> · rolls ${esc(genDieLabel(rows.length))}</span>
+      ${L.locked?`<button class="btn ghost sm" id="flavDup" style="width:auto">Duplicate</button>`
+        :`<button class="btn ghost sm" id="flavImport" style="width:auto">Import CSV</button>`}
+      <button class="btn ghost sm" id="flavNew" style="width:auto">New list</button>
+      ${used===M.sel?`<span class="gk-linuse">In use</span>`
+        :`<button class="btn primary sm" id="flavUse" style="width:auto"${rows.length?"":" disabled"}>Use for this crew</button>`}
+    </div>`);
+  const m=$("#modal");if(m)m.classList.add("gk-host");
+  bindFlavListManager();
+}
+function bindFlavListManager(){
+  const M=_flavM,L=flavSelList(),store=flavStoreList(M.sel);
+  $("#flavBack").addEventListener("click",()=>{_flavM=null;closeModal();if(M.onBack)M.onBack();});
+  $("#modal").querySelectorAll("[data-flavpick]").forEach(el=>el.addEventListener("click",()=>{
+    M.sel=el.dataset.flavpick;renderFlavListManager();}));
+  $("#modal").querySelectorAll("[data-flavview]").forEach(b=>b.addEventListener("click",()=>{
+    M.view=b.dataset.flavview==="text"?"text":"rows";renderFlavListManager();}));
+  const nameEl=$("#flavName");
+  if(nameEl&&store)nameEl.addEventListener("change",()=>{
+    store.n=genCleanListName(nameEl.value)||"Untitled list";flavCommit();renderFlavListManager();});
+  // Rows view: a change commits that row, an empty one removes it; the trailing field appends.
+  if(store){
+    $("#modal").querySelectorAll("[data-flavrow]").forEach(inp=>inp.addEventListener("change",()=>{
+      const i=Number(inp.dataset.flavrow),v=genCleanListRow(inp.value);
+      if(v)store.rows[i]=v;else store.rows.splice(i,1);
+      flavCommit();renderFlavListManager();}));
+    $("#modal").querySelectorAll("[data-flavdel]").forEach(b=>b.addEventListener("click",()=>{
+      store.rows.splice(Number(b.dataset.flavdel),1);flavCommit();renderFlavListManager();}));
+    const add=$("#flavAdd");
+    if(add)add.addEventListener("change",()=>{
+      const v=genCleanListRow(add.value);if(!v)return;
+      if(store.rows.length>=GEN_LIST_MAX){toast("That list is full at "+GEN_LIST_MAX+" entries.");return;}
+      store.rows.push(v);flavCommit();renderFlavListManager();});
+    const ta=$("#flavText");
+    if(ta)ta.addEventListener("change",()=>{
+      store.rows=genParseListText(ta.value);flavCommit();renderFlavListManager();});
+    const del=$("#flavDel");
+    if(del)del.addEventListener("click",()=>confirmModal(`Delete "${esc(store.n)}"? Any crew using it falls back to the shipped list.`,()=>{
+      state.flavLists=state.flavLists.filter(x=>x.id!==store.id);
+      M.sel=GEN_LIST_DEFAULT[M.kind];flavCommit();renderFlavListManager();}));
+    const imp=$("#flavImport");
+    if(imp)imp.addEventListener("click",()=>openFlavImport(store));
+  }
+  const dup=$("#flavDup");
+  if(dup)dup.addEventListener("click",()=>{
+    const copy={id:genListNewId(),kind:M.kind,n:genCleanListName(L.n+" (copy)"),rows:L.rows.slice(0,GEN_LIST_MAX)};
+    state.flavLists.push(copy);M.sel=copy.id;flavCommit();renderFlavListManager();});
+  $("#flavNew").addEventListener("click",()=>{
+    const made={id:genListNewId(),kind:M.kind,n:"New list",rows:[]};
+    state.flavLists.push(made);M.sel=made.id;M.view="text";flavCommit();renderFlavListManager();});
+  const use=$("#flavUse");
+  if(use)use.addEventListener("click",()=>{
+    if(!M.a)return;
+    M.a.crew.lists[M.kind]=M.sel;saveAdv();crewPushConfig(M.a);renderFlavListManager();});
+}
+// The import screen: a file, the column it found, and what the list becomes. A single-column file
+// needs no choice, so the picker only appears when there is one to make.
+function openFlavImport(store){
+  const M=_flavM;
+  let grid=null,col=0,file="",head=false;
+  const draw=()=>{
+    const body=grid?(head?grid.slice(1):grid):[];
+    const found=body.map(r=>genCleanListRow(genStripRowNumber(r[col]==null?"":r[col]))).filter(Boolean);
+    const room=Math.max(0,GEN_LIST_MAX-store.rows.length),take=found.slice(0,room);
+    const cols=grid?grid.reduce((m,r)=>Math.max(m,r.length),0):0;
+    openModalRaw(`<h3 class="modal-h-row"><button class="modal-back" id="impBack" title="Back" aria-label="Back">${BACK_SVG}</button><span>Import into ${esc(store.n)}</span></h3>
+      ${grid?"":`<div class="gk-ldrop" id="impDrop">Drop a .csv or .txt here, or <b>choose a file</b></div>`}
+      ${grid?`<div class="gk-lcount gk-limp" style="margin-bottom:8px"><span>Found <b>${found.length} ${found.length===1?"row":"rows"}</b> in <b>${esc(file)}</b></span>${cols>1
+        ?`<span>column ${genSel("impCol",grid[0].map((x,i)=>String(i)),String(col),grid[0].map((x,i)=>String.fromCharCode(65+i)+(String(x).trim()?" — "+String(x).trim().slice(0,18):"")))}</span>`:""}
+        <label class="gk-lhead"><input type="checkbox" id="impHead"${head?" checked":""}> First row is a header</label></div>
+        <div class="gk-lrows"><div class="gk-lscroll" style="max-height:150px">${take.map((r,i)=>`<div class="gk-lr">
+          <span class="gk-ln">${store.rows.length+i+1}</span><input type="text" value="${esc(r)}" readonly></div>`).join("")||`<div class="hint" style="padding:8px">Nothing usable in that column.</div>`}</div></div>`:""}
+      <div class="mrow gk-lfoot">
+        <span class="gk-lcount">${grid?`Adds to <b>${esc(store.n)}</b> · ${store.rows.length} → ${store.rows.length+take.length} entries · rolls ${esc(genDieLabel(store.rows.length+take.length))}${found.length>take.length?` · ${found.length-take.length} over the ${GEN_LIST_MAX}-entry cap, dropped`:""}`
+          :"Rows are added to the end of the list. A numbering column is detected and dropped."}</span>
+        <button class="btn ghost sm" id="impCancel" style="width:auto">Cancel</button>
+        <button class="btn primary sm" id="impGo" style="width:auto"${take.length?"":" disabled"}>Import</button>
+      </div>
+      <input type="file" id="impFile" accept=".csv,.txt,.tsv,text/plain,text/csv" style="display:none">`);
+    const m=$("#modal");if(m)m.classList.add("gk-host");
+    const fileEl=$("#impFile");
+    const read=f=>{if(!f)return;const r=new FileReader();
+      r.onload=()=>{grid=genParseDelimited(r.result);col=genPickTextCol(grid);head=genLooksHeader(grid);file=f.name||"file";draw();};
+      r.readAsText(f);};
+    fileEl.addEventListener("change",()=>read(fileEl.files&&fileEl.files[0]));
+    const drop=$("#impDrop");
+    if(drop){
+      drop.addEventListener("click",()=>fileEl.click());
+      drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("gk-ldrop-on");});
+      drop.addEventListener("dragleave",()=>drop.classList.remove("gk-ldrop-on"));
+      drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("gk-ldrop-on");
+        read(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]);});
+    }
+    const colEl=$("#impCol");
+    if(colEl)colEl.addEventListener("change",()=>{col=Number(colEl.value)||0;draw();});
+    const headEl=$("#impHead");
+    if(headEl)headEl.addEventListener("change",()=>{head=headEl.checked;draw();});
+    $("#impBack").addEventListener("click",()=>renderFlavListManager());
+    $("#impCancel").addEventListener("click",()=>renderFlavListManager());
+    $("#impGo").addEventListener("click",()=>{
+      store.rows=store.rows.concat(take).slice(0,GEN_LIST_MAX);
+      flavCommit();M.view="rows";renderFlavListManager();
+      toast(take.length+(take.length===1?" entry":" entries")+" imported.",2000,true);});
+  };
+  draw();
+}
 // The crew settings modal (D-021, slimmed in the v4 round): species, scores, class mode,
 // background ASI. The player link lives in its own share dialog now.
 function openCrewSettings(a){
@@ -3309,32 +3783,32 @@ function openCrewSettings(a){
     const sp=GEN_SPECIES[a.crew.sp],spOpts=Object.keys(GEN_SPECIES),ritual=a.crew.spMode==="ritual";
     openModalRaw(`<h3>Crew generator</h3>
     <div class="gk-cfg gk-cfg-modal">
-      <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["locked","ritual"],ritual?"ritual":"locked",["One species for the crew","Rolled in the ritual"])}</label>
+      <label class="gk-f"><span>Species</span>${genSel("crewSpMode",["ritual","locked"],ritual?"ritual":"locked",["Random","Fixed"])}</label>
       ${ritual?"":`<label class="gk-f"><span>Which</span>${spOpts.length>1?genSel("crewSp",spOpts,a.crew.sp,spOpts.map(k=>GEN_SPECIES[k].label)):`<span class="gk-static">${esc(sp.label)}</span>`}</label>`}
-      <label class="gk-f"><span>Trinkets</span>${genSel("crewTrink",["srd","forge"],genCleanTrinketTab(a.crew.trinketTab),["Classic (SRD)","Our own list"])}</label>
-      <label class="gk-f"><span>Species boons</span>${genSel("crewBoons",["on","off"],a.crew.boons?"on":"off",["Rolled","Off"])}</label>
-      ${a.crew.boons?genBoonListHTML(a):""}
-      <label class="gk-f"><span>Scores</span>${genSel("crewStat",["3d6","4d6"],a.crew.set.stat,["3d6, in order","4d6 drop lowest"])}</label>
+      <label class="gk-f"><span>Scores</span>${genSel("crewStat",["4d6","array","3d6"],genCleanStat(a.crew.set.stat),["4d6 drop lowest","Standard array","3d6, in order"])}</label>
+      ${genCleanStat(a.crew.set.stat)==="array"?"":`<label class="gk-f"><span>Hopeless sets</span>${genSel("crewSafe",["off","on"],a.crew.set.safe?"on":"off",["Kept","Redealt"])}</label>`}
       <label class="gk-f"><span>Class</span>${genSel("crewMode",["plausible","chaos"],a.crew.set.mode,["Plausible (best fits)","Chaos (any)"])}</label>
       <label class="gk-f"><span>Background ASI</span>${genSel("crewAsi",["on","off"],a.crew.set.asi?"on":"off",["+2 / +1","Off"])}</label>
       <label class="gk-f"><span>Starting gold</span>${genSel("crewGold",["off","on"],a.crew.set.gold?"on":"off",["Roll anything","Class budget"])}</label>
       ${a.crew.set.gold?`<label class="gk-f"><span>Extra gold</span><input type="number" id="crewGoldPlus" min="0" step="5" value="${genGoldPlus(a.crew.set.goldPlus)}"></label>`:""}
     </div>
-    <p class="hint">Boons are the optional extras a species pack offers on top of its rules — the kobold's Draconic Boon table today.</p>
+    ${genCrewListsBlockHTML(a)}
     <p class="hint">${a.crew.set.gold
       ?"Gear rolls stay inside the class's own XPHB starting gold (Fighter 155, Cleric 110, Wizard 55, and so on). Anything the purse can't cover drops off the table before the dice, and the remainder lands on the card as coin. Extra gold is added to every class alike. Spellbooks, holy symbols and spellcasting foci don't count against it."
       :"Every kit, pack and sundry is on the table whatever it costs — including plate armor and firearms no level-1 character could pay for."}</p>
     <div class="mrow"><button class="btn ghost sm" id="crewCfgClose" style="width:auto">Close</button></div>`);
     const sel=(id,fn)=>{const el=$(id);if(el)el.addEventListener("change",()=>{fn(el.value);saveAdv();crewPushConfig(a);});};
     sel("#crewSpMode",v=>{a.crew.spMode=v==="ritual"?"ritual":"locked";draw();});
-    sel("#crewTrink",v=>{a.crew.trinketTab=genCleanTrinketTab(v);});
-    sel("#crewBoons",v=>{a.crew.boons=v==="on";draw();}); // the per-boon list appears with it
-    $("#modal").querySelectorAll("[data-crewboon]").forEach(cb=>cb.addEventListener("change",()=>{
-      const v=cb.dataset.crewboon,off=genCleanBoonOff(a.crew.boonOff);
-      a.crew.boonOff=cb.checked?off.filter(x=>x!==v):[...off,v];
-      saveAdv();crewPushConfig(a);}));
+    $("#modal").querySelectorAll("[data-crewlist]").forEach(b=>b.addEventListener("click",()=>
+      openFlavListManager(a,b.dataset.crewlist,()=>{openCrewSettings(a);})));
+    sel("#crewBoons",v=>{a.crew.boons=v==="on";draw();}); // the row's Change enables with it
+    {const bl=$("#modal").querySelector("[data-crewboonlist]");
+     if(bl)bl.addEventListener("click",()=>openCrewBoons(a));}
+    $("#modal").querySelectorAll("[data-crewpool]").forEach(b=>b.addEventListener("click",()=>
+      openCrewPoolPage(a,b.dataset.crewpool)));
     sel("#crewSp",v=>{if(GEN_SPECIES[v])a.crew.sp=v;});
-    sel("#crewStat",v=>{a.crew.set.stat=v==="4d6"?"4d6":"3d6";});
+    sel("#crewStat",v=>{a.crew.set.stat=genCleanStat(v);draw();}); // the safety-net row follows the method
+    sel("#crewSafe",v=>{a.crew.set.safe=v==="on";});
     sel("#crewMode",v=>{a.crew.set.mode=v==="chaos"?"chaos":"plausible";});
     sel("#crewAsi",v=>{a.crew.set.asi=v==="on";});
     sel("#crewGold",v=>{a.crew.set.gold=v==="on";draw();}); // the extra-gold field appears with it
@@ -3355,7 +3829,7 @@ function openCrewShareDialog(a){
     if(!a.crew.shareId){
       openModalRaw(`<h3>Share the crew</h3>
         <div class="share-dlg">
-          <p class="share-sub">Players roll their own ${esc(sp.label.toLowerCase())}s from their phones and land straight in this adventure's party.</p>
+          <p class="share-sub">Players roll their own ${esc(a.crew.spMode==="ritual"?"character":sp.label.toLowerCase())}s from their phones and land straight in this adventure's party.</p>
           <div class="mrow"><button class="btn primary sm" id="crewShareStart" style="width:auto">Create the player link</button></div>
         </div>`);
       $("#crewShareStart").addEventListener("click",async()=>{
@@ -3387,11 +3861,14 @@ function openCrewShareDialog(a){
 // so phones roll over the same lists the DM's library produces (D-012).
 function crewShareCfg(a){
   const cfg={name:advDName(a),sp:a.crew.sp,spMode:a.crew.spMode||"locked",boons:a.crew.boons!==false,
-    boonOff:genCleanBoonOff(a.crew.boonOff),trinketTab:genCleanTrinketTab(a.crew.trinketTab),
+    boonOff:genCleanBoonOff(a.crew.boonOff),
+    spOff:genCleanBoonOff(a.crew.spOff),clsOff:genCleanBoonOff(a.crew.clsOff), // D-051
+    // D-049: shipped lists go as their id; a custom one goes as its rows, since a phone has no library
+    lists:{quirk:genListForCfg("quirk",a.crew.lists.quirk),trinket:genListForCfg("trinket",a.crew.lists.trinket)},
     set:{...a.crew.set},tables:genSpellTables()};
   // D-030: uploaded packs ride the cfg so phones can roll and derive them (curated packs ship
   // in-code). Phones SANITIZE these at ingestion like every other cloud-read field.
-  const need=a.crew.spMode==="ritual"?genSpeciesPool():[a.crew.sp];
+  const need=a.crew.spMode==="ritual"?genSpeciesPoolFor(a.crew.spOff):[a.crew.sp];
   const up={};need.forEach(k=>{if(!GEN_SPECIES_SHIPPED.has(k)&&GEN_SPECIES[k])up[k]=GEN_SPECIES[k];});
   if(Object.keys(up).length)cfg.species=up;
   return cfg;
@@ -3406,8 +3883,19 @@ function crewShareRefs(a){
   Object.keys(GEN_CLASS_SPELLS).forEach(cls=>{
     (t.can[cls]||[]).forEach(n=>names.add(n));(t.l1[cls]||[]).forEach(n=>names.add(n));
     const K=GEN_CLASSES[cls];if(K.caster&&K.caster.always)K.caster.always.forEach(n=>names.add(n));});
-  (GEN_SPECIES[a.crew.sp].tables||[]).forEach(tb=>tb.entries.forEach(e=>{
-    if(e.sub&&e.sub.kind==="cantrip")e.sub.entries.forEach(n=>names.add(n));}));
+  // In Random (ritual) mode phones can roll ANY pack, so every pack's granted casts need refs —
+  // walking only the fixed species left non-kobold cards without popover texts (found B307). The
+  // fx.cast names are collected explicitly too: most are class cantrips already in the set, but
+  // grants like the Forest Gnome's Speak with Animals were only covered by luck.
+  const pool=a.crew.spMode==="ritual"?genSpeciesPoolFor(a.crew.spOff):[a.crew.sp];
+  pool.forEach(k=>{
+    (GEN_SPECIES[k].casts||[]).forEach(c=>{if(c.cantrip)names.add(c.cantrip);if(c.spell)names.add(c.spell);});
+    (GEN_SPECIES[k].tables||[]).forEach(tb=>tb.entries.forEach(e=>{
+      if(e.sub&&e.sub.kind==="cantrip")e.sub.entries.forEach(n=>names.add(n));
+      if(e.fx&&e.fx.cast)[].concat(e.fx.cast).forEach(c=>{
+        if(c.cantrip&&c.cantrip!=="sub")names.add(c.cantrip);if(c.spell)names.add(c.spell);});
+    }));
+  });
   const cap=(s,n)=>String(s==null?"":s).slice(0,n);
   const spells=[...names].map(n=>typeof findSpell==="function"?findSpell(n):null).filter(Boolean)
     .map(s=>({name:cap(s.name,60),level:Number(s.level)||0,school:cap(s.school,24),
@@ -3675,7 +4163,8 @@ function crewCounts(){
 }
 function crewOpenRitual(sp,cfg,isReplacement){
   openGenRitual({sp,spMode:cfg.spMode==="ritual"?"ritual":"locked",boons:cfg.boons!==false,boonOff:genCleanBoonOff(cfg.boonOff),
-    trinketTab:genCleanTrinketTab(cfg.trinketTab),set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
+    spOff:genCleanBoonOff(cfg.spOff),clsOff:genCleanBoonOff(cfg.clsOff),
+    lists:crewCleanLists(cfg.lists),set:cfg.set||{},counts:crewCounts(),tables:cfg.tables||null,mode:"crew",pn:_crew.pn,done:async payload=>{
     const prev=crewMyRec();
     const rec={pn:_crew.pn,deaths:(prev&&Number(prev.deaths)||0)+(isReplacement&&prev&&prev.cur?1:0),cur:payload};
     const r=await jbinFetch(`${FB_BASE}/shares/${_crew.id}/crew/${_crew.pid}.json`,

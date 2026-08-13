@@ -31,7 +31,7 @@ G1 Reroll · G2 the closing identity summary screen (D-041) · G3 quirks/trinket
 (D-042) · G4 per-boon toggles (D-043). All shipped, all gates settled in-session.
 → archived 2026-08-10: the four task bodies — `ARCHIVE.md#tasks-side-quest-1-crew-generator-follow-ups`
 
-## Side quest 2 — crew generator, the B298 review slate · ⏳ 5 of 6 done, **G8 is all that remains**
+## Side quest 2 — crew generator, the B298 review slate · ✅ CLOSED 2026-08-13 (G8 shipped, B306)
 
 Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
 asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
@@ -45,13 +45,11 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
   weakest part" — was right**, quirks and trinkets pruned. B305 took the quirk voice to second
   person. Elf and aasimar were never touched — he signed both off. Closed on his re-read.
   → archived 2026-08-11: the full body — `ARCHIVE.md#tasks-g7-name-generator-and-random-lists`
-- [ ] **G8 — The custom d100 lists become editable** · Opus @ high · ~1½
-  "We'll also have the possibility to edit the custom d100 list manually, importing a spreadsheet,
-  pasting listed elements." Our own trinket/quirk lists become crew-editable content: a manual
-  editor, paste-a-list, and a spreadsheet import (CSV rows). The SRD hundred stays untouchable —
-  it is licensed content, not user content. Wire boundary: an edited list rides the crew cfg and
-  is rebuilt phone-side like every other cfg field (D-007).
-  *Done when:* a DM can edit, paste and import a list, phones roll the same one, floors updated.
+- [x] **G8 — The custom d100 lists become editable** · done B306 (D-049) — mockups + four calls, then
+  built. Install-wide lists picked per crew (`state.flavLists` / `a.crew.lists`, `trinketTab`
+  migrated); a list REPLACES and the die follows its row count, printed in crew settings' new Lists
+  block; rows-with-a-Text-toggle editor; the shipped lists locked with Duplicate (D-042 made
+  visible); CSV/paste import with header + numbering-column detection. Six floors, 143 tests.
 - [x] **G9 — Beyond level 1: feasibility** · memo B302 → `GEN_LEVELS.md` · picked 2026-08-11 → **D-048**
   **Stay at level 1; C (levels 2-3) is UNSCHEDULED, not rejected.** Reopen condition, and the only
   one: a real campaign rather than a one-shot starts using the crew. B′ was declined, so don't
@@ -64,9 +62,12 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
 
 ---
 
-Standing from this arc: ~~push + deploy~~ **done 2026-08-10 — B292–B298 are live.** ⚑ B304 and B305
-are committed but NOT pushed (2026-08-11, owner: Francesco). Open taste items: leftover coin for cheap-kit casters (D-040), and whether the d100
-identity rolls want the 3D die at all (a d100 renders as a boxy solid).
+Standing from this arc: ~~push + deploy~~ **B304/B305 pushed — `origin/main` = `7909f15`, verified
+2026-08-13; whether Pages BUILT is still unconfirmed.** ⚑ B306 + B307 (his B306 review — D-050) +
+B308 (the four approved settings — D-051) are in the working tree, NOT yet committed (2026-08-13 —
+Claude waits to be asked; Francesco pushes). Open from D-050: the boons page grows real boon LISTS
+("several working boon options") in a later batch — his note, not yet scheduled. Open taste items: leftover coin for cheap-kit casters (D-040), and
+whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---
 

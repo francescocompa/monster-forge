@@ -4,7 +4,7 @@
 // core/forge/engine/bestiary/adventures/app — in that order). No imports/exports. See DEVELOPMENT.md.
 
 "use strict";
-let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],species:[],feats:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
+let state={lib:[],adv:[],roster:[],selAdv:null,presets:[],spells:[],conditions:[],rules:[],species:[],feats:[],flavLists:[],books:{},disabledLibs:[],legendaryGroups:{},refMeta:{},settings:null};
 // Player mode (B204): index.html?share=<bin> boots a locked-down, read-only-then-editable view of a shared
 // combat — reusing the real tracker. PLAYER_MODE gates persistence/DM-only paths so the DM app is untouched.
 let PLAYER_MODE=false,PLAYER_BIN=null;
@@ -36,7 +36,7 @@ function readForgeDraft(){try{const d=localStorage.getItem("mf_forgedraft");retu
 // and conditions/glossary terms. Stored in localStorage only (never JSONBin / never
 // the repo): bulky, copyrighted reference data that stays on-device. Each kind lives
 // in its own array/key so a spell is never mistaken for a statblock (Batch 14 note).
-const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",RULE_KEY="mf_rules",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta",SPECIES_KEY="mf_species",FEAT_KEY="mf_feats";
+const PRESET_KEY="mf_presets",SPELL_KEY="mf_spells",COND_KEY="mf_conditions",RULE_KEY="mf_rules",BOOK_KEY="mf_books",DISLIB_KEY="mf_disabled_libs",LEGGRP_KEY="mf_leggroups",REFMETA_KEY="mf_refmeta",SPECIES_KEY="mf_species",FEAT_KEY="mf_feats",FLAVLIST_KEY="mf_flavlists";
 // Quota-aware writes: a failed setItem (device storage full) flips _storageFailed so the
 // upload flow can surface a single consolidated alert instead of silently dropping data.
 let _storageFailed=false;
@@ -76,7 +76,12 @@ async function loadSpecies(){try{state.species=await _loadIdbList("species",SPEC
 function saveSpecies(){idbSet("species",state.species);}
 async function loadFeats(){try{state.feats=await _loadIdbList("feats",FEAT_KEY);}catch(e){state.feats=[];}}
 function saveFeats(){idbSet("feats",state.feats);}
-async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions(),loadRules(),loadSpecies(),loadFeats()]);reannotateBooks();reapplyLegGroups();
+// Flavour lists (D-049) — the crew generator's quirk/trinket tables, DM-authored. NOT an uploaded
+// reference library: no _source, no enable toggle, no book annotation. They ride the same IDB store
+// because they are install-wide content the adventures only reference by id.
+async function loadFlavLists(){try{state.flavLists=genCleanFlavStore(await _loadIdbList("flavlists",FLAVLIST_KEY));}catch(e){state.flavLists=[];}}
+function saveFlavLists(){idbSet("flavlists",state.flavLists);}
+async function loadRefLibs(){loadBooks();loadDisabled();loadLegGroups();loadRefMeta();await Promise.all([loadPresets(),loadSpells(),loadConditions(),loadRules(),loadSpecies(),loadFeats(),loadFlavLists()]);reannotateBooks();reapplyLegGroups();
   if(typeof genSyncSpecies==="function")genSyncSpecies();}
 // Stamp _book/_group onto every stored item from its _srcCode via the loaded books map,
 // so uploading books.json after a library still resolves its full title + group.
@@ -350,8 +355,13 @@ function normalizeAdv(a){
     a.crew.spMode=a.crew.spMode==="ritual"?"ritual":"locked"; // D-031: locked species vs ritual step
     a.crew.boons=a.crew.boons!==false;                        // D-035: optional species boon tables
     a.crew.boonOff=Array.isArray(a.crew.boonOff)?a.crew.boonOff.map(String):[]; // D-043: switched off one by one
-    a.crew.trinketTab=a.crew.trinketTab==="forge"?"forge":"srd";                 // D-044: which trinket list
-    a.crew.set={stat:a.crew.set&&a.crew.set.stat==="4d6"?"4d6":"3d6",
+    a.crew.spOff=Array.isArray(a.crew.spOff)?a.crew.spOff.map(String):[];       // D-051: species pool narrowing
+    a.crew.clsOff=Array.isArray(a.crew.clsOff)?a.crew.clsOff.map(String):[];    // D-051: class pool narrowing
+    // D-049: which flavour list each table rolls, install-wide ids. Migrates the D-044 trinketTab.
+    a.crew.lists=genCleanCrewLists(a.crew.lists,a.crew.trinketTab);
+    delete a.crew.trinketTab;
+    a.crew.set={stat:genCleanStat(a.crew.set&&a.crew.set.stat), // "3d6"|"4d6"|"array" (B307)
+                safe:!!(a.crew.set&&a.crew.set.safe),           // D-051: hopeless sets redealt
                 mode:a.crew.set&&a.crew.set.mode==="chaos"?"chaos":"plausible",
                 asi:!(a.crew.set&&a.crew.set.asi===false),
                 // D-038: starting-gold budget, OFF by default so existing crews roll as before.

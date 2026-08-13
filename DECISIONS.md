@@ -529,3 +529,124 @@ any row not starting "You " or calling the character "it".
 Enforced by: gen.js (`genNameClash`, `genRollName`, `GEN_NAME_PROFILES`, `GEN_QUIRKS`,
 `GEN_TRINKETS_X`) · `test/gen.test.js` (seam invariants, mean length per policy, virtue share,
 `NOT_OURS`, the exact-20 floor).
+
+### D-049 — Flavour lists become editable content: install-wide, picked per crew, a list REPLACES · 2026-08-13 · DECIDED
+**Mechanism:** AskUserQuestion over two mockup rounds (G8's opening design session), 4 questions +
+one follow-up on the entry point.
+**Raw note (verbatim), from the B298 slate:** *"We'll also have the possibility to edit the custom
+d100 list manually, importing a spreadsheet, pasting listed elements."* On the entry point, round 1:
+*"Leaning towards E2, but explain better"* → after the second mockup: **"E2 as shown — go"**.
+
+Four calls, each with its rejected alternative:
+
+1. **Entry point — E2, the Lists block.** The `Trinkets` select LEAVES the crew-settings grid.
+   Below the grid sits a two-row block — `Quirks · <list> · <die>` and `Trinkets · <list> · <die>` —
+   each with a **Change** button opening the list manager. Quirks become a first-class choice
+   (today they have no row at all, there being one quirk table). **Each row prints the die the
+   ritual will actually roll** (`genDieLabel`), because the die is DERIVED from row count: paste 34
+   rows and a clean d20 silently becomes "d100 (reroll over 34)". E2 shows that consequence at the
+   moment of choosing. *Rejected E1 — two selects in the settings grid with "— Edit lists…" as the
+   last option:* fewest taps to switch (2 vs 3) and nothing new to learn, but the settings grid
+   grows a row per table, a `<select>` ends up doubling as a door, and the die label is invisible
+   until the ritual rolls. *Rejected the one-tap variant of E2* (picker rows commit on tap, no
+   "Use for this crew"): matches E1's tap count, but then tapping a row to READ a list also
+   switches the crew onto it.
+2. **Storage — install-wide, crews pick.** Lists live with the install like uploaded species do;
+   every crew picks from the same set, and the chosen list resolves into the share cfg exactly as
+   `genSpellTables()` already does (D-012/D-030 pattern; phones rebuild it hostile-side per D-007).
+   A house table is typed once and every later one-shot has it. *Rejected per-crew-only:* cheapest
+   build and the literal reading of the raw note, but the next one-shot starts empty and the table
+   gets re-pasted every time. *Rejected "per-crew now, library later":* the migration is real work
+   — lifting per-crew lists out and de-duplicating them — for a saving of about half a batch.
+3. **Editor — numbered rows with an "Edit as text" toggle.** Rows by default (fix row 43, delete
+   row 12, numbering that maps a physical die to a row, matching the ritual's dropdowns); the
+   toggle flips the same list into one plain textarea for pasting a block or wholesale editing.
+   Both use paths are covered: first use is bulk (paste your table), every use after is a fix.
+   *Rejected text-box-only:* fastest to build and to fill, but no per-row handle and nothing shows
+   which line the die lands on. *Rejected rows-only:* cleanest editing, but paste and import — the
+   two verbs the raw note actually names — become a second dialog rather than the main act.
+4. **Composition — a list REPLACES, never extends.** The picked list is the whole table: 34 of your
+   rows = d100 reroll over 34, nothing of ours mixed in. One table to look at, one traceable roll,
+   nothing extra on the wire. Ours-plus-yours is reachable by **Duplicate** then paste. *Rejected
+   extend (yours appends to ours):* free authored entries, but no single table to show, the ritual's
+   "here is the table you are rolling on" promise blurs, and the SRD hundred could end up sharing a
+   die with DM rows.
+
+**The licence boundary, made visible (D-042 stands):** `GEN_TRINKETS` (SRD 5.2, CC-BY-4.0) and our
+own shipped lists appear in the picker with a **lock** — selectable, never editable, **Duplicate**
+in place of Rename. An edited SRD row would no longer be the SRD's, and our shipped 20 is pinned by
+a test; a DM edit therefore becomes a NEW list rather than a mutation of either.
+
+**Affects:** gen.js (`genIdList`/`genTrinketTab`/`genRollIdentity`, `openCrewSettings`,
+`crewShareCfg`, a phone-side `crewCleanLists` sanitizer) · core.js (the list store + its enable
+plumbing) · app.js (settings surface if lists get a library home there) · styles.css · the four
+sync points in `DEVELOPMENT.md` if a file is added · `test/gen.test.js` + `test/crew-flow.test.js`.
+**Enforced by (B306, shipped):** `test/gen.test.js` — the registry and its locks (the shipped rows
+are the shipped arrays themselves, never editable copies), replace-not-extend plus the die label,
+the wire round trip against hostile input, the parsers, and the `trinketTab` migration;
+`test/crew-flow.test.js` — the DOM flow (settings block → manager → paste → Use → ritual → cfg →
+phone) through the real handlers. Code: `genList*`/`crewCleanLists`/`openFlavListManager` in gen.js,
+`state.flavLists` in core.js.
+
+### D-050 — His B306 review: boons become a Lists-block row, Random species and 4d6 are the new-crew defaults, the standard array joins the score methods, "In use" is not a button · 2026-08-13 · DECIDED
+**Mechanism:** Francesco's direct notes on the shipped B306, executed as B307.
+**Raw notes (verbatim):** *"the boons now have a checkbox each in the main settings, taking up too
+much space for a minor feature. Make boons like Quirks and Trinkets, after them, with the exception
+that we'll create a list later with several working boon options. Also the on/off toggle for
+species boons should be next to it there."* · *"by default, settings should be set on 'Random'
+(change rolled in the ritual name) rather than one species per crew, which should be changed to
+Fixed"* · *"add a standard array option to scores. Set the default to 4d6 drop lowest"* · *"remove
+the in use button or make it disabled/unclickable"*.
+
+1. **Boons are a table, not a settings field.** The per-boon checklist leaves the settings grid for
+   a third Lists-block row (after Quirks and Trinkets) carrying the on/off select and a Change that
+   opens the per-boon page. `genCrewBoonRows` is the ONE definition of the crew's boon set. **Open
+   by his note:** the page later grows real boon LISTS ("several working boon options") like the
+   other two rows — that is the planned follow-up, not this batch.
+2. **Defaults: Random species, 4d6 drop lowest** — on newly enabled crews only (the creation site
+   in adventures.js); stored crews keep their config. The spMode options are renamed **Random** /
+   **Fixed** (formerly "Rolled in the ritual" / "One species for the crew").
+3. **The standard array is dealt on a d6 over the remaining values** — six one-face rolls on the
+   wire, value column re-dealt by the validator, real d6s in the 3D replay. Chosen over assigning
+   the array by pick-only (breaks D-004's pick-OR-ROLL) and over rolling a d720 permutation index
+   (no physical die, no per-ability moment). `genCleanStat` is the one cleaner; unknown methods
+   fall to "4d6".
+4. **"In use" renders as a dim label, not a disabled button** — the footer button exists only when
+   pressing it does something.
+
+**Audit fixes riding along (both pre-existing, exposed by the Random default):** the crew share
+dialog's species-specific copy, and `crewShareRefs` walking only the fixed species' tables (a
+Random-mode phone rolling another pack lost its cast popovers; refs now cover the shipped pool and
+collect `fx.cast` names explicitly).
+**Supersedes:** the D-044-era boon placement in the settings grid; the D-002 creation defaults.
+**Enforced by:** `test/crew-flow.test.js` (the B307-defaults assertion on a freshly enabled crew;
+the boons-row round trip) · `test/gen.test.js` (the array deal, its wire validation, `genCleanStat`).
+
+### D-051 — Four settings from the B307 audit: species and class pools, the hopeless-set net, the third ASI shape · 2026-08-13 · DECIDED
+**Mechanism:** AskUserQuestion (multiSelect) on the audit's proposal — he picked ALL FOUR options.
+**Raw note:** the B307 session note *"audit the current process and propose a set of additional
+settings"*; the four selected: Species pool · Class constraints · Hopeless-score reroll · ASI
+variant +1/+1/+1.
+
+1. **Pools narrow boon-style, but ingestion REJECTS.** `spOff` (Random mode only — Fixed IS the
+   species narrowing) and `clsOff` ride the cfg like `boonOff`; a filtered pool never empties
+   (all-off → full table, the genAfford convention); excluded rows render struck with "crew
+   setting" (D-044). The boundary stance is D-031's, not D-043's: species and class are the
+   character's identity — there is no no-boon entry to drop to, so a pooled-out payload bounces
+   and the phone rolls again. Chaos rolls equal-weight spans over the pool; plausible ranks inside
+   it (`genClassShortlist` takes the pool; the span follows `top3.length`, no longer a hard 3).
+2. **The hopeless net** (`set.safe`, default OFF): a completed dice-mode set with no score ≥ 14 or
+   total modifiers ≤ +0 redeals whole, per the classic convention. Wire: with the net on, a
+   hopeless ROLLED set is by definition tampered and rejects; TYPED scores stay exempt (the manual
+   override is deliberate). Hidden for the standard array (it can't be hopeless).
+3. **ASI value is 2 or 3 distinct abilities** — [+2,+1] or [+1,+1,+1], both XPHB shapes, chosen
+   per character via tabs in the step editor; the rolled default stays the class suggestion.
+   `genSummaryScores`, `deriveGenChar` and the validator read the length.
+Rejected in the same round: presets for the class pool (Martials only, etc.) — the per-class
+checklist subsumes them; a species-pool surface in Fixed mode (redundant with Which).
+**Build note:** `genTableHTML` expects `off` to BE the reason STRING — a boolean `off:true`
+crashed `esc()` at ritual open (caught in the live preview, not by the tests).
+**Supersedes:** nothing; extends D-050's Lists block with two pool rows.
+**Enforced by:** `test/gen.test.js` (pool roll/table/pick/ingest floors incl. never-empty; the
+net's engine redeal + wire rejection on the same seed; the 3-shape end to end) ·
+`test/crew-flow.test.js` (the block's row set).

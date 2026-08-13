@@ -291,6 +291,43 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
   and `Dur`+`in` were both caught this way). Tiefling additionally carries `virtue`/`virtueRate`: a
   whole-word virtue name instead of an assembly, per the D&D convention. Rolled identity lands on the
   draft as an ordinary picked value, so the wire is unchanged.
+- **The flavour lists are editable content** (D-049, B306): quirks and trinkets roll on a LIST, and
+  a list is the WHOLE table — the crew picks one per kind (`a.crew.lists`, migrated from D-044's
+  `trinketTab`) and it REPLACES, never extends. Custom lists are INSTALL-WIDE (`state.flavLists`,
+  IDB key `flavlists`) so a house table is typed once; they are **not** an uploaded reference
+  library (no `_source`, no enable toggle, not in `presetLibraries()`). Crew settings carries a
+  **Lists block** stating each table's list and **the die it will actually roll** — the die is
+  derived from row count (`genDieLabel`), so pasting 34 rows turns a clean d20 into "d100 (reroll
+  over 34)" and the block is where that shows. **Change** opens `openFlavListManager`: the picker
+  commits only on **Use for this crew**, the editor below is Rows (numbered, per-row delete, append
+  field) with a **Text** toggle for pasting a block. **The shipped lists are locked** — D-042's SRD
+  hundred and our own 20 are selectable, never editable, and **Duplicate** makes an editable copy;
+  a locked row renders as wrapping text, not a truncating input. Import reads comma/tab/semicolon
+  with quoted cells (`genParseDelimited`), picks the prose column over the numbering one
+  (`genPickTextCol`) and defaults the "First row is a header" checkbox from `genLooksHeader` — which
+  fires on ONE signal (a column numeric all the way down but not in row 1) because the length-ratio
+  version it replaced called a headerless file a header and silently ate an entry. On the wire a
+  shipped list travels as its id and a custom one as its rows (`genListForCfg`), rebuilt phone-side
+  by `crewCleanLists` under the same hostile-data stance as `/refs`. **Boons are the block's third
+  row** (D-050, B307): on/off select on the row, Change opens the per-boon page, `genCrewBoonRows`
+  is the one definition of the crew's boon set — the settings grid carries no boon field. A later
+  batch grows the page into boon lists proper.
+- **Defaults and score methods (D-050, B307):** a newly enabled crew starts on **Random** species
+  (`spMode:"ritual"`, renamed from "Rolled in the ritual"; the locked mode is **Fixed**) and **4d6
+  drop lowest**; stored crews keep their config. Score methods are `3d6` · `4d6` · `array`
+  (`genCleanStat` is the one cleaner, unknown → "4d6"). The **standard array is dealt**: each
+  ability draws one of the remaining values on a d6 (reroll over what's left), so the wire carries
+  six one-face rolls, `validateGenPayload` re-deals the values from the faces, and the 3D replay
+  fires real d6s. In Random mode `crewShareRefs` walks the whole shipped pool (and `fx.cast` names
+  explicitly) so any rolled species's cast popovers work on phones.
+- **The pools and the safety net (D-051, B308):** `spOff` (Random mode) and `clsOff` narrow the
+  species/class tables boon-style — two more Lists-block rows with counts and die, one shared
+  checklist page (`openCrewPoolPage`), never-empty fallback, struck rows in the ritual ("crew
+  setting"; NOTE `genTableHTML` expects `off` to BE the reason string). Ingestion REJECTS a
+  pooled-out species or class (D-031 stance — identity has no no-boon entry). `set.safe` redeals a
+  completed dice-mode set with no 14+ or mods ≤ +0, and the validator rejects a hopeless rolled set
+  when the net is on (typed picks exempt). `steps.asi.value` is 2 OR 3 distinct abilities
+  ([+2,+1] / [+1,+1,+1]), chosen via tabs in the step editor.
 - **Boons are optional twice over** (D-035 whole-table, D-043 per-boon): crew settings lists the
   individual boons a pack ships; a switched-off one leaves the option table and resolves to the
   table's no-boon entry if the die lands on its face. `boonOff` rides the share cfg, is rebuilt
@@ -356,7 +393,7 @@ Rules content is D&D 2024 (XPHB); the species is the 2014 MPMM Kobold.
 - **Payloads, never statblocks, on the wire** (D-007) — see the crew-share note in the security
   section above (incl. the B281 `/refs` popover texts and their phone-side sanitizer). The phone
   poll reads only `/crew`; cfg refreshes on focus, refs load once at boot.
-  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (135 tests).
+  `test/gen.test.js` + `test/crew-flow.test.js` are the floors (148 tests).
 - Backlog (D-006): print stylesheet (2-up A4), crew JSON export/import, further species packs.
   Parked by the user (2026-08-05): the phone-flow polish pass waits for the next real playtest.
 

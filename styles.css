@@ -2546,6 +2546,55 @@ body.rule-finder .sb table,body.rule-finder .sb .k,body.rule-finder .sb i{color:
 .gk-boonlist{display:flex;flex-wrap:wrap;gap:4px 16px;width:100%;padding:8px 0 2px;border-top:1px dashed var(--line)}
 .gk-boonrow{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--txt);cursor:pointer}
 .gk-boonrow .gk-dim{font-size:10.5px}
+/* G8 (D-049): the Lists block in crew settings, and the manager it opens. The block states the die
+   each table will actually roll, because the die follows the row count. */
+.gk-lists{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}
+.gk-lrow{display:flex;align-items:center;gap:10px;font-size:12px;padding:7px 2px;border-bottom:1px solid var(--line)}
+.gk-lrow:last-child{border-bottom:none}
+.gk-lname{flex:1;min-width:0}
+.gk-lmeta{font-size:10.5px;color:var(--faint)}
+.gk-lbtn{background:none;border:1px solid var(--line);border-radius:6px;color:var(--dim);cursor:pointer;font-size:11px;padding:5px 9px;width:auto;flex:none}
+.gk-lbtn:hover{border-color:var(--accent);color:var(--txt)}
+.gk-lbtn[disabled]{opacity:.4;cursor:default}
+.gk-lbtn[disabled]:hover{border-color:var(--line);color:var(--dim)}
+.gk-lrow .gk-sel{width:auto;min-width:0;padding:4px 6px;font-size:11px;flex:none}
+.gk-linuse{font-size:11px;color:var(--faint);padding:5px 4px;flex:none}
+.gk-lpicks{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.gk-lpick{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
+.gk-lpick:last-child{border-bottom:none}
+.gk-lpick:hover{background:rgba(255,255,255,.02)}
+.gk-lpick-sel{background:rgba(255,255,255,.035)}
+.gk-ldot{width:13px;height:13px;border-radius:50%;border:1px solid var(--line);flex:none;display:grid;place-items:center}
+.gk-ldot-on{border-color:var(--accent)}
+.gk-ldot-on::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.gk-lpname{flex:1;min-width:0;display:flex;align-items:center;gap:5px}
+.gk-llock{color:var(--faint);display:inline-flex}
+.gk-lpmeta{font-size:10.5px;color:var(--faint);font-family:"JetBrains Mono",monospace;flex:none}
+.gk-leh{display:flex;align-items:center;gap:8px;margin:12px 0 7px}
+.gk-lename{flex:1;font-size:12px;font-weight:600}
+.gk-lename-i{flex:1;min-width:0}
+.gk-ltabs{margin:0;flex:none}
+.gk-llocked{margin:0 0 8px}
+.gk-lrows{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.gk-lscroll{max-height:230px;overflow:auto}
+.gk-lr{display:flex;align-items:center;gap:8px;padding:0 6px 0 0;border-bottom:1px solid var(--line)}
+.gk-lr:last-child{border-bottom:none}
+.gk-ln{width:32px;text-align:right;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint);flex:none;padding:0 4px}
+.gk-lr input{flex:1;min-width:0;background:none;border:none;color:var(--txt);font-size:12px;padding:6px 0;outline:none}
+.gk-lrt{flex:1;min-width:0;font-size:12px;color:var(--dim);padding:6px 6px 6px 0;line-height:1.4}
+.gk-lr-new input{color:var(--faint)}
+.gk-lx{background:none;border:none;color:var(--faint);cursor:pointer;padding:3px 4px;opacity:.5;display:inline-flex;width:auto}
+.gk-lx:hover{color:var(--bad);opacity:1}
+.gk-lta{width:100%;min-height:200px;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.6;white-space:pre-wrap;resize:vertical}
+.gk-lfoot{flex-wrap:wrap;align-items:center}
+.gk-lcount{font-size:11px;color:var(--faint);flex:1;min-width:160px;line-height:1.45}
+.gk-lcount b{color:var(--txt);font-weight:600}
+.gk-limp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gk-limp .gk-sel{padding:3px 6px}
+.gk-lhead{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+.gk-ldrop{border:1px dashed var(--line);border-radius:8px;padding:22px 14px;text-align:center;font-size:12px;color:var(--faint);cursor:pointer}
+.gk-ldrop b{color:var(--txt)}
+.gk-ldrop:hover,.gk-ldrop-on{border-color:var(--accent);color:var(--txt)}
 #partyHead .lvlup-btn{margin-left:0}
 /* SHARE_ICON carries no width/height (the combat toolbar sizes it through .ct-toolsbtn's fixed
    grid box). In the roster header there is no such box, so the icon collapsed to 0x0 and the

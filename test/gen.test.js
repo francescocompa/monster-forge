@@ -950,7 +950,8 @@ test("D-042: identity tables are whole, and every species can name a character",
     const d=genNewDraft({sp:"kobold",set:{},counts:{}});
     genRollAll(d,rng);
     const q=genRollIdentity(d,"quirk",rng),t=genRollIdentity(d,"trinket",rng);
-    d.trinketTab="forge";const t2=genRollIdentity(d,"trinket",rng);
+    // D-049: which table a draft rolls is the resolved list on the draft, not a tab flag
+    d.lists.trinket=genListRowsFor("trinket",{trinket:"forge"});const t2=genRollIdentity(d,"trinket",rng);
     const nm=genRollIdentity(d,"name",rng);
     const p=genCompletePayload(d),v=validateGenPayload(p);
     return {trinkets:GEN_TRINKETS.length,extras:GEN_TRINKETS_X.length,quirks:GEN_QUIRKS.length,
@@ -1129,4 +1130,296 @@ test("ritual steps: every step carries a macro category, and each category is on
   assert.equal(r.ritualFirst, "Species", "in ritual-species mode the species group leads the ritual");
   assert.ok(r.spTables >= 1, "…carrying whatever tables that species happens to ship (a Dwarf ships none)");
   assert.ok(r.koboldSpecies >= 2, "a species WITH tables groups them with itself (kobold: legacy + boon)");
+});
+
+// ── G8 (D-049) — flavour lists ───────────────────────────────────────────────
+// The floors that stop the four decisions drifting: shipped lists stay read-only, a list REPLACES
+// (never extends), the die follows the row count, and everything crossing the wire is cleaned.
+test("D-049: the list registry — shipped lists are locked, custom lists join, a dangling id falls back", () => {
+  const r = ev(`(()=>{
+    state.flavLists=[{id:"u_a",kind:"trinket",n:"Sewer junk",rows:["A rusted key.","A gull's skull."]},
+                     {id:"u_q",kind:"quirk",n:"Kobold tics",rows:["You hiss when you lie."]}];
+    const tr=genListAll("trinket"),qu=genListAll("quirk");
+    const dangling=genListOr("trinket","u_gone"),custom=genListById("trinket","u_a");
+    const wrongKind=genListById("quirk","u_a");
+    state.flavLists=[];
+    return {tr:tr.map(x=>[x.id,x.locked,x.rows.length]),qu:qu.map(x=>[x.id,x.locked,x.rows.length]),
+      dangling:dangling.id,customRows:custom.rows.length,wrongKind:!!wrongKind,
+      srdIsSrd:genListById("trinket","srd").rows===GEN_TRINKETS,
+      oursIsOurs:genListById("trinket","forge").rows===GEN_TRINKETS_X,
+      quirkIsQuirks:genListById("quirk","forge").rows===GEN_QUIRKS};})()`);
+  assert.deepEqual(r.tr, [["srd", true, 100], ["forge", true, 20], ["u_a", false, 2]]);
+  assert.deepEqual(r.qu, [["forge", true, 100], ["u_q", false, 1]]);
+  assert.equal(r.dangling, "srd", "a picked list that is gone falls back to the shipped default");
+  assert.equal(r.customRows, 2);
+  assert.equal(r.wrongKind, false, "a trinket list never shows up among the quirk lists");
+  assert.equal(r.srdIsSrd, true, "the SRD hundred is the shipped array itself, never a copy to edit");
+  assert.equal(r.oursIsOurs, true);
+  assert.equal(r.quirkIsQuirks, true);
+});
+
+test("D-049: a custom list replaces the whole table, and the die follows its row count", () => {
+  const r = ev(`(()=>{
+    const rows=Array.from({length:12},(x,i)=>"Row "+(i+1));
+    state.flavLists=[{id:"u_a",kind:"trinket",n:"Sewer junk",rows}];
+    const d=genNewDraft({sp:"kobold",set:{},counts:{},lists:{trinket:"u_a",quirk:"forge"}});
+    const rng=${RNG}(7);
+    const hits=[];for(let i=0;i<40;i++)hits.push(genRollIdentity(d,"trinket",rng).value);
+    const t=genRollIdentity(d,"trinket",rng),q=genRollIdentity(d,"quirk",rng);
+    // 34 rows is the case the crew-settings line exists to show: no clean die covers it
+    state.flavLists=[{id:"u_b",kind:"trinket",n:"Long",rows:Array.from({length:34},(x,i)=>"R"+i)}];
+    const d2=genNewDraft({sp:"kobold",set:{},counts:{},lists:{trinket:"u_b"}});
+    const t2=genRollIdentity(d2,"trinket",rng);
+    state.flavLists=[];
+    return {die:t.die,label:genDieLabel(12),
+      fromCustom:hits.every(v=>rows.includes(v)),
+      srdLeaked:hits.filter(v=>GEN_TRINKETS.includes(v)).length,
+      oursLeaked:hits.filter(v=>GEN_TRINKETS_X.includes(v)).length,
+      quirkUntouched:GEN_QUIRKS.includes(q.value),
+      die2:t2.die,label2:genDieLabel(34),in2:t2.value.startsWith("R")};})()`);
+  assert.equal(r.fromCustom, true, "every roll comes from the picked list");
+  assert.equal(r.srdLeaked, 0, "a list REPLACES — nothing of the SRD's mixes in");
+  assert.equal(r.oursLeaked, 0);
+  assert.equal(r.quirkUntouched, true, "picking a trinket list leaves the quirk table alone");
+  assert.equal(r.die, 12);
+  assert.equal(r.label, "d12");
+  assert.equal(r.die2, 100);
+  assert.equal(r.label2, "d100 (reroll over 34)");
+  assert.equal(r.in2, true);
+});
+
+test("D-049: the wire — a shipped list travels as its id, a custom one as its rows, and both arrive clean", () => {
+  const r = ev(`(()=>{
+    state.flavLists=[{id:"u_a",kind:"trinket",n:"Sewer junk",rows:["A rusted key.","A gull's skull."]}];
+    const shipped=genListForCfg("trinket","srd"),custom=genListForCfg("trinket","u_a"),
+          gone=genListForCfg("trinket","u_gone");
+    // hostile cfg: an unknown id, a script-ish row, an over-long row, junk rows, and 140 entries
+    const hostile=crewCleanLists({trinket:{n:"<b>x</b>Nasty".repeat(6),
+        rows:["<script>bad()</script>ok row","   ",null,42,"y".repeat(200)]
+              .concat(Array.from({length:140},(x,i)=>"Row "+i))},
+      quirk:"nope"});
+    const empty=crewCleanLists({trinket:{n:"Empty",rows:["  ",""]},quirk:{rows:"not an array"}});
+    const missing=crewCleanLists(null);
+    state.flavLists=[];
+    return {shipped,customName:custom.n,customRows:custom.rows,gone,
+      hName:hostile.trinket.n,hLen:hostile.trinket.rows.length,
+      hAngle:hostile.trinket.rows.filter(x=>/[<>]/.test(x)).length,
+      hLong:hostile.trinket.rows.filter(x=>x.length>90).length,
+      hFirst:hostile.trinket.rows[0],hQuirk:hostile.quirk,
+      empty:empty.trinket,emptyQ:empty.quirk,missing};})()`);
+  assert.equal(r.shipped, "srd", "phones have the shipped rows in code — only the id travels");
+  assert.deepEqual(r.customRows, ["A rusted key.", "A gull's skull."]);
+  assert.equal(r.customName, "Sewer junk");
+  assert.equal(r.gone, "srd");
+  assert.equal(r.hAngle, 0, "angle brackets never survive ingestion");
+  assert.equal(r.hLong, 0, "a row is capped at 90 characters like the identity fields");
+  assert.equal(r.hLen, 100, "a hostile list cannot grow past the 100-entry cap");
+  assert.ok(r.hName.length <= 28, "a list name is capped");
+  // same treatment the identity fields already get on the wire: brackets stripped at ingestion,
+  // and every render still goes through esc()
+  assert.equal(r.hFirst, "scriptbad()/scriptok row");
+  assert.equal(r.hQuirk, "forge", "an unknown list id falls back to the kind's default");
+  assert.equal(r.empty, "srd", "a list with no usable rows is no list");
+  assert.equal(r.emptyQ, "forge");
+  assert.deepEqual(r.missing, { quirk: "forge", trinket: "srd" });
+});
+
+test("D-049: paste and spreadsheet parsing — numbering goes, prose stays, the text column wins", () => {
+  const r = ev(`(()=>{
+    const pasted=genParseListText(
+      "1. A rusted key.\\n" +
+      "02) A gull's skull.\\n" +
+      "03-04 Half a ledger.\\n" +
+      "\\n" +
+      "   \\n" +
+      "3 teeth on a wire, none of them yours.\\n" +
+      "1920s brass goggles.");
+    const csv=genParseDelimited('n,trinket,notes\\n1,"A key, rusted",old\\n2,"He said ""no""",new');
+    const tsv=genParseDelimited("1\\tA ribbon\\n2\\tA tooth");
+    const semi=genParseDelimited("1;A ribbon;x\\n2;A tooth;y");
+    const plain=genParseDelimited('1,"A key, rusted",old\\n2,"A ribbon that was white once.",new');
+    return {pasted,csvCol:genPickTextCol(csv),csv,tsvCol:genPickTextCol(tsv),
+      semiCol:genPickTextCol(semi),tsv,
+      headCsv:genLooksHeader(csv),headPlain:genLooksHeader(plain),headOne:genLooksHeader([["trinket"]]),
+      headNoNum:genLooksHeader(genParseDelimited("trinket\\nA ribbon.\\nA tooth."))};})()`);
+  assert.deepEqual(r.pasted, ["A rusted key.", "A gull's skull.", "Half a ledger.",
+    "3 teeth on a wire, none of them yours.", "1920s brass goggles."],
+    "a leading number goes only when a separator makes it unambiguous");
+  assert.deepEqual(r.csv[1], ["1", "A key, rusted", "old"], "a quoted comma stays inside its cell");
+  assert.equal(r.csv[2][1], 'He said "no"', "a doubled quote is one quote");
+  assert.equal(r.csvCol, 1, "the prose column wins over the numbering column");
+  assert.equal(r.headCsv, true, "a spreadsheet's header row is spotted, not imported as an entry");
+  assert.equal(r.headPlain, false, "a headerless file keeps its first row — the costlier mistake");
+  assert.equal(r.headOne, false, "one row is never a header — there would be nothing left");
+  assert.equal(r.headNoNum, false, "no numbering column, no detection: the checkbox carries that case");
+  assert.equal(r.tsvCol, 1);
+  assert.equal(r.semiCol, 1);
+  assert.deepEqual(r.tsv[0], ["1", "A ribbon"]);
+});
+
+test("D-049: a crew's picks normalize, and D-044's trinketTab migrates into them", () => {
+  const r = ev(`(()=>{
+    const legacy=normalizeAdv({id:"fl-1",name:"Old",encounters:[],crew:{sp:"kobold",trinketTab:"forge",set:{}}});
+    const legacySrd=normalizeAdv({id:"fl-2",name:"Older",encounters:[],crew:{sp:"kobold",set:{}}});
+    const fresh=normalizeAdv({id:"fl-3",name:"New",encounters:[],crew:{sp:"kobold",set:{},lists:{trinket:"u_a",quirk:"u_q"}}});
+    const junk=normalizeAdv({id:"fl-4",name:"Junk",encounters:[],crew:{sp:"kobold",set:{},lists:{trinket:42,quirk:{}}}});
+    return {legacy:legacy.crew.lists,legacyTab:"trinketTab" in legacy.crew,
+      legacySrd:legacySrd.crew.lists,fresh:fresh.crew.lists,junk:junk.crew.lists};})()`);
+  assert.deepEqual(r.legacy, { quirk: "forge", trinket: "forge" }, "the old Ours tab becomes the Ours list");
+  assert.equal(r.legacyTab, false, "trinketTab does not survive the migration");
+  assert.deepEqual(r.legacySrd, { quirk: "forge", trinket: "srd" });
+  assert.deepEqual(r.fresh, { quirk: "u_q", trinket: "u_a" });
+  assert.deepEqual(r.junk, { quirk: "forge", trinket: "srd" }, "a non-string pick is no pick");
+});
+
+// ── B307 — the standard array, and the score-method cleaner ─────────────────
+// The array is DEALT: each ability draws one of the remaining values on a d6 (reroll over what's
+// left), so the wire carries six one-face rolls and the value column replays from them.
+test("B307: the standard array deals a permutation, survives the wire, and rejects a tampered deal", () => {
+  const r = ev(`(()=>{
+    const rng=${RNG}(1234);
+    const d=genNewDraft({sp:"kobold",set:{stat:"array",mode:"plausible",asi:true},counts:{}});
+    let st;while(!st||st.rolls.length<6)st=genRollStep(d,"stats",rng);
+    genRollAll(d,rng); // fills the rest; stats stay as dealt
+    genApplyPick(d,"name","Sgrizzo");
+    const p=genCompletePayload(d),v=validateGenPayload(p);
+    // tampering: a face over what was still left (5th deal has only 2 values remaining)
+    const bad=JSON.parse(JSON.stringify(p));bad.steps.stats.rolls[4]=[3];
+    const vBad=validateGenPayload(bad);
+    // a dice-mode payload can't smuggle an array claim: set says 3d6, rolls are one-face
+    const cross=JSON.parse(JSON.stringify(p));cross.set.stat="3d6";
+    const vCross=validateGenPayload(cross);
+    return {vals:[...st.value].sort((a,b)=>b-a),faces:st.rolls.map(x=>x.length),
+      wireOk:v.ok,wireVals:v.ok?v.clean.steps.stats.value:null,
+      badOk:vBad.ok,badErr:vBad.err,crossOk:vCross.ok,
+      clean:[genCleanStat("array"),genCleanStat("3d6"),genCleanStat("4d6"),genCleanStat(),genCleanStat("junk")]};})()`);
+  assert.deepEqual(r.vals, [15, 14, 13, 12, 10, 8], "the deal is a permutation of the standard array");
+  assert.deepEqual(r.faces, [1, 1, 1, 1, 1, 1], "one face per ability on the wire");
+  assert.equal(r.wireOk, true);
+  assert.deepEqual([...r.wireVals].sort((a, b) => b - a), [15, 14, 13, 12, 10, 8],
+    "the validator re-deals the same values from the faces");
+  assert.equal(r.badOk, false, "a face over the remaining count is rejected");
+  assert.equal(r.badErr, "stats");
+  assert.equal(r.crossOk, false, "one-face rolls do not validate as 3d6 dice");
+  assert.deepEqual(r.clean, ["array", "3d6", "4d6", "4d6", "4d6"], "unknown score methods fall to the 4d6 default");
+});
+
+// ── B308 (D-051) — the pools, the safety net, and the third ASI shape ───────
+test("D-051: narrowed pools drive the roll, the table, the pick, and the ingest boundary", () => {
+  const r = ev(`(()=>{
+    const rng=${RNG}(77);
+    // species pool: three packs off — rolls and picks stay inside what's left
+    const spOff=["kobold","dwarf","elf"];
+    const dr=genNewDraft({sp:"kobold",spMode:"ritual",spOff,set:{stat:"3d6"},counts:{}});
+    const landed=new Set();
+    for(let i=0;i<60;i++){genRollStep(dr,"species",rng);landed.add(dr.steps.species.value);}
+    const pickOff=genApplyPick(dr,"species","kobold"),pickOn=genApplyPick(dr,"species","human");
+    const spTbl=genStepTable(dr,"species");
+    // class pool: nine off leaves three; chaos and plausible both stay inside
+    const clsOff=GEN_CLASS_LIST.filter(c=>!["Fighter","Rogue","Wizard"].includes(c));
+    const dc=genNewDraft({sp:"kobold",clsOff,set:{stat:"3d6",mode:"chaos"},counts:{}});
+    genRollAll(dc,rng);
+    const dp=genNewDraft({sp:"kobold",clsOff,set:{stat:"3d6",mode:"plausible"},counts:{}});
+    genRollAll(dp,rng);
+    const clsTbl=genStepTable(dp,"cls");
+    // all-off falls back to the full table, never empties
+    const full=genClassPoolFor(GEN_CLASS_LIST).length;
+    // ingest boundary: a pooled-out species/class bounces, an allowed one lands
+    const a={id:"t",party:[],crew:{sp:"kobold",spMode:"ritual",spOff,clsOff:[],boonOff:[],set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]}};
+    const mk=sp=>{const d=genNewDraft({sp,set:a.crew.set,counts:{}});genRollAll(d,${RNG}(5));genApplyPick(d,"name","T");return genCompletePayload(d);};
+    const bounced=genIngestPayload(a,mk("kobold"),"P","p:x")===null;
+    const landedIn=genIngestPayload(a,mk("human"),"P","p:y")!==null;
+    state.roster=state.roster.filter(x=>!(x.gen&&(x.gen.pid==="p:x"||x.gen.pid==="p:y")));
+    return {landed:[...landed],pickOff,pickOn,
+      offRows:spTbl.rows.filter(x=>x.off).map(x=>x.value),
+      chaosCls:dc.steps.cls.value,chaosDie:dc.steps.cls.die,
+      plausTop:dp.steps.cls.top3,plausIn:["Fighter","Rogue","Wizard"].includes(dp.steps.cls.value),
+      clsOffRows:clsTbl.moreRows.filter(x=>x.off).length,full,bounced,landedIn};})()`);
+  assert.equal(r.landed.some(v => ["kobold", "dwarf", "elf"].includes(v)), false, "the species roll never lands outside the pool");
+  assert.equal(r.pickOff, false, "a pooled-out species is not pickable either");
+  assert.equal(r.pickOn, true);
+  assert.deepEqual([...r.offRows].sort(), ["dwarf", "elf", "kobold"], "excluded species render as struck rows");
+  assert.equal(["Fighter", "Rogue", "Wizard"].includes(r.chaosCls), true, "chaos rolls the pool");
+  assert.equal(r.chaosDie, 6, "three allowed classes = a d6 in thirds, not a d12");
+  assert.equal(r.plausTop.every(c => ["Fighter", "Rogue", "Wizard"].includes(c)), true, "plausible ranks inside the pool");
+  assert.equal(r.plausIn, true);
+  assert.equal(r.clsOffRows, 9, "the nine excluded classes sit struck in the expander");
+  assert.equal(r.full, 12, "switching every class off falls back to the full table");
+  assert.equal(r.bounced, true, "a pooled-out species bounces at ingestion (D-031 stance)");
+  assert.equal(r.landedIn, true);
+});
+
+test("D-051: the hopeless safety net redeals in the engine and rejects on the wire", () => {
+  const r = ev(`(()=>{
+    // 3d6 with a seed hunt: find a seed whose UNSAFE set is hopeless, then run SAFE on the same seed
+    let seed=0,unsafe=null;
+    for(let s=1;s<4000&&!unsafe;s++){
+      const d2=genNewDraft({sp:"kobold",set:{stat:"3d6"},counts:{}});
+      const rng=${RNG}(s);
+      let st2;while(!st2||st2.rolls.length<6)st2=genRollStep(d2,"stats",rng);
+      if(genHopeless(st2.value)){seed=s;unsafe=st2.value;}
+    }
+    const dSafe=genNewDraft({sp:"kobold",set:{stat:"3d6",safe:true},counts:{}});
+    const rngS=${RNG}(seed);
+    let stS;while(!stS||stS.rolls.length<6)stS=genRollStep(dSafe,"stats",rngS);
+    // wire: a hopeless rolled set with safe on is a tampered payload — reject; safe off keeps it
+    const mkRaw=vals=>({v:2,id:"w",sp:"kobold",set:{stat:"3d6",safe:true},steps:{}});
+    const dHost=genNewDraft({sp:"kobold",set:{stat:"3d6",safe:false},counts:{}});
+    const rngH=${RNG}(seed);
+    let stH;while(!stH||stH.rolls.length<6)stH=genRollStep(dHost,"stats",rngH);
+    genRollAll(dHost,${RNG}(9));genApplyPick(dHost,"name","T");
+    const p=genCompletePayload(dHost);
+    const vOff=validateGenPayload(p,{...dHost.set,safe:false});
+    const vOn=validateGenPayload(p,{...dHost.set,safe:true});
+    // typed picks are exempt from the net
+    const dPick=genNewDraft({sp:"kobold",set:{stat:"3d6",safe:true},counts:{}});
+    genApplyPick(dPick,"stats",[8,8,8,8,8,8]);
+    genRollAll(dPick,${RNG}(9));genApplyPick(dPick,"name","T");
+    const vPick=validateGenPayload(genCompletePayload(dPick),{...dPick.set,safe:true});
+    return {found:!!unsafe,unsafeHopeless:unsafe?genHopeless(unsafe):null,
+      safeValue:stS.value,safeHopeless:genHopeless(stS.value),redeals:stS.redeals||0,
+      hostHopeless:genHopeless(stH.value),offOk:vOff.ok,onOk:vOn.ok,onErr:vOn.err,pickOk:vPick.ok};})()`);
+  assert.equal(r.found, true, "3d6 produces a hopeless set within the seed hunt");
+  assert.equal(r.unsafeHopeless, true);
+  assert.equal(r.safeHopeless, false, "the same stream with the net on lands a playable set");
+  assert.ok(r.redeals >= 1, "the redeal is recorded for the UI toast");
+  assert.equal(r.hostHopeless, true, "the probe payload really is hopeless");
+  assert.equal(r.offOk, true, "net off: a hopeless set is legal");
+  assert.equal(r.onOk, false, "net on: a hopeless ROLLED set cannot cross the wire");
+  assert.equal(r.onErr, "stats");
+  assert.equal(r.pickOk, true, "typed scores are exempt — the override is deliberate");
+});
+
+test("D-051: the +1/+1/+1 background shape applies, renders, and validates beside +2/+1", () => {
+  const r = ev(`(()=>{
+    const d=genNewDraft({sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},counts:{}});
+    genRollAll(d,${RNG}(4242));
+    const base=genSummaryScores({...d,set:{...d.set,asi:false}}).map(x=>x.v);
+    const two=genApplyPick(d,"asi",["str","dex"]);
+    const s2=genSummaryScores(d).map(x=>x.v);
+    const three=genApplyPick(d,"asi",["str","dex","con"]);
+    const s3=genSummaryScores(d).map(x=>x.v);
+    const dupe=genApplyPick(d,"asi",["str","str","con"]);
+    const shape4=genApplyPick(d,"asi",["str","dex","con","wis"]);
+    genApplyPick(d,"name","T");
+    const p=genCompletePayload(d),v=validateGenPayload(p);
+    const ch=v.ok?deriveGenChar(v.clean):null;
+    const html=genStepValueHTML(d,"asi");
+    return {two,three,dupe,shape4,base,s2,s3,wireOk:v.ok,
+      wireAsi:v.ok?v.clean.steps.asi.value:null,
+      chScores:ch?[ch.scores.str,ch.scores.dex,ch.scores.con]:null,
+      baseSCD:[base[0],base[1],base[2]],html};})()`);
+  assert.equal(r.two, true);
+  assert.equal(r.three, true);
+  assert.equal(r.dupe, false, "duplicate abilities rejected in either shape");
+  assert.equal(r.shape4, false, "only the two XPHB shapes exist");
+  assert.equal(r.s2[0], Math.min(20, r.base[0] + 2), "+2/+1: the +2 lands");
+  assert.equal(r.s3[0], Math.min(20, r.base[0] + 1), "+1/+1/+1: one point each");
+  assert.equal(r.s3[1], Math.min(20, r.base[1] + 1));
+  assert.equal(r.s3[2], Math.min(20, r.base[2] + 1));
+  assert.equal(r.wireOk, true);
+  assert.deepEqual(r.wireAsi, ["str", "dex", "con"], "the 3-shape survives the wire");
+  assert.deepEqual(r.chScores, [Math.min(20, r.baseSCD[0] + 1), Math.min(20, r.baseSCD[1] + 1), Math.min(20, r.baseSCD[2] + 1)],
+    "deriveGenChar applies the 3-shape");
+  assert.ok(/\+1 STR \/ \+1 DEX \/ \+1 CON/.test(r.html), "the step renders the 3-shape: " + r.html);
 });

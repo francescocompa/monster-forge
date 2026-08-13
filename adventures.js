@@ -212,7 +212,8 @@ function renderAdvDetail(){
   $("#advCrewTog").addEventListener("click",()=>{
     if(a.crew){confirmModal("Disable the crew generator? Its settings and the fallen archive are cleared. Living crew members stay in the party.",()=>{
       const sid=a.crew.shareId;a.crew=null;saveAdv();renderAdvDetail();if(sid)jbinDeletePublic(sid);});}
-    else{a.crew={sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]};saveAdv();renderAdvDetail();}
+    // B307 defaults: species Random (rolled in the ritual) and 4d6-drop-lowest scores.
+    else{a.crew={sp:"kobold",spMode:"ritual",set:{stat:"4d6",mode:"plausible",asi:true},shareId:"",fallen:[]};saveAdv();renderAdvDetail();}
   });
   $("#advToggleNotes").addEventListener("click",()=>{a.notesOn=!a.notesOn;if(!a.notesOn)a.notes="";saveAdv();renderAdvDetail();});
   {const an=$("#advNotes");if(an)an.addEventListener("input",e=>{a.notes=e.target.value;saveAdv();});}

@@ -42,12 +42,18 @@ test("crew flow: enable → table-first ritual → save → statblock card → m
     const shareBtn=document.getElementById("crewShareBtn");
     let share=false;
     if(shareBtn){shareBtn.click();share=!!document.getElementById("crewShareStart");closeModal();}
-    return {crewOn:!!a.crew,panelGone:!document.querySelector(".gk-panel"),
+    // B307 defaults on a freshly enabled crew — captured, then flipped to the locked kobold
+    // config the rest of this test walks (the ritual-species flow has its own floors).
+    const defaults={spMode:a.crew&&a.crew.spMode,stat:a.crew&&a.crew.set.stat};
+    a.crew.spMode="locked";a.crew.set.stat="3d6";
+    return {crewOn:!!a.crew,panelGone:!document.querySelector(".gk-panel"),defaults,
             roll:!!document.getElementById("rollPC"),gear:!!gear,share,shareInSettings,
             caret:!!document.querySelector('[data-menu="pcadd"]'),
             regularAdd:!!document.getElementById("addPC")};})()`);
   assert.equal(setup.fail, undefined);
   assert.equal(setup.crewOn, true);
+  assert.deepEqual(setup.defaults, { spMode: "ritual", stat: "4d6" },
+    "a new crew defaults to Random species and 4d6 drop lowest (B307)");
   assert.equal(setup.panelGone, true, "the old crew panel is dissolved");
   assert.equal(setup.roll, true, "split Roll button is the roster primary");
   assert.equal(setup.gear, true, "settings gear in the roster header");
@@ -425,4 +431,119 @@ test("DM ingest: same device slot replaces (predecessor falls), known payload id
   assert.equal(r.fallen, 1);
   assert.equal(r.fallenName, "Primo");
   assert.deepEqual(r.living, ["Secondo"]);
+});
+
+// G8 (D-049): the list surface through the real handlers — crew settings' Lists block opens the
+// manager, a pasted list becomes install-wide content, Use points the crew at it, and the ritual,
+// the wire and a phone all roll the same table.
+test("crew lists: settings block → manager → paste → use → the ritual and the wire agree", () => {
+  const r = ev(`(()=>{
+    const a=normalizeAdv({id:"gk-list-adv",name:"Sewer job",encounters:[]});
+    a.crew={sp:"kobold",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]};
+    normalizeAdv(a);
+    state.adv.unshift(a);state.selAdv=a.id;
+    const before=JSON.parse(JSON.stringify(a.crew.lists));
+    openCrewSettings(a);
+    const block=[...document.querySelectorAll("#modal .gk-lrow")].map(x=>x.textContent.replace(/\\s+/g," ").trim());
+    const change=document.querySelector('#modal [data-crewlist="trinket"]');
+    if(!change)return {fail:"no Change button on the trinket row"};
+    change.click();
+    const picks=[...document.querySelectorAll("#modal [data-flavpick]")].map(x=>x.dataset.flavpick);
+    const usedAtOpen=document.querySelector("#modal .gk-ldot-on")!==null;
+    document.getElementById("flavNew").click();
+    const madeId=state.flavLists.length?state.flavLists[state.flavLists.length-1].id:"";
+    const ta=document.getElementById("flavText");
+    ta.value="1. A rusted key.\\n2. A gull's skull.\\n3. Half a ledger.\\n4. A tin whistle.";
+    ta.dispatchEvent(new window.Event("change"));
+    const nm=document.getElementById("flavName");
+    nm.value="Sewer junk";nm.dispatchEvent(new window.Event("change"));
+    document.querySelector('#modal [data-flavview="rows"]').click();
+    const rowsShown=[...document.querySelectorAll("#modal [data-flavrow]")].map(x=>x.value);
+    const countLine=document.querySelector("#modal .gk-lcount").textContent.replace(/\\s+/g," ").trim();
+    const useBtn=document.getElementById("flavUse");
+    const useLabel=useBtn.textContent.trim();
+    useBtn.click();
+    const picked=JSON.parse(JSON.stringify(a.crew.lists));
+    const cfg=crewShareCfg(a);
+    // the DM's own ritual, and a phone rebuilding the same cfg from the world-writable share
+    const dm=genNewDraft({sp:"kobold",set:a.crew.set,counts:{},lists:a.crew.lists});
+    const phone=genNewDraft({sp:"kobold",set:a.crew.set,counts:{},lists:crewCleanLists(JSON.parse(JSON.stringify(cfg.lists)))});
+    // one seeded stream each, not one shared one — interleaved draws would prove nothing
+    const seeded=s=>{let x=s;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};};
+    const rngA=seeded(31),rngB=seeded(31),rng=seeded(77);
+    const dmRolls=[],phoneRolls=[];
+    for(let i=0;i<12;i++){dmRolls.push(genRollIdentity(dm,"trinket",rngA).value);
+                          phoneRolls.push(genRollIdentity(phone,"trinket",rngB).value);}
+    // deleting the list it uses drops the crew back to the shipped table rather than emptying it
+    document.getElementById("flavDel").click();
+    const yes=document.querySelector("#modalBg.show .btn.primary")||document.querySelector("#modal .btn.primary");
+    if(yes)yes.click();
+    const afterDel={store:state.flavLists.length,
+      rolls:genRollIdentity(genNewDraft({sp:"kobold",set:a.crew.set,counts:{},lists:a.crew.lists}),"trinket",rng).value};
+    closeModal();
+    state.adv=state.adv.filter(x=>x.id!=="gk-list-adv");state.flavLists=[];
+    return {before,block,picks,usedAtOpen,madeId,rowsShown,countLine,useLabel,picked,
+      cfgList:cfg.lists,cfgQuirk:cfg.lists.quirk,dmRolls,phoneRolls,afterDel};})()`);
+  assert.equal(r.fail, undefined);
+  assert.deepEqual(r.before, { quirk: "forge", trinket: "srd" }, "a fresh crew starts on the shipped lists");
+  assert.equal(r.block.length, 4, "quirks, trinkets, the kobold's boons (B307), and the class pool (B308) — no species row on a Fixed crew");
+  assert.ok(/^Quirks · Our own list · d100/.test(r.block[0]), "the block states the list AND its die: " + r.block[0]);
+  assert.ok(/^Trinkets · Classic \(SRD\) · d100/.test(r.block[1]), r.block[1]);
+  assert.ok(/^Boons · rolled/.test(r.block[2]), "the boons row joins the block: " + r.block[2]);
+  assert.ok(/^Classes · all 12 rolled/.test(r.block[3]), "the class pool row joins the block: " + r.block[3]);
+  assert.deepEqual(r.picks, ["srd", "forge"], "the manager opens on the shipped lists");
+  assert.equal(r.usedAtOpen, true, "the list in use is marked");
+  assert.ok(/^u_/.test(r.madeId), "New list creates a custom list");
+  assert.deepEqual(r.rowsShown, ["A rusted key.", "A gull's skull.", "Half a ledger.", "A tin whistle."],
+    "a pasted block becomes rows, its table numbering stripped");
+  assert.ok(/4 entries · rolls d4/.test(r.countLine), "the die follows the row count: " + r.countLine);
+  assert.equal(r.useLabel, "Use for this crew");
+  assert.equal(r.picked.trinket, r.madeId, "Use points THIS crew at the list");
+  assert.equal(r.picked.quirk, "forge", "…and leaves the other table alone");
+  assert.equal(r.cfgQuirk, "forge", "a shipped list travels as its id");
+  assert.deepEqual(r.cfgList.trinket, { n: "Sewer junk", rows: ["A rusted key.", "A gull's skull.", "Half a ledger.", "A tin whistle."] },
+    "a custom list travels as its rows — a phone has no library to look an id up in");
+  assert.deepEqual(r.dmRolls, r.phoneRolls, "the DM and a phone roll the same table from the same seed");
+  assert.equal(r.dmRolls.every(v => r.cfgList.trinket.rows.includes(v)), true);
+  assert.equal(r.afterDel.store, 0, "deleting removes the list");
+  assert.equal(typeof r.afterDel.rolls, "string", "a crew pointing at a deleted list still rolls (the shipped fallback)");
+});
+
+// B307: the boons row in the Lists block — the on/off select rides the row, Change opens the
+// per-boon page, and a toggle there lands on the crew's boonOff (and would ride the next cfg push).
+test("crew boons: the Lists-block row, the boons page, and the off-switch round trip", () => {
+  const r = ev(`(()=>{
+    const a=normalizeAdv({id:"gk-boon-adv",name:"Boons",encounters:[],
+      crew:{sp:"kobold",spMode:"locked",set:{stat:"3d6",mode:"plausible",asi:true},shareId:"",fallen:[]}});
+    state.adv.unshift(a);
+    openCrewSettings(a);
+    const row=[...document.querySelectorAll("#modal .gk-lrow")].find(x=>/^Boons/.test(x.textContent.trim()));
+    if(!row)return {fail:"no Boons row in the Lists block"};
+    const sel=row.querySelector("select#crewBoons"),change=row.querySelector("[data-crewboonlist]");
+    const inGrid=!!document.querySelector("#modal .gk-cfg .gk-boonlist")
+      ||[...document.querySelectorAll("#modal .gk-cfg .gk-f span")].some(s=>s.textContent==="Species boons");
+    change.click();
+    const page={title:document.querySelector("#modal h3").textContent.trim(),
+      boxes:document.querySelectorAll("#modal [data-crewboon]").length};
+    const cb=document.querySelector("#modal [data-crewboon]");
+    cb.checked=false;cb.dispatchEvent(new window.Event("change"));
+    const off=[...a.crew.boonOff];
+    document.getElementById("boonBack").click();
+    const meta=[...document.querySelectorAll("#modal .gk-lrow")].find(x=>/^Boons/.test(x.textContent.trim()))
+      .querySelector(".gk-lmeta").textContent.trim();
+    // Off disables Change
+    const bs=document.getElementById("crewBoons");
+    bs.value="off";bs.dispatchEvent(new window.Event("change"));
+    const disabled=document.querySelector("#modal [data-crewboonlist]").disabled;
+    closeModal();
+    state.adv=state.adv.filter(x=>x.id!=="gk-boon-adv");
+    return {sel:!!sel,inGrid,page,off,meta,disabled};})()`);
+  assert.equal(r.fail, undefined);
+  assert.equal(r.sel, true, "the on/off select sits on the row");
+  assert.equal(r.inGrid, false, "the settings grid carries no boon field or checklist any more");
+  assert.equal(r.page.title, "Species boons");
+  assert.ok(r.page.boxes >= 2, "the per-boon checklist lives on its own page");
+  assert.equal(r.off.length, 1, "unticking a boon lands on boonOff");
+  assert.ok(/of \d+ rolled/.test(r.meta), "the row's meta counts what still rolls: " + r.meta);
+  assert.equal(r.disabled, true, "boons off disables the page");
 });

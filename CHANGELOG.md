@@ -4,6 +4,97 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 308 — The four settings he approved: species and class pools, the hopeless-set net, the third ASI shape (D-051)
+
+All four picked from the B307 audit proposal, built in one pass.
+
+- **Species pool (Random mode) and Class pool** narrow boon-style: `a.crew.spOff`/`clsOff` ride the
+  cfg, two new Lists-block rows state the count AND the die (`Species · 4 of 11 rolled · d4`), and
+  Change opens a shared checklist page (`openCrewPoolPage`). A filtered pool NEVER empties —
+  all-off falls back to the full table. Excluded rows render struck in the ritual's tables with the
+  reason ("crew setting", D-044's convention — which expects `off` to BE the reason string; a
+  boolean crashed `esc()` in the live preview, the one bug this batch's tests missed). Chaos rolls
+  equal-weight spans over the pool (3 classes = a d6 in thirds, not a d12); plausible ranks inside
+  it; picks and INGESTION reject what the pool excludes — species and class are identity, so the
+  D-031 locked-species stance applies, not D-043's drop-to-no-boon.
+- **The hopeless-set safety net** (`set.safe`, default off, hidden for the array): once the sixth
+  ability lands, a set with no 14+ or total modifiers +0 or less is redealt whole — the classic
+  convention. The final set is what the dice replay and the wire carry; a toast says it happened.
+  On the wire the honest engine can't produce a hopeless rolled set with the net on, so the
+  validator REJECTS one (tampered); typed picks stay exempt — the override is deliberate.
+- **The +1/+1/+1 background shape** joins +2/+1 (both XPHB-legal): the ASI editor grows two shape
+  tabs, `steps.asi.value` is 2 or 3 distinct abilities, and the summary, the card derivation and
+  the validator all read the length. The rolled default stays the class's +2/+1 suggestion.
+- 148 tests green (pools drive roll/table/pick/ingest; the net redeals in-engine and rejects on the
+  wire on the same seed; the 3-shape applies, renders and validates). Verified live: a crew locked
+  to 4 species / 3 classes rolled a Goliath Fighter with +1/+1/+1 applied.
+
+## Batch 307 — His B306 review executed: boons join the Lists block, Random species and 4d6 become the defaults, the standard array lands (D-050)
+
+Five notes on the shipped G8, all his calls, plus the audit he asked for.
+
+- **Boons leave the settings grid.** The per-boon checkboxes were crowding the modal for a minor
+  feature. They now live where the other tables do: a third row in the Lists block — `Boons ·
+  8 of 9 rolled` — carrying the on/off select AND a Change button that opens the per-boon page
+  (its own modal, back-arrow to settings). `genCrewBoonRows` is now the one definition of the
+  crew's boon set; the block row, the page, and D-043's off-switches all read it. The row only
+  prints when the species pool actually ships boons. A future batch grows the page into proper
+  boon lists like quirks and trinkets.
+- **New-crew defaults flip (D-050):** species **Random** (rolled in the ritual — the option
+  formerly "Rolled in the ritual", now named Random; "One species for the crew" is now **Fixed**)
+  and scores **4d6 drop lowest**. Existing crews keep whatever they had — only the creation site
+  changed.
+- **The standard array** joins the score methods ("Standard array", between 4d6 and 3d6). It is
+  DEALT, not rolled: each ability draws one of the remaining values on a d6 (reroll over what's
+  left) — the same shrinking-table convention as every other roll, so the wire carries six
+  one-face rolls, the validator re-deals the values from the faces, and the 3D dice replay real
+  d6s. A tampered face over the remaining count rejects; one-face rolls can't masquerade as 3d6.
+- **"In use" stops being a button.** The manager's footer shows a dim text label when the viewed
+  list is the crew's; the button only renders when pressing it would do something.
+- **Audit findings, fixed:** the crew share dialog said "Players roll their own kobolds" even in
+  Random mode; and `crewShareRefs` walked only the FIXED species' tables, so in Random mode a
+  phone rolling any other pack got no popover refs for its granted casts — it now walks the same
+  pool the cfg ships, and collects `fx.cast` names explicitly (Speak with Animals was only covered
+  by luck before).
+- 145 tests green (new floors: the array deal + wire, the boons row round trip, the B307 defaults);
+  verified in the live preview — settings, the boons page, and a standard-array ritual end to end.
+
+## Batch 306 — G8: the flavour lists become editable content (D-049)
+
+The last item on the crew side quest. Quirks and trinkets stop being fixed tables: a DM can type,
+paste or import their own, and every crew picks which one it rolls. Opened with mockups and four
+AskUserQuestion calls before any code, per the standing protocol.
+
+- **Install-wide lists, picked per crew.** Custom lists live in `state.flavLists` (IDB, alongside the
+  uploaded libraries but NOT one of them — no `_source`, no enable toggle); a crew stores only ids in
+  `a.crew.lists`. So a house table is typed once and every later one-shot can pick it. D-044's
+  `trinketTab` is migrated into `lists.trinket` by `normalizeAdv` and deleted.
+- **A list REPLACES, never extends.** The picked list is the whole table, and the die follows the row
+  count — which is why crew settings' new **Lists block** prints it: `Trinkets · Sewer junk · d100
+  (reroll over 34)`. Paste 34 rows and you see the consequence there, not at the table.
+- **The manager does two jobs on one screen.** The top picks which list the crew rolls, the bottom
+  edits whichever list you are looking at, so browsing does not change what the crew uses until
+  **Use for this crew**. Rows view (numbered like the ritual's tables, per-row delete, an append
+  field) with a **Text** toggle for pasting a block wholesale.
+- **The shipped lists carry a lock** (D-042 made visible): the SRD hundred and our own 20 are
+  selectable, never editable — **Duplicate** makes an editable copy. Read-only rows render as
+  wrapping text, since an input would only truncate the long SRD entries.
+- **Import understands a spreadsheet.** `genParseDelimited` handles comma/tab/semicolon with quoted
+  cells and doubled quotes; `genPickTextCol` picks the prose column over the numbering one;
+  `genLooksHeader` ticks "First row is a header" when a column is numbers all the way down but not in
+  row 1. A length-ratio detector was tried first and called a headerless file a header — silently
+  eating a real entry, the worse failure — so the one strong signal plus a visible checkbox stands.
+  Pasted rows lose a leading table number only when a separator makes it unambiguous: "1. A rusted
+  key" loses it, "3 teeth on a wire" keeps it.
+- **On the wire** (D-007 unchanged): a shipped list travels as its id, a custom one as its rows,
+  and phones rebuild it through `crewCleanLists` — brackets stripped, rows capped at 90 characters,
+  lists at 100 entries, an unknown id dropped to the shipped default. Quirk and trinket values
+  themselves were already free text on the wire, so validation is untouched.
+- Six new floors (143 tests): the registry and its locks, replace-not-extend + the die label, the
+  wire round trip against hostile input, the parsers, the trinketTab migration, and a DOM flow test
+  driving settings → manager → paste → Use → ritual → cfg → phone through the real handlers.
+- Verified in the live preview end to end, including a real CSV through the file input.
+
 ## Batch 305b — Docs: /handoff pass — G7 and G9 bodies archived, DEVELOPMENT catches up
 
 No code. Session close-out after B304/B305.
