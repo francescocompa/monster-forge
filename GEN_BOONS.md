@@ -1,11 +1,16 @@
-# GEN_BOONS — the boon-lists content proposal (D-050 follow-up)
+# GEN_BOONS — the boon-lists content plan (D-050 → decided D-052)
 
-> **Status: PROPOSAL, nothing built.** His note (B307, D-050): boons become lists "like Quirks and
-> Trinkets … we'll create a list later with several working boon options." This memo is the
-> researched candidate content — sources first, then six shipped-list drafts plus an overflow pool.
-> Every entry is written in OUR words at level-1 power; nothing lands in gen.js until he picks.
-> Research base: the local 5etools mirror (v2.29.0, 272 reward entries + optional features + feats)
-> and a web pass over the CC-licensed third-party SRDs (2026-08-13).
+> **Status: SCOPED FOR BUILD (D-052, 2026-08-14) — content and design settled, nothing coded yet.**
+> The 2026-08-14 interview resolved every §4 gate: all six lists ship; boons UNCOUPLE from species;
+> a **multi-list roll mode** lands for quirks, trinkets AND boons (pick several lists → stage 1
+> rolls which list on equal spans, stage 2 rolls that list's die); the no-boon floor becomes a crew
+> setting in **5% steps on a d20** (default 60%); custom entries are **prose-only**; `res` gains
+> `per:"never"`; both fx extensions build. **List C re-seeds from RHW** — Ravenloft: The Horrors
+> Within (mirror v2.33.3) reissues the dark gifts as 2024 feats whose cost is a **natural-1 flare**
+> (d20 Test rolls a 1 → save DC 13+PB or a one-turn themed debuff); the chosen shape is gift +
+> cosmetic mark + flare, so C's seven flaw lines below are superseded by flare lines at build time.
+> Research base: the local 5etools mirrors (v2.29.0 + v2.33.3) and a web pass over the CC-licensed
+> third-party SRDs (2026-08-13).
 
 ## 1 · What a boon has to be (the contract)
 
@@ -48,6 +53,7 @@
 | FTD Draconic Gifts | 8 | ★★★ | directly extends the kobold table: Senses, Tongue, Scaled Toughness, Familiar |
 | MOT Supernatural Gifts + Piety | 10 + 60 | ★★★ | Heroic Destiny, Pious, Unscarred, Inscrutable — heroic-gift band; piety = future deity lists |
 | EFA Charms (planar) | 16 | ★★ | one per plane — a "planar touch" list seed |
+| **RHW Dark Gift feats + Charms** (mirror v2.33.3) | 9 + 5 | ★★★ | the 2024 reissue — gift + NATURAL-1 FLARE cost; List C's build seed per D-052 |
 | CRCotN Fragments of Suffering | 9 | ★★ | psychic mutation riders with a haunt |
 | Optional features (FS/EI/MM/MV/AS/RN) | 100+ | ★★★ | the "flexible class features" quarry: styles, maneuvers, invocations, metamagic, runes |
 
@@ -160,7 +166,7 @@ seasonal) · Symbiote (VRGR — roleplay-heavy, needs a willing table) · Second
 form) · Treasure-sense variants · BFRD Aware (can't be surprised while conscious — clean, CC,
 maybe swap into List A) · SRD 5.2 Boon of Fate scaled (the d10-after-the-roll shape List E-15 uses).
 
-## 4 · Decisions this raises (his calls, before any build)
+## 4 · Decisions this raised — RESOLVED, see D-052 (kept for the option trail)
 
 1. **Where boon lists attach.** Today boons are SPECIES content (the kobold's table). Lists imply a
    CREW-level boon roll available to every species. Options: (a) crew list REPLACES any species

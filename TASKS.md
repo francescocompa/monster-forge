@@ -65,10 +65,14 @@ asked to PLAN rather than build, each with its gate. Off-roadmap like the rest o
 Standing from this arc: ~~push + deploy~~ **B304/B305 pushed — `origin/main` = `7909f15`, verified
 2026-08-13; whether Pages BUILT is still unconfirmed.** ⚑ B306 + B307 (his B306 review — D-050) +
 B308 (the four approved settings — D-051) are in the working tree, NOT yet committed (2026-08-13 —
-Claude waits to be asked; Francesco pushes). Open from D-050: the boons page grows real boon LISTS
-("several working boon options") — **content proposal researched and drafted 2026-08-13 →
-`GEN_BOONS.md`** (six d20 lists + overflow pool + the five design gates it raises); 🔶 his pick of
-lists/entries and the §4 gates before any build. Open taste items: leftover coin for cheap-kit casters (D-040), and
+Claude waits to be asked; Francesco pushes). **NEXT BUILD — boon lists (D-052, decided 2026-08-14, ~3-4 batches · Opus @ high, Fable @ high
+for the two-stage wire replay):** all six `GEN_BOONS.md` lists (C re-seeded from RHW's natural-1
+flares); boons UNCOUPLED from species (kobold table stays readable for old payloads, stops fronting
+new rolls); the multi-list roll mode for quirks/trinkets/boons (stage 1 which-list on equal spans,
+stage 2 the list's die); the no-boon floor as a crew setting in 5% steps on a d20 (default 60%);
+prose-only custom entries; `res per:"never"`; hp/score fx riders (capped, shipped-only); BFRD
+CC-BY attribution joins README + Credits. *Done when:* six lists roll on DM and phone alike, the
+two-stage roll replays in the validator, the floor maps to honest d20 spans, floors pinned. Open taste items: leftover coin for cheap-kit casters (D-040), and
 whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---

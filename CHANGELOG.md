@@ -4,6 +4,24 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 309b — The boon interview: every gate settled (D-052)
+
+No code. Three AskUserQuestion rounds over `GEN_BOONS.md` §4, all eight calls his:
+- **Boons uncouple from species** and become D-049 lists proper; the kobold table stays readable
+  for old payloads but stops fronting new rolls (List F carries the theme).
+- **Multi-list roll mode for ALL table kinds** — his ask, verbatim: *"roll first among multiple
+  selected lists then among the entries of the rolled list."* Quirks, trinkets and boons all gain
+  multi-select; stage 1 which-list on equal spans, stage 2 the list's own die. Amends D-049: the
+  selected SET replaces; lists still never merge.
+- **The no-boon floor becomes a crew percentage — in 5% steps on a real d20** (default 60%); the
+  step granularity was the round's /challenge (a free % breaks D-011's physical-die grammar) and he
+  took it.
+- **List C re-seeds from RHW** (Ravenloft: The Horrors Within, mirror v2.33.3): the 2024 dark-gift
+  feats carry their cost as a natural-1 flare; chosen shape = gift + cosmetic mark + flare.
+- All six lists ship · custom entries prose-only (resolves D-043's deferred half) · `res` gains
+  `per:"never"` · both fx riders build (hp/score, capped, shipped-only) · BFRD CC-BY attribution
+  obligation noted. Build scoped in TASKS (~3-4 batches).
+
 ## Batch 309 — Docs: the boon-lists content proposal (GEN_BOONS.md)
 
 No code. The D-050 follow-up ("several working boon options"), researched and drafted for his pick.

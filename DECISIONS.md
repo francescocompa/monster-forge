@@ -650,3 +650,54 @@ crashed `esc()` at ritual open (caught in the live preview, not by the tests).
 **Enforced by:** `test/gen.test.js` (pool roll/table/pick/ingest floors incl. never-empty; the
 net's engine redeal + wire rejection on the same seed; the 3-shape end to end) ·
 `test/crew-flow.test.js` (the block's row set).
+
+### D-052 — The boon-lists build is scoped: uncoupled from species, multi-list rolls for every table kind, a 5%-step floor, six lists with RHW dark gifts · 2026-08-14 · DECIDED
+**Mechanism:** AskUserQuestion, 3 rounds (/interview over `GEN_BOONS.md` §4, after B306–B309 committed).
+**Raw notes (verbatim):**
+- *"Boon lists are uncoupled from species and work like trinket/quirks lists. Both for the boons and
+  these other lists however there should be an option to roll first among multiple selected lists
+  then among the entries of the rolled list, randomizing completely the outcome from all available
+  options."*
+- *"No boon floor is customizable, there should be a setting to set the floor as a percentage
+  (could even be 0)"*
+- *"For Dark Gifts, refer to the updated ones in Ravenloft (should be available in the latest
+  5etools mirror source download 2.33.3)"*
+
+The eight calls:
+1. **Boons uncouple from species** and become D-049 lists proper. The kobold's Draconic Boon table
+   stops being the attachment point for new rolls; List F (species-agnostic Draconic) carries the
+   theme. *Implementation note, not his to carry:* the kobold pack keeps its `boon:true` table
+   readable so pre-D-052 payloads (D-028 wings and kin) still validate and derive — it just stops
+   being offered to new drafts.
+2. **Multi-list roll mode, ALL three kinds at once** (quirks, trinkets, boons): the picker gains
+   multi-select; stage 1 rolls WHICH list on equal-weight spans (D-011), stage 2 rolls that list's
+   own die. Single-list stays the default and rolls exactly as today. This AMENDS D-049's
+   replace-not-extend: the SELECTED SET replaces — lists still never merge into one flat table.
+   Rejected: boons-only first (same code touched twice, two picker grammars side by side).
+3. **All six lists ship** (A Veteran tricks · B Pocket charms · C Dark gifts · D Heroic gifts ·
+   E Trickster charms · F Draconic). No cuts.
+4. **List C re-seeds from RHW** — Ravenloft: The Horrors Within (2026, mirror v2.33.3 confirmed on
+   disk) reissues the VRGR dark gifts as 2024-rules feats with the cost built in as a NATURAL-1
+   FLARE (roll a 1 on any D20 Test → save DC 13+PB or a one-turn, gift-themed debuff), plus the new
+   Aberrant Anatomy and five new charms. **Chosen shape: gift + one-line cosmetic mark + flare.**
+   Rejected: static CoS-style flaws (nothing enforces them in a one-shot); flare without marks
+   (loses the body horror).
+5. **The no-boon floor becomes a crew setting: a percentage in 5% STEPS on a real d20** (0–95%,
+   default 60% = today's 1–12). His raw ask was any percentage; the 5% step is the accepted
+   /challenge — a free percentage breaks D-011's physical-die grammar (a 35% floor lands on no
+   clean face), 5% steps keep every span honest on a d20. Rejected: free % on a hidden d100
+   (visible table stops matching a real die); fuzzy spans.
+6. **Custom boon entries: PROSE-ONLY.** This resolves D-043's deferred half (asked, as D-043
+   required): a DM-authored entry is a trait sentence, never structured fx — the wire has no closed
+   domain for free-form mechanics (D-007). Shipped lists carry full fx. Rejected: no custom at all
+   (his pick was the middle option); full custom fx (breaks the trust boundary — not buildable).
+7. **`res` gains `per:"never"`** — true consumable charms (N charges, never reset; the charm dies
+   with the kobold). Rejected: recasting all charms per-rest (loses the spent-able feel).
+8. **Both fx extensions build**: `hp:{delta}` and `score:{abil,delta}`, hard-capped in the
+   validator (±10 HP, ±2 score, max 20), SHIPPED-content only.
+**Attribution obligation when built:** Black Flag Reference Document (CC-BY-4.0, Kobold Press)
+joins README + the Credits card if A-16/A-19 land verbatim; SRD 5.2 credit already present.
+**Supersedes:** D-043's open half (custom boon text — now resolved prose-only); amends D-049
+(multi-list mode) and D-028 (the species table stops fronting new boon rolls).
+**Enforced by:** prose only until the build batch lands its floors (list registry, two-stage roll
+replay in `validateGenPayload`, the floor die-mapping, `per:"never"`, the fx caps).
