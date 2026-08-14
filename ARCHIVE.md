@@ -3591,3 +3591,33 @@ and points at DEVELOPMENT.md, which owns the schema itself.
   Options in the memo: **A** stay · **B** level 2 only (~2) · **B′** a numbers-only "hardened crew"
   dial (~1) · **C** levels 2-3 (~10-14) · **D** full 2-5 (~20+).
   *Done when:* ~~the memo exists~~ ~~and he has picked a direction (including "no")~~ — **both done.**
+
+
+## TASKS: Side quest 2 — the B298 review slate (G5–G10), closed
+
+> Archived 2026-08-14 from `TASKS.md`. All six items shipped; G7 and G9's own bodies were archived
+> earlier (above) and their stubs came with this move. Forward-looking constraints from these tasks
+> live on in `TASKS.md`'s outcome line, `DEVELOPMENT.md` and the D-045…D-049 entries — check those
+> before re-deriving anything here.
+
+Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these six were the
+ones he asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
+
+- [x] **G5 — Grouped steps read as groups** · done B299 (D-045) — category rules; closed D-034's open item.
+- [x] **G6 — Equipment kits get real names** · done B300, reviewed B301 (D-047) — archetype voice, no
+  article, sentence case; a floor pins the house rules. His review also fixed two dominated kits.
+- [x] **G7 — Review the name generator and the random lists** · done B303–B305 (D-042 amended twice)
+  The seam rule (B303), then his full read-through executed (B304): nine profiles rebuilt on
+  researched phonology, the seam policy moved onto the profile because **his call — "mid is the
+  weakest part" — was right**, quirks and trinkets pruned. B305 took the quirk voice to second
+  person. Elf and aasimar were never touched — he signed both off. Closed on his re-read.
+  → full body: `ARCHIVE.md#tasks-g7-name-generator-and-random-lists`
+- [x] **G8 — The custom d100 lists become editable** · done B306 (D-049) — mockups + four calls, then
+  built. Install-wide lists picked per crew (`state.flavLists` / `a.crew.lists`, `trinketTab`
+  migrated); a list REPLACES and the die follows its row count, printed in crew settings' new Lists
+  block; rows-with-a-Text-toggle editor; the shipped lists locked with Duplicate (D-042 made
+  visible); CSV/paste import with header + numbering-column detection. Six floors, 143 tests at the time.
+- [x] **G9 — Beyond level 1: feasibility** · memo B302 → `GEN_LEVELS.md` · picked 2026-08-11 → **D-048**
+  → measurements: `ARCHIVE.md#tasks-g9-beyond-level-1`
+- [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (D-046) — one shared
+  death-save widget on both surfaces; the crew card's HP row is the combat panel inline.

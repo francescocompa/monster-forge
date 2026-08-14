@@ -4,6 +4,22 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 309c — Docs: /handoff pass — side quest 2 archived, D-035/D-043 closed, the next build gets its own block
+
+No code. Session close-out after B306–B309b.
+- `TASKS.md`: Side quest 2's six task bodies move to `ARCHIVE.md` behind an outcome stub (the two
+  constraints that outlive the arc — `GEN_LEVELS.md` stays live, T2.8 inherits G10's widget — stay
+  in the live doc); the D-052 boon-lists build becomes its own **▶ NEXT BUILD** block with
+  checkboxes and a *Done when*, instead of a run-on standing paragraph; the stale "B306-B308
+  uncommitted" claim is replaced with the real commit state and a dated push ⚑.
+- `DECISIONS.md`: D-035's and D-043's deferred "DM-edited boon text" halves are struck IN PLACE and
+  pointed at D-052 — they were still telling future sessions not to propose work that is now
+  scheduled.
+- Handoff memory restamped to `b3ac6c2`; two new gotchas recorded (a shared RNG stream between two
+  things you're comparing proves nothing; `genTableHTML`'s `off` must be the reason string, not a
+  boolean — the live preview caught what the tests missed); the pending BFRD attribution obligation
+  filed beside the D-042 one; the "don't re-propose boon-text editing" line corrected.
+
 ## Batch 309b — The boon interview: every gate settled (D-052)
 
 No code. Three AskUserQuestion rounds over `GEN_BOONS.md` §4, all eight calls his:

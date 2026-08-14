@@ -31,49 +31,49 @@ G1 Reroll · G2 the closing identity summary screen (D-041) · G3 quirks/trinket
 (D-042) · G4 per-boon toggles (D-043). All shipped, all gates settled in-session.
 → archived 2026-08-10: the four task bodies — `ARCHIVE.md#tasks-side-quest-1-crew-generator-follow-ups`
 
-## Side quest 2 — crew generator, the B298 review slate · ✅ CLOSED 2026-08-13 (G8 shipped, B306)
+## Side quest 2 — crew generator, the B298 review slate · ✅ CLOSED 2026-08-13 (all six shipped)
 
-Francesco's notes on B297. The eleven mechanical ones shipped in B298 (D-044); these are the six he
-asked to PLAN rather than build, each with its gate. Off-roadmap like the rest of the crew arc.
+G5 grouped steps (D-045) · G6 kit names (D-047) · G7 the name generator and the random lists
+(D-042 amended twice) · G8 editable d100 lists (D-049) · G9 beyond level 1 → **D-048, stay at
+level 1, C unscheduled but NOT rejected** · G10 the HP block and death saves (D-046).
+→ archived 2026-08-14: the six task bodies — `ARCHIVE.md#tasks-side-quest-2--the-b298-review-slate-g5g10-closed`
 
-- [x] **G5 — Grouped steps read as groups** · done B299 (D-045) — category rules; closed D-034's open item.
-- [x] **G6 — Equipment kits get real names** · done B300, reviewed B301 (D-047) — archetype voice, no
-  article, sentence case; a floor pins the house rules. His review also fixed two dominated kits.
-- [x] **G7 — Review the name generator and the random lists** · done B303–B305 (D-042 amended twice)
-  The seam rule (B303), then his full read-through executed (B304): nine profiles rebuilt on
-  researched phonology, the seam policy moved onto the profile because **his call — "mid is the
-  weakest part" — was right**, quirks and trinkets pruned. B305 took the quirk voice to second
-  person. Elf and aasimar were never touched — he signed both off. Closed on his re-read.
-  → archived 2026-08-11: the full body — `ARCHIVE.md#tasks-g7-name-generator-and-random-lists`
-- [x] **G8 — The custom d100 lists become editable** · done B306 (D-049) — mockups + four calls, then
-  built. Install-wide lists picked per crew (`state.flavLists` / `a.crew.lists`, `trinketTab`
-  migrated); a list REPLACES and the die follows its row count, printed in crew settings' new Lists
-  block; rows-with-a-Text-toggle editor; the shipped lists locked with Duplicate (D-042 made
-  visible); CSV/paste import with header + numbering-column detection. Six floors, 143 tests.
-- [x] **G9 — Beyond level 1: feasibility** · memo B302 → `GEN_LEVELS.md` · picked 2026-08-11 → **D-048**
-  **Stay at level 1; C (levels 2-3) is UNSCHEDULED, not rejected.** Reopen condition, and the only
-  one: a real campaign rather than a one-shot starts using the crew. B′ was declined, so don't
-  re-pitch a fragility dial. **`GEN_LEVELS.md` stays live, not archived** — it is what makes C cheap
-  to restart.
-  → archived 2026-08-11: the measurements — `ARCHIVE.md#tasks-g9-beyond-level-1`
-- [x] **G10 — The player's HP section, hit dice, and death saves** · done B299 (D-046) — one shared
-  death-save widget on both surfaces; the crew card's HP row is the combat panel inline.
-  **T2.8 inherits the widget — don't design a second one.**
+**Two constraints from this arc that outlive it:** `GEN_LEVELS.md` stays LIVE, not archived — it is
+what makes D-048's option C cheap to restart. And **T2.8 inherits G10's death-save widget — don't
+design a second one.**
 
 ---
 
-Standing from this arc: ~~push + deploy~~ **B304/B305 pushed — `origin/main` = `7909f15`, verified
-2026-08-13; whether Pages BUILT is still unconfirmed.** ⚑ B306 + B307 (his B306 review — D-050) +
-B308 (the four approved settings — D-051) are in the working tree, NOT yet committed (2026-08-13 —
-Claude waits to be asked; Francesco pushes). **NEXT BUILD — boon lists (D-052, decided 2026-08-14, ~3-4 batches · Opus @ high, Fable @ high
-for the two-stage wire replay):** all six `GEN_BOONS.md` lists (C re-seeded from RHW's natural-1
-flares); boons UNCOUPLED from species (kobold table stays readable for old payloads, stops fronting
-new rolls); the multi-list roll mode for quirks/trinkets/boons (stage 1 which-list on equal spans,
-stage 2 the list's die); the no-boon floor as a crew setting in 5% steps on a d20 (default 60%);
-prose-only custom entries; `res per:"never"`; hp/score fx riders (capped, shipped-only); BFRD
-CC-BY attribution joins README + Credits. *Done when:* six lists roll on DM and phone alike, the
-two-stage roll replays in the validator, the floor maps to honest d20 spans, floors pinned. Open taste items: leftover coin for cheap-kit casters (D-040), and
-whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
+## ▶ NEXT BUILD — boon lists (D-052) · ~3-4 batches · Opus @ high (Fable @ high for the wire replay)
+
+Decided 2026-08-14 by interview over `GEN_BOONS.md`; every gate settled, nothing blocks it.
+**Opens with a mockup of the multi-list picker** — new surface, standing protocol.
+
+- [ ] All six `GEN_BOONS.md` lists ship (A Veteran tricks · B Pocket charms · C Dark gifts ·
+      D Heroic gifts · E Trickster charms · F Draconic). **C re-seeds from RHW v2.33.3** — gift +
+      cosmetic mark + natural-1 flare, not the older static flaws.
+- [ ] **Boons uncouple from species.** The kobold table stays readable so pre-D-052 payloads still
+      validate and derive; it stops fronting new rolls (List F carries the theme).
+- [ ] **Multi-list roll mode for quirks, trinkets AND boons** — multi-select in the picker; stage 1
+      rolls WHICH list on equal-weight spans (D-011), stage 2 rolls that list's own die. Single-list
+      stays the default and behaves exactly as today. Amends D-049: the selected SET replaces.
+- [ ] **The no-boon floor becomes a crew setting** — a percentage in 5% steps mapped to honest d20
+      spans (0–95%, default 60% = today's 1–12).
+- [ ] **Prose-only custom entries** (closes D-035/D-043's deferred half) · **`res per:"never"`** ·
+      **hp/score fx riders**, capped in the validator, shipped-content only.
+- [ ] **BFRD attribution** (CC-BY-4.0, Kobold Press) joins README + the Credits card if A-16/A-19
+      land verbatim.
+
+*Done when:* six lists roll identically on DM and phone, the two-stage roll replays in
+`validateGenPayload`, the floor maps to spans a physical d20 could produce, and the floors are pinned.
+
+---
+
+Standing from this arc: ~~push + deploy~~ ~~B306-B308 uncommitted~~ **all committed 2026-08-14 —
+`b3ac6c2` (B309b) atop `7a1b918`; local is THREE commits ahead of `origin/main` = `7909f15`.**
+⚑ **Push + confirm the Pages build** (owner: Francesco, 2026-08-14). Open taste items: leftover coin
+for cheap-kit casters (D-040), and whether the d100 identity rolls want the 3D die at all (a d100
+renders as a boxy solid).
 
 ---
 
