@@ -66,7 +66,9 @@ Standing from this arc: ~~push + deploy~~ **B304/B305 pushed — `origin/main` =
 2026-08-13; whether Pages BUILT is still unconfirmed.** ⚑ B306 + B307 (his B306 review — D-050) +
 B308 (the four approved settings — D-051) are in the working tree, NOT yet committed (2026-08-13 —
 Claude waits to be asked; Francesco pushes). Open from D-050: the boons page grows real boon LISTS
-("several working boon options") in a later batch — his note, not yet scheduled. Open taste items: leftover coin for cheap-kit casters (D-040), and
+("several working boon options") — **content proposal researched and drafted 2026-08-13 →
+`GEN_BOONS.md`** (six d20 lists + overflow pool + the five design gates it raises); 🔶 his pick of
+lists/entries and the §4 gates before any build. Open taste items: leftover coin for cheap-kit casters (D-040), and
 whether the d100 identity rolls want the 3D die at all (a d100 renders as a boxy solid).
 
 ---

@@ -4,6 +4,25 @@ Monster Forge — D&D 2024 homebrew monster & encounter builder. No-build static
 site (`index.html` + `styles.css` + the shared scripts, `data.js` … `app.js`).
 Newest batches first.
 
+## Batch 309 — Docs: the boon-lists content proposal (GEN_BOONS.md)
+
+No code. The D-050 follow-up ("several working boon options"), researched and drafted for his pick.
+- **Sources inventoried:** the local 5etools mirror's full reward corpus (272 entries — XDMG/DMG
+  charms and blessings, CoS + VRGR dark gifts, FTD draconic gifts, MOT supernatural gifts and
+  piety, IDRotF/BMT/GGR/ToA/BGDIA/EFA charms, CRCotN fragments, 29 XPHB epic-boon feats with their
+  `srd52` flags, the optional-feature sets), plus a web pass over third-party licensing: the Black
+  Flag Reference Document (Tales of the Valiant) is **CC-BY-4.0** — its background-band talents are
+  verbatim-usable like the SRD trinkets; the A5E SRD has no boon analog; Tal'Dorei and the rest are
+  closed (inspiration only).
+- **The proposal:** six shipped d20 lists in the kobold table's grammar (1–12 no boon, 13–19, a big
+  20) — Veteran tricks (flexible class features: fighting style, one maneuver, second-wind,
+  expertise, any-list cantrip/spell), Pocket charms, Dark gifts (boon-with-a-visible-cost), Heroic
+  gifts, Trickster charms, and a species-agnostic Draconic list — ~50 entries, each with source
+  seed, our-text mechanic at level-1 power, and an fx-feasibility tag; plus an overflow pool.
+- **Five design gates flagged** before any build: where boon lists attach vs species tables, the
+  custom-list wire boundary (prose-only, or not at all — D-043's deferral stands), the charm
+  resource shape, two tiny fx extensions (hp/score deltas), and the BFRD attribution obligation.
+
 ## Batch 308 — The four settings he approved: species and class pools, the hopeless-set net, the third ASI shape (D-051)
 
 All four picked from the B307 audit proposal, built in one pass.
